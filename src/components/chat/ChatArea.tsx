@@ -8,7 +8,7 @@ import { WelcomeScreen } from "./WelcomeScreen";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 export function ChatArea() {
-  const { messages, isStreaming, isToolWorking, activeToolName } = useChatStore();
+  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,6 +36,7 @@ export function ChatArea() {
             {/* Thinking / Tool Working Indicator */}
             {(isStreaming || isToolWorking) && (
               <ThinkingIndicator
+                phase={streamingPhase}
                 isToolWorking={isToolWorking}
                 toolName={activeToolName}
               />

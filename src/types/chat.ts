@@ -12,12 +12,15 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
+  reasoning?: string;
   toolName?: string;
   toolResult?: Record<string, unknown>;
   legalRefs?: LegalRef[];
   artifacts?: ArtifactData[];
   createdAt: string;
 }
+
+export type AIProvider = "openai" | "anthropic" | "deepinfra";
 
 export interface LegalRef {
   id: string;
@@ -45,6 +48,10 @@ export interface ConversationSummary {
   createdAt: string;
   updatedAt: string;
   lastMessage?: string;
+  agentId?: string | null;
+  agentName?: string | null;
+  agentIcon?: string | null;
+  agentIconColor?: string | null;
 }
 
 export interface Conversation extends ConversationSummary {

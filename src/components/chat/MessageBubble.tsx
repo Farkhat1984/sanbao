@@ -1,6 +1,6 @@
 "use client";
 
-import { Scale, User, Copy, Check, RotateCcw } from "lucide-react";
+import { Scale, User, Copy, Check, RotateCcw, Brain, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -16,6 +16,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, isLast }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
 
@@ -59,6 +60,36 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
         <span className="text-[11px] font-medium text-text-muted mb-1 block">
           {isUser ? "Вы" : "Leema"}
         </span>
+
+        {/* Reasoning block */}
+        {isAssistant && message.reasoning && (
+          <div className="mb-2 w-full">
+            <button
+              onClick={() => setReasoningOpen(!reasoningOpen)}
+              className="flex items-center gap-1.5 text-[11px] text-violet-500 hover:text-violet-600 transition-colors cursor-pointer mb-1"
+            >
+              <Brain className="h-3 w-3" />
+              <span>Ход мысли</span>
+              <ChevronDown
+                className={cn(
+                  "h-3 w-3 transition-transform",
+                  reasoningOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {reasoningOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-3 py-2 text-xs text-violet-700 dark:text-violet-300 leading-relaxed max-h-[300px] overflow-y-auto"
+              >
+                <pre className="whitespace-pre-wrap font-sans">
+                  {message.reasoning}
+                </pre>
+              </motion.div>
+            )}
+          </div>
+        )}
 
         {/* Message bubble */}
         <div

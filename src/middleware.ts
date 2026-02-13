@@ -11,6 +11,7 @@ export default auth((req) => {
     pathname.startsWith("/profile") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/billing") ||
+    pathname.startsWith("/agents") ||
     pathname.startsWith("/admin");
 
   if (isAppRoute && !isLoggedIn) {
@@ -30,6 +31,7 @@ export const config = {
     "/profile",
     "/settings",
     "/billing",
+    "/agents/:path*",
     "/admin/:path*",
   ],
 };

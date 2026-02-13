@@ -3,6 +3,8 @@
 import { Scale, FileText, Gavel, Search, ShieldCheck, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { useAgentStore } from "@/stores/agentStore";
+import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
 const quickActions = [
   {
@@ -50,7 +52,10 @@ const itemVariants = {
 };
 
 export function WelcomeScreen() {
-  const { addMessage, setStreaming } = useChatStore();
+  const { addMessage, setStreaming, activeAgentId } = useChatStore();
+  const { activeAgent } = useAgentStore();
+
+  const hasAgent = activeAgentId && activeAgent;
 
   const handleQuickAction = (prompt: string) => {
     addMessage({
@@ -82,16 +87,38 @@ export function WelcomeScreen() {
         transition={{ type: "spring", damping: 20, stiffness: 200 }}
         className="text-center mb-10"
       >
-        {/* Logo */}
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
-          <Scale className="h-8 w-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-text-primary mb-2">
-          Добро пожаловать в Leema
-        </h2>
-        <p className="text-sm text-text-secondary max-w-md">
-          Ваш AI-помощник для работы с законодательством. Задайте вопрос, создайте документ или проанализируйте НПА.
-        </p>
+        {/* Logo / Agent Icon */}
+        {hasAgent ? (() => {
+          const AgentIcon = ICON_MAP[activeAgent.icon] || ICON_MAP.Bot;
+          return (
+            <>
+              <div
+                className="h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg"
+                style={{ backgroundColor: activeAgent.iconColor }}
+              >
+                <AgentIcon className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-text-primary mb-2">
+                {activeAgent.name}
+              </h2>
+              <p className="text-sm text-text-secondary max-w-md">
+                {activeAgent.description || "Персональный AI-агент. Задайте вопрос, чтобы начать."}
+              </p>
+            </>
+          );
+        })() : (
+          <>
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
+              <Scale className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              Добро пожаловать в Leema
+            </h2>
+            <p className="text-sm text-text-secondary max-w-md">
+              Ваш AI-помощник для работы с законодательством. Задайте вопрос, создайте документ или проанализируйте НПА.
+            </p>
+          </>
+        )}
       </motion.div>
 
       {/* Quick Actions */}

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
 }
 
 // ─── NextAuth models ─────────────────────────────────────
@@ -64,6 +65,7 @@ model User {
   conversations Conversation[]
   subscription  Subscription?
   dailyUsage    DailyUsage[]
+  agents        Agent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,8 +77,10 @@ model Conversation {
   userId   String
   pinned   Boolean @default(false)
   archived Boolean @default(false)
+  agentId  String?
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent       Agent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
   messages    Message[]
   artifacts   Artifact[]
   attachments Attachment[]
@@ -85,6 +89,7 @@ model Conversation {
   updatedAt DateTime @updatedAt
 
   @@index([userId, updatedAt])
+  @@index([agentId])
 }
 
 model Message {
@@ -152,6 +157,44 @@ model Attachment {
   createdAt DateTime @default(now())
 
   @@index([conversationId])
+}
+
+// ─── Agent models ───────────────────────────────────────
+
+model Agent {
+  id           String  @id @default(cuid())
+  userId       String
+  name         String
+  description  String? @db.Text
+  instructions String  @db.Text
+  model        String  @default("openai")
+  icon         String  @default("Bot")
+  iconColor    String  @default("#4F6EF7")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files         AgentFile[]
+  conversations Conversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model AgentFile {
+  id            String  @id @default(cuid())
+  agentId       String
+  fileName      String
+  fileType      String
+  fileUrl       String
+  fileSize      Int
+  extractedText String? @db.Text
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
 }
 
 // ─── Billing models ─────────────────────────────────────

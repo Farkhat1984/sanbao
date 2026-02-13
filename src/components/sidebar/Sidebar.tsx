@@ -6,12 +6,12 @@ import {
   PanelLeftClose,
   Settings,
   Scale,
-  CreditCard,
   ShieldCheck,
 } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { ConversationList } from "./ConversationList";
+import { AgentList } from "./AgentList";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -70,6 +70,9 @@ export function Sidebar() {
         </button>
       </div>
 
+      {/* Agents */}
+      <AgentList />
+
       {/* Search */}
       <div className="px-3 py-2">
         <div className="relative">
@@ -106,14 +109,6 @@ export function Sidebar() {
             </p>
           </div>
           <ThemeToggle />
-          <Tooltip content="Тарифы" side="top">
-            <button
-              onClick={() => router.push("/billing")}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-            >
-              <CreditCard className="h-4 w-4" />
-            </button>
-          </Tooltip>
           {session?.user?.role === "ADMIN" && (
             <Tooltip content="Админ" side="top">
               <button

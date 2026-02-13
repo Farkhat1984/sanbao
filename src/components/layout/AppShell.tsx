@@ -33,11 +33,11 @@ export function AppShell({ children }: AppShellProps) {
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <Header />
-        <main className="flex-1 overflow-hidden flex">
+        <main className="flex-1 min-h-0 overflow-hidden flex">
           {/* Chat Area */}
-          <div className="flex-1 min-w-0">{children}</div>
+          <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">{children}</div>
 
           {/* Artifact Panel */}
           <AnimatePresence>
