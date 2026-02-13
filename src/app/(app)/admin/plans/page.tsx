@@ -11,10 +11,16 @@ interface PlanData {
   price: string;
   messagesPerDay: number;
   tokensPerMessage: number;
+  tokensPerMonth: number;
   requestsPerMinute: number;
   contextWindowSize: number;
   maxConversations: number;
+  maxAgents: number;
+  documentsPerMonth: number;
   canUseAdvancedTools: boolean;
+  canUseReasoning: boolean;
+  canUseRag: boolean;
+  canUseGraph: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;

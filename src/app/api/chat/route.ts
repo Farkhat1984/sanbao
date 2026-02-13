@@ -21,7 +21,17 @@ const SYSTEM_PROMPT = `Ты — Leema, профессиональный юрид
 - Указывай актуальность нормы
 - Используй понятный язык, избегая лишнего юридического жаргона
 - Предупреждай о рисках и ограничениях
-- Всегда напоминай что финальное решение должен принимать квалифицированный юрист`;
+- Всегда напоминай что финальное решение должен принимать квалифицированный юрист
+
+СОЗДАНИЕ ДОКУМЕНТОВ:
+Когда создаёшь юридический документ (договор, иск, жалобу, заявление, анализ или любой структурированный текст), ОБЯЗАТЕЛЬНО оберни его содержимое в теги:
+
+<leema-doc type="ТИП" title="Название документа">
+Содержимое документа здесь
+</leema-doc>
+
+Доступные типы: CONTRACT (договор), CLAIM (иск), COMPLAINT (жалоба), DOCUMENT (документ/заявление), CODE (код), ANALYSIS (анализ).
+Перед и после тега можешь добавить пояснения обычным текстом.`;
 
 const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
 
@@ -313,7 +323,7 @@ export async function POST(req: Request) {
     attachments = [],
   } = await req.json();
 
-  const { plan, usage } = await getUserPlanAndUsage(session.user.id);
+  const { plan, usage, monthlyUsage } = await getUserPlanAndUsage(session.user.id);
   if (!plan) {
     return NextResponse.json(
       { error: "Нет настроенного тарифа" },
@@ -321,6 +331,7 @@ export async function POST(req: Request) {
     );
   }
 
+  // Daily message limit
   if (
     plan.messagesPerDay > 0 &&
     (usage?.messageCount ?? 0) >= plan.messagesPerDay
@@ -331,10 +342,30 @@ export async function POST(req: Request) {
     );
   }
 
+  // Monthly token limit
+  if (
+    plan.tokensPerMonth > 0 &&
+    monthlyUsage.tokenCount >= plan.tokensPerMonth
+  ) {
+    return NextResponse.json(
+      { error: "Достигнут месячный лимит токенов. Перейдите на более высокий тариф.", limit: plan.tokensPerMonth },
+      { status: 429 }
+    );
+  }
+
+  // Minute rate limit
   if (!checkMinuteRateLimit(session.user.id, plan.requestsPerMinute)) {
     return NextResponse.json(
       { error: "Слишком много запросов. Подождите минуту." },
       { status: 429 }
+    );
+  }
+
+  // Reasoning access check
+  if (thinkingEnabled && !plan.canUseReasoning) {
+    return NextResponse.json(
+      { error: "Режим рассуждений доступен на тарифе Pro и выше" },
+      { status: 403 }
     );
   }
 
@@ -368,7 +399,7 @@ export async function POST(req: Request) {
 
   if (webSearchEnabled) {
     systemPrompt +=
-      "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.";
+      "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.\n\nВАЖНО: Когда используешь веб-поиск, ОБЯЗАТЕЛЬНО в конце ответа добавь раздел «Источники:» со списком URL-ссылок откуда была взята информация. Формат:\n\nИсточники:\n- [Название](URL)\n- [Название](URL)";
   }
 
   // Process messages

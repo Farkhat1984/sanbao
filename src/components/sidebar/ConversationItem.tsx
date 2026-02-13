@@ -30,6 +30,7 @@ export function ConversationItem({
     e.stopPropagation();
     removeConversation(conversation.id);
     setShowMenu(false);
+    fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(() => {});
   };
 
   return (

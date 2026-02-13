@@ -13,10 +13,16 @@ interface PlanData {
   price: string;
   messagesPerDay: number;
   tokensPerMessage: number;
+  tokensPerMonth: number;
   requestsPerMinute: number;
   contextWindowSize: number;
   maxConversations: number;
+  maxAgents: number;
+  documentsPerMonth: number;
   canUseAdvancedTools: boolean;
+  canUseReasoning: boolean;
+  canUseRag: boolean;
+  canUseGraph: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
@@ -37,10 +43,16 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     price: plan.price,
     messagesPerDay: plan.messagesPerDay,
     tokensPerMessage: plan.tokensPerMessage,
+    tokensPerMonth: plan.tokensPerMonth,
     requestsPerMinute: plan.requestsPerMinute,
     contextWindowSize: plan.contextWindowSize,
     maxConversations: plan.maxConversations,
+    maxAgents: plan.maxAgents,
+    documentsPerMonth: plan.documentsPerMonth,
     canUseAdvancedTools: plan.canUseAdvancedTools,
+    canUseReasoning: plan.canUseReasoning,
+    canUseRag: plan.canUseRag,
+    canUseGraph: plan.canUseGraph,
     canChooseProvider: plan.canChooseProvider,
     highlighted: plan.highlighted,
   });
@@ -126,7 +138,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div>
           <label className="text-xs font-medium text-text-secondary block mb-1">
             Название
@@ -153,13 +165,19 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         </div>
         {numField("Сообщений/день", "messagesPerDay", "0 = безлимит")}
         {numField("Токенов/сообщение", "tokensPerMessage")}
+        {numField("Токенов/месяц", "tokensPerMonth")}
         {numField("Запросов/мин", "requestsPerMinute")}
         {numField("Окно контекста", "contextWindowSize")}
         {numField("Макс. диалогов", "maxConversations", "0 = безлимит")}
+        {numField("Макс. агентов", "maxAgents", "0 = нет, -1 = безлимит")}
+        {numField("Документов/месяц", "documentsPerMonth", "0 = нет, -1 = безлимит")}
       </div>
 
       <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-border">
         {toggle("Продвинутые инструменты", "canUseAdvancedTools")}
+        {toggle("Рассуждения (Reasoning)", "canUseReasoning")}
+        {toggle("RAG (база знаний)", "canUseRag")}
+        {toggle("Граф знаний", "canUseGraph")}
         {toggle("Выбор AI-провайдера", "canChooseProvider")}
         {toggle("Рекомендуемый", "highlighted")}
       </div>

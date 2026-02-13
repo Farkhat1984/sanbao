@@ -14,6 +14,7 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  Camera,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
@@ -76,6 +77,7 @@ export function MessageInput() {
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -83,10 +85,13 @@ export function MessageInput() {
   const {
     messages,
     isStreaming,
+    activeConversationId,
     activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
     addMessage,
+    addConversation,
+    setActiveConversation,
     updateLastAssistantMessage,
     setStreaming,
     setStreamingPhase,
@@ -282,6 +287,32 @@ export function MessageInput() {
     setStreaming(true);
     setStreamingPhase(thinkingEnabled ? "thinking" : "answering");
 
+    // Ensure we have a conversation for persistence
+    let convId = activeConversationId;
+    if (!convId) {
+      try {
+        const convRes = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: trimmed.slice(0, 60) || "Новый чат",
+            agentId: activeAgentId || undefined,
+          }),
+        });
+        if (convRes.ok) {
+          const conv = await convRes.json();
+          convId = conv.id;
+          addConversation(conv);
+          setActiveConversation(conv.id);
+          window.history.replaceState(null, "", `/chat/${conv.id}`);
+        }
+      } catch {
+        // Continue without persistence if conversation creation fails
+      }
+    }
+
+    let fullContent = "";
+
     try {
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role.toLowerCase(),
@@ -335,7 +366,6 @@ export function MessageInput() {
       // Parse NDJSON stream
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
-      let fullContent = "";
       let fullReasoning = "";
       let buffer = "";
 
@@ -384,9 +414,35 @@ export function MessageInput() {
           }
         }
       }
+
+      // Save messages to DB after stream completes
+      if (convId && fullContent) {
+        fetch(`/api/conversations/${convId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              { role: "USER", content: trimmed },
+              { role: "ASSISTANT", content: fullContent },
+            ],
+          }),
+        }).catch(() => {});
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        // User stopped the stream
+        // User stopped the stream — save partial content if available
+        if (convId && fullContent) {
+          fetch(`/api/conversations/${convId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [
+                { role: "USER", content: trimmed },
+                { role: "ASSISTANT", content: fullContent },
+              ],
+            }),
+          }).catch(() => {});
+        }
       } else {
         addMessage({
           id: crypto.randomUUID(),
@@ -405,10 +461,13 @@ export function MessageInput() {
     attachedFiles,
     isStreaming,
     messages,
+    activeConversationId,
     activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
     addMessage,
+    addConversation,
+    setActiveConversation,
     updateLastAssistantMessage,
     setStreaming,
     setStreamingPhase,
@@ -432,7 +491,7 @@ export function MessageInput() {
     setInput(e.target.value);
     const el = e.target;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
   const handleOpenTools = () => {
@@ -443,6 +502,11 @@ export function MessageInput() {
   const handleAttachClick = () => {
     setMenuOpen(false);
     fileInputRef.current?.click();
+  };
+
+  const handleCameraClick = () => {
+    setMenuOpen(false);
+    cameraInputRef.current?.click();
   };
 
   const hasContent = input.trim() || attachedFiles.length > 0;
@@ -456,6 +520,15 @@ export function MessageInput() {
         type="file"
         multiple
         accept={CHAT_ACCEPTED_EXTENSIONS}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      {/* Hidden camera input */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -586,6 +659,17 @@ export function MessageInput() {
                         </div>
                       </button>
 
+                      {/* Camera */}
+                      <button
+                        onClick={handleCameraClick}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                      >
+                        <div className="h-7 w-7 rounded-lg bg-green-50 dark:bg-green-950 text-green-500 flex items-center justify-center">
+                          <Camera className="h-3.5 w-3.5" />
+                        </div>
+                        <span>Сделать фото</span>
+                      </button>
+
                       {/* Legal tools */}
                       <button
                         onClick={handleOpenTools}
@@ -695,7 +779,7 @@ export function MessageInput() {
             }
             rows={1}
             className={cn(
-              "flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none leading-relaxed max-h-[200px] py-1",
+              "flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none leading-relaxed max-h-[120px] overflow-y-auto py-1",
               isRecording && "placeholder:text-red-400"
             )}
           />

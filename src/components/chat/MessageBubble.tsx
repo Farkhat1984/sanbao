@@ -1,22 +1,123 @@
 "use client";
 
-import { Scale, User, Copy, Check, RotateCcw, Brain, ChevronDown } from "lucide-react";
+import {
+  Scale,
+  User,
+  Copy,
+  Check,
+  RotateCcw,
+  Brain,
+  ChevronDown,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
-import type { ChatMessage } from "@/types/chat";
+import { useArtifactStore } from "@/stores/artifactStore";
+import type { ChatMessage, ArtifactType } from "@/types/chat";
+
+// ─── Artifact parsing ────────────────────────────────────
+
+const ARTIFACT_REGEX =
+  /<leema-doc\s+type="(\w+)"\s+title="([^"]*)">([\s\S]*?)<\/leema-doc>/g;
+
+const ARTIFACT_TYPE_LABELS: Record<string, string> = {
+  CONTRACT: "Договор",
+  CLAIM: "Иск",
+  COMPLAINT: "Жалоба",
+  DOCUMENT: "Документ",
+  CODE: "Код",
+  ANALYSIS: "Анализ",
+};
+
+interface ParsedPart {
+  type: "text" | "artifact";
+  content: string;
+  artifactType?: string;
+  title?: string;
+}
+
+function parseContentWithArtifacts(content: string): ParsedPart[] {
+  const parts: ParsedPart[] = [];
+  let lastIndex = 0;
+  let match;
+
+  ARTIFACT_REGEX.lastIndex = 0;
+  while ((match = ARTIFACT_REGEX.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", content: content.slice(lastIndex, match.index) });
+    }
+    parts.push({
+      type: "artifact",
+      artifactType: match[1],
+      title: match[2],
+      content: match[3].trim(),
+    });
+    lastIndex = ARTIFACT_REGEX.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", content: content.slice(lastIndex) });
+  }
+
+  return parts;
+}
+
+// ─── Markdown renderer ───────────────────────────────────
+
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-2 last:mb-0">{children}</p>
+  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-accent hover:underline inline-flex items-center gap-0.5"
+    >
+      {children}
+    </a>
+  ),
+  code: ({
+    className,
+    children,
+    ...props
+  }: {
+    className?: string;
+    children?: React.ReactNode;
+  }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-[13px] font-mono">
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className={cn("text-[13px]", className)} {...props}>
+        {children}
+      </code>
+    );
+  },
+};
+
+// ─── Component ───────────────────────────────────────────
 
 interface MessageBubbleProps {
   message: ChatMessage;
   isLast: boolean;
 }
 
-export function MessageBubble({ message, isLast }: MessageBubbleProps) {
+export function MessageBubble({ message }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
+  const { openArtifact } = useArtifactStore();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
 
@@ -24,6 +125,20 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Parse artifacts from assistant messages
+  const parts = isAssistant ? parseContentWithArtifacts(message.content) : [];
+  const hasArtifacts = parts.some((p) => p.type === "artifact");
+
+  const handleOpenArtifact = (part: ParsedPart) => {
+    openArtifact({
+      id: crypto.randomUUID(),
+      type: (part.artifactType || "DOCUMENT") as ArtifactType,
+      title: part.title || "Документ",
+      content: part.content,
+      version: 1,
+    });
   };
 
   return (
@@ -102,31 +217,50 @@ export function MessageBubble({ message, isLast }: MessageBubbleProps) {
         >
           {isAssistant ? (
             <div className="prose-leema">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => (
-                    <p className="mb-2 last:mb-0">{children}</p>
-                  ),
-                  code: ({ className, children, ...props }) => {
-                    const isInline = !className;
-                    if (isInline) {
-                      return (
-                        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-[13px] font-mono">
-                          {children}
-                        </code>
-                      );
-                    }
-                    return (
-                      <code className={cn("text-[13px]", className)} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
+              {hasArtifacts ? (
+                // Render with inline artifact cards
+                parts.map((part, i) =>
+                  part.type === "text" ? (
+                    part.content.trim() ? (
+                      <ReactMarkdown
+                        key={i}
+                        remarkPlugins={[remarkGfm]}
+                        components={markdownComponents}
+                      >
+                        {part.content}
+                      </ReactMarkdown>
+                    ) : null
+                  ) : (
+                    <button
+                      key={i}
+                      onClick={() => handleOpenArtifact(part)}
+                      className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {part.title}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
+                            part.artifactType}{" "}
+                          &middot; Нажмите чтобы открыть
+                        </p>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
+                    </button>
+                  )
+                )
+              ) : (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={markdownComponents}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              )}
             </div>
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>

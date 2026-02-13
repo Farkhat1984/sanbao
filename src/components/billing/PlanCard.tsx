@@ -1,4 +1,4 @@
-import { Check, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers } from "lucide-react";
+import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -10,28 +10,42 @@ interface PlanCardProps {
     price: string;
     messagesPerDay: number;
     tokensPerMessage: number;
+    tokensPerMonth: number;
     requestsPerMinute: number;
     contextWindowSize: number;
     maxConversations: number;
+    maxAgents: number;
+    documentsPerMonth: number;
     canUseAdvancedTools: boolean;
+    canUseReasoning: boolean;
+    canUseRag: boolean;
+    canUseGraph: boolean;
     canChooseProvider: boolean;
     highlighted?: boolean;
   };
   isCurrent: boolean;
 }
 
-export function PlanCard({ plan, isCurrent }: PlanCardProps) {
-  const formatLimit = (value: number, unit: string) =>
-    value === 0 ? "Безлимит" : `${value.toLocaleString("ru-RU")} ${unit}`;
+function formatLimit(value: number, unit: string) {
+  if (value <= 0) return "Безлимит";
+  return `${value.toLocaleString("ru-RU")} ${unit}`;
+}
 
-  const features = [
+function formatTokens(value: number) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+  return value.toString();
+}
+
+export function PlanCard({ plan, isCurrent }: PlanCardProps) {
+  const limits = [
     {
       icon: MessageSquare,
       label: formatLimit(plan.messagesPerDay, "сообщ./день"),
     },
     {
       icon: Cpu,
-      label: `${(plan.tokensPerMessage / 1024).toFixed(0)}K токенов/сообщ.`,
+      label: `${formatTokens(plan.tokensPerMonth)} токенов/мес`,
     },
     {
       icon: Zap,
@@ -47,9 +61,29 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
     },
   ];
 
-  const booleanFeatures = [
-    { enabled: plan.canUseAdvancedTools, label: "Продвинутые инструменты" },
-    { enabled: plan.canChooseProvider, label: "Выбор AI-провайдера" },
+  const features = [
+    { enabled: plan.canUseReasoning, label: "Рассуждения", icon: Brain },
+    {
+      enabled: plan.documentsPerMonth !== 0,
+      label: plan.documentsPerMonth < 0
+        ? "Документы: безлимит"
+        : plan.documentsPerMonth > 0
+          ? `Документы: ${plan.documentsPerMonth}/мес`
+          : "Создание документов",
+      icon: FileText,
+    },
+    {
+      enabled: plan.maxAgents !== 0,
+      label: plan.maxAgents < 0
+        ? "Агенты: безлимит"
+        : plan.maxAgents > 0
+          ? `Агенты: до ${plan.maxAgents}`
+          : "Кастомные агенты",
+      icon: Bot,
+    },
+    { enabled: plan.canUseRag, label: "RAG (база знаний)", icon: Database },
+    { enabled: plan.canUseGraph, label: "Граф знаний", icon: Share2 },
+    { enabled: plan.canChooseProvider, label: "Выбор AI-провайдера", icon: Sparkles },
   ];
 
   return (
@@ -82,21 +116,21 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
         )}
       </div>
 
-      <div className="space-y-2.5 flex-1">
-        {features.map((f, i) => (
+      <div className="space-y-2 flex-1">
+        {limits.map((f, i) => (
           <div key={i} className="flex items-center gap-2">
             <f.icon className="h-3.5 w-3.5 text-text-muted shrink-0" />
             <span className="text-sm text-text-secondary">{f.label}</span>
           </div>
         ))}
-        {booleanFeatures.map((f, i) => (
-          <div key={`b-${i}`} className="flex items-center gap-2">
-            <Check
-              className={cn(
-                "h-3.5 w-3.5 shrink-0",
-                f.enabled ? "text-success" : "text-text-muted opacity-40"
-              )}
-            />
+        <div className="h-px bg-border my-2" />
+        {features.map((f, i) => (
+          <div key={`f-${i}`} className="flex items-center gap-2">
+            {f.enabled ? (
+              <Check className="h-3.5 w-3.5 text-success shrink-0" />
+            ) : (
+              <X className="h-3.5 w-3.5 text-text-muted opacity-40 shrink-0" />
+            )}
             <span
               className={cn(
                 "text-sm",

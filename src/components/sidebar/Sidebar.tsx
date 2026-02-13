@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   Plus,
   Search,
@@ -21,9 +22,20 @@ import { useRouter } from "next/navigation";
 
 export function Sidebar() {
   const { close, searchQuery, setSearchQuery } = useSidebarStore();
-  const { setActiveConversation, setMessages } = useChatStore();
+  const { setActiveConversation, setMessages, setConversations } = useChatStore();
   const { data: session } = useSession();
   const router = useRouter();
+
+  // Load conversations from DB on mount
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/conversations")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setConversations(data);
+      })
+      .catch(() => {});
+  }, [session?.user, setConversations]);
 
   const handleNewChat = () => {
     setActiveConversation(null);

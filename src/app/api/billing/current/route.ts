@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { plan, usage, subscription } = await getUserPlanAndUsage(
+  const { plan, usage, subscription, monthlyUsage } = await getUserPlanAndUsage(
     session.user.id
   );
 
@@ -21,10 +21,16 @@ export async function GET() {
           price: plan.price,
           messagesPerDay: plan.messagesPerDay,
           tokensPerMessage: plan.tokensPerMessage,
+          tokensPerMonth: plan.tokensPerMonth,
           requestsPerMinute: plan.requestsPerMinute,
           contextWindowSize: plan.contextWindowSize,
           maxConversations: plan.maxConversations,
+          maxAgents: plan.maxAgents,
+          documentsPerMonth: plan.documentsPerMonth,
           canUseAdvancedTools: plan.canUseAdvancedTools,
+          canUseReasoning: plan.canUseReasoning,
+          canUseRag: plan.canUseRag,
+          canUseGraph: plan.canUseGraph,
           canChooseProvider: plan.canChooseProvider,
         }
       : null,
@@ -37,6 +43,10 @@ export async function GET() {
     usage: {
       messageCount: usage?.messageCount || 0,
       tokenCount: usage?.tokenCount || 0,
+    },
+    monthlyUsage: {
+      tokenCount: monthlyUsage.tokenCount,
+      messageCount: monthlyUsage.messageCount,
     },
   });
 }

@@ -29,10 +29,16 @@ interface PlanInfo {
   price: string;
   messagesPerDay: number;
   tokensPerMessage: number;
+  tokensPerMonth: number;
   requestsPerMinute: number;
   contextWindowSize: number;
   maxConversations: number;
+  maxAgents: number;
+  documentsPerMonth: number;
   canUseAdvancedTools: boolean;
+  canUseReasoning: boolean;
+  canUseRag: boolean;
+  canUseGraph: boolean;
   canChooseProvider: boolean;
   highlighted?: boolean;
 }
@@ -40,6 +46,7 @@ interface PlanInfo {
 interface BillingData {
   plan: PlanInfo | null;
   usage: { messageCount: number; tokenCount: number };
+  monthlyUsage: { tokenCount: number; messageCount: number };
   subscription: { grantedAt: string; expiresAt: string | null } | null;
 }
 
@@ -72,6 +79,7 @@ export default function SettingsPage() {
 
   const currentPlan = billing?.plan;
   const usage = billing?.usage;
+  const monthlyUsage = billing?.monthlyUsage;
 
   return (
     <div className="h-full">
@@ -142,12 +150,9 @@ export default function SettingsPage() {
                   max={currentPlan?.messagesPerDay || 20}
                 />
                 <UsageBar
-                  label="Токены за сегодня"
-                  current={usage?.tokenCount || 0}
-                  max={
-                    (currentPlan?.tokensPerMessage || 4096) *
-                    (currentPlan?.messagesPerDay || 20) || 0
-                  }
+                  label="Токены за месяц"
+                  current={monthlyUsage?.tokenCount || 0}
+                  max={currentPlan?.tokensPerMonth || 100000}
                   color="bg-legal-ref"
                 />
               </div>
