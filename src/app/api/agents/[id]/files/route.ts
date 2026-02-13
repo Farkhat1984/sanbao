@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/lib/constants";
+import { parseFileToText } from "@/lib/parse-file";
 
 export async function POST(
   req: Request,
@@ -61,10 +62,14 @@ export async function POST(
 
   const fileUrl = `/uploads/agents/${id}/${uniqueName}`;
 
-  // Extract text for text-based files
+  // Extract text from all supported file types
   let extractedText: string | null = null;
-  if (file.type === "text/plain" || file.name.endsWith(".md")) {
-    extractedText = buffer.toString("utf-8");
+  if (!file.type.startsWith("image/")) {
+    try {
+      extractedText = await parseFileToText(buffer, file.name, file.type);
+    } catch {
+      // Non-critical: file will be saved but without extracted text
+    }
   }
 
   const agentFile = await prisma.agentFile.create({

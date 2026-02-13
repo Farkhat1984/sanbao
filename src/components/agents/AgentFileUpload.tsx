@@ -128,7 +128,7 @@ export function AgentFileUpload({
           type="file"
           onChange={handleChange}
           className="hidden"
-          accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.webp"
         />
         {uploading ? (
           <Loader2 className="h-8 w-8 text-accent mx-auto mb-2 animate-spin" />
@@ -141,7 +141,7 @@ export function AgentFileUpload({
             : "Перетащите файл или нажмите для выбора"}
         </p>
         <p className="text-xs text-text-muted mt-1">
-          PDF, DOCX, TXT, MD, изображения до 10MB
+          PDF, DOCX, XLSX, TXT, MD, изображения до 10MB
         </p>
       </div>
 

@@ -25,58 +25,11 @@ const SYSTEM_PROMPT = `Ты — Leema, профессиональный юрид
 
 const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
 
-// ─── Web Search ──────────────────────────────────────────
+// ─── Moonshot built-in web search tool ───────────────────
 
-async function executeWebSearch(query: string): Promise<string> {
-  try {
-    const response = await fetch(
-      `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
-    );
-    const data = await response.json();
-    let results = "";
-
-    if (data.Abstract) {
-      results += `**${data.AbstractSource}:** ${data.Abstract}\n\n`;
-    }
-    if (data.Answer) {
-      results += `**Ответ:** ${data.Answer}\n\n`;
-    }
-    if (data.RelatedTopics?.length > 0) {
-      results += "**Связанные результаты:**\n";
-      for (const topic of data.RelatedTopics.slice(0, 8)) {
-        if (topic.Text) {
-          results += `- ${topic.Text}${topic.FirstURL ? ` (${topic.FirstURL})` : ""}\n`;
-        }
-        if (topic.Topics) {
-          for (const sub of topic.Topics.slice(0, 3)) {
-            if (sub.Text) {
-              results += `  - ${sub.Text}${sub.FirstURL ? ` (${sub.FirstURL})` : ""}\n`;
-            }
-          }
-        }
-      }
-    }
-
-    return results || "По данному запросу не найдено конкретных результатов. Используй свои знания для ответа.";
-  } catch {
-    return "Поиск временно недоступен. Ответь на основе своих знаний.";
-  }
-}
-
-const WEB_SEARCH_TOOL_DEF = {
-  type: "function" as const,
-  function: {
-    name: "web_search",
-    description:
-      "Search the web for current information. Use this to find current legal news, court decisions, law amendments, regulatory changes, and other up-to-date information.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "The search query" },
-      },
-      required: ["query"],
-    },
-  },
+const WEB_SEARCH_BUILTIN = {
+  type: "builtin_function" as const,
+  function: { name: "$web_search" },
 };
 
 // ─── SSE Parser ──────────────────────────────────────────
@@ -187,9 +140,11 @@ function streamMoonshot(
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const maxSteps = webSearchEnabled ? 5 : 1;
+        const currentMessages = [...apiMessages];
+        let searchNotified = false;
 
-        for (let step = 0; step < maxSteps; step++) {
+        // Tool-call loop: max 3 iterations to prevent infinite loops
+        for (let turn = 0; turn < 3; turn++) {
           const response = await fetch(MOONSHOT_URL, {
             method: "POST",
             headers: {
@@ -198,12 +153,14 @@ function streamMoonshot(
             },
             body: JSON.stringify({
               model: "kimi-k2.5",
-              messages: apiMessages,
+              messages: currentMessages,
               max_tokens: maxTokens,
               temperature: thinkingEnabled ? 1.0 : 0.6,
               top_p: 0.95,
               stream: true,
-              ...(webSearchEnabled ? { tools: [WEB_SEARCH_TOOL_DEF] } : {}),
+              ...(webSearchEnabled
+                ? { tools: [WEB_SEARCH_BUILTIN] }
+                : {}),
               ...(!thinkingEnabled
                 ? { thinking: { type: "disabled" } }
                 : {}),
@@ -222,7 +179,7 @@ function streamMoonshot(
             controller.enqueue(
               encoder.encode(JSON.stringify({ t: "e", v: errMsg }) + "\n")
             );
-            break;
+            return;
           }
 
           if (!response.body) {
@@ -231,16 +188,13 @@ function streamMoonshot(
                 JSON.stringify({ t: "e", v: "Пустой ответ от API" }) + "\n"
               )
             );
-            break;
+            return;
           }
 
-          // Parse SSE stream
-          const toolCalls: Record<
-            number,
-            { id: string; name: string; arguments: string }
-          > = {};
-          let hasToolCalls = false;
-          let assistantContent = "";
+          // Collect tool calls from this turn
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const toolCallMap: Record<number, { id: string; type: string; function: { name: string; arguments: string } }> = {};
+          let hasToolCallFinish = false;
 
           for await (const chunk of parseSSEStream(response.body)) {
             const choice = chunk.choices?.[0];
@@ -248,7 +202,43 @@ function streamMoonshot(
 
             const delta = choice.delta;
 
-            // Stream reasoning (only if thinking enabled)
+            // Accumulate tool_calls (streamed in parts)
+            if (delta?.tool_calls) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              for (const tc of delta.tool_calls as any[]) {
+                const idx = tc.index ?? 0;
+                if (tc.id) {
+                  // First chunk of this tool call
+                  toolCallMap[idx] = {
+                    id: tc.id,
+                    type: tc.type || "builtin_function",
+                    function: {
+                      name: tc.function?.name || "",
+                      arguments: tc.function?.arguments || "",
+                    },
+                  };
+                } else if (tc.function?.arguments && toolCallMap[idx]) {
+                  // Continuation — append arguments
+                  toolCallMap[idx].function.arguments += tc.function.arguments;
+                }
+              }
+
+              // Notify frontend about search
+              if (!searchNotified) {
+                searchNotified = true;
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ t: "s", v: "searching" }) + "\n"
+                  )
+                );
+              }
+            }
+
+            if (choice.finish_reason === "tool_calls") {
+              hasToolCallFinish = true;
+            }
+
+            // Stream reasoning + content to frontend
             if (thinkingEnabled && delta?.reasoning_content) {
               controller.enqueue(
                 encoder.encode(
@@ -257,72 +247,39 @@ function streamMoonshot(
               );
             }
 
-            // Stream content
             if (delta?.content) {
-              assistantContent += delta.content;
               controller.enqueue(
                 encoder.encode(
                   JSON.stringify({ t: "c", v: delta.content }) + "\n"
                 )
               );
             }
-
-            // Accumulate tool calls
-            if (delta?.tool_calls) {
-              hasToolCalls = true;
-              for (const tc of delta.tool_calls) {
-                const idx = tc.index ?? 0;
-                if (!toolCalls[idx]) {
-                  toolCalls[idx] = { id: "", name: "", arguments: "" };
-                }
-                if (tc.id) toolCalls[idx].id = tc.id;
-                if (tc.function?.name) toolCalls[idx].name += tc.function.name;
-                if (tc.function?.arguments)
-                  toolCalls[idx].arguments += tc.function.arguments;
-              }
-            }
           }
 
-          // If no tool calls, we're done
-          if (!hasToolCalls) break;
+          // If model finished with tool_calls, send results back and loop
+          const collectedCalls = Object.values(toolCallMap);
+          if (hasToolCallFinish && collectedCalls.length > 0) {
+            // Add assistant message with tool_calls
+            currentMessages.push({
+              role: "assistant",
+              tool_calls: collectedCalls,
+            });
 
-          // Execute tool calls
-          const toolCallsArray = Object.values(toolCalls).map((tc) => ({
-            id: tc.id,
-            type: "function" as const,
-            function: { name: tc.name, arguments: tc.arguments },
-          }));
-
-          apiMessages.push({
-            role: "assistant",
-            content: assistantContent || null,
-            tool_calls: toolCallsArray,
-          });
-
-          for (const tc of Object.values(toolCalls)) {
-            if (tc.name === "web_search") {
-              try {
-                const args = JSON.parse(tc.arguments);
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: args.query }) + "\n"
-                  )
-                );
-                const result = await executeWebSearch(args.query);
-                apiMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: result,
-                });
-              } catch {
-                apiMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: "Ошибка выполнения поиска.",
-                });
-              }
+            // Add tool result messages
+            for (const tc of collectedCalls) {
+              currentMessages.push({
+                role: "tool",
+                tool_call_id: tc.id,
+                content: tc.function.arguments,
+              });
             }
+
+            // Continue to next iteration (second API call)
+            continue;
           }
+
+          // No tool calls — we're done
+          break;
         }
       } catch {
         controller.enqueue(
@@ -411,7 +368,7 @@ export async function POST(req: Request) {
 
   if (webSearchEnabled) {
     systemPrompt +=
-      "\n\nУ тебя есть доступ к веб-поиску. Используй инструмент web_search когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.";
+      "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.";
   }
 
   // Process messages

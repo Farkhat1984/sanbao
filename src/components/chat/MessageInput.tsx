@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Send,
   StopCircle,
@@ -9,22 +9,19 @@ import {
   Wrench,
   Globe,
   Brain,
+  Mic,
   X,
   FileText,
   Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { cn } from "@/lib/utils";
 
-const CHAT_ACCEPTED_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "text/plain",
-];
-const CHAT_ACCEPTED_EXTENSIONS = ".png,.jpg,.jpeg,.webp,.txt,.md";
+const CHAT_ACCEPTED_EXTENSIONS =
+  ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls";
 const CHAT_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 interface AttachedFile {
@@ -35,6 +32,39 @@ interface AttachedFile {
   base64?: string;
   preview?: string;
   textContent?: string;
+  isParsing?: boolean;
+}
+
+// ─── SpeechRecognition type for TS ──────────────────────
+
+type SpeechRecognitionType = typeof window extends { SpeechRecognition: infer T }
+  ? T
+  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any;
+
+function getSpeechRecognition(): SpeechRecognitionType | null {
+  if (typeof window === "undefined") return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+}
+
+// ─── Document type helpers ──────────────────────────────
+
+const DOCUMENT_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+
+const DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"];
+
+function isDocumentFile(file: File): boolean {
+  if (DOCUMENT_TYPES.includes(file.type)) return true;
+  return DOCUMENT_EXTENSIONS.some((ext) =>
+    file.name.toLowerCase().endsWith(ext)
+  );
 }
 
 export function MessageInput() {
@@ -43,9 +73,12 @@ export function MessageInput() {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   const {
     messages,
@@ -67,6 +100,75 @@ export function MessageInput() {
     ...(webSearchEnabled ? ["search"] : []),
   ];
 
+  // Detect speech support on client only (avoid hydration mismatch)
+  const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
+  useEffect(() => {
+    setHasSpeechSupport(!!getSpeechRecognition());
+  }, []);
+
+  // Cleanup recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  // ─── Voice recording ──────────────────────────────────────
+
+  const startRecording = useCallback(() => {
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ru-RU";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    let finalTranscript = "";
+
+    recognition.onresult = (event: { resultIndex: number; results: { length: number; [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } } }) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interim = transcript;
+        }
+      }
+      setInput(finalTranscript + interim);
+    };
+
+    recognition.onerror = () => {
+      setIsRecording(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      recognitionRef.current = null;
+      // Auto-resize textarea
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height =
+          Math.min(textareaRef.current.scrollHeight, 200) + "px";
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+  }, []);
+
   // ─── File handling ───────────────────────────────────────
 
   const handleFileSelect = useCallback(
@@ -83,10 +185,11 @@ export function MessageInput() {
         const isImage = file.type.startsWith("image/");
         const isText =
           file.type === "text/plain" || file.name.endsWith(".md");
+        const isDocument = isDocumentFile(file);
 
-        if (!isImage && !isText) {
+        if (!isImage && !isText && !isDocument) {
           alert(
-            `Формат "${file.name}" не поддерживается.\nПоддерживаются: PNG, JPG, WebP, TXT, MD`
+            `Формат "${file.name}" не поддерживается.\nПоддерживаются: PNG, JPG, WebP, TXT, MD, PDF, DOCX, XLSX`
           );
           continue;
         }
@@ -101,16 +204,47 @@ export function MessageInput() {
         if (isImage) {
           const dataUrl = await readFileAsDataUrl(file);
           attached.preview = dataUrl;
-          // Extract base64 from data URL
           attached.base64 = dataUrl.split(",")[1];
-        } else {
+          setAttachedFiles((prev) => [...prev, attached]);
+        } else if (isText) {
           attached.textContent = await readFileAsText(file);
-        }
+          setAttachedFiles((prev) => [...prev, attached]);
+        } else if (isDocument) {
+          // Parse document server-side
+          attached.isParsing = true;
+          setAttachedFiles((prev) => [...prev, attached]);
 
-        setAttachedFiles((prev) => [...prev, attached]);
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await fetch("/api/files/parse", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({ error: "Ошибка" }));
+              throw new Error(err.error || "Не удалось обработать файл");
+            }
+
+            const { text } = await response.json();
+            setAttachedFiles((prev) =>
+              prev.map((f) =>
+                f.id === attached.id
+                  ? { ...f, textContent: text, isParsing: false }
+                  : f
+              )
+            );
+          } catch (err) {
+            alert(
+              `Ошибка при обработке "${file.name}": ${err instanceof Error ? err.message : "Неизвестная ошибка"}`
+            );
+            setAttachedFiles((prev) => prev.filter((f) => f.id !== attached.id));
+          }
+        }
       }
 
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -127,6 +261,8 @@ export function MessageInput() {
   const handleSubmit = useCallback(async () => {
     const trimmed = input.trim();
     if ((!trimmed && attachedFiles.length === 0) || isStreaming) return;
+    // Don't submit while files are parsing
+    if (attachedFiles.some((f) => f.isParsing)) return;
 
     const userMessage = {
       id: crypto.randomUUID(),
@@ -152,7 +288,6 @@ export function MessageInput() {
         content: m.content,
       }));
 
-      // Prepare attachments for API
       const attachmentsPayload = filesToSend.map((f) => ({
         name: f.name,
         type: f.type,
@@ -221,6 +356,9 @@ export function MessageInput() {
                 fullReasoning += data.v;
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
+              case "s": // web search status
+                setToolWorking(true, "Поиск: веб");
+                break;
               case "c": // content
                 if (!fullContent) {
                   setStreamingPhase("answering");
@@ -231,9 +369,6 @@ export function MessageInput() {
                   fullContent,
                   fullReasoning || undefined
                 );
-                break;
-              case "s": // web search status
-                setToolWorking(true, `Поиск: ${data.v}`);
                 break;
               case "e": // error
                 if (!fullContent) {
@@ -310,6 +445,9 @@ export function MessageInput() {
     fileInputRef.current?.click();
   };
 
+  const hasContent = input.trim() || attachedFiles.length > 0;
+  const hasParsing = attachedFiles.some((f) => f.isParsing);
+
   return (
     <div className="space-y-2">
       {/* Hidden file input */}
@@ -372,7 +510,11 @@ export function MessageInput() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-alt border border-border">
-                    <FileText className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                    {file.isParsing ? (
+                      <Loader2 className="h-3.5 w-3.5 text-accent shrink-0 animate-spin" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                    )}
                     <span className="text-xs text-text-primary truncate max-w-[120px]">
                       {file.name}
                     </span>
@@ -439,7 +581,7 @@ export function MessageInput() {
                         <div className="flex-1 text-left">
                           <span>Прикрепить файл</span>
                           <p className="text-[10px] text-text-muted mt-0.5">
-                            PNG, JPG, WebP, TXT, MD
+                            PDF, DOCX, XLSX, PNG, TXT
                           </p>
                         </div>
                       </button>
@@ -548,12 +690,17 @@ export function MessageInput() {
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder="Задайте юридический вопрос..."
+            placeholder={
+              isRecording ? "Говорите..." : "Задайте юридический вопрос..."
+            }
             rows={1}
-            className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none leading-relaxed max-h-[200px] py-1"
+            className={cn(
+              "flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none leading-relaxed max-h-[200px] py-1",
+              isRecording && "placeholder:text-red-400"
+            )}
           />
 
-          {/* Send / Stop */}
+          {/* Send / Stop / Mic button */}
           <AnimatePresence mode="wait">
             {isStreaming ? (
               <motion.button
@@ -566,20 +713,62 @@ export function MessageInput() {
               >
                 <StopCircle className="h-4 w-4" />
               </motion.button>
-            ) : (
+            ) : isRecording ? (
+              <motion.button
+                key="mic-active"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                onClick={stopRecording}
+                className="relative h-9 w-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
+              >
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-red-500"
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+                <Mic className="h-4 w-4 relative z-10" />
+              </motion.button>
+            ) : hasContent ? (
               <motion.button
                 key="send"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={handleSubmit}
-                disabled={!input.trim() && attachedFiles.length === 0}
+                disabled={hasParsing}
                 className={cn(
                   "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer",
-                  input.trim() || attachedFiles.length > 0
-                    ? "bg-gradient-to-r from-accent to-legal-ref text-white shadow-md hover:shadow-lg"
-                    : "bg-surface-alt text-text-muted"
+                  hasParsing
+                    ? "bg-surface-alt text-text-muted"
+                    : "bg-gradient-to-r from-accent to-legal-ref text-white shadow-md hover:shadow-lg"
                 )}
+              >
+                {hasParsing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </motion.button>
+            ) : hasSpeechSupport ? (
+              <motion.button
+                key="mic"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                onClick={startRecording}
+                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer bg-surface-alt text-text-muted hover:text-text-primary hover:bg-surface-alt/80"
+              >
+                <Mic className="h-4 w-4" />
+              </motion.button>
+            ) : (
+              <motion.button
+                key="send-disabled"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                disabled
+                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 bg-surface-alt text-text-muted"
               >
                 <Send className="h-4 w-4" />
               </motion.button>
@@ -590,7 +779,9 @@ export function MessageInput() {
         {/* Bottom hint */}
         <div className="px-5 pb-2 flex items-center justify-between">
           <span className="text-[10px] text-text-muted">
-            Enter — отправить, Shift+Enter — новая строка
+            {isRecording
+              ? "Нажмите на микрофон чтобы остановить"
+              : "Enter — отправить, Shift+Enter — новая строка"}
           </span>
           <span className="text-[10px] text-text-muted">
             Kimi K2.5 · Leema может ошибаться
