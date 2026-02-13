@@ -62,6 +62,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   conversations Conversation[]
+  subscription  Subscription?
+  dailyUsage    DailyUsage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -150,6 +152,62 @@ model Attachment {
   createdAt DateTime @default(now())
 
   @@index([conversationId])
+}
+
+// ─── Billing models ─────────────────────────────────────
+
+model Plan {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  description         String?  @db.Text
+  price               String   @default("0")
+  messagesPerDay      Int      @default(20)
+  tokensPerMessage    Int      @default(4096)
+  requestsPerMinute   Int      @default(5)
+  contextWindowSize   Int      @default(8192)
+  maxConversations    Int      @default(10)
+  canUseAdvancedTools Boolean  @default(false)
+  canChooseProvider   Boolean  @default(false)
+  isDefault           Boolean  @default(false)
+  sortOrder           Int      @default(0)
+  highlighted         Boolean  @default(false)
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  planId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  grantedBy String?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+}
+
+model DailyUsage {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  messageCount Int @default(0)
+  tokenCount   Int @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
 
 // ─── Enums ───────────────────────────────────────────────

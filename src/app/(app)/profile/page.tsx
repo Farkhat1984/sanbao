@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -8,7 +10,17 @@ import { Mail, Calendar, Shield, Sparkles } from "lucide-react";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const user = session?.user;
+  const [planName, setPlanName] = useState("Free");
+
+  useEffect(() => {
+    fetch("/api/billing/current")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.plan?.name) setPlanName(data.plan.name);
+      });
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -32,7 +44,7 @@ export default function ProfilePage() {
             </div>
             <Badge variant="accent" className="ml-auto">
               <Sparkles className="h-3 w-3" />
-              Free
+              {planName}
             </Badge>
           </div>
 
@@ -52,7 +64,7 @@ export default function ProfilePage() {
                 <span className="text-xs">Роль</span>
               </div>
               <span className="text-sm font-medium text-text-primary">
-                Пользователь
+                {user?.role === "ADMIN" ? "Администратор" : "Пользователь"}
               </span>
             </div>
           </div>
@@ -65,8 +77,12 @@ export default function ProfilePage() {
             Расширенные юридические инструменты, приоритетный доступ к AI,
             экспорт в DOCX/PDF и безлимитная история.
           </p>
-          <Button variant="secondary" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
-            Узнать больше
+          <Button
+            variant="secondary"
+            className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+            onClick={() => router.push("/billing")}
+          >
+            Посмотреть тарифы
           </Button>
         </div>
       </div>
