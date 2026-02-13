@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Leema — Юридический AI-ассистент
 
-## Getting Started
+AI-платформа для работы с нормативно-правовыми актами. Собственный движок понимает связи между статьями, проверяет актуальность и помогает создавать юридические документы.
 
-First, run the development server:
+## Стек
+
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS v4** — дизайн-система Soft Corporate Minimalism
+- **Vercel AI SDK** — стриминг ответов (OpenAI / Anthropic)
+- **NextAuth.js v5** — аутентификация (Google, GitHub, email)
+- **PostgreSQL + Prisma** — хранение данных
+- **Zustand** — клиентский стейт
+- **Framer Motion** — анимации
+- **Tiptap** — редактор документов
+
+## Запуск
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env        # заполнить ключи
+npx prisma db push           # создать таблицы
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Переменные окружения (.env)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Переменная | Описание |
+|------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Секрет NextAuth |
+| `AUTH_GOOGLE_ID/SECRET` | Google OAuth (опционально) |
+| `AUTH_GITHUB_ID/SECRET` | GitHub OAuth (опционально) |
+| `OPENAI_API_KEY` | Ключ OpenAI |
+| `ANTHROPIC_API_KEY` | Ключ Anthropic |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Структура
 
-## Learn More
+```
+src/
+├── app/
+│   ├── (app)/          # Основное приложение (chat, profile, settings)
+│   ├── (auth)/         # Логин, регистрация
+│   └── api/            # Chat streaming, conversations CRUD, auth
+├── components/
+│   ├── ui/             # Button, Avatar, Badge, Tooltip, Modal, Skeleton
+│   ├── chat/           # ChatArea, MessageBubble, MessageInput, LegalReference
+│   ├── sidebar/        # Sidebar, ConversationList, ConversationItem
+│   ├── artifacts/      # ArtifactPanel, DocumentEditor, DocumentPreview
+│   └── legal-tools/    # ToolsPanel (договоры, иски, жалобы, анализ НПА)
+├── stores/             # Zustand (chat, sidebar, artifact)
+├── lib/                # Prisma, auth, utils, constants
+└── types/              # TypeScript-типы
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Функционал
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Чат с AI — стриминг, markdown, подсветка кода
+- Кликабельные ссылки на статьи НПА с попапом текста и статусом актуальности
+- Панель артефактов — просмотр / редактирование / исходник документов
+- 6 юридических инструментов — договоры, иски, жалобы, поиск НПА, проверка актуальности, консультации
+- История чатов с группировкой по датам и поиском
+- Светлая и тёмная тема
+- Загрузка файлов (PDF, DOCX, изображения)
+- Профиль и настройки с управлением API-ключами
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Дизайн
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Стиль: **Soft Corporate Minimalism** — подробности в [STYLEGUIDE.md](STYLEGUIDE.md)

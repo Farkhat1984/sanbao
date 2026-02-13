@@ -1,26 +1,361 @@
 @import "tailwindcss";
 
+/* ─── Leema Design System ─────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background */
+  --bg: #FAFBFD;
+  --bg-surface: #FFFFFF;
+  --bg-surface-alt: #F3F5F9;
+  --bg-surface-hover: #EDF0F5;
+  --bg-overlay: rgba(250, 251, 253, 0.85);
+
+  /* Borders */
+  --border: #E8ECF2;
+  --border-hover: #D0D7E2;
+  --border-focus: #4F6EF7;
+
+  /* Text */
+  --text-primary: #1A2138;
+  --text-secondary: #5C6B82;
+  --text-muted: #8E99AB;
+  --text-inverse: #FFFFFF;
+
+  /* Accent — Indigo Blue */
+  --accent: #4F6EF7;
+  --accent-hover: #3B57D9;
+  --accent-light: #EEF1FE;
+  --accent-gradient: linear-gradient(135deg, #4F6EF7 0%, #7C3AED 100%);
+
+  /* Legal Reference — Purple */
+  --legal-ref: #7C3AED;
+  --legal-ref-bg: #F5F0FF;
+  --legal-ref-hover: #6D28D9;
+
+  /* Status */
+  --success: #22C55E;
+  --success-light: #F0FDF4;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --error: #EF4444;
+  --error-light: #FEF2F2;
+  --info: #3B82F6;
+  --info-light: #EFF6FF;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 33, 56, 0.04);
+  --shadow-md: 0 4px 12px rgba(26, 33, 56, 0.06);
+  --shadow-lg: 0 8px 32px rgba(26, 33, 56, 0.08);
+  --shadow-xl: 0 16px 48px rgba(26, 33, 56, 0.10);
+  --shadow-input: 0 4px 24px rgba(79, 110, 247, 0.08);
+  --shadow-input-focus: 0 4px 32px rgba(79, 110, 247, 0.15);
+
+  /* Sidebar */
+  --sidebar-bg: rgba(243, 245, 249, 0.75);
+  --sidebar-width: 280px;
+  --sidebar-collapsed: 64px;
+
+  /* Artifact Panel */
+  --artifact-width: 480px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --radius-input: 32px;
+
+  /* Transitions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }
+
+.dark {
+  --bg: #0F1219;
+  --bg-surface: #181D27;
+  --bg-surface-alt: #1E2433;
+  --bg-surface-hover: #252C3D;
+  --bg-overlay: rgba(15, 18, 25, 0.85);
+
+  --border: #2A3144;
+  --border-hover: #3A4560;
+  --border-focus: #6B8AFF;
+
+  --text-primary: #E8ECF2;
+  --text-secondary: #8E99AB;
+  --text-muted: #5C6B82;
+  --text-inverse: #0F1219;
+
+  --accent: #6B8AFF;
+  --accent-hover: #8BA3FF;
+  --accent-light: #1A2444;
+  --accent-gradient: linear-gradient(135deg, #6B8AFF 0%, #A78BFA 100%);
+
+  --legal-ref: #A78BFA;
+  --legal-ref-bg: #1E1533;
+  --legal-ref-hover: #C4B5FD;
+
+  --success-light: #052E16;
+  --warning-light: #1C1301;
+  --error-light: #2D0808;
+  --info-light: #0C1929;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --shadow-input: 0 4px 24px rgba(107, 138, 255, 0.1);
+  --shadow-input-focus: 0 4px 32px rgba(107, 138, 255, 0.2);
+
+  --sidebar-bg: rgba(30, 36, 51, 0.75);
+}
+
+/* ─── Tailwind Theme Tokens ───────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--bg-surface);
+  --color-surface-alt: var(--bg-surface-alt);
+  --color-surface-hover: var(--bg-surface-hover);
+
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+
+  --color-legal-ref: var(--legal-ref);
+  --color-legal-ref-bg: var(--legal-ref-bg);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ─────────────────────────────────────── */
+
+html[data-scroll-behavior="smooth"] {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Custom Scrollbar ────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* ─── Selection ───────────────────────────────────────── */
+
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
+/* ─── Focus Ring ──────────────────────────────────────── */
+
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+/* ─── Glassmorphism ───────────────────────────────────── */
+
+.glass {
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ─── Gradient Border (for input focus) ───────────────── */
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: var(--accent-gradient);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-smooth);
+  pointer-events: none;
+}
+
+.gradient-border:focus-within::before {
+  opacity: 1;
+}
+
+/* ─── Animations ──────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-scales {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.15) rotate(-3deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-smooth) both;
+}
+
+.animate-slide-right {
+  animation: slideInRight var(--duration-slow) var(--ease-spring) both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft var(--duration-slow) var(--ease-spring) both;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--duration-normal) var(--ease-spring) both;
+}
+
+/* ─── Markdown Styles ─────────────────────────────────── */
+
+.prose-leema h1,
+.prose-leema h2,
+.prose-leema h3 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose-leema p {
+  margin-bottom: 0.75em;
+}
+
+.prose-leema code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--bg-surface-alt);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
+}
+
+.prose-leema pre {
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1em;
+  overflow-x: auto;
+}
+
+.prose-leema pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose-leema a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-leema a:hover {
+  color: var(--accent-hover);
+}
+
+.prose-leema ul,
+.prose-leema ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.prose-leema blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.prose-leema table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.prose-leema th,
+.prose-leema td {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.prose-leema th {
+  background: var(--bg-surface-alt);
+  font-weight: 600;
 }
