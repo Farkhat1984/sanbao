@@ -337,6 +337,16 @@ function streamMoonshot(
           let hasToolCallFinish = false;
 
           for await (const chunk of parseSSEStream(response.body)) {
+            // Handle SSE error events from Moonshot API
+            if (chunk.type === "error" || chunk.error) {
+              const errMsg = chunk.error?.message || "Ошибка API провайдера";
+              console.error(chunk);
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "e", v: errMsg }) + "\n")
+              );
+              return;
+            }
+
             const choice = chunk.choices?.[0];
             if (!choice) continue;
 
@@ -613,7 +623,7 @@ export async function POST(req: Request) {
     (usage?.messageCount ?? 0) >= plan.messagesPerDay
   ) {
     return NextResponse.json(
-      { error: "Достигнут дневной лимит сообщений", limit: plan.messagesPerDay },
+      { error: `Достигнут дневной лимит сообщений (${plan.messagesPerDay}). Перейдите на более объёмный тариф для увеличения лимита.`, limit: plan.messagesPerDay },
       { status: 429 }
     );
   }
@@ -624,7 +634,7 @@ export async function POST(req: Request) {
     monthlyUsage.tokenCount >= plan.tokensPerMonth
   ) {
     return NextResponse.json(
-      { error: "Достигнут месячный лимит токенов. Перейдите на более высокий тариф.", limit: plan.tokensPerMonth },
+      { error: "Достигнут месячный лимит токенов. Перейдите на более объёмный тариф для продолжения работы.", limit: plan.tokensPerMonth },
       { status: 429 }
     );
   }
@@ -640,7 +650,7 @@ export async function POST(req: Request) {
   // Reasoning access check
   if (thinkingEnabled && !plan.canUseReasoning) {
     return NextResponse.json(
-      { error: "Режим рассуждений доступен на тарифе Pro и выше" },
+      { error: "Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках." },
       { status: 403 }
     );
   }
@@ -648,7 +658,7 @@ export async function POST(req: Request) {
   // Web search access check
   if (webSearchEnabled && !plan.canUseAdvancedTools) {
     return NextResponse.json(
-      { error: "Веб-поиск доступен на тарифе Pro и выше" },
+      { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
       { status: 403 }
     );
   }
