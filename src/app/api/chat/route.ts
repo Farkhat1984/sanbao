@@ -4,8 +4,15 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getUserPlanAndUsage, incrementUsage } from "@/lib/usage";
+import { getUserPlanAndUsage, incrementUsage, incrementTokens } from "@/lib/usage";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
+import {
+  estimateTokens,
+  checkContextWindow,
+  splitMessagesForCompaction,
+  buildCompactionPrompt,
+  buildSystemPromptWithContext,
+} from "@/lib/context";
 
 const SYSTEM_PROMPT = `Ты — Leema, профессиональный юридический AI-ассистент. Ты работаешь с нормативно-правовыми актами, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы.
 
@@ -31,7 +38,35 @@ const SYSTEM_PROMPT = `Ты — Leema, профессиональный юрид
 </leema-doc>
 
 Доступные типы: CONTRACT (договор), CLAIM (иск), COMPLAINT (жалоба), DOCUMENT (документ/заявление), CODE (код), ANALYSIS (анализ).
-Перед и после тега можешь добавить пояснения обычным текстом.`;
+Перед и после тега можешь добавить пояснения обычным текстом.
+
+РЕЖИМ ПЛАНИРОВАНИЯ:
+Когда пользователь задаёт сложный запрос (составление документа, многоэтапный анализ, сравнение нескольких законов), ты МОЖЕШЬ начать ответ с плана.
+
+Для вывода плана оберни его в специальные теги:
+<leema-plan>
+## План
+1. Шаг первый
+2. Шаг второй
+...
+
+**Ключевые решения:**
+- решение 1
+- решение 2
+</leema-plan>
+
+После плана продолжай обычный ответ.
+
+Используй планирование когда:
+- Запрос требует создания документа с параметрами
+- Нужен многоэтапный юридический анализ
+- Пользователь задаёт комплексный вопрос с несколькими подвопросами
+- Предыдущий план требует обновления
+
+НЕ используй планирование для:
+- Простых вопросов с коротким ответом
+- Уточняющих вопросов
+- Приветствий`;
 
 const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
 
@@ -134,6 +169,67 @@ function buildApiMessages(
   return apiMessages;
 }
 
+// ─── Background compaction ───────────────────────────────
+
+async function compactInBackground(
+  conversationId: string,
+  existingSummary: string | null,
+  messagesToSummarize: Array<{ role: string; content: string }>,
+  maxTokens: number,
+  userId: string
+) {
+  try {
+    const compactionPrompt = buildCompactionPrompt(existingSummary, messagesToSummarize);
+
+    const response = await fetch(MOONSHOT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "kimi-k2.5",
+        messages: [
+          { role: "system", content: "Ты — ассистент для сжатия контекста разговора." },
+          { role: "user", content: compactionPrompt },
+        ],
+        max_tokens: Math.min(maxTokens, 2048),
+        temperature: 0.3,
+        stream: false,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const summaryText = data.choices?.[0]?.message?.content;
+
+      if (summaryText) {
+        await prisma.conversationSummary.upsert({
+          where: { conversationId },
+          create: {
+            conversationId,
+            content: summaryText,
+            tokenEstimate: estimateTokens(summaryText),
+            messagesCovered: messagesToSummarize.length,
+            version: 1,
+          },
+          update: {
+            content: summaryText,
+            tokenEstimate: estimateTokens(summaryText),
+            messagesCovered: { increment: messagesToSummarize.length },
+            version: { increment: 1 },
+          },
+        });
+
+        const compactionTokens = estimateTokens(compactionPrompt) + estimateTokens(summaryText);
+        await incrementTokens(userId, compactionTokens);
+      }
+    }
+  } catch {
+    console.error("Compaction failed silently");
+  }
+}
+
 // ─── Moonshot (Kimi K2.5) streaming handler ─────────────
 
 function streamMoonshot(
@@ -142,16 +238,36 @@ function streamMoonshot(
     maxTokens: number;
     thinkingEnabled: boolean;
     webSearchEnabled: boolean;
+    contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean };
   }
 ) {
   const encoder = new TextEncoder();
-  const { maxTokens, thinkingEnabled, webSearchEnabled } = options;
+  const { maxTokens, thinkingEnabled, webSearchEnabled, contextInfo } = options;
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        // Emit context info as first chunk
+        if (contextInfo) {
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({
+                t: "x",
+                v: JSON.stringify({
+                  action: "context_info",
+                  ...contextInfo,
+                }),
+              }) + "\n"
+            )
+          );
+        }
+
         const currentMessages = [...apiMessages];
         let searchNotified = false;
+
+        // Plan detection state
+        let insidePlan = false;
+        let planBuffer = "";
 
         // Tool-call loop: max 3 iterations to prevent infinite loops
         for (let turn = 0; turn < 3; turn++) {
@@ -218,7 +334,6 @@ function streamMoonshot(
               for (const tc of delta.tool_calls as any[]) {
                 const idx = tc.index ?? 0;
                 if (tc.id) {
-                  // First chunk of this tool call
                   toolCallMap[idx] = {
                     id: tc.id,
                     type: tc.type || "builtin_function",
@@ -228,12 +343,10 @@ function streamMoonshot(
                     },
                   };
                 } else if (tc.function?.arguments && toolCallMap[idx]) {
-                  // Continuation — append arguments
                   toolCallMap[idx].function.arguments += tc.function.arguments;
                 }
               }
 
-              // Notify frontend about search
               if (!searchNotified) {
                 searchNotified = true;
                 controller.enqueue(
@@ -248,7 +361,7 @@ function streamMoonshot(
               hasToolCallFinish = true;
             }
 
-            // Stream reasoning + content to frontend
+            // Stream reasoning
             if (thinkingEnabled && delta?.reasoning_content) {
               controller.enqueue(
                 encoder.encode(
@@ -257,25 +370,78 @@ function streamMoonshot(
               );
             }
 
+            // Stream content with plan detection
             if (delta?.content) {
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "c", v: delta.content }) + "\n"
-                )
-              );
+              planBuffer += delta.content;
+
+              // Check for plan opening tag
+              if (!insidePlan && planBuffer.includes("<leema-plan>")) {
+                const idx = planBuffer.indexOf("<leema-plan>");
+                const before = planBuffer.slice(0, idx);
+                if (before) {
+                  controller.enqueue(
+                    encoder.encode(JSON.stringify({ t: "c", v: before }) + "\n")
+                  );
+                }
+                planBuffer = planBuffer.slice(idx + "<leema-plan>".length);
+                insidePlan = true;
+              }
+
+              if (insidePlan) {
+                // Check for plan closing tag
+                if (planBuffer.includes("</leema-plan>")) {
+                  const idx = planBuffer.indexOf("</leema-plan>");
+                  const planText = planBuffer.slice(0, idx);
+                  if (planText) {
+                    controller.enqueue(
+                      encoder.encode(JSON.stringify({ t: "p", v: planText }) + "\n")
+                    );
+                  }
+                  planBuffer = planBuffer.slice(idx + "</leema-plan>".length);
+                  insidePlan = false;
+                  // Flush remaining as content
+                  if (planBuffer) {
+                    controller.enqueue(
+                      encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
+                    );
+                    planBuffer = "";
+                  }
+                } else if (planBuffer.length > 20) {
+                  // Flush accumulated plan content incrementally
+                  controller.enqueue(
+                    encoder.encode(JSON.stringify({ t: "p", v: planBuffer }) + "\n")
+                  );
+                  planBuffer = "";
+                }
+              } else {
+                // Not in plan — flush as content
+                if (planBuffer) {
+                  controller.enqueue(
+                    encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
+                  );
+                  planBuffer = "";
+                }
+              }
             }
+          }
+
+          // Flush remaining plan buffer
+          if (planBuffer) {
+            const type = insidePlan ? "p" : "c";
+            controller.enqueue(
+              encoder.encode(JSON.stringify({ t: type, v: planBuffer }) + "\n")
+            );
+            planBuffer = "";
           }
 
           // If model finished with tool_calls, send results back and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
-            // Add assistant message with tool_calls
             currentMessages.push({
               role: "assistant",
               tool_calls: collectedCalls,
             });
 
-            // Add tool result messages
             for (const tc of collectedCalls) {
               currentMessages.push({
                 role: "tool",
@@ -284,11 +450,9 @@ function streamMoonshot(
               });
             }
 
-            // Continue to next iteration (second API call)
             continue;
           }
 
-          // No tool calls — we're done
           break;
         }
       } catch {
@@ -306,6 +470,102 @@ function streamMoonshot(
   return stream;
 }
 
+// ─── Plan detection wrapper for AI SDK streams ──────────
+
+function createPlanDetectorStream(
+  textStream: AsyncIterable<string>,
+  contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean }
+): ReadableStream {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        // Emit context info
+        if (contextInfo) {
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({
+                t: "x",
+                v: JSON.stringify({ action: "context_info", ...contextInfo }),
+              }) + "\n"
+            )
+          );
+        }
+
+        let insidePlan = false;
+        let planBuffer = "";
+
+        for await (const chunk of textStream) {
+          if (!chunk) continue;
+
+          planBuffer += chunk;
+
+          if (!insidePlan && planBuffer.includes("<leema-plan>")) {
+            const idx = planBuffer.indexOf("<leema-plan>");
+            const before = planBuffer.slice(0, idx);
+            if (before) {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "c", v: before }) + "\n")
+              );
+            }
+            planBuffer = planBuffer.slice(idx + "<leema-plan>".length);
+            insidePlan = true;
+          }
+
+          if (insidePlan) {
+            if (planBuffer.includes("</leema-plan>")) {
+              const idx = planBuffer.indexOf("</leema-plan>");
+              const planText = planBuffer.slice(0, idx);
+              if (planText) {
+                controller.enqueue(
+                  encoder.encode(JSON.stringify({ t: "p", v: planText }) + "\n")
+                );
+              }
+              planBuffer = planBuffer.slice(idx + "</leema-plan>".length);
+              insidePlan = false;
+              if (planBuffer) {
+                controller.enqueue(
+                  encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
+                );
+                planBuffer = "";
+              }
+            } else if (planBuffer.length > 20) {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "p", v: planBuffer }) + "\n")
+              );
+              planBuffer = "";
+            }
+          } else {
+            if (planBuffer) {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
+              );
+              planBuffer = "";
+            }
+          }
+        }
+
+        // Flush remaining
+        if (planBuffer) {
+          const type = insidePlan ? "p" : "c";
+          controller.enqueue(
+            encoder.encode(JSON.stringify({ t: type, v: planBuffer }) + "\n")
+          );
+        }
+      } catch {
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({ t: "e", v: "Ошибка генерации ответа" }) + "\n"
+          )
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+}
+
 // ─── Main handler ────────────────────────────────────────
 
 export async function POST(req: Request) {
@@ -321,6 +581,7 @@ export async function POST(req: Request) {
     thinkingEnabled = true,
     webSearchEnabled = false,
     attachments = [],
+    conversationId: reqConvId,
   } = await req.json();
 
   const { plan, usage, monthlyUsage } = await getUserPlanAndUsage(session.user.id);
@@ -410,10 +671,82 @@ export async function POST(req: Request) {
       "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.\n\nВАЖНО: Когда используешь веб-поиск, ОБЯЗАТЕЛЬНО в конце ответа добавь раздел «Источники:» со списком URL-ссылок откуда была взята информация. Формат:\n\nИсточники:\n- [Название](URL)\n- [Название](URL)";
   }
 
-  // Process messages
-  const apiMessages = buildApiMessages(messages, attachments, systemPrompt);
+  // ─── Load context from DB (summary + plan memory) ──────
 
-  // Track usage — estimate input tokens from message content (~3 chars per token for mixed ru/en)
+  let existingSummary: string | null = null;
+  let planMemory: string | null = null;
+
+  if (reqConvId) {
+    const [summary, activePlan] = await Promise.all([
+      prisma.conversationSummary.findUnique({
+        where: { conversationId: reqConvId },
+      }),
+      prisma.conversationPlan.findFirst({
+        where: { conversationId: reqConvId, isActive: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    if (summary) existingSummary = summary.content;
+    if (activePlan?.memory) planMemory = activePlan.memory;
+  }
+
+  // ─── Autocompact: check context window ─────────────────
+
+  const systemTokens = estimateTokens(systemPrompt);
+  const contextCheck = checkContextWindow(
+    messages,
+    systemTokens,
+    plan.contextWindowSize
+  );
+
+  let effectiveMessages = messages;
+  let isCompacting = false;
+
+  if (contextCheck.needsCompaction) {
+    const { messagesToSummarize, messagesToKeep } = splitMessagesForCompaction(
+      messages,
+      12
+    );
+
+    if (messagesToSummarize.length > 0) {
+      effectiveMessages = messagesToKeep;
+      isCompacting = true;
+
+      // Fire compaction asynchronously (non-blocking)
+      if (reqConvId) {
+        compactInBackground(
+          reqConvId,
+          existingSummary,
+          messagesToSummarize,
+          plan.tokensPerMessage,
+          session.user.id
+        );
+      }
+    }
+  }
+
+  // ─── Build enriched system prompt ──────────────────────
+
+  const enrichedSystemPrompt = buildSystemPromptWithContext(
+    systemPrompt,
+    existingSummary,
+    planMemory
+  );
+
+  // ─── Build API messages ────────────────────────────────
+
+  const apiMessages = buildApiMessages(effectiveMessages, attachments, enrichedSystemPrompt);
+
+  // Context info for frontend
+  const contextInfo = {
+    usagePercent: Math.round(contextCheck.usagePercent * 100),
+    totalTokens: contextCheck.totalTokens,
+    contextWindowSize: contextCheck.contextWindowSize,
+    compacting: isCompacting,
+  };
+
+  // Track usage
   const inputChars = messages.reduce(
     (sum: number, m: { content: string }) => sum + (m.content?.length || 0),
     0
@@ -427,6 +760,7 @@ export async function POST(req: Request) {
       maxTokens: plan.tokensPerMessage,
       thinkingEnabled,
       webSearchEnabled,
+      contextInfo,
     });
 
     return new Response(stream, {
@@ -450,38 +784,15 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model,
-    system: systemPrompt,
-    messages,
+    system: enrichedSystemPrompt,
+    messages: effectiveMessages,
     temperature: 0.6,
     topP: 0.95,
     maxOutputTokens: plan.tokensPerMessage,
   });
 
-  // Wrap AI SDK text stream in NDJSON format
-  const encoder = new TextEncoder();
-  const textStream = result.textStream;
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const chunk of textStream) {
-          if (chunk) {
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: "c", v: chunk }) + "\n")
-            );
-          }
-        }
-      } catch {
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({ t: "e", v: "Ошибка генерации ответа" }) + "\n"
-          )
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
+  // Wrap AI SDK text stream with plan detection
+  const stream = createPlanDetectorStream(result.textStream, contextInfo);
 
   return new Response(stream, {
     headers: {

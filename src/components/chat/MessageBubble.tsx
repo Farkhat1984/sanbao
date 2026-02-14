@@ -17,6 +17,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
+import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
@@ -204,6 +205,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               </motion.div>
             )}
           </div>
+        )}
+
+        {/* Plan block */}
+        {isAssistant && message.planContent && (
+          <PlanBlock content={message.planContent} />
         )}
 
         {/* Message bubble */}

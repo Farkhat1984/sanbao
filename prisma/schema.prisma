@@ -79,11 +79,13 @@ model Conversation {
   archived Boolean @default(false)
   agentId  String?
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agent       Agent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent       Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
   messages    Message[]
   artifacts   Artifact[]
   attachments Attachment[]
+  summary     ConversationSummary?
+  plans       ConversationPlan[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,10 +101,12 @@ model Message {
   content        String      @db.Text
   toolName       String?
   toolResult     Json?
+  planContent    String?     @db.Text
 
-  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   legalRefs    LegalReference[]
   artifacts    Artifact[]
+  plans        ConversationPlan[]
 
   createdAt DateTime @default(now())
 
@@ -157,6 +161,39 @@ model Attachment {
   createdAt DateTime @default(now())
 
   @@index([conversationId])
+}
+
+// ─── Context & Planning models ──────────────────────────
+
+model ConversationSummary {
+  id              String @id @default(cuid())
+  conversationId  String @unique
+  content         String @db.Text
+  tokenEstimate   Int    @default(0)
+  messagesCovered Int    @default(0)
+  version         Int    @default(1)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ConversationPlan {
+  id             String  @id @default(cuid())
+  conversationId String
+  messageId      String?
+  content        String  @db.Text
+  memory         String? @db.Text
+  isActive       Boolean @default(true)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId, isActive])
 }
 
 // ─── Agent models ───────────────────────────────────────

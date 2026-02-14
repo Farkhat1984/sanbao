@@ -6,9 +6,10 @@ import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { ContextIndicator } from "./ContextIndicator";
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName } = useChatStore();
+  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName, contextUsage } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,9 +48,15 @@ export function ChatArea() {
         )}
       </div>
 
-      {/* Input */}
+      {/* Context indicator + Input */}
       <div className="shrink-0 pb-4 px-4">
         <div className="max-w-3xl mx-auto">
+          {contextUsage && (
+            <ContextIndicator
+              usagePercent={contextUsage.usagePercent}
+              isCompacting={contextUsage.isCompacting}
+            />
+          )}
           <MessageInput />
         </div>
       </div>

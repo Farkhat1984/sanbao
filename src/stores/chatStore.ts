@@ -1,7 +1,14 @@
 import { create } from "zustand";
 import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat";
 
-type StreamingPhase = "thinking" | "answering" | null;
+type StreamingPhase = "planning" | "thinking" | "answering" | null;
+
+interface ContextUsage {
+  usagePercent: number;
+  totalTokens: number;
+  contextWindowSize: number;
+  isCompacting: boolean;
+}
 
 interface ChatState {
   activeConversationId: string | null;
@@ -18,6 +25,12 @@ interface ChatState {
   thinkingEnabled: boolean;
   webSearchEnabled: boolean;
 
+  // Planning mode
+  currentPlan: string | null;
+
+  // Autocompact
+  contextUsage: ContextUsage | null;
+
   setActiveConversation: (id: string | null) => void;
   setActiveAgentId: (id: string | null) => void;
   setConversations: (conversations: ConversationSummary[]) => void;
@@ -33,6 +46,13 @@ interface ChatState {
   setProvider: (provider: AIProvider) => void;
   toggleThinking: () => void;
   toggleWebSearch: () => void;
+
+  // Planning
+  setCurrentPlan: (plan: string | null) => void;
+  updateCurrentPlan: (content: string) => void;
+
+  // Context
+  setContextUsage: (usage: ContextUsage | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -48,6 +68,9 @@ export const useChatStore = create<ChatState>((set) => ({
   provider: "deepinfra",
   thinkingEnabled: true,
   webSearchEnabled: false,
+
+  currentPlan: null,
+  contextUsage: null,
 
   setActiveConversation: (activeConversationId) =>
     set({ activeConversationId }),
@@ -88,7 +111,7 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
 
   setStreaming: (isStreaming) =>
-    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null }) }),
+    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null, currentPlan: null }) }),
 
   setStreamingPhase: (streamingPhase) => set({ streamingPhase }),
 
@@ -98,4 +121,11 @@ export const useChatStore = create<ChatState>((set) => ({
   setProvider: (provider) => set({ provider }),
   toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),
   toggleWebSearch: () => set((s) => ({ webSearchEnabled: !s.webSearchEnabled })),
+
+  setCurrentPlan: (currentPlan) => set({ currentPlan }),
+
+  updateCurrentPlan: (content) =>
+    set((s) => ({ currentPlan: (s.currentPlan || "") + content })),
+
+  setContextUsage: (contextUsage) => set({ contextUsage }),
 }));

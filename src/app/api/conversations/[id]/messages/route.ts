@@ -31,10 +31,11 @@ export async function POST(
   }
 
   const created = await prisma.message.createMany({
-    data: messages.map((m: { role: string; content: string }) => ({
+    data: messages.map((m: { role: string; content: string; planContent?: string }) => ({
       conversationId,
       role: m.role as "USER" | "ASSISTANT" | "SYSTEM" | "TOOL",
       content: m.content,
+      planContent: m.planContent || null,
     })),
   });
 
@@ -60,6 +61,48 @@ export async function POST(
   if (assistantMsg?.content) {
     const outputTokens = Math.ceil(assistantMsg.content.length / 3);
     await incrementTokens(session.user.id, outputTokens);
+  }
+
+  // Save planning data if present
+  const planContent = assistantMsg?.planContent;
+  if (planContent && conversationId) {
+    try {
+      // Extract key decisions from plan content
+      const decisionsMatch = planContent.match(
+        /\*\*(?:Ключевые решения|Решения|Контекст)[:\s]*\*\*([\s\S]*?)(?=\n##|\n\*\*|$)/i
+      );
+      const decisions = decisionsMatch?.[1]?.trim() || "";
+
+      // Get existing active plan to merge memory
+      const existing = await prisma.conversationPlan.findFirst({
+        where: { conversationId, isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const newMemory = existing?.memory && decisions
+        ? `${existing.memory}\n\n--- Обновление ---\n${decisions}`
+        : decisions || existing?.memory || null;
+
+      // Deactivate previous plans
+      if (existing) {
+        await prisma.conversationPlan.update({
+          where: { id: existing.id },
+          data: { isActive: false },
+        });
+      }
+
+      // Create new active plan
+      await prisma.conversationPlan.create({
+        data: {
+          conversationId,
+          content: planContent,
+          memory: newMemory,
+          isActive: true,
+        },
+      });
+    } catch {
+      // Plan persistence is best-effort
+    }
   }
 
   return NextResponse.json({ count: created.count });

@@ -57,7 +57,7 @@ export default function AdminDashboard() {
         <StatsCard
           icon={BarChart3}
           label="На тарифах"
-          value={`${stats.usersByPlan?.pro || 0} Pro / ${stats.usersByPlan?.max || 0} Max`}
+          value={`${stats.usersByPlan?.pro || 0} Pro / ${stats.usersByPlan?.business || 0} Business`}
           color="text-warning"
         />
       </div>

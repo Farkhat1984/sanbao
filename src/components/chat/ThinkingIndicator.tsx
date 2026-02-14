@@ -1,10 +1,10 @@
 "use client";
 
-import { Scale, Brain, MessageSquare, Globe } from "lucide-react";
+import { Scale, Brain, MessageSquare, Globe, ListChecks } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface ThinkingIndicatorProps {
-  phase: "thinking" | "answering" | null;
+  phase: "planning" | "thinking" | "answering" | null;
   isToolWorking: boolean;
   toolName?: string | null;
 }
@@ -28,7 +28,12 @@ export function ThinkingIndicator({ phase, isToolWorking, toolName }: ThinkingIn
   let gradientClass: string;
   let dotColorClass: string;
 
-  if (isSearching) {
+  if (phase === "planning") {
+    label = "Leema составляет план";
+    Icon = ListChecks;
+    gradientClass = "from-amber-500 to-orange-500";
+    dotColorClass = "bg-amber-500";
+  } else if (isSearching) {
     label = "Ищет в интернете";
     Icon = Globe;
     gradientClass = "from-emerald-500 to-teal-600";

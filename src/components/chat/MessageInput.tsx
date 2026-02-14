@@ -98,6 +98,9 @@ export function MessageInput() {
     setToolWorking,
     toggleThinking,
     toggleWebSearch,
+    updateCurrentPlan,
+    setCurrentPlan,
+    setContextUsage,
   } = useChatStore();
 
   const activeFeatures = [
@@ -285,6 +288,7 @@ export function MessageInput() {
     }
 
     setStreaming(true);
+    setCurrentPlan(null);
     setStreamingPhase(thinkingEnabled ? "thinking" : "answering");
 
     // Ensure we have a conversation for persistence
@@ -322,6 +326,7 @@ export function MessageInput() {
     }
 
     let fullContent = "";
+    let fullPlan = "";
 
     try {
       const apiMessages = [...messages, userMessage].map((m) => ({
@@ -345,6 +350,7 @@ export function MessageInput() {
           messages: apiMessages,
           provider: "deepinfra",
           agentId: activeAgentId,
+          conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
           attachments: attachmentsPayload,
@@ -410,6 +416,28 @@ export function MessageInput() {
                   fullReasoning || undefined
                 );
                 break;
+              case "p": // plan content
+                if (!fullPlan) {
+                  setStreamingPhase("planning");
+                }
+                fullPlan += data.v;
+                updateCurrentPlan(data.v);
+                break;
+              case "x": // context info
+                try {
+                  const info = JSON.parse(data.v);
+                  if (info.action === "context_info") {
+                    setContextUsage({
+                      usagePercent: info.usagePercent,
+                      totalTokens: info.totalTokens,
+                      contextWindowSize: info.contextWindowSize,
+                      isCompacting: info.compacting,
+                    });
+                  }
+                } catch {
+                  // ignore malformed context info
+                }
+                break;
               case "e": // error
                 if (!fullContent) {
                   fullContent = `Ошибка: ${data.v}`;
@@ -433,7 +461,7 @@ export function MessageInput() {
           body: JSON.stringify({
             messages: [
               { role: "USER", content: trimmed },
-              { role: "ASSISTANT", content: fullContent },
+              { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
             ],
           }),
         }).catch(() => {});
@@ -448,7 +476,7 @@ export function MessageInput() {
             body: JSON.stringify({
               messages: [
                 { role: "USER", content: trimmed },
-                { role: "ASSISTANT", content: fullContent },
+                { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
               ],
             }),
           }).catch(() => {});
@@ -482,6 +510,9 @@ export function MessageInput() {
     setStreaming,
     setStreamingPhase,
     setToolWorking,
+    updateCurrentPlan,
+    setCurrentPlan,
+    setContextUsage,
   ]);
 
   const handleStop = () => {
