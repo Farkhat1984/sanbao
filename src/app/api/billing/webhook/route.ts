@@ -33,6 +33,10 @@ export async function POST(req: Request) {
     }
   }
 
+  if (!event?.data?.object) {
+    return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });
+  }
+
   const obj = event.data.object;
 
   switch (event.type) {
