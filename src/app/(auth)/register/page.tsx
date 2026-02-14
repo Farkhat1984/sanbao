@@ -141,6 +141,18 @@ export default function RegisterPage() {
           Войти
         </Link>
       </p>
+
+      {/* Legal links */}
+      <p className="text-center text-[11px] text-text-muted mt-4 leading-relaxed">
+        Регистрируясь, вы принимаете{" "}
+        <Link href="/offer" className="text-accent hover:text-accent-hover transition-colors">
+          публичную оферту
+        </Link>{" "}
+        и{" "}
+        <Link href="/privacy" className="text-accent hover:text-accent-hover transition-colors">
+          политику конфиденциальности
+        </Link>
+      </p>
     </motion.div>
   );
 }

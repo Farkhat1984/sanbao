@@ -1,17 +1,45 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { checkAuthRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    // Rate limit registration by IP
+    const forwarded = req.headers.get("x-forwarded-for");
+    const cfIp = req.headers.get("cf-connecting-ip");
+    const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
+
+    const rateCheck = checkAuthRateLimit(`reg:${ip}`);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Слишком много попыток. Попробуйте позже." },
+        { status: 429, headers: { "Retry-After": String(rateCheck.retryAfterSeconds ?? 900) } }
+      );
+    }
+
     const { name, email, password } = await req.json();
 
-    if (!email || !password || password.length < 8) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       return NextResponse.json(
-        { error: "Email и пароль (мин. 8 символов) обязательны" },
+        { error: "Некорректный email" },
         { status: 400 }
       );
     }
+
+    if (!password || password.length < 8) {
+      return NextResponse.json(
+        { error: "Пароль должен быть минимум 8 символов" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize name (strip HTML tags)
+    const sanitizedName = name
+      ? String(name).replace(/<[^>]*>/g, "").trim().slice(0, 100)
+      : null;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -25,8 +53,8 @@ export async function POST(req: Request) {
 
     await prisma.user.create({
       data: {
-        name,
-        email,
+        name: sanitizedName,
+        email: email.toLowerCase().trim(),
         password: hashedPassword,
       },
     });

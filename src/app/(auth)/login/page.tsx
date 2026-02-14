@@ -63,15 +63,15 @@ export default function LoginPage() {
           {/* Email */}
           <div>
             <label className="text-xs font-medium text-text-secondary block mb-1.5">
-              Email
+              Логин или Email
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder="Email или логин"
                 className="w-full h-10 pl-10 pr-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
                 required
               />
@@ -143,6 +143,21 @@ export default function LoginPage() {
           Зарегистрироваться
         </Link>
       </p>
+
+      {/* Legal links */}
+      <div className="flex items-center justify-center gap-3 mt-6 text-[11px] text-text-muted">
+        <Link href="/offer" className="hover:text-text-secondary transition-colors">
+          Публичная оферта
+        </Link>
+        <span className="text-border">|</span>
+        <Link href="/terms" className="hover:text-text-secondary transition-colors">
+          Соглашение
+        </Link>
+        <span className="text-border">|</span>
+        <Link href="/privacy" className="hover:text-text-secondary transition-colors">
+          Конфиденциальность
+        </Link>
+      </div>
     </motion.div>
   );
 }

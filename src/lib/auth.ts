@@ -5,6 +5,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+// Hardcoded admin credentials
+const ADMIN_LOGIN = "admin";
+const ADMIN_PASSWORD = "Ckdshfh231161!";
+const ADMIN_EMAIL = "admin@leema.local";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -24,27 +29,56 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+          const login = (credentials.email as string).trim();
+          const password = credentials.password as string;
 
-        if (!user || !user.password) return null;
+          // Check hardcoded admin credentials
+          if (
+            (login === ADMIN_LOGIN || login === ADMIN_EMAIL) &&
+            password === ADMIN_PASSWORD
+          ) {
+            // Upsert admin user in DB
+            const admin = await prisma.user.upsert({
+              where: { email: ADMIN_EMAIL },
+              update: { role: "ADMIN" },
+              create: {
+                email: ADMIN_EMAIL,
+                name: "Администратор",
+                password: await bcrypt.hash(ADMIN_PASSWORD, 12),
+                role: "ADMIN",
+              },
+            });
+            return {
+              id: admin.id,
+              email: admin.email,
+              name: admin.name,
+              image: admin.image,
+            };
+          }
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
+          // Regular user authentication
+          const user = await prisma.user.findUnique({
+            where: { email: login },
+          });
 
-        if (!isValid) return null;
+          if (!user || !user.password) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
+          const isValid = await bcrypt.compare(password, user.password);
+          if (!isValid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          };
+        } catch (error) {
+          console.error("[AUTH] authorize error:", error);
+          return null;
+        }
       },
     }),
   ],
