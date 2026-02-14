@@ -7,6 +7,7 @@ import { useArtifactStore } from "@/stores/artifactStore";
 import { ArtifactTabs } from "./ArtifactTabs";
 import { DocumentPreview } from "./DocumentPreview";
 import { DocumentEditor } from "./DocumentEditor";
+import { CodePreview } from "./CodePreview";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { markdownToDocx } from "@/lib/export-docx";
@@ -22,6 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
   DOCUMENT: "Документ",
   CODE: "Код",
   ANALYSIS: "Анализ",
+  IMAGE: "Изображение",
 };
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
@@ -56,6 +58,21 @@ export function ArtifactPanel() {
   const handleDownload = async () => {
     setIsExporting(true);
     try {
+      // IMAGE type: download as PNG directly
+      if (activeArtifact.type === "IMAGE") {
+        const a = document.createElement("a");
+        a.href = activeArtifact.content;
+        a.download = `${sanitizeFilename(activeArtifact.title)}.png`;
+        a.click();
+        return;
+      }
+
+      // CODE type: download as .tsx
+      if (activeArtifact.type === "CODE") {
+        exportAsText(activeArtifact.content, activeArtifact.title, ".tsx");
+        return;
+      }
+
       switch (downloadFormat) {
         case "docx": {
           const { saveAs } = await import("file-saver");
@@ -94,7 +111,7 @@ export function ArtifactPanel() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-surface w-[480px]">
+    <div className="h-full flex flex-col bg-surface">
       {/* Header */}
       <div className="h-14 flex items-center gap-2 px-4 border-b border-border shrink-0">
         <div className="flex-1 min-w-0">
@@ -125,58 +142,75 @@ export function ArtifactPanel() {
           </button>
 
           {/* Format selector + Download */}
-          <div className="relative flex items-center">
-            <button
-              onClick={() => setFormatMenuOpen(!formatMenuOpen)}
-              className="h-7 pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer"
-            >
-              {FORMAT_LABELS[downloadFormat]}
-              <ChevronDown className="h-3 w-3 text-text-muted" />
-            </button>
+          {activeArtifact.type === "IMAGE" || activeArtifact.type === "CODE" ? (
             <button
               onClick={handleDownload}
               disabled={isExporting}
-              className="h-7 px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50"
+              className="h-7 px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]"
             >
               {isExporting ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Download className="h-3.5 w-3.5" />
+                <>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{activeArtifact.type === "IMAGE" ? "PNG" : "TSX"}</span>
+                </>
               )}
             </button>
+          ) : (
+            <div className="relative flex items-center">
+              <button
+                onClick={() => setFormatMenuOpen(!formatMenuOpen)}
+                className="h-7 pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer"
+              >
+                {FORMAT_LABELS[downloadFormat]}
+                <ChevronDown className="h-3 w-3 text-text-muted" />
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={isExporting}
+                className="h-7 px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+              </button>
 
-            {/* Format dropdown */}
-            {formatMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setFormatMenuOpen(false)}
-                />
-                <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
-                  {(["docx", "pdf", "txt"] as ExportFormat[]).map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={() => handleSelectFormat(fmt)}
-                      className={cn(
-                        "w-full text-left px-3 py-2 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between",
-                        downloadFormat === fmt &&
-                          "text-accent font-medium bg-accent-light"
-                      )}
-                    >
-                      <span>
-                        {fmt === "docx" && "Word (.docx)"}
-                        {fmt === "pdf" && "PDF (.pdf)"}
-                        {fmt === "txt" && "Текст (.txt)"}
-                      </span>
-                      {downloadFormat === fmt && (
-                        <Check className="h-3 w-3 text-accent" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+              {/* Format dropdown */}
+              {formatMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setFormatMenuOpen(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
+                    {(["docx", "pdf", "txt"] as ExportFormat[]).map((fmt) => (
+                      <button
+                        key={fmt}
+                        onClick={() => handleSelectFormat(fmt)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between",
+                          downloadFormat === fmt &&
+                            "text-accent font-medium bg-accent-light"
+                        )}
+                      >
+                        <span>
+                          {fmt === "docx" && "Word (.docx)"}
+                          {fmt === "pdf" && "PDF (.pdf)"}
+                          {fmt === "txt" && "Текст (.txt)"}
+                        </span>
+                        {downloadFormat === fmt && (
+                          <Check className="h-3 w-3 text-accent" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <button
             onClick={() => window.print()}
@@ -194,8 +228,10 @@ export function ArtifactPanel() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <ArtifactTabs activeTab={activeTab} onTabChange={setTab} />
+      {/* Tabs (hidden for IMAGE) */}
+      {activeArtifact.type !== "IMAGE" && (
+        <ArtifactTabs activeTab={activeTab} onTabChange={setTab} artifactType={activeArtifact.type as ArtifactType} />
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -206,21 +242,52 @@ export function ArtifactPanel() {
           transition={{ duration: 0.15 }}
           className="h-full"
         >
-          {activeTab === "preview" && (
-            <DocumentPreview ref={previewRef} content={activeArtifact.content} />
-          )}
-          {activeTab === "edit" && (
-            <DocumentEditor
-              content={activeArtifact.content}
-              onChange={(content) =>
-                updateContent(activeArtifact.id, content)
-              }
-            />
-          )}
-          {activeTab === "source" && (
-            <pre className="p-4 text-xs font-mono text-text-secondary whitespace-pre-wrap leading-relaxed">
-              {activeArtifact.content}
-            </pre>
+          {activeArtifact.type === "IMAGE" ? (
+            <div className="h-full flex items-center justify-center p-4 bg-surface-alt">
+              <img
+                src={activeArtifact.content}
+                alt={activeArtifact.title}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+              />
+            </div>
+          ) : activeArtifact.type === "CODE" ? (
+            <>
+              {activeTab === "source" && (
+                <pre className="p-4 text-xs font-mono text-text-secondary whitespace-pre-wrap leading-relaxed overflow-auto h-full">
+                  <code>{activeArtifact.content}</code>
+                </pre>
+              )}
+              {activeTab === "preview" && (
+                <CodePreview code={activeArtifact.content} />
+              )}
+              {activeTab === "edit" && (
+                <DocumentEditor
+                  content={activeArtifact.content}
+                  onChange={(content) =>
+                    updateContent(activeArtifact.id, content)
+                  }
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {activeTab === "preview" && (
+                <DocumentPreview ref={previewRef} content={activeArtifact.content} />
+              )}
+              {activeTab === "edit" && (
+                <DocumentEditor
+                  content={activeArtifact.content}
+                  onChange={(content) =>
+                    updateContent(activeArtifact.id, content)
+                  }
+                />
+              )}
+              {activeTab === "source" && (
+                <pre className="p-4 text-xs font-mono text-text-secondary whitespace-pre-wrap leading-relaxed">
+                  {activeArtifact.content}
+                </pre>
+              )}
+            </>
           )}
         </motion.div>
       </div>

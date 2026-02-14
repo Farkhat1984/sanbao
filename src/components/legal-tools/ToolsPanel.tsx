@@ -10,12 +10,14 @@ import {
   MessageSquare,
   X,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { cn } from "@/lib/utils";
 import { getTemplatesForTool } from "@/lib/legal-templates";
 import { TemplateModal } from "./TemplateModal";
+import { ImageEditModal } from "@/components/image-edit/ImageEditModal";
 import type { LegalTemplate } from "@/lib/legal-templates";
 
 interface Tool {
@@ -82,6 +84,14 @@ const tools: Tool[] = [
       "Мне нужна юридическая консультация по законодательству Казахстана. Опиши свою ситуацию, и я помогу разобраться с правовой стороной.",
     color: "text-rose-500 bg-rose-50 dark:bg-rose-950",
   },
+  {
+    id: "image-edit",
+    icon: Sparkles,
+    title: "Редактировать изображение",
+    description: "Изменить изображение с помощью AI",
+    prompt: "",
+    color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950",
+  },
 ];
 
 interface ToolsPanelProps {
@@ -95,8 +105,14 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
   const [activeTemplate, setActiveTemplate] = useState<LegalTemplate | null>(
     null
   );
+  const [imageEditOpen, setImageEditOpen] = useState(false);
 
   const handleSelectTool = (tool: Tool) => {
+    if (tool.id === "image-edit") {
+      setImageEditOpen(true);
+      onClose();
+      return;
+    }
     const templates = getTemplatesForTool(tool.id);
     if (templates.length > 0) {
       setExpandedToolId(expandedToolId === tool.id ? null : tool.id);
@@ -248,6 +264,12 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
         isOpen={!!activeTemplate}
         onClose={() => setActiveTemplate(null)}
         onSubmit={handleTemplateSubmit}
+      />
+
+      {/* Image edit modal */}
+      <ImageEditModal
+        isOpen={imageEditOpen}
+        onClose={() => setImageEditOpen(false)}
       />
     </>
   );

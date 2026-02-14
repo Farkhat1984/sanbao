@@ -6,7 +6,8 @@ export type ArtifactType =
   | "COMPLAINT"
   | "DOCUMENT"
   | "CODE"
-  | "ANALYSIS";
+  | "ANALYSIS"
+  | "IMAGE";
 
 export interface ChatMessage {
   id: string;

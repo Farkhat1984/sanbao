@@ -1,23 +1,33 @@
 "use client";
 
-import { Eye, Pencil, Code } from "lucide-react";
+import { Eye, Pencil, Code, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import type { ArtifactType } from "@/types/chat";
 
 type Tab = "preview" | "edit" | "source";
 
 interface ArtifactTabsProps {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
+  artifactType?: ArtifactType;
 }
 
-const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
+const documentTabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "preview", label: "Просмотр", icon: Eye },
   { key: "edit", label: "Редактор", icon: Pencil },
   { key: "source", label: "Исходник", icon: Code },
 ];
 
-export function ArtifactTabs({ activeTab, onTabChange }: ArtifactTabsProps) {
+const codeTabs: { key: Tab; label: string; icon: React.ElementType }[] = [
+  { key: "source", label: "Код", icon: Code },
+  { key: "preview", label: "Превью", icon: Play },
+  { key: "edit", label: "Редактор", icon: Pencil },
+];
+
+export function ArtifactTabs({ activeTab, onTabChange, artifactType }: ArtifactTabsProps) {
+  const tabs = artifactType === "CODE" ? codeTabs : documentTabs;
+
   return (
     <div className="flex items-center gap-1 px-4 py-2 border-b border-border">
       {tabs.map(({ key, label, icon: Icon }) => (

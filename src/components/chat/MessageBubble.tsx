@@ -33,6 +33,7 @@ const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   DOCUMENT: "Документ",
   CODE: "Код",
   ANALYSIS: "Анализ",
+  IMAGE: "Изображение",
 };
 
 interface ParsedPart {

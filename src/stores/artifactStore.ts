@@ -10,12 +10,14 @@ interface ArtifactState {
   activeTab: ArtifactTab;
   artifacts: ArtifactData[];
   downloadFormat: ExportFormat;
+  panelWidthPercent: number;
   openArtifact: (artifact: ArtifactData) => void;
   closePanel: () => void;
   setTab: (tab: ArtifactTab) => void;
   updateContent: (id: string, content: string) => void;
   setArtifacts: (artifacts: ArtifactData[]) => void;
   setDownloadFormat: (format: ExportFormat) => void;
+  setPanelWidthPercent: (percent: number) => void;
 }
 
 export const useArtifactStore = create<ArtifactState>((set) => ({
@@ -24,9 +26,14 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
   activeTab: "preview",
   artifacts: [],
   downloadFormat: "docx",
+  panelWidthPercent: 50,
 
   openArtifact: (artifact) =>
-    set({ isOpen: true, activeArtifact: artifact, activeTab: "preview" }),
+    set({
+      isOpen: true,
+      activeArtifact: artifact,
+      activeTab: artifact.type === "CODE" ? "source" : "preview",
+    }),
 
   closePanel: () =>
     set({ isOpen: false, activeArtifact: null }),
@@ -47,4 +54,6 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
   setArtifacts: (artifacts) => set({ artifacts }),
 
   setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
+
+  setPanelWidthPercent: (panelWidthPercent) => set({ panelWidthPercent }),
 }));
