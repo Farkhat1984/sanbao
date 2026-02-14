@@ -1,19 +1,21 @@
 # Leema — Юридический AI-ассистент
 
-AI-платформа для работы с нормативно-правовыми актами. Собственный движок понимает связи между статьями, проверяет актуальность и помогает создавать юридические документы.
+AI-платформа для работы с нормативно-правовыми актами. Движок понимает связи между статьями, проверяет актуальность и помогает создавать юридические документы.
 
 ## Стек
 
 - **Next.js 16** (App Router) + TypeScript
 - **Tailwind CSS v4** — дизайн-система Soft Corporate Minimalism
-- **Vercel AI SDK** — стриминг ответов (OpenAI / Anthropic)
+- **Vercel AI SDK** — стриминг (OpenAI, Anthropic)
 - **Moonshot API** — Kimi K2.5 с веб-поиском
-- **NextAuth.js v5** — аутентификация (Google, GitHub, email)
-- **PostgreSQL + Prisma** — хранение данных
+- **NextAuth.js v5** — JWT, Credentials, Google OAuth, 2FA TOTP
+- **PostgreSQL + Prisma** — 40+ моделей
+- **Stripe** — оплата, webhook, промокоды
+- **S3/MinIO** — файловое хранилище
+- **Prometheus + Grafana** — мониторинг
 - **Zustand** — клиентский стейт
+- **Tiptap** — редактор документов
 - **Framer Motion** — анимации
-- **Tiptap** — редактор документов (таблицы, выравнивание, подсветка)
-- **docx / html2pdf.js** — экспорт документов в DOCX и PDF
 
 ## Запуск
 
@@ -21,78 +23,70 @@ AI-платформа для работы с нормативно-правовы
 npm install
 cp .env.example .env        # заполнить ключи
 npx prisma db push           # создать таблицы
+npx prisma db seed           # начальные данные (планы, Фемида)
 npm run dev                  # http://localhost:3000
 ```
 
-## Переменные окружения (.env)
+## Переменные окружения
 
-| Переменная | Описание |
-|------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | Секрет NextAuth |
-| `AUTH_GOOGLE_ID/SECRET` | Google OAuth (опционально) |
-| `AUTH_GITHUB_ID/SECRET` | GitHub OAuth (опционально) |
-| `OPENAI_API_KEY` | Ключ OpenAI |
-| `ANTHROPIC_API_KEY` | Ключ Anthropic |
-| `MOONSHOT_API_KEY` | Ключ Moonshot / Kimi K2.5 |
-
-## Структура
-
-```
-src/
-├── app/
-│   ├── (app)/          # Основное приложение (chat, profile, settings, billing)
-│   ├── (auth)/         # Логин, регистрация
-│   └── api/            # Chat streaming, conversations CRUD, auth, tasks, memory
-├── components/
-│   ├── ui/             # Button, Avatar, Badge, Tooltip, Modal, Skeleton
-│   ├── chat/           # ChatArea, MessageBubble, MessageInput, LegalReference
-│   ├── sidebar/        # Sidebar, ConversationList, ConversationItem
-│   ├── artifacts/      # ArtifactPanel, DocumentEditor, EditorToolbar, DocumentPreview
-│   ├── legal-tools/    # ToolsPanel, TemplateModal (шаблоны документов)
-│   ├── skills/         # Навыки и промпты
-│   ├── agents/         # Кастомные AI-агенты
-│   └── tasks/          # Чек-листы задач
-├── stores/             # Zustand (chat, sidebar, artifact, skill, agent, task, memory)
-├── lib/                # Prisma, auth, utils, export-docx, export-pdf, legal-templates
-└── types/              # TypeScript-типы
-```
+| Переменная | Описание | Обязательно |
+|------------|----------|:-----------:|
+| `DATABASE_URL` | PostgreSQL connection string | да |
+| `NEXTAUTH_SECRET` | Секрет NextAuth | да |
+| `MOONSHOT_API_KEY` | Kimi K2.5 (дефолтный TEXT-провайдер) | да |
+| `AUTH_GOOGLE_ID/SECRET` | Google OAuth | нет |
+| `DEEPINFRA_API_KEY` | DeepInfra Flux (IMAGE) | нет |
+| `STRIPE_SECRET_KEY` | Stripe API | нет |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook подпись | нет |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | S3/MinIO хранилище | нет |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Email-рассылки | нет |
+| `ENCRYPTION_KEY` | AES-256-GCM для API-ключей | нет |
+| `ADMIN_IP_WHITELIST` | IP-адреса для доступа к админке (через запятую) | нет |
 
 ## Функционал
 
 ### Чат и AI
-- Мультипровайдер: Kimi K2.5 (Moonshot), OpenAI, Anthropic
-- Стриминг ответов, markdown, подсветка кода
-- Режим рассуждений (extended thinking) с раскрывающимся блоком
-- Веб-поиск через встроенный инструмент Moonshot
-- Автокомпакция контекста при переполнении окна
-- Пользовательская память (persistent context)
+- Мультипровайдер: Kimi K2.5, OpenAI, Anthropic — динамическая маршрутизация из БД
+- NDJSON-стриминг, markdown, подсветка кода, reasoning mode
+- Веб-поиск, автокомпакция контекста, пользовательская память
+- A/B тестирование промптов, фильтр контента
 
 ### Юридические инструменты
-- 6 инструментов: договоры, иски, жалобы, поиск НПА, проверка актуальности, консультации
-- 7 шаблонов документов с формой заполнения (договор услуг/купли-продажи/аренды, иск о долге/убытках, жалоба в госорган/апелляция)
-- Кликабельные ссылки на статьи НПА с попапом текста и статусом актуальности
-
-### Документы и артефакты
-- Панель артефактов справа — просмотр / редактирование / исходник
-- Экспорт в DOCX (Word), PDF и TXT
-- Редактор с тулбаром: жирный, курсив, подчёркивание, подсветка, заголовки H1-H3, списки, выравнивание, таблицы
-- Превью в стиле A4-страницы с юридической типографикой (Times New Roman, поля, justified)
-- Типы документов: CONTRACT, CLAIM, COMPLAINT, DOCUMENT, CODE, ANALYSIS
+- 6 инструментов + 7 шаблонов документов с формами заполнения
+- Ссылки на статьи НПА с попапом текста и статусом актуальности
+- Панель артефактов: просмотр / редактирование / исходник
+- Экспорт в DOCX, PDF, TXT
 
 ### Навыки и агенты
-- Кастомные навыки (skills) с системным промптом, правилами цитирования и юрисдикцией
+- Кастомные навыки с системным промптом, правилами цитирования, юрисдикцией
 - Кастомные агенты с загруженными файлами-контекстом
-- Маркетплейс навыков
+- Системные агенты (Фемида и др.) — управление из админки
+- Маркетплейс навыков, модерация
 
-### Прочее
-- История чатов с группировкой по датам и поиском
-- Светлая и тёмная тема
-- Загрузка файлов (PDF, DOCX, XLSX, изображения) с автоизвлечением текста
-- Голосовой ввод (Web Speech API, ru-RU)
-- Тарифные планы и отслеживание лимитов
-- Админ-панель
+### Биллинг
+- Stripe Checkout с промокодами и пробным периодом
+- Webhook: автоназначение подписки, invoice-email, downgrade при отмене
+- Ручное управление подписками из админки
+- Тарифные планы с гранулярными лимитами и feature-флагами
 
-## Дизайн
+### Безопасность
+- 2FA TOTP (Google Authenticator), обязательная для админов
+- IP whitelist для админ-панели
+- Rate-limiting с автоблокировкой при abuse
+- Шифрование API-ключей AES-256-GCM
+- Session TTL из настроек
 
-Стиль: **Soft Corporate Minimalism** — подробности в [STYLEGUIDE.md](STYLEGUIDE.md)
+### Админ-панель (`/admin`)
+Полная панель управления — 25+ страниц. Подробности в [ADMINGUIDE.md](ADMINGUIDE.md).
+
+### Мониторинг
+- `/api/metrics` — Prometheus-метрики
+- `/api/health` — health-check (БД, провайдеры, MCP)
+- Docker Compose: Prometheus + Grafana + алерты + дашборд
+
+## Документация
+
+- [STYLEGUIDE.md](STYLEGUIDE.md) — дизайн-система
+- [USERGUIDE.md](USERGUIDE.md) — руководство пользователя
+- [ADMINGUIDE.md](ADMINGUIDE.md) — руководство администратора
+- [CLAUDE.md](CLAUDE.md) — контекст для Claude Code
