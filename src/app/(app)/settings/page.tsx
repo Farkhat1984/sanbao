@@ -19,8 +19,14 @@ import {
   CreditCard,
   BarChart3,
   Shield,
+  Brain,
+  Server,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MemoryManager } from "@/components/memory/MemoryManager";
+import { McpServerManager } from "@/components/settings/McpServerManager";
+import { PluginManager } from "@/components/settings/PluginManager";
 
 interface PlanInfo {
   slug: string;
@@ -238,6 +244,42 @@ export default function SettingsPage() {
             <button className="w-10 h-6 rounded-full bg-accent relative cursor-pointer transition-colors">
               <div className="w-4 h-4 rounded-full bg-white absolute right-1 top-1 transition-all" />
             </button>
+          </div>
+        </section>
+
+        {/* Memory */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Brain className="h-4 w-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text-primary">Память</h2>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <p className="text-xs text-text-muted mb-3">
+              AI запоминает ваши предпочтения и использует их в каждом разговоре.
+            </p>
+            <MemoryManager />
+          </div>
+        </section>
+
+        {/* MCP Servers */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Server className="h-4 w-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text-primary">MCP-серверы</h2>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <McpServerManager />
+          </div>
+        </section>
+
+        {/* Plugins */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Puzzle className="h-4 w-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text-primary">Плагины</h2>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-5">
+            <PluginManager />
           </div>
         </section>
 

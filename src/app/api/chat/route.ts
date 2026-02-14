@@ -13,6 +13,7 @@ import {
   buildCompactionPrompt,
   buildSystemPromptWithContext,
 } from "@/lib/context";
+import { buildMemoryContext } from "@/lib/memory";
 
 const SYSTEM_PROMPT = `Ты — Leema, профессиональный юридический AI-ассистент. Ты работаешь с нормативно-правовыми актами, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы.
 
@@ -66,7 +67,22 @@ const SYSTEM_PROMPT = `Ты — Leema, профессиональный юрид
 НЕ используй планирование для:
 - Простых вопросов с коротким ответом
 - Уточняющих вопросов
-- Приветствий`;
+- Приветствий
+
+СОЗДАНИЕ ЗАДАЧ:
+Когда пользователь даёт сложный многошаговый запрос (3+ шагов), создай чек-лист задач:
+
+<leema-task title="Название задачи">
+- [ ] Первый шаг
+- [ ] Второй шаг
+- [ ] Третий шаг
+</leema-task>
+
+Используй задачи для:
+- Подготовки комплекта документов
+- Многоэтапного анализа
+- Процессуальных действий с дедлайнами
+НЕ создавай задачи для простых вопросов.`;
 
 const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
 
@@ -578,6 +594,7 @@ export async function POST(req: Request) {
     messages,
     provider = "deepinfra",
     agentId,
+    skillId,
     thinkingEnabled = true,
     webSearchEnabled = false,
     attachments = [],
@@ -666,29 +683,72 @@ export async function POST(req: Request) {
     }
   }
 
+  // ─── Load skill ──────────────────────────────────────────
+
+  if (skillId) {
+    const skill = await prisma.skill.findFirst({
+      where: {
+        id: skillId,
+        OR: [
+          { isBuiltIn: true },
+          { userId: session.user.id },
+          { isPublic: true },
+        ],
+      },
+    });
+
+    if (skill) {
+      let skillPrompt = skill.systemPrompt;
+      if (skill.citationRules) {
+        skillPrompt += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
+      }
+      if (skill.jurisdiction) {
+        skillPrompt += `\n\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+      }
+      systemPrompt = `${skillPrompt}\n\n${systemPrompt}`;
+    }
+  }
+
   if (webSearchEnabled) {
     systemPrompt +=
       "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.\n\nВАЖНО: Когда используешь веб-поиск, ОБЯЗАТЕЛЬНО в конце ответа добавь раздел «Источники:» со списком URL-ссылок откуда была взята информация. Формат:\n\nИсточники:\n- [Название](URL)\n- [Название](URL)";
   }
 
-  // ─── Load context from DB (summary + plan memory) ──────
+  // ─── Load context from DB (summary + plan memory + user memory) ──
 
   let existingSummary: string | null = null;
   let planMemory: string | null = null;
+  let userMemoryContext: string | null = null;
+
+  const [contextData, userMemories] = await Promise.all([
+    reqConvId
+      ? Promise.all([
+          prisma.conversationSummary.findUnique({
+            where: { conversationId: reqConvId },
+          }),
+          prisma.conversationPlan.findFirst({
+            where: { conversationId: reqConvId, isActive: true },
+            orderBy: { createdAt: "desc" },
+          }),
+        ])
+      : Promise.resolve([null, null]),
+    prisma.userMemory.findMany({
+      where: { userId: session.user.id },
+      select: { key: true, content: true },
+    }),
+  ]);
 
   if (reqConvId) {
-    const [summary, activePlan] = await Promise.all([
-      prisma.conversationSummary.findUnique({
-        where: { conversationId: reqConvId },
-      }),
-      prisma.conversationPlan.findFirst({
-        where: { conversationId: reqConvId, isActive: true },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
-
+    const [summary, activePlan] = contextData as [
+      { content: string } | null,
+      { memory: string | null } | null,
+    ];
     if (summary) existingSummary = summary.content;
     if (activePlan?.memory) planMemory = activePlan.memory;
+  }
+
+  if (userMemories.length > 0) {
+    userMemoryContext = buildMemoryContext(userMemories);
   }
 
   // ─── Autocompact: check context window ─────────────────
@@ -731,7 +791,8 @@ export async function POST(req: Request) {
   const enrichedSystemPrompt = buildSystemPromptWithContext(
     systemPrompt,
     existingSummary,
-    planMemory
+    planMemory,
+    userMemoryContext
   );
 
   // ─── Build API messages ────────────────────────────────

@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { useSkillStore } from "@/stores/skillStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
+import { SkillSelector } from "@/components/skills/SkillSelector";
 import { cn } from "@/lib/utils";
 
 const CHAT_ACCEPTED_EXTENSIONS =
@@ -102,6 +105,9 @@ export function MessageInput() {
     setCurrentPlan,
     setContextUsage,
   } = useChatStore();
+
+  const { activeSkillId } = useSkillStore();
+  const { addTask } = useTaskStore();
 
   const activeFeatures = [
     ...(thinkingEnabled ? ["thinking"] : []),
@@ -350,6 +356,7 @@ export function MessageInput() {
           messages: apiMessages,
           provider: "deepinfra",
           agentId: activeAgentId,
+          skillId: activeSkillId || undefined,
           conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
@@ -466,6 +473,39 @@ export function MessageInput() {
           }),
         }).catch(() => {});
       }
+
+      // Detect and create tasks from <leema-task> tags
+      const taskRegex = /<leema-task\s+title="([^"]+)">([\s\S]*?)<\/leema-task>/g;
+      let taskMatch;
+      while ((taskMatch = taskRegex.exec(fullContent)) !== null) {
+        const taskTitle = taskMatch[1];
+        const taskBody = taskMatch[2];
+        const steps = taskBody
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("- ["))
+          .map((line) => ({
+            text: line.replace(/^- \[[ x]\]\s*/, ""),
+            done: line.includes("[x]"),
+          }));
+
+        if (steps.length > 0) {
+          fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: taskTitle,
+              steps,
+              conversationId: convId,
+            }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((task) => {
+              if (task) addTask(task);
+            })
+            .catch(() => {});
+        }
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         // User stopped the stream — save partial content if available
@@ -501,6 +541,7 @@ export function MessageInput() {
     messages,
     activeConversationId,
     activeAgentId,
+    activeSkillId,
     thinkingEnabled,
     webSearchEnabled,
     addMessage,
@@ -513,6 +554,7 @@ export function MessageInput() {
     updateCurrentPlan,
     setCurrentPlan,
     setContextUsage,
+    addTask,
   ]);
 
   const handleStop = () => {
@@ -574,31 +616,30 @@ export function MessageInput() {
         className="hidden"
       />
 
-      {/* Active feature badges */}
-      {activeFeatures.length > 0 && (
-        <div className="flex items-center gap-1.5 px-2">
-          {thinkingEnabled && (
-            <button
-              onClick={toggleThinking}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-[10px] font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors cursor-pointer"
-            >
-              <Brain className="h-3 w-3" />
-              Thinking
-              <X className="h-2.5 w-2.5 ml-0.5" />
-            </button>
-          )}
-          {webSearchEnabled && (
-            <button
-              onClick={toggleWebSearch}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
-            >
-              <Globe className="h-3 w-3" />
-              Веб-поиск
-              <X className="h-2.5 w-2.5 ml-0.5" />
-            </button>
-          )}
-        </div>
-      )}
+      {/* Active feature badges + skill selector */}
+      <div className="flex items-center gap-1.5 px-2">
+        <SkillSelector />
+        {thinkingEnabled && (
+          <button
+            onClick={toggleThinking}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-[10px] font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors cursor-pointer"
+          >
+            <Brain className="h-3 w-3" />
+            Thinking
+            <X className="h-2.5 w-2.5 ml-0.5" />
+          </button>
+        )}
+        {webSearchEnabled && (
+          <button
+            onClick={toggleWebSearch}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
+          >
+            <Globe className="h-3 w-3" />
+            Веб-поиск
+            <X className="h-2.5 w-2.5 ml-0.5" />
+          </button>
+        )}
+      </div>
 
       {/* Main input */}
       <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,11 +8,17 @@ import {
   Settings,
   Scale,
   ShieldCheck,
+  Zap,
+  ListChecks,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
+import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -23,8 +29,10 @@ import { useRouter } from "next/navigation";
 export function Sidebar() {
   const { close, searchQuery, setSearchQuery } = useSidebarStore();
   const { setActiveConversation, setMessages, setConversations } = useChatStore();
+  const { tasks } = useTaskStore();
   const { data: session } = useSession();
   const router = useRouter();
+  const [tasksExpanded, setTasksExpanded] = useState(false);
 
   // Load conversations from DB on mount
   useEffect(() => {
@@ -82,8 +90,43 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Agents */}
+      {/* Agents & Skills */}
       <AgentList />
+      <div className="px-3 mb-1">
+        <button
+          onClick={() => router.push("/skills")}
+          className="w-full h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-alt text-xs font-medium flex items-center gap-2 px-2.5 transition-colors cursor-pointer"
+        >
+          <Zap className="h-3.5 w-3.5" />
+          Скиллы
+        </button>
+      </div>
+
+      {/* Tasks */}
+      <div className="px-3 mb-1">
+        <button
+          onClick={() => setTasksExpanded(!tasksExpanded)}
+          className="w-full h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-alt text-xs font-medium flex items-center gap-2 px-2.5 transition-colors cursor-pointer"
+        >
+          {tasksExpanded ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" />
+          )}
+          <ListChecks className="h-3.5 w-3.5" />
+          Задачи
+          {tasks.filter((t) => t.status === "IN_PROGRESS").length > 0 && (
+            <span className="ml-auto text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full">
+              {tasks.filter((t) => t.status === "IN_PROGRESS").length}
+            </span>
+          )}
+        </button>
+      </div>
+      {tasksExpanded && (
+        <div className="mb-2 max-h-48 overflow-y-auto">
+          <TaskPanel />
+        </div>
+      )}
 
       {/* Search */}
       <div className="px-3 py-2">

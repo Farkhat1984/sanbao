@@ -62,9 +62,14 @@ export function splitMessagesForCompaction(
 export function buildSystemPromptWithContext(
   base: string,
   summary: string | null,
-  planMemory: string | null
+  planMemory: string | null,
+  userMemory: string | null = null
 ): string {
   let result = base;
+
+  if (userMemory) {
+    result += `\n\n--- ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ (предпочтения и стандарты) ---\n${userMemory}\n--- КОНЕЦ ПАМЯТИ ПОЛЬЗОВАТЕЛЯ ---`;
+  }
 
   if (summary) {
     result += `\n\n--- КРАТКОЕ СОДЕРЖАНИЕ ПРЕДЫДУЩЕЙ ЧАСТИ РАЗГОВОРА ---\n${summary}\n--- КОНЕЦ КРАТКОГО СОДЕРЖАНИЯ ---`;

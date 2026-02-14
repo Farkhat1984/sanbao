@@ -3,7 +3,8 @@
 import {
   Bot, Scale, Briefcase, Shield, BookOpen, Gavel, FileText,
   Building, User, HeartPulse, GraduationCap, Landmark,
-  Code, MessageSquare, Globe, Lightbulb,
+  Code, MessageSquare, Globe, Lightbulb, FileSearch,
+  ShieldCheck, ClipboardCheck, Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,10 @@ const ICONS = [
   { name: "MessageSquare", component: MessageSquare },
   { name: "Globe", component: Globe },
   { name: "Lightbulb", component: Lightbulb },
+  { name: "FileSearch", component: FileSearch },
+  { name: "ShieldCheck", component: ShieldCheck },
+  { name: "ClipboardCheck", component: ClipboardCheck },
+  { name: "Brain", component: Brain },
 ] as const;
 
 const COLORS = [

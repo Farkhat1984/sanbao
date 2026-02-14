@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { cn, truncate } from "@/lib/utils";
 import type { ConversationSummary } from "@/types/chat";
@@ -18,8 +18,20 @@ export function ConversationItem({
   isActive,
 }: ConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveConversation, removeConversation } = useChatStore();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMenu]);
 
   const handleClick = () => {
     setActiveConversation(conversation.id);
@@ -34,14 +46,11 @@ export function ConversationItem({
   };
 
   return (
-    <motion.div
-      className="relative group"
-      onMouseLeave={() => setShowMenu(false)}
-    >
+    <div ref={menuRef} className="relative group">
       <button
         onClick={handleClick}
         className={cn(
-          "w-full text-left px-2.5 py-2 rounded-xl text-sm transition-all duration-150 cursor-pointer",
+          "w-full text-left px-2.5 py-2 pr-8 rounded-xl text-sm transition-all duration-150 cursor-pointer",
           "flex items-center gap-2",
           isActive
             ? "bg-accent-light text-accent font-medium"
@@ -65,37 +74,42 @@ export function ConversationItem({
         className={cn(
           "absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md",
           "flex items-center justify-center text-text-muted",
-          "opacity-0 group-hover:opacity-100 hover:bg-surface-alt hover:text-text-primary",
-          "transition-all cursor-pointer"
+          "opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer",
+          "hover:bg-surface-alt hover:text-text-primary",
+          showMenu && "opacity-100"
         )}
       >
         <MoreHorizontal className="h-3.5 w-3.5" />
       </button>
 
       {/* Dropdown */}
-      {showMenu && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="absolute right-0 top-full mt-1 z-20 w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
-        >
-          <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-            <Pin className="h-3 w-3" />
-            {conversation.pinned ? "Открепить" : "Закрепить"}
-          </button>
-          <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-            <Archive className="h-3 w-3" />
-            В архив
-          </button>
-          <button
-            onClick={handleDelete}
-            className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 cursor-pointer"
+      <AnimatePresence>
+        {showMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.12 }}
+            className="absolute right-0 top-full z-20 w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
           >
-            <Trash2 className="h-3 w-3" />
-            Удалить
-          </button>
-        </motion.div>
-      )}
-    </motion.div>
+            <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+              <Pin className="h-3 w-3" />
+              {conversation.pinned ? "Открепить" : "Закрепить"}
+            </button>
+            <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+              <Archive className="h-3 w-3" />
+              В архив
+            </button>
+            <button
+              onClick={handleDelete}
+              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 cursor-pointer"
+            >
+              <Trash2 className="h-3 w-3" />
+              Удалить
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
