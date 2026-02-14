@@ -92,6 +92,7 @@ export function MessageInput() {
     activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
+    pendingInput,
     addMessage,
     addConversation,
     setActiveConversation,
@@ -104,6 +105,7 @@ export function MessageInput() {
     updateCurrentPlan,
     setCurrentPlan,
     setContextUsage,
+    setPendingInput,
   } = useChatStore();
 
   const { activeSkillId } = useSkillStore();
@@ -270,10 +272,20 @@ export function MessageInput() {
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
+  // ─── Auto-submit from tools/templates ────────────────────
+
+  useEffect(() => {
+    if (pendingInput && !isStreaming) {
+      setPendingInput(null);
+      doSubmit(pendingInput);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingInput]);
+
   // ─── Submit ──────────────────────────────────────────────
 
-  const handleSubmit = useCallback(async () => {
-    const trimmed = input.trim();
+  const doSubmit = useCallback(async (overrideInput?: string) => {
+    const trimmed = (overrideInput ?? input).trim();
     if ((!trimmed && attachedFiles.length === 0) || isStreaming) return;
     // Don't submit while files are parsing
     if (attachedFiles.some((f) => f.isParsing)) return;
@@ -555,7 +567,12 @@ export function MessageInput() {
     setCurrentPlan,
     setContextUsage,
     addTask,
+    setPendingInput,
   ]);
+
+  const handleSubmit = useCallback(() => {
+    doSubmit();
+  }, [doSubmit]);
 
   const handleStop = () => {
     abortRef.current?.abort();

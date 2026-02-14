@@ -1,7 +1,7 @@
 "use client";
 
-import { X, Download, Copy, Printer, Check } from "lucide-react";
-import { useState } from "react";
+import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { ArtifactTabs } from "./ArtifactTabs";
@@ -9,6 +9,11 @@ import { DocumentPreview } from "./DocumentPreview";
 import { DocumentEditor } from "./DocumentEditor";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { markdownToDocx } from "@/lib/export-docx";
+import { exportToPdf } from "@/lib/export-pdf";
+import { exportAsText, sanitizeFilename } from "@/lib/export-utils";
+import type { ExportFormat } from "@/lib/export-utils";
+import type { ArtifactType } from "@/types/chat";
 
 const TYPE_LABELS: Record<string, string> = {
   CONTRACT: "Договор",
@@ -19,10 +24,26 @@ const TYPE_LABELS: Record<string, string> = {
   ANALYSIS: "Анализ",
 };
 
+const FORMAT_LABELS: Record<ExportFormat, string> = {
+  docx: "DOCX",
+  pdf: "PDF",
+  txt: "TXT",
+};
+
 export function ArtifactPanel() {
-  const { activeArtifact, activeTab, setTab, closePanel, updateContent } =
-    useArtifactStore();
+  const {
+    activeArtifact,
+    activeTab,
+    setTab,
+    closePanel,
+    updateContent,
+    downloadFormat,
+    setDownloadFormat,
+  } = useArtifactStore();
   const [copied, setCopied] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   if (!activeArtifact) return null;
 
@@ -32,14 +53,44 @@ export function ArtifactPanel() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([activeArtifact.content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${activeArtifact.title}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = async () => {
+    setIsExporting(true);
+    try {
+      switch (downloadFormat) {
+        case "docx": {
+          const { saveAs } = await import("file-saver");
+          const blob = await markdownToDocx(
+            activeArtifact.content,
+            activeArtifact.title,
+            activeArtifact.type as ArtifactType
+          );
+          saveAs(blob, `${sanitizeFilename(activeArtifact.title)}.docx`);
+          break;
+        }
+        case "pdf": {
+          // Switch to preview tab so the DOM element is rendered
+          if (activeTab !== "preview") {
+            setTab("preview");
+            await new Promise((r) => setTimeout(r, 300));
+          }
+          if (previewRef.current) {
+            await exportToPdf(previewRef.current, activeArtifact.title);
+          }
+          break;
+        }
+        case "txt": {
+          exportAsText(activeArtifact.content, activeArtifact.title);
+          break;
+        }
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSelectFormat = (format: ExportFormat) => {
+    setDownloadFormat(format);
+    setFormatMenuOpen(false);
   };
 
   return (
@@ -66,14 +117,67 @@ export function ArtifactPanel() {
             onClick={handleCopy}
             className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-success" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </button>
-          <button
-            onClick={handleDownload}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-          >
-            <Download className="h-3.5 w-3.5" />
-          </button>
+
+          {/* Format selector + Download */}
+          <div className="relative flex items-center">
+            <button
+              onClick={() => setFormatMenuOpen(!formatMenuOpen)}
+              className="h-7 pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer"
+            >
+              {FORMAT_LABELS[downloadFormat]}
+              <ChevronDown className="h-3 w-3 text-text-muted" />
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={isExporting}
+              className="h-7 px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isExporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+            </button>
+
+            {/* Format dropdown */}
+            {formatMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setFormatMenuOpen(false)}
+                />
+                <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
+                  {(["docx", "pdf", "txt"] as ExportFormat[]).map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => handleSelectFormat(fmt)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between",
+                        downloadFormat === fmt &&
+                          "text-accent font-medium bg-accent-light"
+                      )}
+                    >
+                      <span>
+                        {fmt === "docx" && "Word (.docx)"}
+                        {fmt === "pdf" && "PDF (.pdf)"}
+                        {fmt === "txt" && "Текст (.txt)"}
+                      </span>
+                      {downloadFormat === fmt && (
+                        <Check className="h-3 w-3 text-accent" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => window.print()}
             className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
@@ -103,7 +207,7 @@ export function ArtifactPanel() {
           className="h-full"
         >
           {activeTab === "preview" && (
-            <DocumentPreview content={activeArtifact.content} />
+            <DocumentPreview ref={previewRef} content={activeArtifact.content} />
           )}
           {activeTab === "edit" && (
             <DocumentEditor

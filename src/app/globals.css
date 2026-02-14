@@ -359,3 +359,166 @@ body {
   background: var(--bg-surface-alt);
   font-weight: 600;
 }
+
+/* ─── Legal Document Preview Styles ──────────────────── */
+
+.prose-legal {
+  font-family: "Times New Roman", Georgia, "Noto Serif", serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.prose-legal h1 {
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-top: 0;
+  margin-bottom: 1.5em;
+}
+
+.prose-legal h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.prose-legal h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+.prose-legal p {
+  text-align: justify;
+  text-indent: 1.25em;
+  margin-bottom: 0.4em;
+}
+
+.prose-legal ol {
+  list-style-type: decimal;
+  padding-left: 2em;
+  margin-bottom: 0.5em;
+}
+
+.prose-legal ol ol {
+  list-style-type: lower-alpha;
+}
+
+.prose-legal ul {
+  padding-left: 2em;
+  margin-bottom: 0.5em;
+}
+
+.prose-legal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 13px;
+}
+
+.prose-legal th,
+.prose-legal td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+}
+
+.prose-legal th {
+  background: var(--bg-surface-alt);
+  font-weight: 600;
+  text-align: center;
+}
+
+.prose-legal hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+.prose-legal strong {
+  font-weight: 700;
+}
+
+.prose-legal blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 1em 0;
+}
+
+/* ─── Tiptap Editor Table Styles ─────────────────────── */
+
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1em 0;
+  overflow: hidden;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 1em;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: top;
+  position: relative;
+}
+
+.ProseMirror th {
+  background: var(--bg-surface-alt);
+  font-weight: 600;
+}
+
+.ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent-light);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--accent);
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+/* Tiptap highlight */
+.ProseMirror mark {
+  background-color: #FBBF24;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* ─── Print Styles ───────────────────────────────────── */
+
+@media print {
+  .prose-legal {
+    font-size: 12pt;
+    color: #000;
+  }
+
+  .prose-legal h1 {
+    font-size: 14pt;
+  }
+
+  .prose-legal h2 {
+    font-size: 13pt;
+  }
+}

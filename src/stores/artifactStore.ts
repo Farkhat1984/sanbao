@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ArtifactData } from "@/types/chat";
+import type { ExportFormat } from "@/lib/export-utils";
 
 type ArtifactTab = "preview" | "edit" | "source";
 
@@ -8,11 +9,13 @@ interface ArtifactState {
   activeArtifact: ArtifactData | null;
   activeTab: ArtifactTab;
   artifacts: ArtifactData[];
+  downloadFormat: ExportFormat;
   openArtifact: (artifact: ArtifactData) => void;
   closePanel: () => void;
   setTab: (tab: ArtifactTab) => void;
   updateContent: (id: string, content: string) => void;
   setArtifacts: (artifacts: ArtifactData[]) => void;
+  setDownloadFormat: (format: ExportFormat) => void;
 }
 
 export const useArtifactStore = create<ArtifactState>((set) => ({
@@ -20,6 +23,7 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
   activeArtifact: null,
   activeTab: "preview",
   artifacts: [],
+  downloadFormat: "docx",
 
   openArtifact: (artifact) =>
     set({ isOpen: true, activeArtifact: artifact, activeTab: "preview" }),
@@ -41,4 +45,6 @@ export const useArtifactStore = create<ArtifactState>((set) => ({
     })),
 
   setArtifacts: (artifacts) => set({ artifacts }),
+
+  setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
 }));

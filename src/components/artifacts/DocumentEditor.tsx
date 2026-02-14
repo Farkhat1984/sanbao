@@ -3,7 +3,15 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Underline } from "@tiptap/extension-underline";
 import { useEffect } from "react";
+import { EditorToolbar } from "./EditorToolbar";
 
 interface DocumentEditorProps {
   content: string;
@@ -17,6 +25,15 @@ export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
       Placeholder.configure({
         placeholder: "Начните редактирование документа...",
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Highlight.configure({ multicolor: true }),
+      Underline,
     ],
     content,
     editorProps: {
@@ -36,5 +53,12 @@ export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
     }
   }, [content, editor]);
 
-  return <EditorContent editor={editor} className="h-full" />;
+  return (
+    <div className="h-full flex flex-col">
+      <EditorToolbar editor={editor} />
+      <div className="flex-1 overflow-y-auto">
+        <EditorContent editor={editor} className="h-full" />
+      </div>
+    </div>
+  );
 }

@@ -53,6 +53,10 @@ interface ChatState {
 
   // Context
   setContextUsage: (usage: ContextUsage | null) => void;
+
+  // Pending input (from tools/templates)
+  pendingInput: string | null;
+  setPendingInput: (input: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -71,6 +75,7 @@ export const useChatStore = create<ChatState>((set) => ({
 
   currentPlan: null,
   contextUsage: null,
+  pendingInput: null,
 
   setActiveConversation: (activeConversationId) =>
     set({ activeConversationId }),
@@ -128,4 +133,6 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => ({ currentPlan: (s.currentPlan || "") + content })),
 
   setContextUsage: (contextUsage) => set({ contextUsage }),
+
+  setPendingInput: (pendingInput) => set({ pendingInput }),
 }));
