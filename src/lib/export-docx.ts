@@ -191,7 +191,9 @@ export async function markdownToDocx(
       const tableData = parseMarkdownTable(tableLines);
       if (tableData && tableData.headers.length > 0) {
         const colCount = tableData.headers.length;
-        const colWidth = Math.floor(9000 / colCount);
+        // A4 text area: 210mm - 30mm left - 15mm right = 165mm ≈ 9356 twips
+        const tableWidthTwips = convertMillimetersToTwip(165);
+        const colWidth = Math.floor(tableWidthTwips / colCount);
 
         const headerRow = new TableRow({
           tableHeader: true,
@@ -307,6 +309,7 @@ export async function markdownToDocx(
         alignment: AlignmentType.JUSTIFIED,
         spacing: { before: 60, after: 60, line: 360 },
         indent: { firstLine: convertMillimetersToTwip(12.5) },
+        wordWrap: true,
         children: createTextRuns(trimmed),
       })
     );
@@ -373,6 +376,10 @@ export async function markdownToDocx(
       {
         properties: {
           page: {
+            size: {
+              width: convertMillimetersToTwip(210),
+              height: convertMillimetersToTwip(297),
+            },
             margin: {
               top: convertMillimetersToTwip(20),
               bottom: convertMillimetersToTwip(20),

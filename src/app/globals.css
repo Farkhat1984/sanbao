@@ -509,9 +509,37 @@ body {
 /* ─── Print Styles ───────────────────────────────────── */
 
 @media print {
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Hide all UI chrome */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the legal document content */
+  .prose-legal,
+  .prose-legal * {
+    visibility: visible !important;
+  }
+
   .prose-legal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
     font-size: 12pt;
-    color: #000;
+    color: #000 !important;
   }
 
   .prose-legal h1 {
@@ -520,5 +548,14 @@ body {
 
   .prose-legal h2 {
     font-size: 13pt;
+  }
+
+  .prose-legal table {
+    page-break-inside: avoid;
+  }
+
+  .prose-legal th,
+  .prose-legal td {
+    border-color: #000 !important;
   }
 }

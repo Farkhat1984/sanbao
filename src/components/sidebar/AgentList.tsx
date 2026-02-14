@@ -1,54 +1,52 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { useState } from "react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Bot,
+  Zap,
+  Puzzle,
+  Cable,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAgentStore } from "@/stores/agentStore";
-import { useChatStore } from "@/stores/chatStore";
-import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn } from "@/lib/utils";
+
+const PLAYGROUND_ITEMS = [
+  {
+    label: "Агенты",
+    icon: Bot,
+    href: "/agents",
+    color: "bg-blue-50 dark:bg-blue-950 text-blue-500",
+    description: "AI-ассистенты",
+  },
+  {
+    label: "Скиллы",
+    icon: Zap,
+    href: "/skills",
+    color: "bg-indigo-50 dark:bg-indigo-950 text-indigo-500",
+    description: "Шаблоны промптов",
+  },
+  {
+    label: "Плагины",
+    icon: Puzzle,
+    href: "/plugins",
+    color: "bg-amber-50 dark:bg-amber-950 text-amber-500",
+    description: "Скоро",
+    disabled: true,
+  },
+  {
+    label: "MCP",
+    icon: Cable,
+    href: "/mcp",
+    color: "bg-emerald-50 dark:bg-emerald-950 text-emerald-500",
+    description: "Серверы",
+  },
+];
 
 export function AgentList() {
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
-  const { agents, setAgents } = useAgentStore();
-  const { addConversation, setActiveConversation, setMessages, setActiveAgentId } =
-    useChatStore();
-
-  useEffect(() => {
-    fetch("/api/agents")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setAgents(data);
-      })
-      .catch(() => {});
-  }, [setAgents]);
-
-  const handleAgentClick = async (agentId: string, agentName: string) => {
-    try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: `Чат с ${agentName}`,
-          agentId,
-        }),
-      });
-
-      if (!res.ok) return;
-
-      const conversation = await res.json();
-      addConversation(conversation);
-      setActiveConversation(conversation.id);
-      setActiveAgentId(agentId);
-      setMessages([]);
-      router.push(`/chat/${conversation.id}`);
-    } catch {
-      // Ignore errors
-    }
-  };
-
-  const visibleAgents = agents.slice(0, 5);
 
   return (
     <div className="px-3 mb-1">
@@ -62,55 +60,40 @@ export function AgentList() {
         ) : (
           <ChevronRight className="h-3 w-3" />
         )}
-        Мои агенты
+        Playground
       </button>
 
       {expanded && (
         <div className="space-y-0.5 mt-0.5">
-          {visibleAgents.map((agent) => {
-            const Icon = ICON_MAP[agent.icon] || ICON_MAP.Bot;
-            return (
-              <button
-                key={agent.id}
-                onClick={() => handleAgentClick(agent.id, agent.name)}
+          {PLAYGROUND_ITEMS.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => !item.disabled && router.push(item.href)}
+              className={cn(
+                "w-full h-8 rounded-lg flex items-center gap-2.5 px-2",
+                "transition-colors",
+                item.disabled
+                  ? "text-text-muted/50 cursor-default"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-alt cursor-pointer"
+              )}
+            >
+              <div
                 className={cn(
-                  "w-full h-8 rounded-lg flex items-center gap-2.5 px-2",
-                  "text-text-muted hover:text-text-primary hover:bg-surface-alt",
-                  "transition-colors cursor-pointer"
+                  "h-5 w-5 rounded-md flex items-center justify-center shrink-0",
+                  item.color,
+                  item.disabled && "opacity-40"
                 )}
               >
-                <div
-                  className="h-5 w-5 rounded-md flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: agent.iconColor }}
-                >
-                  <Icon className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-sm truncate">{agent.name}</span>
-              </button>
-            );
-          })}
-
-          {/* All agents / Create */}
-          <div className="flex items-center gap-1 pt-0.5">
-            {agents.length > 0 && (
-              <>
-                <button
-                  onClick={() => router.push("/agents")}
-                  className="text-[11px] text-text-muted hover:text-accent transition-colors cursor-pointer"
-                >
-                  Все агенты
-                </button>
-                <span className="text-text-muted text-[11px]">·</span>
-              </>
-            )}
-            <button
-              onClick={() => router.push("/agents/new")}
-              className="text-[11px] text-text-muted hover:text-accent transition-colors flex items-center gap-0.5 cursor-pointer"
-            >
-              <Plus className="h-3 w-3" />
-              Создать агента
+                <item.icon className="h-3 w-3" />
+              </div>
+              <span className="text-sm truncate">{item.label}</span>
+              {item.disabled && (
+                <span className="text-[9px] text-text-muted/50 ml-auto">
+                  скоро
+                </span>
+              )}
             </button>
-          </div>
+          ))}
         </div>
       )}
     </div>

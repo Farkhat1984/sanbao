@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
-import { useSkillStore } from "@/stores/skillStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
-import { SkillSelector } from "@/components/skills/SkillSelector";
+import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
 import { cn } from "@/lib/utils";
+import { FEMIDA_ID } from "@/lib/system-agents";
 
 const CHAT_ACCEPTED_EXTENSIONS =
   ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls";
@@ -75,6 +75,7 @@ export function MessageInput() {
   const [input, setInput] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [imageGenOpen, setImageGenOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -106,15 +107,10 @@ export function MessageInput() {
     setCurrentPlan,
     setContextUsage,
     setPendingInput,
+    setClarifyQuestions,
   } = useChatStore();
 
-  const { activeSkillId } = useSkillStore();
   const { addTask } = useTaskStore();
-
-  const activeFeatures = [
-    ...(thinkingEnabled ? ["thinking"] : []),
-    ...(webSearchEnabled ? ["search"] : []),
-  ];
 
   // Detect speech support on client only (avoid hydration mismatch)
   const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
@@ -368,7 +364,6 @@ export function MessageInput() {
           messages: apiMessages,
           provider: "deepinfra",
           agentId: activeAgentId,
-          skillId: activeSkillId || undefined,
           conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
@@ -518,6 +513,19 @@ export function MessageInput() {
             .catch(() => {});
         }
       }
+
+      // Detect clarify questions from <leema-clarify> tag
+      const clarifyMatch = /<leema-clarify>([\s\S]*?)<\/leema-clarify>/.exec(fullContent);
+      if (clarifyMatch) {
+        try {
+          const questions = JSON.parse(clarifyMatch[1]);
+          if (Array.isArray(questions) && questions.length > 0) {
+            setClarifyQuestions(questions);
+          }
+        } catch {
+          // Skip malformed clarify JSON
+        }
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         // User stopped the stream — save partial content if available
@@ -553,7 +561,6 @@ export function MessageInput() {
     messages,
     activeConversationId,
     activeAgentId,
-    activeSkillId,
     thinkingEnabled,
     webSearchEnabled,
     addMessage,
@@ -568,6 +575,7 @@ export function MessageInput() {
     setContextUsage,
     addTask,
     setPendingInput,
+    setClarifyQuestions,
   ]);
 
   const handleSubmit = useCallback(() => {
@@ -633,9 +641,8 @@ export function MessageInput() {
         className="hidden"
       />
 
-      {/* Active feature badges + skill selector */}
+      {/* Active feature badges */}
       <div className="flex items-center gap-1.5 px-2">
-        <SkillSelector />
         {thinkingEnabled && (
           <button
             onClick={toggleThinking}
@@ -660,6 +667,7 @@ export function MessageInput() {
 
       {/* Main input */}
       <div
+        data-tour="chat-input"
         className={cn(
           "relative rounded-[32px] transition-all duration-300",
           "bg-surface border border-border",
@@ -705,7 +713,7 @@ export function MessageInput() {
 
         <div className="flex items-end gap-2 px-4 py-3">
           {/* Plus menu button */}
-          <div className="relative">
+          <div className="relative" data-tour="plus-menu">
             <button
               onClick={() => {
                 setMenuOpen(!menuOpen);
@@ -769,15 +777,31 @@ export function MessageInput() {
                         <span>Сделать фото</span>
                       </button>
 
-                      {/* Legal tools */}
+                      {/* Legal tools (only for Фемида) */}
+                      {activeAgentId === FEMIDA_ID && (
+                        <button
+                          onClick={handleOpenTools}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                        >
+                          <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center">
+                            <Wrench className="h-3.5 w-3.5" />
+                          </div>
+                          <span>Юр. инструменты</span>
+                        </button>
+                      )}
+
+                      {/* Image generation */}
                       <button
-                        onClick={handleOpenTools}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setImageGenOpen(true);
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center">
-                          <Wrench className="h-3.5 w-3.5" />
+                        <div className="h-7 w-7 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-500 flex items-center justify-center">
+                          <ImageIcon className="h-3.5 w-3.5" />
                         </div>
-                        <span>Юр. инструменты</span>
+                        <span>Генерация картинок</span>
                       </button>
 
                       <div className="h-px bg-border mx-3 my-1" />
@@ -874,7 +898,11 @@ export function MessageInput() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={
-              isRecording ? "Говорите..." : "Задайте юридический вопрос..."
+              isRecording
+                ? "Говорите..."
+                : activeAgentId === FEMIDA_ID
+                  ? "Задайте юридический вопрос..."
+                  : "Напишите сообщение..."
             }
             rows={1}
             className={cn(
@@ -971,6 +999,12 @@ export function MessageInput() {
           </span>
         </div>
       </div>
+
+      {/* Image generate modal */}
+      <ImageGenerateModal
+        isOpen={imageGenOpen}
+        onClose={() => setImageGenOpen(false)}
+      />
     </div>
   );
 }

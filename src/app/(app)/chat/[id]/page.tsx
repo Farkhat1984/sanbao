@@ -7,7 +7,7 @@ import { useChatStore } from "@/stores/chatStore";
 
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
-  const { setActiveConversation, setMessages } = useChatStore();
+  const { setActiveConversation, setActiveAgentId, setMessages } = useChatStore();
 
   useEffect(() => {
     if (!id) return;
@@ -20,6 +20,9 @@ export default function ConversationPage() {
         return r.json();
       })
       .then((data) => {
+        // Restore activeAgentId: prefer systemAgentId (e.g. Фемида), fallback to regular agentId
+        setActiveAgentId(data.systemAgentId || data.agentId || null);
+
         if (data.messages && Array.isArray(data.messages)) {
           setMessages(
             data.messages.map(
@@ -45,9 +48,10 @@ export default function ConversationPage() {
         }
       })
       .catch(() => {
+        setActiveAgentId(null);
         setMessages([]);
       });
-  }, [id, setActiveConversation, setMessages]);
+  }, [id, setActiveConversation, setActiveAgentId, setMessages]);
 
   return <ChatArea />;
 }

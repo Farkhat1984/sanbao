@@ -75,12 +75,13 @@ model User {
 }
 
 model Conversation {
-  id       String  @id @default(cuid())
-  title    String  @default("Новый чат")
-  userId   String
-  pinned   Boolean @default(false)
-  archived Boolean @default(false)
-  agentId  String?
+  id            String  @id @default(cuid())
+  title         String  @default("Новый чат")
+  userId        String
+  pinned        Boolean @default(false)
+  archived      Boolean @default(false)
+  agentId       String?
+  systemAgentId String?
 
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   agent       Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)

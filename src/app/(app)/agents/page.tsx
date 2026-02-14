@@ -6,7 +6,9 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAgentStore } from "@/stores/agentStore";
 import { AgentCard } from "@/components/agents/AgentCard";
+import { SystemAgentCard } from "@/components/agents/SystemAgentCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { FEMIDA_AGENT } from "@/lib/system-agents";
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -34,10 +36,10 @@ export default function AgentsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-xl font-bold text-text-primary">
-              Мои агенты
+              Агенты
             </h1>
             <p className="text-sm text-text-muted mt-1">
-              Создавайте персональных AI-ассистентов с уникальными инструкциями
+              Системные и персональные AI-ассистенты
             </p>
           </div>
           <button
@@ -68,38 +70,25 @@ export default function AgentsPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {loaded && agents.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20"
-          >
-            <div className="h-16 w-16 rounded-2xl bg-surface-alt flex items-center justify-center mx-auto mb-5">
-              <Bot className="h-8 w-8 text-text-muted" />
-            </div>
-            <h2 className="text-lg font-semibold text-text-primary mb-2">
-              У вас пока нет агентов
-            </h2>
-            <p className="text-sm text-text-muted max-w-md mx-auto mb-6">
-              Создайте своего первого AI-агента с персональными инструкциями, файлами знаний и выбором модели
-            </p>
-            <button
-              onClick={() => router.push("/agents/new")}
-              className="h-10 px-6 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-sm cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              Создать первого агента
-            </button>
-          </motion.div>
-        )}
-
-        {/* Agent Grid */}
-        {loaded && agents.length > 0 && (
+        {/* Agent Grid — System agents first, then user agents */}
+        {loaded && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* System agent: Фемида */}
+            <SystemAgentCard agent={FEMIDA_AGENT} />
+
+            {/* User agents */}
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
+          </div>
+        )}
+
+        {/* Empty hint (when no user agents) */}
+        {loaded && agents.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-sm text-text-muted">
+              Создайте персонального агента с уникальными инструкциями и файлами знаний
+            </p>
           </div>
         )}
       </div>

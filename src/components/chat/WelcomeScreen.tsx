@@ -1,41 +1,83 @@
 "use client";
 
-import { Scale, FileText, Gavel, Search, ShieldCheck, BookOpen } from "lucide-react";
+import {
+  Sparkles,
+  FileText,
+  Globe,
+  Code,
+  Scale,
+  Gavel,
+  Search,
+  ShieldCheck,
+  BookOpen,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
+import { FEMIDA_ID, FEMIDA_AGENT, isSystemAgent } from "@/lib/system-agents";
 
-const quickActions = [
+// ─── General-purpose quick actions (main chat) ────────────
+
+const generalActions = [
+  {
+    icon: Sparkles,
+    title: "Создать картинку",
+    desc: "Сгенерировать изображение по описанию",
+    prompt: "Создай изображение: уютная кофейня в дождливый вечер, тёплый свет из окон, акварельный стиль",
+  },
+  {
+    icon: FileText,
+    title: "Написать документ",
+    desc: "Письмо, статья, план или отчёт",
+    prompt: "Помоги написать профессиональное деловое письмо с благодарностью партнёру за сотрудничество",
+  },
+  {
+    icon: Globe,
+    title: "Найти в интернете",
+    desc: "Поиск актуальной информации в сети",
+    prompt: "Найди последние новости и тренды в области искусственного интеллекта за 2025 год",
+  },
+  {
+    icon: Code,
+    title: "Написать код",
+    desc: "Скрипт, функция или полноценный проект",
+    prompt: "Напиши скрипт на Python который парсит CSV файл, анализирует данные и строит график с помощью matplotlib",
+  },
+];
+
+// ─── Legal quick actions (Фемида) ─────────────────────────
+
+const legalActions = [
   {
     icon: FileText,
     title: "Составить договор",
     desc: "Создание договора с нуля или по шаблону",
-    prompt: "Помоги составить договор оказания услуг между ООО и физическим лицом",
+    prompt: "Помоги составить договор оказания услуг между ТОО и физическим лицом по законодательству РК",
   },
   {
     icon: Gavel,
     title: "Подготовить иск",
-    desc: "Исковое заявление в суд",
-    prompt: "Помоги подготовить исковое заявление о взыскании задолженности",
+    desc: "Исковое заявление в суд РК",
+    prompt: "Помоги подготовить исковое заявление о взыскании задолженности по законодательству РК",
   },
   {
     icon: Search,
     title: "Найти статью закона",
-    desc: "Поиск по НПА с проверкой актуальности",
-    prompt: "Найди актуальную редакцию статьи 309 ГК РФ и поясни её применение",
+    desc: "Поиск по НПА РК с проверкой актуальности",
+    prompt: "Найди актуальную редакцию статьи 272 ГК РК и поясни её применение",
   },
   {
     icon: ShieldCheck,
     title: "Проверить документ",
-    desc: "Анализ юридического документа",
-    prompt: "Проанализируй прикреплённый договор на юридические риски",
+    desc: "Анализ юридического документа на риски",
+    prompt: "Проанализируй прикреплённый договор на юридические риски по законодательству РК",
   },
   {
     icon: BookOpen,
     title: "Юридическая консультация",
-    desc: "Ответ на правовой вопрос",
-    prompt: "Какие права имеет потребитель при возврате товара надлежащего качества?",
+    desc: "Ответ на правовой вопрос по законам РК",
+    prompt: "Какие права имеет потребитель при возврате товара надлежащего качества по законодательству РК?",
   },
 ];
 
@@ -52,32 +94,17 @@ const itemVariants = {
 };
 
 export function WelcomeScreen() {
-  const { addMessage, setStreaming, activeAgentId } = useChatStore();
+  const { activeAgentId, setPendingInput } = useChatStore();
   const { activeAgent } = useAgentStore();
 
-  const hasAgent = activeAgentId && activeAgent;
+  const isFemida = activeAgentId === FEMIDA_ID;
+  const hasUserAgent = activeAgentId && activeAgent && !isSystemAgent(activeAgentId);
 
   const handleQuickAction = (prompt: string) => {
-    addMessage({
-      id: crypto.randomUUID(),
-      role: "USER",
-      content: prompt,
-      createdAt: new Date().toISOString(),
-    });
-
-    // TODO: trigger real API call
-    setStreaming(true);
-    setTimeout(() => {
-      addMessage({
-        id: crypto.randomUUID(),
-        role: "ASSISTANT",
-        content:
-          "Это демо-ответ. Реальный AI-ответ будет отображаться здесь с полным стримингом и ссылками на статьи НПА.",
-        createdAt: new Date().toISOString(),
-      });
-      setStreaming(false);
-    }, 1500);
+    setPendingInput(prompt);
   };
+
+  const actions = isFemida ? legalActions : generalActions;
 
   return (
     <div className="h-full flex flex-col items-center justify-center px-4">
@@ -88,7 +115,22 @@ export function WelcomeScreen() {
         className="text-center mb-10"
       >
         {/* Logo / Agent Icon */}
-        {hasAgent ? (() => {
+        {isFemida ? (
+          <>
+            <div
+              className="h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg"
+              style={{ backgroundColor: FEMIDA_AGENT.iconColor }}
+            >
+              <Scale className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              {FEMIDA_AGENT.name}
+            </h2>
+            <p className="text-sm text-text-secondary max-w-md">
+              {FEMIDA_AGENT.description}
+            </p>
+          </>
+        ) : hasUserAgent ? (() => {
           const AgentIcon = ICON_MAP[activeAgent.icon] || ICON_MAP.Bot;
           return (
             <>
@@ -109,13 +151,13 @@ export function WelcomeScreen() {
         })() : (
           <>
             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
-              <Scale className="h-8 w-8 text-white" />
+              <Sparkles className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">
               Добро пожаловать в Leema
             </h2>
             <p className="text-sm text-text-secondary max-w-md">
-              Ваш AI-помощник для работы с законодательством. Задайте вопрос, создайте документ или проанализируйте НПА.
+              Ваш универсальный AI-помощник. Создавайте контент, пишите код, ищите информацию и решайте любые задачи.
             </p>
           </>
         )}
@@ -128,7 +170,7 @@ export function WelcomeScreen() {
         animate="visible"
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full"
       >
-        {quickActions.map((action) => (
+        {actions.map((action) => (
           <motion.button
             key={action.title}
             variants={itemVariants}

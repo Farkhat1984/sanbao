@@ -41,10 +41,12 @@ export function ArtifactPanel() {
     updateContent,
     downloadFormat,
     setDownloadFormat,
+    restoreVersion,
   } = useArtifactStore();
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   if (!activeArtifact) return null;
@@ -122,9 +124,51 @@ export function ArtifactPanel() {
             <Badge variant="legal" className="text-[10px]">
               {TYPE_LABELS[activeArtifact.type] || activeArtifact.type}
             </Badge>
-            <span className="text-[10px] text-text-muted">
-              v{activeArtifact.version}
-            </span>
+            {/* Version selector */}
+            {activeArtifact.versions && activeArtifact.versions.length > 1 ? (
+              <div className="relative">
+                <button
+                  onClick={() => setVersionMenuOpen(!versionMenuOpen)}
+                  className="flex items-center gap-0.5 text-[10px] text-text-muted hover:text-accent transition-colors cursor-pointer"
+                >
+                  v{activeArtifact.version}
+                  <ChevronDown className="h-2.5 w-2.5" />
+                </button>
+                {versionMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setVersionMenuOpen(false)}
+                    />
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[140px] max-h-[200px] overflow-y-auto">
+                      {[...activeArtifact.versions].reverse().map((v) => (
+                        <button
+                          key={`${v.version}-${v.timestamp}`}
+                          onClick={() => {
+                            restoreVersion(activeArtifact.id, v.version);
+                            setVersionMenuOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between gap-3",
+                            v.version === activeArtifact.version &&
+                              "text-accent font-medium bg-accent-light"
+                          )}
+                        >
+                          <span>v{v.version}</span>
+                          {v.version === activeArtifact.version && (
+                            <Check className="h-3 w-3 text-accent shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <span className="text-[10px] text-text-muted">
+                v{activeArtifact.version}
+              </span>
+            )}
           </div>
         </div>
 
@@ -258,7 +302,12 @@ export function ArtifactPanel() {
                 </pre>
               )}
               {activeTab === "preview" && (
-                <CodePreview code={activeArtifact.content} />
+                <CodePreview
+                  code={activeArtifact.content}
+                  onCodeFixed={(fixedCode) =>
+                    updateContent(activeArtifact.id, fixedCode)
+                  }
+                />
               )}
               {activeTab === "edit" && (
                 <DocumentEditor

@@ -1,69 +1,82 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { RefreshCw, AlertTriangle, Maximize2, Minimize2 } from "lucide-react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { RefreshCw, Maximize2, Minimize2, Loader2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CodePreviewProps {
   code: string;
+  onCodeFixed?: (fixedCode: string) => void;
 }
 
 function buildPreviewHtml(code: string): string {
-  // Extract the code content — strip markdown code fences if present
   let cleanCode = code.trim();
-  const fenceMatch = cleanCode.match(/^```(?:tsx?|jsx?|javascript|typescript)?\n([\s\S]*?)```$/);
+  const fenceMatch = cleanCode.match(/^```(?:tsx?|jsx?|javascript|typescript|html)?\n([\s\S]*?)```$/);
   if (fenceMatch) {
     cleanCode = fenceMatch[1].trim();
   }
 
+  // Error reporter script — injected into any HTML
+  const errorReporter = `<script>
+(function(){
+  window.onerror = function(msg, url, line, col, error) {
+    var text = (error ? (error.stack || error.toString()) : String(msg));
+    if (line) text += '\\nLine: ' + line;
+    window.parent.postMessage({type:'preview-error', message: text}, '*');
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function(e) {
+    window.parent.postMessage({type:'preview-error', message:'Unhandled Promise: ' + (e.reason ? e.reason.toString() : 'unknown')}, '*');
+  });
+})();
+<\/script>`;
+
+  const readySignal = `<script>window.parent.postMessage({type:'preview-ready'}, '*');<\/script>`;
+
+  // Full HTML document — inject error reporter
+  if (/^\s*<!DOCTYPE|^\s*<html/i.test(cleanCode)) {
+    if (cleanCode.includes('</head>')) {
+      cleanCode = cleanCode.replace('</head>', errorReporter + '</head>');
+    } else if (/<body/i.test(cleanCode)) {
+      cleanCode = cleanCode.replace(/<body([^>]*)>/i, '<body$1>' + errorReporter);
+    } else {
+      cleanCode = errorReporter + cleanCode;
+    }
+    // Add ready signal before </body> or at the end
+    if (cleanCode.includes('</body>')) {
+      cleanCode = cleanCode.replace('</body>', readySignal + '</body>');
+    } else {
+      cleanCode += readySignal;
+    }
+    return cleanCode;
+  }
+
+  // React/JSX code — wrap in full HTML shell
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin><\/script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     #root { min-height: 100vh; }
-    #error-overlay {
-      position: fixed; inset: 0; background: rgba(255,0,0,0.05);
-      display: none; padding: 16px; z-index: 9999;
-    }
-    #error-overlay.visible { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    #error-message {
-      background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 12px;
-      padding: 16px; max-width: 500px; font-size: 13px; color: #991B1B;
-      font-family: monospace; white-space: pre-wrap; word-break: break-word;
-    }
   </style>
+  ${errorReporter}
 </head>
 <body>
   <div id="root"></div>
-  <div id="error-overlay">
-    <div id="error-message"></div>
-  </div>
-  <script>
-    window.onerror = function(msg, url, line, col, error) {
-      var overlay = document.getElementById('error-overlay');
-      var message = document.getElementById('error-message');
-      overlay.className = 'visible';
-      message.textContent = (error ? error.toString() : msg) + '\\n\\nLine: ' + line;
-      return true;
-    };
-  </script>
   <script type="text/babel" data-type="module">
     const { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext, Fragment } = React;
 
     ${cleanCode}
 
-    // Auto-detect and render the component
     ;(function() {
       try {
-        // Try common export patterns
         const candidates = [
           typeof App !== 'undefined' ? App : null,
           typeof Main !== 'undefined' ? Main : null,
@@ -78,40 +91,98 @@ function buildPreviewHtml(code: string): string {
         if (RootComponent) {
           const root = ReactDOM.createRoot(document.getElementById('root'));
           root.render(React.createElement(RootComponent));
+          window.parent.postMessage({type:'preview-ready'}, '*');
         } else {
-          document.getElementById('error-message').textContent = 'No component found to render. Define a component named App, Main, Component, Page, Home, Demo, or Example.';
-          document.getElementById('error-overlay').className = 'visible';
+          window.parent.postMessage({type:'preview-error', message:'No component found. Define: App, Main, Component, Page, Home, Demo, or Example.'}, '*');
         }
       } catch(e) {
-        document.getElementById('error-message').textContent = e.toString();
-        document.getElementById('error-overlay').className = 'visible';
+        window.parent.postMessage({type:'preview-error', message: e.stack || e.toString()}, '*');
       }
     })();
-  </script>
+  <\/script>
 </body>
 </html>`;
 }
 
-export function CodePreview({ code }: CodePreviewProps) {
+const MAX_FIX_ATTEMPTS = 3;
+
+export function CodePreview({ code, onCodeFixed }: CodePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [key, setKey] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
+  const [fixAttempts, setFixAttempts] = useState(0);
 
-  const blobUrl = useMemo(() => {
-    const html = buildPreviewHtml(code);
-    const blob = new Blob([html], { type: "text/html" });
-    return URL.createObjectURL(blob);
-  }, [code, key]);
+  const html = useMemo(() => buildPreviewHtml(code), [code, key]);
 
+  // Reset errors when code changes
   useEffect(() => {
-    return () => {
-      URL.revokeObjectURL(blobUrl);
-    };
-  }, [blobUrl]);
+    setHasError(false);
+    setErrorMessage("");
+    setFixAttempts(0);
+  }, [code]);
+
+  // Listen for postMessage from iframe
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (!e.data || typeof e.data !== "object") return;
+      if (e.data.type === "preview-error") {
+        setHasError(true);
+        setErrorMessage(e.data.message || "Unknown error");
+      } else if (e.data.type === "preview-ready") {
+        setHasError(false);
+        setErrorMessage("");
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // Auto-fix on error
+  useEffect(() => {
+    if (!hasError || !errorMessage || isFixing || !onCodeFixed) return;
+    if (fixAttempts >= MAX_FIX_ATTEMPTS) return;
+
+    const timer = setTimeout(() => {
+      doAutoFix();
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasError, errorMessage]);
+
+  const doAutoFix = useCallback(async () => {
+    if (!onCodeFixed || isFixing) return;
+    setIsFixing(true);
+    setFixAttempts((prev) => prev + 1);
+
+    try {
+      const res = await fetch("/api/fix-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, error: errorMessage }),
+      });
+
+      if (!res.ok) {
+        setIsFixing(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (data.fixedCode && data.fixedCode !== code) {
+        onCodeFixed(data.fixedCode);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsFixing(false);
+    }
+  }, [code, errorMessage, onCodeFixed, isFixing]);
 
   const handleRefresh = () => {
     setHasError(false);
+    setErrorMessage("");
     setKey((k) => k + 1);
   };
 
@@ -122,10 +193,33 @@ export function CodePreview({ code }: CodePreviewProps) {
     )}>
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-surface-alt shrink-0">
-        <span className="text-[10px] text-text-muted font-medium uppercase tracking-wide">
-          Live Preview
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-text-muted font-medium uppercase tracking-wide">
+            Live Preview
+          </span>
+          {isFixing && (
+            <span className="flex items-center gap-1 text-[10px] text-amber-500 font-medium">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Автоисправление...
+            </span>
+          )}
+          {hasError && !isFixing && fixAttempts >= MAX_FIX_ATTEMPTS && (
+            <span className="text-[10px] text-red-400 font-medium">
+              Не удалось исправить
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1">
+          {hasError && onCodeFixed && fixAttempts < MAX_FIX_ATTEMPTS && !isFixing && (
+            <button
+              onClick={doAutoFix}
+              className="h-6 px-2 rounded-md flex items-center gap-1 text-[10px] text-amber-500 hover:bg-surface transition-colors cursor-pointer"
+              title="Исправить ошибку"
+            >
+              <Wrench className="h-3 w-3" />
+              Исправить
+            </button>
+          )}
           <button
             onClick={handleRefresh}
             className="h-6 w-6 rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
@@ -147,30 +241,24 @@ export function CodePreview({ code }: CodePreviewProps) {
         </div>
       </div>
 
-      {/* iframe */}
+      {/* Error bar */}
+      {hasError && errorMessage && !isFixing && (
+        <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 shrink-0">
+          <pre className="text-[11px] text-red-400 font-mono whitespace-pre-wrap break-words max-h-20 overflow-y-auto">
+            {errorMessage}
+          </pre>
+        </div>
+      )}
+
+      {/* iframe — srcdoc instead of blob URL */}
       <div className="flex-1 relative bg-white">
-        {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-surface-alt z-10">
-            <div className="text-center space-y-2">
-              <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-              <p className="text-sm text-text-secondary">Ошибка рендеринга</p>
-              <button
-                onClick={handleRefresh}
-                className="text-xs text-accent hover:underline cursor-pointer"
-              >
-                Попробовать снова
-              </button>
-            </div>
-          </div>
-        )}
         <iframe
           ref={iframeRef}
           key={key}
-          src={blobUrl}
+          srcDoc={html}
           sandbox="allow-scripts"
           className="w-full h-full border-0"
           title="Code Preview"
-          onError={() => setHasError(true)}
         />
       </div>
     </div>

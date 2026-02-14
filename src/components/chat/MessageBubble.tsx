@@ -10,8 +10,9 @@ import {
   ChevronDown,
   FileText,
   ExternalLink,
+  Pencil,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -23,8 +24,16 @@ import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Artifact parsing ────────────────────────────────────
 
+const CLARIFY_REGEX = /<leema-clarify>[\s\S]*?<\/leema-clarify>/g;
+
 const ARTIFACT_REGEX =
   /<leema-doc\s+type="(\w+)"\s+title="([^"]*)">([\s\S]*?)<\/leema-doc>/g;
+
+const EDIT_REGEX =
+  /<leema-edit\s+target="([^"]*)">([\s\S]*?)<\/leema-edit>/g;
+
+const REPLACE_REGEX =
+  /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/replace>/g;
 
 const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   CONTRACT: "Договор",
@@ -37,29 +46,77 @@ const ARTIFACT_TYPE_LABELS: Record<string, string> = {
 };
 
 interface ParsedPart {
-  type: "text" | "artifact";
+  type: "text" | "artifact" | "edit";
   content: string;
   artifactType?: string;
   title?: string;
+  edits?: Array<{ old: string; new: string }>;
 }
 
-function parseContentWithArtifacts(content: string): ParsedPart[] {
+function parseContentWithArtifacts(rawContent: string): ParsedPart[] {
+  const content = rawContent.replace(CLARIFY_REGEX, "").trim();
   const parts: ParsedPart[] = [];
   let lastIndex = 0;
-  let match;
 
+  // Combine both regexes — find all matches sorted by position
+  const allMatches: Array<{
+    index: number;
+    end: number;
+    part: ParsedPart;
+  }> = [];
+
+  // Find artifacts
   ARTIFACT_REGEX.lastIndex = 0;
+  let match;
   while ((match = ARTIFACT_REGEX.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({ type: "text", content: content.slice(lastIndex, match.index) });
-    }
-    parts.push({
-      type: "artifact",
-      artifactType: match[1],
-      title: match[2],
-      content: match[3].trim(),
+    allMatches.push({
+      index: match.index,
+      end: ARTIFACT_REGEX.lastIndex,
+      part: {
+        type: "artifact",
+        artifactType: match[1],
+        title: match[2],
+        content: match[3].trim(),
+      },
     });
-    lastIndex = ARTIFACT_REGEX.lastIndex;
+  }
+
+  // Find edits
+  EDIT_REGEX.lastIndex = 0;
+  while ((match = EDIT_REGEX.exec(content)) !== null) {
+    const target = match[1];
+    const editBody = match[2];
+    const edits: Array<{ old: string; new: string }> = [];
+
+    REPLACE_REGEX.lastIndex = 0;
+    let replaceMatch;
+    while ((replaceMatch = REPLACE_REGEX.exec(editBody)) !== null) {
+      edits.push({ old: replaceMatch[1].trim(), new: replaceMatch[2].trim() });
+    }
+
+    if (edits.length > 0) {
+      allMatches.push({
+        index: match.index,
+        end: EDIT_REGEX.lastIndex,
+        part: {
+          type: "edit",
+          title: target,
+          content: "",
+          edits,
+        },
+      });
+    }
+  }
+
+  // Sort by position
+  allMatches.sort((a, b) => a.index - b.index);
+
+  for (const m of allMatches) {
+    if (m.index > lastIndex) {
+      parts.push({ type: "text", content: content.slice(lastIndex, m.index) });
+    }
+    parts.push(m.part);
+    lastIndex = m.end;
   }
 
   if (lastIndex < content.length) {
@@ -119,9 +176,12 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
-  const { openArtifact } = useArtifactStore();
+  const { openArtifact, trackArtifact, findByTitle, applyEdits } = useArtifactStore();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
+
+  // Track which edits we've already applied (by message id)
+  const appliedEditsRef = useRef<Set<string>>(new Set());
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -129,18 +189,51 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Parse artifacts from assistant messages
+  // Parse artifacts and edits from assistant messages
   const parts = isAssistant ? parseContentWithArtifacts(message.content) : [];
-  const hasArtifacts = parts.some((p) => p.type === "artifact");
+  const hasSpecialParts = parts.some((p) => p.type === "artifact" || p.type === "edit");
+
+  // Auto-apply edits to existing artifacts (run once per message)
+  useEffect(() => {
+    if (!isAssistant) return;
+
+    const editParts = parts.filter((p) => p.type === "edit");
+    for (const part of editParts) {
+      const editKey = `${message.id}-${part.title}`;
+      if (appliedEditsRef.current.has(editKey)) continue;
+      appliedEditsRef.current.add(editKey);
+
+      const target = findByTitle(part.title || "");
+      if (target && part.edits) {
+        applyEdits(target.id, part.edits);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message.id, message.content]);
 
   const handleOpenArtifact = (part: ParsedPart) => {
-    openArtifact({
+    // Reuse existing artifact if already tracked (prevents version increment on re-click)
+    const existing = findByTitle(part.title || "");
+    if (existing) {
+      openArtifact(existing);
+      return;
+    }
+
+    const artifact = {
       id: crypto.randomUUID(),
       type: (part.artifactType || "DOCUMENT") as ArtifactType,
       title: part.title || "Документ",
       content: part.content,
       version: 1,
-    });
+    };
+    openArtifact(artifact);
+  };
+
+  const handleOpenEditedArtifact = (title: string) => {
+    const target = findByTitle(title);
+    if (target) {
+      openArtifact(target);
+    }
   };
 
   return (
@@ -224,11 +317,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         >
           {isAssistant ? (
             <div className="prose-leema">
-              {hasArtifacts ? (
-                // Render with inline artifact cards
-                parts.map((part, i) =>
-                  part.type === "text" ? (
-                    part.content.trim() ? (
+              {hasSpecialParts ? (
+                // Render with inline artifact/edit cards
+                parts.map((part, i) => {
+                  if (part.type === "text") {
+                    return part.content.trim() ? (
                       <ReactMarkdown
                         key={i}
                         remarkPlugins={[remarkGfm]}
@@ -236,36 +329,68 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                       >
                         {part.content}
                       </ReactMarkdown>
-                    ) : null
-                  ) : (
-                    <button
-                      key={i}
-                      onClick={() => handleOpenArtifact(part)}
-                      className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
-                    >
-                      <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-accent" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">
-                          {part.title}
-                        </p>
-                        <p className="text-xs text-text-muted">
-                          {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
-                            part.artifactType}{" "}
-                          &middot; Нажмите чтобы открыть
-                        </p>
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
-                    </button>
-                  )
-                )
+                    ) : null;
+                  }
+
+                  if (part.type === "artifact") {
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleOpenArtifact(part)}
+                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
+                      >
+                        <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
+                          <FileText className="h-5 w-5 text-accent" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {part.title}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
+                              part.artifactType}{" "}
+                            &middot; Нажмите чтобы открыть
+                          </p>
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
+                      </button>
+                    );
+                  }
+
+                  if (part.type === "edit") {
+                    const target = findByTitle(part.title || "");
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleOpenEditedArtifact(part.title || "")}
+                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
+                      >
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
+                          <Pencil className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {part.title}
+                          </p>
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                            {part.edits?.length} {part.edits?.length === 1 ? "изменение" : "изменений"}
+                            {target ? ` · v${target.version}` : ""}
+                            {" "}&middot; Нажмите чтобы открыть
+                          </p>
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/edit:text-emerald-500 transition-colors shrink-0" />
+                      </button>
+                    );
+                  }
+
+                  return null;
+                })
               ) : (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={markdownComponents}
                 >
-                  {message.content}
+                  {message.content.replace(CLARIFY_REGEX, "").trim()}
                 </ReactMarkdown>
               )}
             </div>

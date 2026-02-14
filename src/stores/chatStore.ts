@@ -3,6 +3,14 @@ import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat"
 
 type StreamingPhase = "planning" | "thinking" | "answering" | null;
 
+export interface ClarifyQuestion {
+  id: string;
+  question: string;
+  options?: string[];
+  type?: "select" | "text";
+  placeholder?: string;
+}
+
 interface ContextUsage {
   usagePercent: number;
   totalTokens: number;
@@ -57,6 +65,10 @@ interface ChatState {
   // Pending input (from tools/templates)
   pendingInput: string | null;
   setPendingInput: (input: string | null) => void;
+
+  // Clarify questions modal
+  clarifyQuestions: ClarifyQuestion[] | null;
+  setClarifyQuestions: (questions: ClarifyQuestion[] | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -76,6 +88,7 @@ export const useChatStore = create<ChatState>((set) => ({
   currentPlan: null,
   contextUsage: null,
   pendingInput: null,
+  clarifyQuestions: null,
 
   setActiveConversation: (activeConversationId) =>
     set({ activeConversationId }),
@@ -135,4 +148,6 @@ export const useChatStore = create<ChatState>((set) => ({
   setContextUsage: (contextUsage) => set({ contextUsage }),
 
   setPendingInput: (pendingInput) => set({ pendingInput }),
+
+  setClarifyQuestions: (clarifyQuestions) => set({ clarifyQuestions }),
 }));

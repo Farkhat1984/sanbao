@@ -33,12 +33,19 @@ export interface LegalRef {
   isActual: boolean;
 }
 
+export interface ArtifactVersion {
+  version: number;
+  content: string;
+  timestamp: number;
+}
+
 export interface ArtifactData {
   id: string;
   type: ArtifactType;
   title: string;
   content: string;
   version: number;
+  versions?: ArtifactVersion[];
   metadata?: Record<string, unknown>;
 }
 

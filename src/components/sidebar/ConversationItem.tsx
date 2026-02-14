@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn, truncate } from "@/lib/utils";
 import type { ConversationSummary } from "@/types/chat";
 
@@ -19,7 +20,7 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { setActiveConversation, removeConversation } = useChatStore();
+  const { setActiveConversation, setActiveAgentId, removeConversation } = useChatStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export function ConversationItem({
 
   const handleClick = () => {
     setActiveConversation(conversation.id);
+    setActiveAgentId(conversation.agentId || null);
     router.push(`/chat/${conversation.id}`);
   };
 
@@ -60,6 +62,18 @@ export function ConversationItem({
         {conversation.pinned && (
           <Pin className="h-3 w-3 shrink-0 text-accent" />
         )}
+        {conversation.agentId && conversation.agentIcon && (() => {
+          const AgentIcon = ICON_MAP[conversation.agentIcon] || ICON_MAP.Bot;
+          return (
+            <div
+              className="h-4 w-4 rounded shrink-0 flex items-center justify-center"
+              style={{ backgroundColor: conversation.agentIconColor || "#6366f1" }}
+              title={conversation.agentName || "Агент"}
+            >
+              <AgentIcon className="h-2.5 w-2.5 text-white" />
+            </div>
+          );
+        })()}
         <span className="truncate flex-1">
           {truncate(conversation.title, 32)}
         </span>

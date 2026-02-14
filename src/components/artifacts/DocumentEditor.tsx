@@ -9,7 +9,7 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Highlight } from "@tiptap/extension-highlight";
-import { Underline } from "@tiptap/extension-underline";
+
 import { useEffect } from "react";
 import { EditorToolbar } from "./EditorToolbar";
 
@@ -20,6 +20,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({
@@ -33,7 +34,6 @@ export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
         types: ["heading", "paragraph"],
       }),
       Highlight.configure({ multicolor: true }),
-      Underline,
     ],
     content,
     editorProps: {

@@ -1,38 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Plus,
   Search,
   PanelLeftClose,
   Settings,
-  Scale,
   ShieldCheck,
-  Zap,
-  ListChecks,
-  ChevronDown,
-  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
-import { useTaskStore } from "@/stores/taskStore";
 import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
-import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-
 export function Sidebar() {
   const { close, searchQuery, setSearchQuery } = useSidebarStore();
-  const { setActiveConversation, setMessages, setConversations } = useChatStore();
-  const { tasks } = useTaskStore();
+  const { setActiveConversation, setActiveAgentId, setMessages, setConversations } = useChatStore();
   const { data: session } = useSession();
   const router = useRouter();
-  const [tasksExpanded, setTasksExpanded] = useState(false);
 
   // Load conversations from DB on mount
   useEffect(() => {
@@ -47,6 +38,7 @@ export function Sidebar() {
 
   const handleNewChat = () => {
     setActiveConversation(null);
+    setActiveAgentId(null);
     setMessages([]);
     router.push("/chat");
   };
@@ -62,7 +54,7 @@ export function Sidebar() {
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0">
-            <Scale className="h-4 w-4 text-white" />
+            <Sparkles className="h-4 w-4 text-white" />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight">
             Leema
@@ -90,43 +82,8 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Agents & Skills */}
+      {/* Agents */}
       <AgentList />
-      <div className="px-3 mb-1">
-        <button
-          onClick={() => router.push("/skills")}
-          className="w-full h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-alt text-xs font-medium flex items-center gap-2 px-2.5 transition-colors cursor-pointer"
-        >
-          <Zap className="h-3.5 w-3.5" />
-          Скиллы
-        </button>
-      </div>
-
-      {/* Tasks */}
-      <div className="px-3 mb-1">
-        <button
-          onClick={() => setTasksExpanded(!tasksExpanded)}
-          className="w-full h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-alt text-xs font-medium flex items-center gap-2 px-2.5 transition-colors cursor-pointer"
-        >
-          {tasksExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-          <ListChecks className="h-3.5 w-3.5" />
-          Задачи
-          {tasks.filter((t) => t.status === "IN_PROGRESS").length > 0 && (
-            <span className="ml-auto text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full">
-              {tasks.filter((t) => t.status === "IN_PROGRESS").length}
-            </span>
-          )}
-        </button>
-      </div>
-      {tasksExpanded && (
-        <div className="mb-2 max-h-48 overflow-y-auto">
-          <TaskPanel />
-        </div>
-      )}
 
       {/* Search */}
       <div className="px-3 py-2">

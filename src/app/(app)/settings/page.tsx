@@ -20,12 +20,10 @@ import {
   BarChart3,
   Shield,
   Brain,
-  Server,
   Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemoryManager } from "@/components/memory/MemoryManager";
-import { McpServerManager } from "@/components/settings/McpServerManager";
 import { PluginManager } from "@/components/settings/PluginManager";
 
 interface PlanInfo {
@@ -258,17 +256,6 @@ export default function SettingsPage() {
               AI запоминает ваши предпочтения и использует их в каждом разговоре.
             </p>
             <MemoryManager />
-          </div>
-        </section>
-
-        {/* MCP Servers */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Server className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">MCP-серверы</h2>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <McpServerManager />
           </div>
         </section>
 
