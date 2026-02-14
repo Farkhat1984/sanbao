@@ -32,6 +32,7 @@ interface ChatState {
   provider: AIProvider;
   thinkingEnabled: boolean;
   webSearchEnabled: boolean;
+  planningEnabled: boolean;
 
   // Planning mode
   currentPlan: string | null;
@@ -46,7 +47,7 @@ interface ChatState {
   removeConversation: (id: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
-  updateLastAssistantMessage: (content: string, reasoning?: string) => void;
+  updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   setStreaming: (isStreaming: boolean) => void;
   setStreamingPhase: (phase: StreamingPhase) => void;
   setToolWorking: (isToolWorking: boolean, toolName?: string | null) => void;
@@ -54,6 +55,7 @@ interface ChatState {
   setProvider: (provider: AIProvider) => void;
   toggleThinking: () => void;
   toggleWebSearch: () => void;
+  togglePlanning: () => void;
 
   // Planning
   setCurrentPlan: (plan: string | null) => void;
@@ -82,8 +84,9 @@ export const useChatStore = create<ChatState>((set) => ({
   activeToolName: null,
 
   provider: "deepinfra",
-  thinkingEnabled: true,
+  thinkingEnabled: false,
   webSearchEnabled: false,
+  planningEnabled: false,
 
   currentPlan: null,
   contextUsage: null,
@@ -112,7 +115,7 @@ export const useChatStore = create<ChatState>((set) => ({
   addMessage: (message) =>
     set((s) => ({ messages: [...s.messages, message] })),
 
-  updateLastAssistantMessage: (content, reasoning) =>
+  updateLastAssistantMessage: (content, reasoning, planContent) =>
     set((s) => {
       const msgs = [...s.messages];
       for (let i = msgs.length - 1; i >= 0; i--) {
@@ -121,6 +124,7 @@ export const useChatStore = create<ChatState>((set) => ({
             ...msgs[i],
             content,
             ...(reasoning !== undefined ? { reasoning } : {}),
+            ...(planContent !== undefined ? { planContent } : {}),
           };
           break;
         }
@@ -129,7 +133,7 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
 
   setStreaming: (isStreaming) =>
-    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null, currentPlan: null }) }),
+    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null }) }),
 
   setStreamingPhase: (streamingPhase) => set({ streamingPhase }),
 
@@ -139,6 +143,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setProvider: (provider) => set({ provider }),
   toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),
   toggleWebSearch: () => set((s) => ({ webSearchEnabled: !s.webSearchEnabled })),
+  togglePlanning: () => set((s) => ({ planningEnabled: !s.planningEnabled })),
 
   setCurrentPlan: (currentPlan) => set({ currentPlan }),
 

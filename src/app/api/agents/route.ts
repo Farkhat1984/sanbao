@@ -19,6 +19,7 @@ export async function GET() {
       icon: true,
       iconColor: true,
       model: true,
+      avatar: true,
       updatedAt: true,
       _count: { select: { conversations: true, files: true } },
     },
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { name, description, instructions, model, icon, iconColor } = body;
+  const { name, description, instructions, model, icon, iconColor, avatar, skillIds, mcpServerIds } = body;
 
   if (!name?.trim() || !instructions?.trim()) {
     return NextResponse.json(
@@ -79,14 +80,31 @@ export async function POST(req: Request) {
       model: model || "openai",
       icon: icon || "Bot",
       iconColor: iconColor || "#4F6EF7",
+      avatar: avatar || null,
     },
     include: { files: true },
   });
+
+  // Create skill associations
+  if (Array.isArray(skillIds) && skillIds.length > 0) {
+    await prisma.agentSkill.createMany({
+      data: skillIds.map((skillId: string) => ({ agentId: agent.id, skillId })),
+    });
+  }
+
+  // Create MCP server associations
+  if (Array.isArray(mcpServerIds) && mcpServerIds.length > 0) {
+    await prisma.agentMcpServer.createMany({
+      data: mcpServerIds.map((mcpServerId: string) => ({ agentId: agent.id, mcpServerId })),
+    });
+  }
 
   return NextResponse.json({
     ...agent,
     createdAt: agent.createdAt.toISOString(),
     updatedAt: agent.updatedAt.toISOString(),
     files: [],
+    skills: [],
+    mcpServers: [],
   });
 }

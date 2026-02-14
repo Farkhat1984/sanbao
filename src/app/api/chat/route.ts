@@ -15,6 +15,7 @@ import {
 } from "@/lib/context";
 import { buildMemoryContext } from "@/lib/memory";
 import { FEMIDA_ID, FEMIDA_SYSTEM_PROMPT, isSystemAgent } from "@/lib/system-agents";
+import { callMcpTool } from "@/lib/mcp-client";
 
 const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассистент. Отвечай точно, полезно и по делу.
 
@@ -50,12 +51,22 @@ const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассис�
 - Если нужно создать документ с нуля — используй <leema-doc>
 
 РЕЖИМ ПЛАНИРОВАНИЯ:
-Для сложных запросов можешь начать с плана:
+ОБЯЗАТЕЛЬНО начинай с плана в теге <leema-plan> в следующих случаях:
+- Запрос требует 3+ шагов или этапов работы
+- Создание сложного документа (договор, иск, анализ, бизнес-план и т.д.)
+- Исследовательские или аналитические задачи
+- Любой запрос, где нужно структурировать подход перед выполнением
+- Когда пользователь явно просит план, стратегию или порядок действий
+
+Формат:
 <leema-plan>
 ## План
-1. Шаг первый
-2. Шаг второй
+1. Шаг первый — краткое описание
+2. Шаг второй — краткое описание
 </leema-plan>
+
+После плана сразу приступай к выполнению. План — это вступление, а не весь ответ.
+НЕ используй <leema-plan> для простых вопросов, коротких ответов или однозадачных запросов.
 
 ЗАДАЧИ:
 Для многошаговых запросов (3+ шагов) создавай чек-лист:
@@ -246,17 +257,27 @@ async function compactInBackground(
 
 // ─── Moonshot (Kimi K2.5) streaming handler ─────────────
 
+interface McpToolContext {
+  url: string;
+  transport: "SSE" | "STREAMABLE_HTTP";
+  apiKey: string | null;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
 function streamMoonshot(
   apiMessages: Array<Record<string, unknown>>,
   options: {
     maxTokens: number;
     thinkingEnabled: boolean;
     webSearchEnabled: boolean;
+    mcpTools?: McpToolContext[];
     contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean };
   }
 ) {
   const encoder = new TextEncoder();
-  const { maxTokens, thinkingEnabled, webSearchEnabled, contextInfo } = options;
+  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], contextInfo } = options;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -298,8 +319,20 @@ function streamMoonshot(
               temperature: thinkingEnabled ? 1.0 : 0.6,
               top_p: 0.95,
               stream: true,
-              ...(webSearchEnabled
-                ? { tools: [WEB_SEARCH_BUILTIN] }
+              ...((webSearchEnabled || mcpTools.length > 0)
+                ? {
+                    tools: [
+                      ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
+                      ...mcpTools.map((t) => ({
+                        type: "function" as const,
+                        function: {
+                          name: t.name,
+                          description: t.description,
+                          parameters: t.inputSchema,
+                        },
+                      })),
+                    ],
+                  }
                 : {}),
               ...(!thinkingEnabled
                 ? { thinking: { type: "disabled" } }
@@ -438,13 +471,23 @@ function streamMoonshot(
                   planBuffer = "";
                 }
               } else {
-                // Not in plan — flush as content
-                if (planBuffer) {
-                  controller.enqueue(
-                    encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
-                  );
-                  planBuffer = "";
+                // Keep tail that could be a partial "<leema-plan>" tag
+                const TAG = "<leema-plan>";
+                let safeFlush = planBuffer;
+                let keepTail = "";
+                for (let k = 1; k < TAG.length; k++) {
+                  if (planBuffer.endsWith(TAG.slice(0, k))) {
+                    safeFlush = planBuffer.slice(0, -k);
+                    keepTail = planBuffer.slice(-k);
+                    break;
+                  }
                 }
+                if (safeFlush) {
+                  controller.enqueue(
+                    encoder.encode(JSON.stringify({ t: "c", v: safeFlush }) + "\n")
+                  );
+                }
+                planBuffer = keepTail;
               }
             }
           }
@@ -466,12 +509,41 @@ function streamMoonshot(
               tool_calls: collectedCalls,
             });
 
+            // Build a map of MCP tool names for quick lookup
+            const mcpToolMap = new Map(mcpTools.map((t) => [t.name, t]));
+
             for (const tc of collectedCalls) {
-              currentMessages.push({
-                role: "tool",
-                tool_call_id: tc.id,
-                content: tc.function.arguments,
-              });
+              const mcpDef = mcpToolMap.get(tc.function.name);
+              if (mcpDef) {
+                // MCP tool call — execute via MCP client
+                let args: Record<string, unknown> = {};
+                try {
+                  args = JSON.parse(tc.function.arguments || "{}");
+                } catch {
+                  // fallback empty
+                }
+                const mcpResult = await callMcpTool(
+                  mcpDef.url,
+                  mcpDef.transport,
+                  mcpDef.apiKey,
+                  tc.function.name,
+                  args
+                );
+                currentMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: mcpResult.error
+                    ? `Error: ${mcpResult.error}`
+                    : mcpResult.result,
+                });
+              } else {
+                // Built-in tool (web search) — pass arguments as content
+                currentMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: tc.function.arguments,
+                });
+              }
             }
 
             continue;
@@ -561,12 +633,23 @@ function createPlanDetectorStream(
               planBuffer = "";
             }
           } else {
-            if (planBuffer) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
-              );
-              planBuffer = "";
+            // Keep tail that could be a partial "<leema-plan>" tag
+            const TAG = "<leema-plan>";
+            let safeFlush = planBuffer;
+            let keepTail = "";
+            for (let k = 1; k < TAG.length; k++) {
+              if (planBuffer.endsWith(TAG.slice(0, k))) {
+                safeFlush = planBuffer.slice(0, -k);
+                keepTail = planBuffer.slice(-k);
+                break;
+              }
             }
+            if (safeFlush) {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "c", v: safeFlush }) + "\n")
+              );
+            }
+            planBuffer = keepTail;
           }
         }
 
@@ -605,6 +688,7 @@ export async function POST(req: Request) {
     skillId,
     thinkingEnabled = true,
     webSearchEnabled = false,
+    planningEnabled = false,
     attachments = [],
     conversationId: reqConvId,
   } = await req.json();
@@ -666,6 +750,7 @@ export async function POST(req: Request) {
   // Build system prompt and determine provider
   let systemPrompt = SYSTEM_PROMPT;
   let effectiveProvider = provider;
+  const agentMcpTools: McpToolContext[] = [];
 
   if (agentId) {
     if (isSystemAgent(agentId)) {
@@ -679,12 +764,12 @@ export async function POST(req: Request) {
         where: { id: agentId, userId: session.user.id },
         include: {
           files: { select: { extractedText: true, fileName: true } },
+          skills: { include: { skill: true } },
+          mcpServers: { include: { mcpServer: true } },
         },
       });
 
       if (agent) {
-        effectiveProvider = agent.model;
-
         const filesContext = agent.files
           .filter((f) => f.extractedText)
           .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
@@ -694,6 +779,37 @@ export async function POST(req: Request) {
 
         if (filesContext) {
           systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
+        }
+
+        // Append agent skills
+        for (const as of agent.skills) {
+          const sk = as.skill;
+          let skillPrompt = `\n\n--- Скилл: ${sk.name} ---\n${sk.systemPrompt}`;
+          if (sk.citationRules) {
+            skillPrompt += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${sk.citationRules}`;
+          }
+          if (sk.jurisdiction) {
+            skillPrompt += `\nЮРИСДИКЦИЯ: ${sk.jurisdiction}`;
+          }
+          systemPrompt += skillPrompt;
+        }
+
+        // Collect MCP tools from agent's connected servers
+        for (const ams of agent.mcpServers) {
+          const srv = ams.mcpServer;
+          if (srv.status === "CONNECTED" && srv.discoveredTools) {
+            const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+            for (const tool of tools) {
+              agentMcpTools.push({
+                url: srv.url,
+                transport: srv.transport,
+                apiKey: srv.apiKey,
+                name: tool.name,
+                description: tool.description || "",
+                inputSchema: tool.inputSchema || {},
+              });
+            }
+          }
         }
       }
     }
@@ -723,6 +839,11 @@ export async function POST(req: Request) {
       }
       systemPrompt = `${skillPrompt}\n\n${systemPrompt}`;
     }
+  }
+
+  if (planningEnabled) {
+    systemPrompt +=
+      "\n\nВАЖНО: Пользователь включил режим планирования. ОБЯЗАТЕЛЬНО начни ответ с подробного плана в теге <leema-plan>. Распиши все шаги, подзадачи и порядок действий. Это критически важно — пользователь ожидает структурированный план ПЕРЕД основным ответом.";
   }
 
   if (webSearchEnabled) {
@@ -837,6 +958,7 @@ export async function POST(req: Request) {
       maxTokens: plan.tokensPerMessage,
       thinkingEnabled,
       webSearchEnabled,
+      mcpTools: agentMcpTools,
       contextInfo,
     });
 

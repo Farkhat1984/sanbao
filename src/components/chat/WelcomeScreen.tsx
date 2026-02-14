@@ -164,31 +164,33 @@ export function WelcomeScreen() {
       </motion.div>
 
       {/* Quick Actions */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full"
-      >
-        {actions.map((action) => (
-          <motion.button
-            key={action.title}
-            variants={itemVariants}
-            onClick={() => handleQuickAction(action.prompt)}
-            className="group text-left p-4 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover transition-all duration-200 cursor-pointer"
-          >
-            <div className="h-9 w-9 rounded-xl bg-accent-light flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-white transition-colors">
-              <action.icon className="h-4 w-4 text-accent group-hover:text-white transition-colors" />
-            </div>
-            <h3 className="text-sm font-semibold text-text-primary mb-0.5">
-              {action.title}
-            </h3>
-            <p className="text-xs text-text-muted leading-relaxed">
-              {action.desc}
-            </p>
-          </motion.button>
-        ))}
-      </motion.div>
+      {!hasUserAgent && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full"
+        >
+          {actions.map((action) => (
+            <motion.button
+              key={action.title}
+              variants={itemVariants}
+              onClick={() => handleQuickAction(action.prompt)}
+              className="group text-left p-4 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover transition-all duration-200 cursor-pointer"
+            >
+              <div className="h-9 w-9 rounded-xl bg-accent-light flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-white transition-colors">
+                <action.icon className="h-4 w-4 text-accent group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-sm font-semibold text-text-primary mb-0.5">
+                {action.title}
+              </h3>
+              <p className="text-xs text-text-muted leading-relaxed">
+                {action.desc}
+              </p>
+            </motion.button>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }

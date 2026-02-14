@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSkillStore } from "@/stores/skillStore";
 import { SkillCard } from "@/components/skills/SkillCard";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { Skill } from "@/types/skill";
 
@@ -34,10 +35,14 @@ export default function SkillsPage() {
       });
   }, [setSkills, setLoading]);
 
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const builtIn = skills.filter((s) => s.isBuiltIn);
   const custom = skills.filter((s) => !s.isBuiltIn);
 
-  async function handleDelete(id: string) {
+  async function handleDeleteConfirm() {
+    if (!deleteId) return;
+    const id = deleteId;
+    setDeleteId(null);
     const res = await fetch(`/api/skills/${id}`, { method: "DELETE" });
     if (res.ok) {
       setLocalSkills((prev) => prev.filter((s) => s.id !== id));
@@ -116,7 +121,7 @@ export default function SkillsPage() {
                       key={skill.id}
                       skill={skill}
                       isOwner
-                      onDelete={handleDelete}
+                      onDelete={(id) => setDeleteId(id)}
                     />
                   ))}
                 </div>
@@ -143,6 +148,15 @@ export default function SkillsPage() {
           </>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteId(null)}
+        title="Удалить скилл?"
+        description="Скилл будет удалён. Агенты, использующие этот скилл, потеряют его."
+        confirmText="Удалить"
+      />
     </div>
   );
 }

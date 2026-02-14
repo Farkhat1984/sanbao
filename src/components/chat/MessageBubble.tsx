@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Artifact parsing ────────────────────────────────────
@@ -171,9 +172,12 @@ const markdownComponents = {
 interface MessageBubbleProps {
   message: ChatMessage;
   isLast: boolean;
+  agentName?: string;
+  agentIcon?: string;
+  agentIconColor?: string;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, agentName, agentIcon, agentIconColor }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const { openArtifact, trackArtifact, findByTitle, applyEdits } = useArtifactStore();
@@ -182,6 +186,20 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   // Track which edits we've already applied (by message id)
   const appliedEditsRef = useRef<Set<string>>(new Set());
+
+  // Collapse long assistant messages
+  const [isExpanded, setIsExpanded] = useState(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    if (!isAssistant || isExpanded) return;
+    const el = bubbleRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      setIsOverflowing(el.scrollHeight > 500);
+    });
+  }, [message.content, isAssistant, isExpanded]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -244,20 +262,26 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       className={cn("group flex gap-3 py-3", isUser && "flex-row-reverse")}
     >
       {/* Avatar */}
-      <div
-        className={cn(
-          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
-          isUser
-            ? "bg-accent text-white"
-            : "bg-gradient-to-br from-accent to-legal-ref text-white"
-        )}
-      >
-        {isUser ? (
-          <User className="h-4 w-4" />
-        ) : (
-          <Scale className="h-4 w-4" />
-        )}
-      </div>
+      {(() => {
+        const AgentIcon = agentIcon ? (ICON_MAP[agentIcon] || Scale) : Scale;
+        return (
+          <div
+            className={cn(
+              "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+              isUser
+                ? "bg-accent text-white"
+                : !agentIconColor && "bg-gradient-to-br from-accent to-legal-ref text-white"
+            )}
+            style={!isUser && agentIconColor ? { backgroundColor: agentIconColor, color: "white" } : undefined}
+          >
+            {isUser ? (
+              <User className="h-4 w-4" />
+            ) : (
+              <AgentIcon className="h-4 w-4" />
+            )}
+          </div>
+        );
+      })()}
 
       {/* Content */}
       <div
@@ -268,7 +292,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       >
         {/* Name */}
         <span className="text-[11px] font-medium text-text-muted mb-1 block">
-          {isUser ? "Вы" : "Leema"}
+          {isUser ? "Вы" : (agentName || "Leema")}
         </span>
 
         {/* Reasoning block */}
@@ -308,11 +332,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         {/* Message bubble */}
         <div
+          ref={isAssistant ? bubbleRef : undefined}
           className={cn(
             "rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isUser
               ? "bg-accent text-white rounded-tr-md"
-              : "bg-surface-alt text-text-primary rounded-tl-md border border-border"
+              : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
+            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative"
           )}
         >
           {isAssistant ? (
@@ -397,7 +423,23 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
+
+          {/* Gradient fade for collapsed long messages */}
+          {isAssistant && !isExpanded && isOverflowing && (
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-surface-alt to-transparent rounded-b-2xl pointer-events-none" />
+          )}
         </div>
+
+        {/* Expand / Collapse */}
+        {isAssistant && isOverflowing && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 mt-1.5 text-xs text-text-muted hover:text-accent transition-colors cursor-pointer"
+          >
+            <ChevronDown className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-180")} />
+            {isExpanded ? "Свернуть" : "Развернуть"}
+          </button>
+        )}
 
         {/* Legal References */}
         {message.legalRefs && message.legalRefs.length > 0 && (

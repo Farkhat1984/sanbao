@@ -3,7 +3,9 @@
 import { useRef, useEffect, useState } from "react";
 import { ListChecks, ChevronDown, ChevronRight } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
+import { useAgentStore } from "@/stores/agentStore";
 import { useTaskStore } from "@/stores/taskStore";
+import { isSystemAgent } from "@/lib/system-agents";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { WelcomeScreen } from "./WelcomeScreen";
@@ -13,7 +15,8 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName, contextUsage } = useChatStore();
+  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName, contextUsage, activeConversationId, activeAgentId, conversations } = useChatStore();
+  const { setActiveAgent } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [tasksExpanded, setTasksExpanded] = useState(false);
@@ -22,8 +25,27 @@ export function ChatArea() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming]);
 
+  // Load full agent data when activeAgentId changes
+  useEffect(() => {
+    if (!activeAgentId || isSystemAgent(activeAgentId)) {
+      setActiveAgent(null);
+      return;
+    }
+
+    fetch(`/api/agents/${activeAgentId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((agent) => setActiveAgent(agent))
+      .catch(() => setActiveAgent(null));
+  }, [activeAgentId, setActiveAgent]);
+
   const hasMessages = messages.length > 0;
   const activeTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
+
+  // Agent info from active conversation
+  const activeConv = conversations.find((c) => c.id === activeConversationId);
+  const agentName = activeConv?.agentName ?? undefined;
+  const agentIcon = activeConv?.agentIcon ?? undefined;
+  const agentIconColor = activeConv?.agentIconColor ?? undefined;
 
   return (
     <div className="h-full flex flex-col">
@@ -63,6 +85,9 @@ export function ChatArea() {
                 key={msg.id}
                 message={msg}
                 isLast={i === messages.length - 1}
+                agentName={agentName}
+                agentIcon={agentIcon}
+                agentIconColor={agentIconColor}
               />
             ))}
 
@@ -72,6 +97,7 @@ export function ChatArea() {
                 phase={streamingPhase}
                 isToolWorking={isToolWorking}
                 toolName={activeToolName}
+                agentName={agentName}
               />
             )}
 

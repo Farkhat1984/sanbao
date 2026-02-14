@@ -9,6 +9,7 @@ import {
   Wrench,
   Globe,
   Brain,
+  ListChecks,
   Mic,
   X,
   FileText,
@@ -21,6 +22,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { cn } from "@/lib/utils";
 import { FEMIDA_ID } from "@/lib/system-agents";
 
@@ -79,6 +81,7 @@ export function MessageInput() {
   const [isFocused, setIsFocused] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ title: string; description?: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +96,7 @@ export function MessageInput() {
     activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
+    planningEnabled,
     pendingInput,
     addMessage,
     addConversation,
@@ -103,6 +107,7 @@ export function MessageInput() {
     setToolWorking,
     toggleThinking,
     toggleWebSearch,
+    togglePlanning,
     updateCurrentPlan,
     setCurrentPlan,
     setContextUsage,
@@ -190,7 +195,7 @@ export function MessageInput() {
 
       for (const file of Array.from(files)) {
         if (file.size > CHAT_MAX_FILE_SIZE) {
-          alert(`Файл "${file.name}" слишком большой (макс. 20MB)`);
+          setAlertMessage({ title: "Файл слишком большой", description: `«${file.name}» превышает лимит 20 МБ` });
           continue;
         }
 
@@ -200,9 +205,7 @@ export function MessageInput() {
         const isDocument = isDocumentFile(file);
 
         if (!isImage && !isText && !isDocument) {
-          alert(
-            `Формат "${file.name}" не поддерживается.\nПоддерживаются: PNG, JPG, WebP, TXT, MD, PDF, DOCX, XLSX`
-          );
+          setAlertMessage({ title: "Формат не поддерживается", description: `«${file.name}» — поддерживаются PNG, JPG, WebP, TXT, MD, PDF, DOCX, XLSX` });
           continue;
         }
 
@@ -249,9 +252,7 @@ export function MessageInput() {
               )
             );
           } catch (err) {
-            alert(
-              `Ошибка при обработке "${file.name}": ${err instanceof Error ? err.message : "Неизвестная ошибка"}`
-            );
+            setAlertMessage({ title: "Ошибка обработки файла", description: `«${file.name}»: ${err instanceof Error ? err.message : "Неизвестная ошибка"}` });
             setAttachedFiles((prev) => prev.filter((f) => f.id !== attached.id));
           }
         }
@@ -367,6 +368,7 @@ export function MessageInput() {
           conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
+          planningEnabled,
           attachments: attachmentsPayload,
         }),
         signal: abortRef.current.signal,
@@ -436,6 +438,11 @@ export function MessageInput() {
                 }
                 fullPlan += data.v;
                 updateCurrentPlan(data.v);
+                updateLastAssistantMessage(
+                  fullContent,
+                  fullReasoning || undefined,
+                  fullPlan
+                );
                 break;
               case "x": // context info
                 try {
@@ -563,6 +570,7 @@ export function MessageInput() {
     activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
+    planningEnabled,
     addMessage,
     addConversation,
     setActiveConversation,
@@ -660,6 +668,16 @@ export function MessageInput() {
           >
             <Globe className="h-3 w-3" />
             Веб-поиск
+            <X className="h-2.5 w-2.5 ml-0.5" />
+          </button>
+        )}
+        {planningEnabled && (
+          <button
+            onClick={togglePlanning}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer"
+          >
+            <ListChecks className="h-3 w-3" />
+            Планирование
             <X className="h-2.5 w-2.5 ml-0.5" />
           </button>
         )}
@@ -842,6 +860,42 @@ export function MessageInput() {
                         </div>
                       </button>
 
+                      {/* Planning toggle */}
+                      <button
+                        onClick={() => {
+                          togglePlanning();
+                          setMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                      >
+                        <div
+                          className={cn(
+                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
+                            planningEnabled
+                              ? "bg-amber-500 text-white"
+                              : "bg-amber-50 dark:bg-amber-950 text-amber-500"
+                          )}
+                        >
+                          <ListChecks className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span>Планирование</span>
+                        </div>
+                        <div
+                          className={cn(
+                            "w-8 h-4.5 rounded-full transition-colors relative",
+                            planningEnabled ? "bg-amber-500" : "bg-border"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
+                              planningEnabled ? "left-[18px]" : "left-0.5"
+                            )}
+                          />
+                        </div>
+                      </button>
+
                       {/* Thinking toggle */}
                       <button
                         onClick={() => {
@@ -1004,6 +1058,14 @@ export function MessageInput() {
       <ImageGenerateModal
         isOpen={imageGenOpen}
         onClose={() => setImageGenOpen(false)}
+      />
+
+      {/* File error alert */}
+      <AlertModal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        title={alertMessage?.title || ""}
+        description={alertMessage?.description}
       />
     </div>
   );

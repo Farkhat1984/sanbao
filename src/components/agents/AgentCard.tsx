@@ -52,19 +52,24 @@ export function AgentCard({ agent }: AgentCardProps) {
       onClick={() => router.push(`/agents/${agent.id}/edit`)}
     >
       <div className="flex items-start gap-3 mb-3">
-        <div
-          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: agent.iconColor }}
-        >
-          <Icon className="h-5 w-5 text-white" />
-        </div>
+        {agent.avatar ? (
+          <img
+            src={agent.avatar}
+            alt={agent.name}
+            className="h-10 w-10 rounded-xl object-cover shrink-0"
+          />
+        ) : (
+          <div
+            className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: agent.iconColor }}
+          >
+            <Icon className="h-5 w-5 text-white" />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {agent.name}
           </h3>
-          <p className="text-xs text-text-muted mt-0.5">
-            {agent.model === "anthropic" ? "Claude Sonnet" : "GPT-4o"}
-          </p>
         </div>
         <button
           onClick={(e) => {

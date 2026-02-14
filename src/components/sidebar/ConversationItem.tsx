@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn, truncate } from "@/lib/utils";
 import type { ConversationSummary } from "@/types/chat";
@@ -19,6 +20,7 @@ export function ConversationItem({
   isActive,
 }: ConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveConversation, setActiveAgentId, removeConversation } = useChatStore();
   const router = useRouter();
@@ -40,10 +42,15 @@ export function ConversationItem({
     router.push(`/chat/${conversation.id}`);
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    removeConversation(conversation.id);
     setShowMenu(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    removeConversation(conversation.id);
     fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(() => {});
   };
 
@@ -115,7 +122,7 @@ export function ConversationItem({
               В архив
             </button>
             <button
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
@@ -124,6 +131,15 @@ export function ConversationItem({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Удалить чат?"
+        description="Все сообщения и документы этого чата будут удалены."
+        confirmText="Удалить"
+      />
     </div>
   );
 }

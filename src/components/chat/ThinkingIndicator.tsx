@@ -7,6 +7,7 @@ interface ThinkingIndicatorProps {
   phase: "planning" | "thinking" | "answering" | null;
   isToolWorking: boolean;
   toolName?: string | null;
+  agentName?: string;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -18,7 +19,7 @@ const TOOL_LABELS: Record<string, string> = {
   searchArticles: "Ищет статьи закона",
 };
 
-export function ThinkingIndicator({ phase, isToolWorking, toolName }: ThinkingIndicatorProps) {
+export function ThinkingIndicator({ phase, isToolWorking, toolName, agentName }: ThinkingIndicatorProps) {
   const isThinking = phase === "thinking";
   const isSearching = isToolWorking && toolName?.startsWith("Поиск:");
 
@@ -29,7 +30,7 @@ export function ThinkingIndicator({ phase, isToolWorking, toolName }: ThinkingIn
   let dotColorClass: string;
 
   if (phase === "planning") {
-    label = "Leema составляет план";
+    label = `${agentName || "Leema"} составляет план`;
     Icon = ListChecks;
     gradientClass = "from-amber-500 to-orange-500";
     dotColorClass = "bg-amber-500";
@@ -44,12 +45,12 @@ export function ThinkingIndicator({ phase, isToolWorking, toolName }: ThinkingIn
     gradientClass = "from-amber-500 to-orange-600";
     dotColorClass = "bg-amber-500";
   } else if (isThinking) {
-    label = "Leema думает";
+    label = `${agentName || "Leema"} думает`;
     Icon = Brain;
     gradientClass = "from-violet-500 to-purple-600";
     dotColorClass = "bg-violet-500";
   } else {
-    label = "Leema отвечает";
+    label = `${agentName || "Leema"} отвечает`;
     Icon = MessageSquare;
     gradientClass = "from-accent to-legal-ref";
     dotColorClass = "bg-accent";

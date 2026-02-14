@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { AvatarUpload } from "@/components/agents/AvatarUpload";
 import { Mail, Calendar, Shield, Sparkles } from "lucide-react";
 
 export default function ProfilePage() {
@@ -13,6 +13,16 @@ export default function ProfilePage() {
   const router = useRouter();
   const user = session?.user;
   const [planName, setPlanName] = useState("Free");
+  const [userAvatar, setUserAvatar] = useState<string | null>(user?.image || null);
+
+  const handleAvatarChange = async (avatar: string | null) => {
+    setUserAvatar(avatar);
+    await fetch("/api/user/avatar", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar }),
+    });
+  };
 
   useEffect(() => {
     fetch("/api/billing/current")
@@ -30,7 +40,7 @@ export default function ProfilePage() {
         {/* User Card */}
         <div className="bg-surface border border-border rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-4 mb-6">
-            <Avatar src={user?.image} name={user?.name} size="lg" />
+            <AvatarUpload avatar={userAvatar} onAvatarChange={handleAvatarChange} />
             <div>
               <h2 className="text-lg font-semibold text-text-primary">
                 {user?.name || "Пользователь"}
