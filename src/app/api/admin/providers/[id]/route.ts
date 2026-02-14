@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
+import { encrypt } from "@/lib/crypto";
 
 export async function GET(
   _req: Request,
@@ -45,7 +46,7 @@ export async function PUT(
   const data: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
-      data[field] = body[field];
+      data[field] = field === "apiKey" ? encrypt(body[field]) : body[field];
     }
   }
 

@@ -38,6 +38,8 @@ export async function GET() {
       ? {
           grantedAt: subscription.createdAt,
           expiresAt: subscription.expiresAt,
+          trialEndsAt: (subscription as Record<string, unknown>).trialEndsAt || null,
+          isTrial: !!(subscription as Record<string, unknown>).trialEndsAt && new Date((subscription as Record<string, unknown>).trialEndsAt as string) > new Date(),
         }
       : null,
     usage: {

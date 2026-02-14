@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin";
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  const result = await requireAdmin();
+  if (result.error) return result.error;
+
+  const sessions = await prisma.session.findMany({
+    include: {
+      user: { select: { name: true, email: true } },
+    },
+    orderBy: { expires: "desc" },
+  });
+
+  return NextResponse.json(
+    sessions.map((s) => ({
+      id: s.id,
+      userId: s.userId,
+      userName: s.user.name,
+      userEmail: s.user.email,
+      expires: s.expires.toISOString(),
+    }))
+  );
+}
+
+export async function DELETE(req: Request) {
+  const result = await requireAdmin();
+  if (result.error) return result.error;
+
+  const body = await req.json();
+
+  if (body.all) {
+    await prisma.session.deleteMany({});
+    return NextResponse.json({ success: true, deleted: "all" });
+  }
+
+  if (body.sessionId) {
+    await prisma.session.delete({ where: { id: body.sessionId } }).catch(() => null);
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: "sessionId or all required" }, { status: 400 });
+}

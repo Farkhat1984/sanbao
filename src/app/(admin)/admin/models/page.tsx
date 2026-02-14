@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Star, StarOff } from "lucide-react";
+import { Plus, Save, Trash2, Star, StarOff, Brain, Grid3X3 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -16,6 +17,8 @@ interface Model {
   contextWindow: number | null;
   costPer1kInput: number;
   costPer1kOutput: number;
+  supportsThinking: boolean;
+  maxThinkingTokens: number | null;
   isActive: boolean;
   isDefault: boolean;
   provider: { id: string; name: string; slug: string };
@@ -57,6 +60,8 @@ export default function AdminModelsPage() {
     contextWindow: 128000,
     costPer1kInput: 0,
     costPer1kOutput: 0,
+    supportsThinking: false,
+    maxThinkingTokens: 0,
   });
 
   const fetchData = async () => {
@@ -81,7 +86,7 @@ export default function AdminModelsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: 0.7, topP: 1, maxTokens: 4096, contextWindow: 128000, costPer1kInput: 0, costPer1kOutput: 0 });
+      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: 0.7, topP: 1, maxTokens: 4096, contextWindow: 128000, costPer1kInput: 0, costPer1kOutput: 0, supportsThinking: false, maxThinkingTokens: 0 });
       fetchData();
     }
   };
@@ -119,10 +124,14 @@ export default function AdminModelsPage() {
           <h1 className="text-xl font-bold text-text-primary">AI-модели</h1>
           <p className="text-sm text-text-muted mt-1">Настройки моделей, температура, токены, стоимость</p>
         </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" />
-          Добавить
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/models/matrix">
+            <Button variant="secondary" size="sm"><Grid3X3 className="h-4 w-4" /> Матрица планов</Button>
+          </Link>
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" /> Добавить
+          </Button>
+        </div>
       </div>
 
       {/* Category filter */}
@@ -211,6 +220,26 @@ export default function AdminModelsPage() {
               className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
             />
           </div>
+          <div className="flex items-center gap-4 mt-3">
+            <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newModel.supportsThinking}
+                onChange={(e) => setNewModel({ ...newModel, supportsThinking: e.target.checked })}
+                className="rounded"
+              />
+              Поддержка Thinking
+            </label>
+            {newModel.supportsThinking && (
+              <input
+                placeholder="Max Thinking Tokens"
+                type="number"
+                value={newModel.maxThinkingTokens}
+                onChange={(e) => setNewModel({ ...newModel, maxThinkingTokens: parseInt(e.target.value) || 0 })}
+                className="h-9 w-48 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+              />
+            )}
+          </div>
           <div className="mt-3">
             <Button variant="gradient" size="sm" onClick={handleCreate}>
               <Save className="h-3.5 w-3.5" />
@@ -295,7 +324,29 @@ export default function AdminModelsPage() {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-4 mt-3">
+                  <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.supportsThinking ?? m.supportsThinking}
+                      onChange={(e) => setEditForm({ ...editForm, supportsThinking: e.target.checked })}
+                      className="rounded"
+                    />
+                    Поддержка Thinking
+                  </label>
+                  {(editForm.supportsThinking ?? m.supportsThinking) && (
+                    <div>
+                      <label className="text-xs text-text-muted block mb-1">Max Thinking Tokens</label>
+                      <input
+                        type="number"
+                        value={editForm.maxThinkingTokens ?? m.maxThinkingTokens ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, maxThinkingTokens: parseInt(e.target.value) || null })}
+                        className="w-40 h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-3">
                   <Button variant="gradient" size="sm" onClick={() => handleUpdate(m.id, editForm)}>
                     <Save className="h-3.5 w-3.5" /> Сохранить
                   </Button>
@@ -311,6 +362,7 @@ export default function AdminModelsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-text-primary">{m.displayName}</span>
                       <Badge variant="default">{CATEGORY_LABELS[m.category] || m.category}</Badge>
+                      {m.supportsThinking && <Badge variant="default"><Brain className="h-3 w-3 inline" /> Thinking</Badge>}
                       {m.isDefault && <Badge variant="accent">По умолчанию</Badge>}
                     </div>
                     <p className="text-xs text-text-muted mt-0.5">

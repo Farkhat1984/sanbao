@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mail, CheckCircle, XCircle, Send, RefreshCw } from "lucide-react";
+import { Mail, CheckCircle, XCircle, Send, RefreshCw, FileEdit, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -15,6 +15,32 @@ interface EmailLog {
   createdAt: string;
 }
 
+interface EmailTemplate {
+  id: string | null;
+  type: string;
+  subject: string;
+  html: string;
+  isActive: boolean;
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  WELCOME: "Приветствие",
+  INVOICE: "Счёт",
+  SUBSCRIPTION_EXPIRING: "Истечение подписки",
+  PAYMENT_FAILED: "Ошибка оплаты",
+  PASSWORD_RESET: "Сброс пароля",
+  EMAIL_VERIFICATION: "Подтверждение email",
+};
+
+const TYPE_VARS: Record<string, string> = {
+  WELCOME: "{{userName}}",
+  INVOICE: "{{userName}}, {{planName}}, {{amount}}, {{period}}, {{invoiceNumber}}",
+  SUBSCRIPTION_EXPIRING: "{{userName}}, {{planName}}, {{expiresAt}}",
+  PAYMENT_FAILED: "{{userName}}, {{planName}}",
+  PASSWORD_RESET: "{{resetLink}}",
+  EMAIL_VERIFICATION: "{{verifyLink}}",
+};
+
 export default function AdminEmailPage() {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -23,6 +49,11 @@ export default function AdminEmailPage() {
   const [testEmail, setTestEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [smtpStatus, setSmtpStatus] = useState<{ ok?: boolean; error?: string } | null>(null);
+  const [tab, setTab] = useState<"logs" | "templates">("logs");
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [editType, setEditType] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ subject: string; html: string; isActive: boolean }>({ subject: "", html: "", isActive: true });
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const fetchLogs = async () => {
     const res = await fetch(`/api/admin/email?page=${page}&limit=20`);
@@ -32,9 +63,26 @@ export default function AdminEmailPage() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page]);
+  const fetchTemplates = async () => {
+    const res = await fetch("/api/admin/email-templates");
+    setTemplates(await res.json());
+  };
+
+  useEffect(() => { fetchLogs(); }, [page]);
+  useEffect(() => { if (tab === "templates") fetchTemplates(); }, [tab]);
+
+  const handleSaveTemplate = async () => {
+    if (!editType) return;
+    setSavingTemplate(true);
+    await fetch("/api/admin/email-templates", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: editType, ...editForm }),
+    });
+    setSavingTemplate(false);
+    setEditType(null);
+    fetchTemplates();
+  };
 
   const handleVerifySmtp = async () => {
     setSmtpStatus(null);
@@ -75,8 +123,71 @@ export default function AdminEmailPage() {
   return (
     <div>
       <h1 className="text-xl font-bold text-text-primary mb-1">Email</h1>
-      <p className="text-sm text-text-muted mb-6">Логи отправки и SMTP-конфигурация</p>
+      <p className="text-sm text-text-muted mb-6">Логи отправки, шаблоны и SMTP-конфигурация</p>
 
+      <div className="flex gap-1 mb-4">
+        <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>Логи</button>
+        <button onClick={() => setTab("templates")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "templates" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><FileEdit className="h-3 w-3 inline mr-1" />Шаблоны</button>
+      </div>
+
+      {tab === "templates" && (
+        <div className="space-y-3">
+          {editType ? (
+            <div className="bg-surface border border-accent/30 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-text-primary">{TYPE_LABELS[editType] || editType}</h3>
+                <div className="flex items-center gap-2">
+                  <Button variant="gradient" size="sm" onClick={handleSaveTemplate} isLoading={savingTemplate}>
+                    <Save className="h-3.5 w-3.5" /> Сохранить
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditType(null)}>Отмена</Button>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted mb-3">Переменные: <code className="text-accent">{TYPE_VARS[editType] || ""}</code></p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-text-muted block mb-1">Тема письма</label>
+                  <input
+                    value={editForm.subject}
+                    onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                    className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted block mb-1">HTML-содержимое</label>
+                  <textarea
+                    value={editForm.html}
+                    onChange={(e) => setEditForm({ ...editForm, html: e.target.value })}
+                    className="w-full h-64 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary font-mono focus:outline-none focus:border-accent resize-none"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
+                  <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })} className="rounded" />
+                  Активный (перезаписывает стандартный шаблон)
+                </label>
+              </div>
+            </div>
+          ) : (
+            templates.map((t) => (
+              <div key={t.type} className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`h-2.5 w-2.5 rounded-full ${t.isActive && t.html ? "bg-success" : "bg-text-muted"}`} />
+                  <div>
+                    <span className="text-sm font-medium text-text-primary">{TYPE_LABELS[t.type] || t.type}</span>
+                    {t.subject && <span className="text-xs text-text-muted ml-2">&middot; {t.subject}</span>}
+                    {!t.html && <span className="text-xs text-text-muted ml-2">(стандартный)</span>}
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => { setEditType(t.type); setEditForm({ subject: t.subject, html: t.html, isActive: t.isActive }); }}>
+                  <FileEdit className="h-3.5 w-3.5" /> Изменить
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === "logs" && <>
       {/* SMTP Check & Test */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
         <div className="flex flex-wrap items-end gap-3">
@@ -167,6 +278,7 @@ export default function AdminEmailPage() {
           )}
         </>
       )}
+      </>}
     </div>
   );
 }

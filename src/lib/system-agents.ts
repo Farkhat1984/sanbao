@@ -1,7 +1,9 @@
 /**
  * System agents — built-in agents available to all users.
- * They cannot be edited, deleted or customized.
+ * Loaded from DB (SystemAgent table) with hardcoded fallback.
  */
+
+import { prisma } from "@/lib/prisma";
 
 export const FEMIDA_ID = "system-femida";
 
@@ -49,4 +51,59 @@ export const SYSTEM_AGENT_IDS = [FEMIDA_ID] as const;
 export function isSystemAgent(agentId: string | null | undefined): boolean {
   if (!agentId) return false;
   return (SYSTEM_AGENT_IDS as readonly string[]).includes(agentId);
+}
+
+/** Load system agents from DB, falling back to hardcoded Femida */
+export async function getSystemAgents() {
+  try {
+    const dbAgents = await prisma.systemAgent.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    if (dbAgents.length > 0) {
+      return dbAgents.map((a) => ({
+        id: `system-${a.id}`,
+        name: a.name,
+        description: a.description || "",
+        icon: a.icon,
+        iconColor: a.iconColor,
+        model: a.model,
+        systemPrompt: a.systemPrompt,
+      }));
+    }
+  } catch {
+    // DB not available, fall back
+  }
+
+  return [
+    {
+      ...FEMIDA_AGENT,
+      systemPrompt: FEMIDA_SYSTEM_PROMPT,
+    },
+  ];
+}
+
+/** Get system prompt for a system agent by ID */
+export async function getSystemAgentPrompt(agentId: string): Promise<string | null> {
+  // Check DB first
+  try {
+    const cleanId = agentId.replace(/^system-/, "");
+    const agent = await prisma.systemAgent.findFirst({
+      where: {
+        OR: [
+          { id: cleanId },
+          { name: "Фемида" }, // Femida fallback
+        ],
+        isActive: true,
+      },
+    });
+    if (agent) return agent.systemPrompt;
+  } catch {
+    // fall through
+  }
+
+  // Hardcoded fallback
+  if (agentId === FEMIDA_ID) return FEMIDA_SYSTEM_PROMPT;
+  return null;
 }

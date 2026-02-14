@@ -49,6 +49,8 @@ export async function POST(req: Request) {
     contextWindow,
     costPer1kInput,
     costPer1kOutput,
+    supportsThinking,
+    maxThinkingTokens,
     isActive,
     isDefault,
   } = body;
@@ -104,6 +106,8 @@ export async function POST(req: Request) {
       contextWindow: contextWindow ?? null,
       costPer1kInput: costPer1kInput ?? 0,
       costPer1kOutput: costPer1kOutput ?? 0,
+      supportsThinking: supportsThinking ?? false,
+      maxThinkingTokens: maxThinkingTokens || null,
       isActive: isActive ?? true,
       isDefault: isDefault ?? false,
     },

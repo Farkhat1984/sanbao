@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
+import { encrypt } from "@/lib/crypto";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
       name,
       slug,
       baseUrl,
-      apiKey,
+      apiKey: encrypt(apiKey),
       isActive: isActive ?? true,
       priority: priority ?? 0,
     },

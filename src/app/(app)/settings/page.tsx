@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +22,7 @@ import {
   Shield,
   Brain,
   Puzzle,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemoryManager } from "@/components/memory/MemoryManager";
@@ -54,9 +56,109 @@ interface BillingData {
   subscription: { grantedAt: string; expiresAt: string | null } | null;
 }
 
-export default function SettingsPage() {
+function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup?: boolean }) {
+  const [twoFa, setTwoFa] = useState<{ enabled: boolean; qrCodeUrl?: string; secret?: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [loading2fa, setLoading2fa] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/2fa").then((r) => r.json()).then((data) => {
+      setTwoFa(data);
+      // Auto-trigger setup if redirected from admin with ?setup2fa=1
+      if (autoSetup && !data.enabled && !data.qrCodeUrl) {
+        fetch("/api/auth/2fa").then((r) => r.json()).then(setTwoFa);
+      }
+    });
+  }, [autoSetup]);
+
+  const handleSetup = async () => {
+    const res = await fetch("/api/auth/2fa");
+    const data = await res.json();
+    setTwoFa(data);
+  };
+
+  const handleEnable = async () => {
+    if (!code) return;
+    setLoading2fa(true);
+    const res = await fetch("/api/auth/2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, action: "enable" }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setTwoFa({ enabled: true });
+      setMsg("2FA включена");
+      setCode("");
+    } else {
+      setMsg(data.error || "Ошибка");
+    }
+    setLoading2fa(false);
+  };
+
+  const handleDisable = async () => {
+    if (!code) return;
+    setLoading2fa(true);
+    const res = await fetch("/api/auth/2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, action: "disable" }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setTwoFa({ enabled: false });
+      setMsg("2FA отключена");
+      setCode("");
+    } else {
+      setMsg(data.error || "Ошибка");
+    }
+    setLoading2fa(false);
+  };
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <Lock className="h-4 w-4 text-text-muted" />
+        <h2 className="text-sm font-semibold text-text-primary">Двухфакторная аутентификация</h2>
+      </div>
+      <div className="p-4 rounded-xl bg-surface-alt border border-border space-y-3">
+        {twoFa?.enabled ? (
+          <>
+            <p className="text-sm text-success">2FA включена</p>
+            {!isAdmin && (
+              <div className="flex gap-2">
+                <input placeholder="Код из приложения" value={code} onChange={(e) => setCode(e.target.value)} className="h-9 px-3 rounded-lg bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent w-40 font-mono" />
+                <Button variant="secondary" size="sm" onClick={handleDisable} isLoading={loading2fa}>Отключить</Button>
+              </div>
+            )}
+            {isAdmin && <p className="text-xs text-text-muted">Для администраторов 2FA обязательна и не может быть отключена</p>}
+          </>
+        ) : twoFa?.qrCodeUrl ? (
+          <>
+            <p className="text-sm text-text-primary">Отсканируйте QR-код в Google Authenticator:</p>
+            <img src={twoFa.qrCodeUrl} alt="QR Code" className="w-48 h-48 rounded-lg" />
+            <p className="text-xs text-text-muted font-mono break-all">Секрет: {twoFa.secret}</p>
+            <div className="flex gap-2">
+              <input placeholder="6-значный код" value={code} onChange={(e) => setCode(e.target.value)} className="h-9 px-3 rounded-lg bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent w-40 font-mono" />
+              <Button variant="gradient" size="sm" onClick={handleEnable} isLoading={loading2fa}>Подтвердить</Button>
+            </div>
+          </>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={handleSetup}>Настроить 2FA</Button>
+        )}
+        {msg && <p className="text-xs text-text-muted">{msg}</p>}
+      </div>
+    </section>
+  );
+}
+
+function SettingsContent() {
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const setup2fa = searchParams.get("setup2fa") === "1";
+  const isAdmin = session?.user?.role === "ADMIN";
   const [mounted, setMounted] = useState(false);
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
@@ -91,6 +193,17 @@ export default function SettingsPage() {
     <div className="h-full">
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-10">
         <h1 className="text-xl font-bold text-text-primary">Настройки</h1>
+
+        {setup2fa && !mounted ? null : setup2fa && (
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              Для доступа к админ-панели необходимо включить двухфакторную аутентификацию (2FA).
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              Настройте 2FA ниже, затем вернитесь в админ-панель.
+            </p>
+          </div>
+        )}
 
         {/* Profile */}
         <section>
@@ -270,6 +383,9 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* 2FA */}
+        <TwoFactorSection isAdmin={isAdmin} autoSetup={setup2fa} />
+
         {/* Privacy */}
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -305,5 +421,13 @@ export default function SettingsPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

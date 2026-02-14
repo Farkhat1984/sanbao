@@ -46,6 +46,27 @@ export async function POST(
     );
   }
 
+  // Storage quota check
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: session.user.id },
+    include: { plan: { select: { maxStorageMb: true } } },
+  });
+  const maxStorageMb = sub?.plan?.maxStorageMb || 0;
+  if (maxStorageMb > 0) {
+    const usedBytes = await prisma.agentFile.aggregate({
+      where: { agent: { userId: session.user.id } },
+      _sum: { fileSize: true },
+    });
+    const usedMb = (usedBytes._sum.fileSize || 0) / (1024 * 1024);
+    const fileMb = file.size / (1024 * 1024);
+    if (usedMb + fileMb > maxStorageMb) {
+      return NextResponse.json(
+        { error: `Превышена квота хранилища (${maxStorageMb} МБ). Используется: ${usedMb.toFixed(1)} МБ` },
+        { status: 413 }
+      );
+    }
+  }
+
   const uploadDir = path.join(
     process.cwd(),
     "public",

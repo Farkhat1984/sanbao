@@ -27,6 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totpCode: { label: "2FA Code", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -69,6 +70,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const isValid = await bcrypt.compare(password, user.password);
           if (!isValid) return null;
 
+          // 2FA check
+          if (user.twoFactorEnabled && user.twoFactorSecret) {
+            const totpCode = credentials.totpCode as string | undefined;
+            if (!totpCode) {
+              throw new Error("2FA_REQUIRED");
+            }
+            const { OTP } = await import("otplib");
+            const otpInstance = new OTP();
+            const result2fa = await otpInstance.verify({ token: totpCode, secret: user.twoFactorSecret });
+            if (!result2fa.valid) {
+              throw new Error("2FA_INVALID");
+            }
+          }
+
           return {
             id: user.id,
             email: user.email,
@@ -86,15 +101,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.iat = Math.floor(Date.now() / 1000);
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id as string },
           select: { role: true },
         });
         if (dbUser) token.role = dbUser.role;
       }
+
+      // Session TTL enforcement from SystemSettings
+      if (token.iat) {
+        try {
+          const ttlSetting = await prisma.systemSetting.findUnique({
+            where: { key: "session_ttl_hours" },
+          });
+          const ttlHours = ttlSetting ? parseInt(ttlSetting.value, 10) : 720; // default 30 days
+          const maxAge = ttlHours * 3600;
+          const now = Math.floor(Date.now() / 1000);
+          if (now - (token.iat as number) > maxAge) {
+            return { ...token, expired: true };
+          }
+        } catch {
+          // DB not available — allow session
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
+      if (token.expired) {
+        // Force logout by returning empty session
+        return { ...session, user: undefined } as unknown as typeof session;
+      }
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) || "USER";

@@ -35,7 +35,7 @@ export async function sendInvoiceEmail(opts: {
 
   const period = `${formatDate(opts.periodStart)} — ${formatDate(opts.periodEnd)}`;
 
-  const { subject, html } = invoiceEmail({
+  const { subject, html } = await invoiceEmail({
     userName: user.name || "Пользователь",
     planName: opts.planName,
     amount: opts.amount,
@@ -70,7 +70,7 @@ export async function sendExpiringReminder(opts: {
   const formatDate = (d: Date) =>
     d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
 
-  const { subject, html } = subscriptionExpiringEmail({
+  const { subject, html } = await subscriptionExpiringEmail({
     userName: user.name || "Пользователь",
     planName: opts.planName,
     expiresAt: formatDate(opts.expiresAt),
@@ -98,7 +98,7 @@ export async function sendPaymentFailedNotification(opts: {
 
   if (!user) return false;
 
-  const { subject, html } = paymentFailedEmail({
+  const { subject, html } = await paymentFailedEmail({
     userName: user.name || "Пользователь",
     planName: opts.planName,
   });

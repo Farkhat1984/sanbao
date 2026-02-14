@@ -1,17 +1,63 @@
 const requestTimestamps = new Map<string, number[]>();
 
+// ─── Abuse tracking: auto-block after repeated rate limit violations ───
+const violationCounts = new Map<string, { count: number; lastViolation: number }>();
+const userBlocklist = new Map<string, number>(); // userId -> unblock timestamp
+const VIOLATION_THRESHOLD = 10; // violations before auto-block
+const VIOLATION_WINDOW_MS = 5 * 60_000; // 5-minute window
+const USER_BLOCK_DURATION_MS = 30 * 60_000; // 30-minute block
+
+function trackViolation(key: string): boolean {
+  const now = Date.now();
+  const v = violationCounts.get(key);
+
+  if (!v || now - v.lastViolation > VIOLATION_WINDOW_MS) {
+    violationCounts.set(key, { count: 1, lastViolation: now });
+    return false;
+  }
+
+  v.count++;
+  v.lastViolation = now;
+
+  if (v.count >= VIOLATION_THRESHOLD) {
+    userBlocklist.set(key, now + USER_BLOCK_DURATION_MS);
+    violationCounts.delete(key);
+    return true; // blocked
+  }
+
+  return false;
+}
+
+/** Check if a user is auto-blocked due to abuse. */
+export function isUserBlocked(userId: string): { blocked: boolean; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const blockedUntil = userBlocklist.get(userId);
+  if (blockedUntil && now < blockedUntil) {
+    return { blocked: true, retryAfterSeconds: Math.ceil((blockedUntil - now) / 1000) };
+  }
+  if (blockedUntil) userBlocklist.delete(userId);
+  return { blocked: false };
+}
+
 export function checkMinuteRateLimit(
   userId: string,
   maxPerMinute: number
 ): boolean {
   if (maxPerMinute <= 0) return true;
 
+  // Check auto-block first
+  if (isUserBlocked(userId).blocked) return false;
+
   const now = Date.now();
   const windowMs = 60_000;
   const timestamps = requestTimestamps.get(userId) ?? [];
   const recent = timestamps.filter((t) => now - t < windowMs);
 
-  if (recent.length >= maxPerMinute) return false;
+  if (recent.length >= maxPerMinute) {
+    // Track violation for auto-block
+    trackViolation(userId);
+    return false;
+  }
 
   recent.push(now);
   requestTimestamps.set(userId, recent);
@@ -104,6 +150,12 @@ if (typeof setInterval !== "undefined") {
     // Cleanup expired blocklist entries
     for (const [ip, until] of ipBlocklist) {
       if (now >= until) ipBlocklist.delete(ip);
+    }
+    for (const [uid, until] of userBlocklist) {
+      if (now >= until) userBlocklist.delete(uid);
+    }
+    for (const [key, v] of violationCounts) {
+      if (now - v.lastViolation > VIOLATION_WINDOW_MS) violationCounts.delete(key);
     }
   }, 300_000);
 }

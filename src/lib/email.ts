@@ -6,13 +6,27 @@ import { prisma } from "@/lib/prisma";
 
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter() {
+async function getTransporter() {
   if (transporter) return transporter;
 
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  // Try loading SMTP from SystemSettings first
+  let host = process.env.SMTP_HOST;
+  let port = parseInt(process.env.SMTP_PORT || "587", 10);
+  let user = process.env.SMTP_USER;
+  let pass = process.env.SMTP_PASS;
+
+  try {
+    const settings = await prisma.systemSetting.findMany({
+      where: { key: { in: ["smtp_host", "smtp_port", "smtp_user", "smtp_pass"] } },
+    });
+    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+    if (map.smtp_host) host = map.smtp_host;
+    if (map.smtp_port) port = parseInt(map.smtp_port, 10);
+    if (map.smtp_user) user = map.smtp_user;
+    if (map.smtp_pass) pass = map.smtp_pass;
+  } catch {
+    // DB not available, use env vars
+  }
 
   if (!host || !user || !pass) {
     return null;
@@ -61,7 +75,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     },
   });
 
-  const transport = getTransporter();
+  const transport = await getTransporter();
   if (!transport) {
     await prisma.emailLog.update({
       where: { id: log.id },
@@ -93,7 +107,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
 /** Verify SMTP connection works. */
 export async function verifySmtp(): Promise<{ ok: boolean; error?: string }> {
-  const transport = getTransporter();
+  const transport = await getTransporter();
   if (!transport) {
     return { ok: false, error: "SMTP не настроен. Проверьте переменные SMTP_HOST, SMTP_USER, SMTP_PASS." };
   }
@@ -105,6 +119,22 @@ export async function verifySmtp(): Promise<{ ok: boolean; error?: string }> {
     const errorMsg = err instanceof Error ? err.message : String(err);
     return { ok: false, error: errorMsg };
   }
+}
+
+// ─── Custom template loader ─────────────────────────────
+
+async function getCustomTemplate(
+  type: EmailType
+): Promise<{ subject: string; html: string } | null> {
+  try {
+    const template = await prisma.emailTemplate.findUnique({ where: { type } });
+    if (template && template.isActive && template.html) {
+      return { subject: template.subject, html: template.html };
+    }
+  } catch {
+    // DB not available — fall through to hardcoded
+  }
+  return null;
 }
 
 // ─── Email templates ────────────────────────────────────
@@ -133,7 +163,15 @@ ${content}
 </html>`;
 }
 
-export function welcomeEmail(userName: string): { subject: string; html: string } {
+export async function welcomeEmail(userName: string): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("WELCOME");
+  if (custom) {
+    // Replace variables in custom template
+    return {
+      subject: custom.subject.replace(/\{\{userName\}\}/g, userName || ""),
+      html: custom.html.replace(/\{\{userName\}\}/g, userName || ""),
+    };
+  }
   return {
     subject: "Добро пожаловать в Leema!",
     html: baseLayout(`
@@ -144,13 +182,24 @@ export function welcomeEmail(userName: string): { subject: string; html: string 
   };
 }
 
-export function invoiceEmail(data: {
+export async function invoiceEmail(data: {
   userName: string;
   planName: string;
   amount: string;
   period: string;
   invoiceNumber: string;
-}): { subject: string; html: string } {
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("INVOICE");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
   return {
     subject: `Счёт #${data.invoiceNumber} — Leema`,
     html: baseLayout(`
@@ -179,11 +228,22 @@ export function invoiceEmail(data: {
   };
 }
 
-export function subscriptionExpiringEmail(data: {
+export async function subscriptionExpiringEmail(data: {
   userName: string;
   planName: string;
   expiresAt: string;
-}): { subject: string; html: string } {
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("SUBSCRIPTION_EXPIRING");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
   return {
     subject: "Ваша подписка скоро истекает — Leema",
     html: baseLayout(`
@@ -195,10 +255,21 @@ export function subscriptionExpiringEmail(data: {
   };
 }
 
-export function paymentFailedEmail(data: {
+export async function paymentFailedEmail(data: {
   userName: string;
   planName: string;
-}): { subject: string; html: string } {
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("PAYMENT_FAILED");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
   return {
     subject: "Ошибка оплаты — Leema",
     html: baseLayout(`

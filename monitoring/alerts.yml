@@ -1,0 +1,29 @@
+groups:
+  - name: leema-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: leema_errors_1h > 50
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate"
+          description: "More than 50 errors in the last hour (current: {{ $value }})"
+
+      - alert: NoActiveUsers
+        expr: leema_active_users_today == 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No active users"
+          description: "No users have been active today for over 1 hour"
+
+      - alert: HighTokenUsage
+        expr: leema_tokens_today > 1000000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High token usage"
+          description: "Over 1M tokens used today (current: {{ $value }})"

@@ -24,6 +24,7 @@ interface PlanData {
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
+  maxStorageMb: number;
   _count?: { subscriptions: number };
 }
 

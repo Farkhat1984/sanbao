@@ -26,6 +26,7 @@ interface PlanData {
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
+  maxStorageMb: number;
   _count?: { subscriptions: number };
 }
 
@@ -49,6 +50,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     maxConversations: plan.maxConversations,
     maxAgents: plan.maxAgents,
     documentsPerMonth: plan.documentsPerMonth,
+    maxStorageMb: plan.maxStorageMb,
     canUseAdvancedTools: plan.canUseAdvancedTools,
     canUseReasoning: plan.canUseReasoning,
     canUseRag: plan.canUseRag,
@@ -171,6 +173,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         {numField("Макс. диалогов", "maxConversations", "0 = безлимит")}
         {numField("Макс. агентов", "maxAgents", "0 = нет, -1 = безлимит")}
         {numField("Документов/месяц", "documentsPerMonth", "0 = нет, -1 = безлимит")}
+        {numField("Хранилище (МБ)", "maxStorageMb", "0 = безлимит")}
       </div>
 
       <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-border">

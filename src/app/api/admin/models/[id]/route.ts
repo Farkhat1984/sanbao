@@ -45,7 +45,7 @@ export async function PUT(
   const allowedFields = [
     "modelId", "displayName", "category", "temperature", "topP",
     "maxTokens", "contextWindow", "costPer1kInput", "costPer1kOutput",
-    "isActive", "isDefault",
+    "supportsThinking", "maxThinkingTokens", "isActive", "isDefault",
   ];
 
   const data: Record<string, unknown> = {};

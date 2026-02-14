@@ -1,6 +1,8 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export interface McpToolInfo {
   name: string;
@@ -54,8 +56,10 @@ export async function callMcpTool(
   transport: "SSE" | "STREAMABLE_HTTP",
   apiKey: string | null | undefined,
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  context?: { mcpServerId?: string; userId?: string; conversationId?: string }
 ): Promise<{ result: string; error?: string }> {
+  const start = Date.now();
   try {
     const headers: Record<string, string> = {};
     if (apiKey) {
@@ -87,11 +91,42 @@ export async function callMcpTool(
       .map((c: any) => c.text)
       .join("\n") || "";
 
+    // Log tool call
+    if (context?.mcpServerId) {
+      prisma.mcpToolLog.create({
+        data: {
+          mcpServerId: context.mcpServerId,
+          toolName,
+          input: args as Prisma.InputJsonValue,
+          output: { text: textContent.slice(0, 10000) } as Prisma.InputJsonValue,
+          durationMs: Date.now() - start,
+          success: true,
+          userId: context.userId || null,
+          conversationId: context.conversationId || null,
+        },
+      }).catch(() => {}); // fire-and-forget
+    }
+
     return { result: textContent };
   } catch (e) {
-    return {
-      result: "",
-      error: e instanceof Error ? e.message : "Tool call failed",
-    };
+    const errorMsg = e instanceof Error ? e.message : "Tool call failed";
+
+    // Log failed tool call
+    if (context?.mcpServerId) {
+      prisma.mcpToolLog.create({
+        data: {
+          mcpServerId: context.mcpServerId,
+          toolName,
+          input: args as Prisma.InputJsonValue,
+          durationMs: Date.now() - start,
+          success: false,
+          error: errorMsg,
+          userId: context.userId || null,
+          conversationId: context.conversationId || null,
+        },
+      }).catch(() => {}); // fire-and-forget
+    }
+
+    return { result: "", error: errorMsg };
   }
 }

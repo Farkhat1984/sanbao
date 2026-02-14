@@ -21,7 +21,8 @@ npx prisma studio    # Visual DB browser
 
 - `src/app/(app)/` — основное приложение (требует авторизации): `/chat`, `/chat/[id]`, `/profile`, `/settings`, `/skills`, `/billing`, `/mcp`
 - `src/app/(auth)/` — аутентификация: `/login`, `/register`
-- `src/app/api/` — API-роуты: `/chat`, `/conversations`, `/agents`, `/skills`, `/tasks`, `/memory`, `/billing`, `/admin`, `/auth`
+- `src/app/(admin)/admin/` — админ-панель: `/admin`, `/users`, `/plans`, `/providers`, `/models`, `/agents`, `/skills`, `/mcp`, `/analytics`, `/usage`, `/logs`, `/health`, `/email`, `/notifications`, `/settings`, `/templates`, `/api-keys`, `/webhooks`
+- `src/app/api/` — API-роуты: `/chat`, `/conversations`, `/agents`, `/skills`, `/tasks`, `/memory`, `/billing`, `/admin/*`, `/auth`, `/health`, `/notifications`
 
 ### State Management
 
@@ -86,8 +87,9 @@ AI ответы содержат специальные `leema-*` теги, ко
 ### Data Layer
 
 - **Prisma + PostgreSQL** — схема в `prisma/schema.prisma`
-- Ключевые модели: User, Conversation, Message, Artifact, Agent, AgentFile, Skill, Task, Plan, Subscription, DailyUsage, UserMemory, ConversationSummary, ConversationPlan, AiProvider, AiModel, PlanModel, EmailLog
-- Enums: UserRole (USER/PRO/ADMIN), MessageRole, ArtifactType, ModelCategory (TEXT/IMAGE/VOICE/VIDEO/CODE/EMBEDDING), EmailType, EmailStatus
+- Ключевые модели: User, Conversation, Message, Artifact, Agent, AgentFile, Skill, Task, Plan, Subscription, DailyUsage, UserMemory, ConversationSummary, ConversationPlan, AiProvider, AiModel, PlanModel, EmailLog, SystemAgent, TokenLog, AuditLog, ErrorLog, Notification, SystemSetting, DocumentTemplate, ApiKey, Webhook
+- Enums: UserRole (USER/PRO/ADMIN), MessageRole, ArtifactType, ModelCategory (TEXT/IMAGE/VOICE/VIDEO/CODE/EMBEDDING), EmailType, EmailStatus, NotificationType
+- Audit: `src/lib/audit.ts` — `logAudit()`, `logError()`, `logTokenUsage()`
 - Auth: NextAuth v5 с JWT-стратегией, провайдеры: Credentials, Google, GitHub
 - Биллинг: Plan → Subscription → DailyUsage, гранулярные лимиты (messages/day, tokens/month, requestsPerMinute, feature flags)
 - Email: `src/lib/email.ts` (Nodemailer SMTP), `src/lib/invoice.ts` (invoice генерация + рассылка), `EmailLog` для истории

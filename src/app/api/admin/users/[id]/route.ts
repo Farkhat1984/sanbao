@@ -11,11 +11,23 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { role, planSlug } = body;
+  const { role, planSlug, isBanned, bannedReason } = body;
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Ban / unban
+  if (isBanned !== undefined) {
+    await prisma.user.update({
+      where: { id },
+      data: {
+        isBanned: !!isBanned,
+        bannedAt: isBanned ? new Date() : null,
+        bannedReason: isBanned ? (bannedReason || null) : null,
+      },
+    });
   }
 
   if (role && ["USER", "PRO", "ADMIN"].includes(role)) {
@@ -52,6 +64,9 @@ export async function PUT(
       name: true,
       email: true,
       role: true,
+      isBanned: true,
+      bannedAt: true,
+      bannedReason: true,
       subscription: {
         select: {
           plan: { select: { slug: true, name: true } },

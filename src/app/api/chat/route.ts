@@ -17,6 +17,9 @@ import { buildMemoryContext } from "@/lib/memory";
 import { FEMIDA_ID, FEMIDA_SYSTEM_PROMPT, isSystemAgent } from "@/lib/system-agents";
 import { callMcpTool } from "@/lib/mcp-client";
 import { resolveModel, type ResolvedModel } from "@/lib/model-router";
+import { checkContentFilter } from "@/lib/content-filter";
+import { recordRequestDuration } from "@/lib/request-metrics";
+import { resolveWithExperiment } from "@/lib/ab-experiment";
 
 const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассистент. Отвечай точно, полезно и по делу.
 
@@ -693,8 +696,11 @@ function createPlanDetectorStream(
 // ─── Main handler ────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const _requestStart = Date.now();
+
   const session = await auth();
   if (!session?.user?.id) {
+    recordRequestDuration("/api/chat", Date.now() - _requestStart);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -762,6 +768,20 @@ export async function POST(req: Request) {
       { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
       { status: 403 }
     );
+  }
+
+  // Content filter check on last user message
+  const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+  if (lastUserMsg) {
+    const filterResult = await checkContentFilter(
+      typeof lastUserMsg.content === "string" ? lastUserMsg.content : JSON.stringify(lastUserMsg.content)
+    );
+    if (filterResult.blocked) {
+      return NextResponse.json(
+        { error: "Сообщение содержит запрещённый контент и не может быть отправлено." },
+        { status: 400 }
+      );
+    }
   }
 
   // Build system prompt and determine provider
@@ -855,6 +875,14 @@ export async function POST(req: Request) {
         skillPrompt += `\n\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
       }
       systemPrompt = `${skillPrompt}\n\n${systemPrompt}`;
+    }
+  }
+
+  // A/B experiment: allow overriding global system prompt
+  {
+    const ab = await resolveWithExperiment("global_system_prompt", systemPrompt, session.user.id);
+    if (ab.experimentId) {
+      systemPrompt = ab.value;
     }
   }
 
@@ -985,6 +1013,7 @@ export async function POST(req: Request) {
       textModel,
     });
 
+    recordRequestDuration("/api/chat", Date.now() - _requestStart);
     return new Response(stream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
@@ -1016,6 +1045,7 @@ export async function POST(req: Request) {
   // Wrap AI SDK text stream with plan detection
   const stream = createPlanDetectorStream(result.textStream, contextInfo);
 
+  recordRequestDuration("/api/chat", Date.now() - _requestStart);
   return new Response(stream, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

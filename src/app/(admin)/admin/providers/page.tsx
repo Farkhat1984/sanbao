@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, Save, Trash2, Power, PowerOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 interface Provider {
   id: string;
@@ -58,6 +59,25 @@ export default function AdminProvidersPage() {
       body: JSON.stringify(data),
     });
     fetchProviders();
+  };
+
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, { success: boolean; latency?: number; error?: string; modelCount?: number }>>({});
+
+  const handleTest = async (id: string) => {
+    setTesting(id);
+    try {
+      const res = await fetch("/api/admin/providers/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: id }),
+      });
+      const data = await res.json();
+      setTestResult((prev) => ({ ...prev, [id]: data }));
+    } catch {
+      setTestResult((prev) => ({ ...prev, [id]: { success: false, error: "Network error" } }));
+    }
+    setTesting(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -150,6 +170,15 @@ export default function AdminProvidersPage() {
                 <Button
                   variant="secondary"
                   size="sm"
+                  onClick={() => handleTest(p.id)}
+                  isLoading={testing === p.id}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  Тест
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handleUpdate(p.id, { isActive: !p.isActive })}
                 >
                   {p.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
@@ -163,10 +192,28 @@ export default function AdminProvidersPage() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-border">
+            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
               <p className="text-xs text-text-muted">
                 <span className="text-text-secondary">Base URL:</span> {p.baseUrl}
               </p>
+              {testResult[p.id] && (
+                <div className="flex items-center gap-2">
+                  {testResult[p.id].success ? (
+                    <>
+                      <Badge variant="default">OK</Badge>
+                      <span className="text-xs text-success">{testResult[p.id].latency}ms</span>
+                      {testResult[p.id].modelCount !== undefined && (
+                        <span className="text-xs text-text-muted">{testResult[p.id].modelCount} моделей</span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="default">Ошибка</Badge>
+                      <span className="text-xs text-error">{testResult[p.id].error?.slice(0, 60)}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}

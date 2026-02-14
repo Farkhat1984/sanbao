@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ModelCategory } from "@prisma/client";
+import { decrypt } from "@/lib/crypto";
 
 export interface ResolvedModel {
   provider: {
@@ -14,6 +15,8 @@ export interface ResolvedModel {
   topP: number | null;
   maxTokens: number | null;
   contextWindow: number | null;
+  supportsThinking: boolean;
+  maxThinkingTokens: number | null;
 }
 
 // In-memory cache: category+planId -> { model, expiresAt }
@@ -181,6 +184,8 @@ type ModelWithProvider = {
   topP: number | null;
   maxTokens: number | null;
   contextWindow: number | null;
+  supportsThinking: boolean;
+  maxThinkingTokens: number | null;
   provider: {
     slug: string;
     baseUrl: string;
@@ -193,7 +198,7 @@ function toResolvedModel(model: ModelWithProvider): ResolvedModel {
     provider: {
       slug: model.provider.slug,
       baseUrl: model.provider.baseUrl,
-      apiKey: model.provider.apiKey,
+      apiKey: decrypt(model.provider.apiKey),
     },
     modelId: model.modelId,
     displayName: model.displayName,
@@ -202,6 +207,8 @@ function toResolvedModel(model: ModelWithProvider): ResolvedModel {
     topP: model.topP,
     maxTokens: model.maxTokens,
     contextWindow: model.contextWindow,
+    supportsThinking: model.supportsThinking ?? false,
+    maxThinkingTokens: model.maxThinkingTokens ?? null,
   };
 }
 
@@ -224,6 +231,8 @@ function getEnvFallback(category: ModelCategory): ResolvedModel | null {
         topP: null,
         maxTokens: null,
         contextWindow: null,
+        supportsThinking: false,
+        maxThinkingTokens: null,
       };
     }
     case "IMAGE": {
@@ -242,6 +251,8 @@ function getEnvFallback(category: ModelCategory): ResolvedModel | null {
         topP: null,
         maxTokens: null,
         contextWindow: null,
+        supportsThinking: false,
+        maxThinkingTokens: null,
       };
     }
     default:
