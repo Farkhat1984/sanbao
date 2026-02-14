@@ -2,7 +2,14 @@ import { create } from "zustand";
 import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat";
 import { DEFAULT_PROVIDER } from "@/lib/constants";
 
-type StreamingPhase = "planning" | "thinking" | "answering" | null;
+export type StreamingPhase = "thinking" | "searching" | "planning" | "answering" | null;
+
+const PHASE_PRIORITY: Record<string, number> = {
+  thinking: 1,
+  searching: 2,
+  planning: 3,
+  answering: 4,
+};
 
 export interface ClarifyQuestion {
   id: string;
@@ -26,8 +33,6 @@ interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingPhase: StreamingPhase;
-  isToolWorking: boolean;
-  activeToolName: string | null;
 
   // AI feature toggles
   provider: AIProvider;
@@ -51,7 +56,6 @@ interface ChatState {
   updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   setStreaming: (isStreaming: boolean) => void;
   setStreamingPhase: (phase: StreamingPhase) => void;
-  setToolWorking: (isToolWorking: boolean, toolName?: string | null) => void;
 
   setProvider: (provider: AIProvider) => void;
   toggleThinking: () => void;
@@ -81,9 +85,6 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isStreaming: false,
   streamingPhase: null,
-  isToolWorking: false,
-  activeToolName: null,
-
   provider: DEFAULT_PROVIDER as AIProvider,
   thinkingEnabled: false,
   webSearchEnabled: false,
@@ -95,7 +96,9 @@ export const useChatStore = create<ChatState>((set) => ({
   clarifyQuestions: null,
 
   setActiveConversation: (activeConversationId) =>
-    set({ activeConversationId }),
+    set(activeConversationId === null
+      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null }
+      : { activeConversationId }),
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
 
@@ -136,10 +139,14 @@ export const useChatStore = create<ChatState>((set) => ({
   setStreaming: (isStreaming) =>
     set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null }) }),
 
-  setStreamingPhase: (streamingPhase) => set({ streamingPhase }),
-
-  setToolWorking: (isToolWorking, toolName = null) =>
-    set({ isToolWorking, activeToolName: toolName }),
+  setStreamingPhase: (phase) => set((s) => {
+    if (!phase) return { streamingPhase: null };
+    // searching is an overlay — always allowed
+    if (phase === "searching") return { streamingPhase: phase };
+    const curr = s.streamingPhase ? PHASE_PRIORITY[s.streamingPhase] || 0 : 0;
+    const next = PHASE_PRIORITY[phase] || 0;
+    return next > curr ? { streamingPhase: phase } : {};
+  }),
 
   setProvider: (provider) => set({ provider }),
   toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),

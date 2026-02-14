@@ -52,6 +52,11 @@ export function ConversationItem({
     setShowDeleteConfirm(false);
     removeConversation(conversation.id);
     fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(() => {});
+    if (isActive) {
+      setActiveConversation(null);
+      setActiveAgentId(null);
+      router.push("/chat");
+    }
   };
 
   return (

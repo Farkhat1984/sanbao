@@ -15,7 +15,7 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, isToolWorking, activeToolName, contextUsage, activeConversationId, activeAgentId, conversations } = useChatStore();
+  const { messages, isStreaming, streamingPhase, contextUsage, activeConversationId, activeAgentId, conversations } = useChatStore();
   const { setActiveAgent } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -91,12 +91,10 @@ export function ChatArea() {
               />
             ))}
 
-            {/* Thinking / Tool Working Indicator */}
-            {(isStreaming || isToolWorking) && (
+            {/* Thinking / Streaming Indicator */}
+            {isStreaming && streamingPhase && (
               <ThinkingIndicator
                 phase={streamingPhase}
-                isToolWorking={isToolWorking}
-                toolName={activeToolName}
                 agentName={agentName}
               />
             )}

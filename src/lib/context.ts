@@ -65,7 +65,8 @@ export function buildSystemPromptWithContext(
   base: string,
   summary: string | null,
   planMemory: string | null,
-  userMemory: string | null = null
+  userMemory: string | null = null,
+  tasksContext: string | null = null
 ): string {
   let result = base;
 
@@ -79,6 +80,10 @@ export function buildSystemPromptWithContext(
 
   if (planMemory) {
     result += `\n\n--- ПАМЯТЬ ПЛАНИРОВАНИЯ (ключевые решения и контекст) ---\n${planMemory}\n--- КОНЕЦ ПАМЯТИ ПЛАНИРОВАНИЯ ---`;
+  }
+
+  if (tasksContext) {
+    result += `\n\n--- АКТИВНЫЕ ЗАДАЧИ ---\n${tasksContext}\n--- КОНЕЦ ЗАДАЧ ---`;
   }
 
   return result;

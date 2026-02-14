@@ -4,10 +4,11 @@ import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { useChatStore } from "@/stores/chatStore";
 import { ArtifactTabs } from "./ArtifactTabs";
 import { DocumentPreview } from "./DocumentPreview";
 import { DocumentEditor } from "./DocumentEditor";
-import { CodePreview } from "./CodePreview";
+import { CodePreview, isPythonCode } from "./CodePreview";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { markdownToDocx } from "@/lib/export-docx";
@@ -43,6 +44,7 @@ export function ArtifactPanel() {
     setDownloadFormat,
     restoreVersion,
   } = useArtifactStore();
+  const { setPendingInput } = useChatStore();
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
@@ -69,9 +71,10 @@ export function ArtifactPanel() {
         return;
       }
 
-      // CODE type: download as .tsx
+      // CODE type: download as .py or .tsx
       if (activeArtifact.type === "CODE") {
-        exportAsText(activeArtifact.content, activeArtifact.title, ".tsx");
+        const ext = isPythonCode(activeArtifact.content) ? ".py" : ".tsx";
+        exportAsText(activeArtifact.content, activeArtifact.title, ext);
         return;
       }
 
@@ -197,7 +200,6 @@ export function ArtifactPanel() {
               ) : (
                 <>
                   <Download className="h-3.5 w-3.5" />
-                  <span>{activeArtifact.type === "IMAGE" ? "PNG" : "TSX"}</span>
                 </>
               )}
             </button>
@@ -304,9 +306,9 @@ export function ArtifactPanel() {
               {activeTab === "preview" && (
                 <CodePreview
                   code={activeArtifact.content}
-                  onCodeFixed={(fixedCode) =>
-                    updateContent(activeArtifact.id, fixedCode)
-                  }
+                  onRequestChatFix={(error) => {
+                    setPendingInput(`В артефакте «${activeArtifact.title}» ошибка выполнения:\n\`\`\`\n${error}\n\`\`\`\nИсправь только место с ошибкой.`);
+                  }}
                 />
               )}
               {activeTab === "edit" && (

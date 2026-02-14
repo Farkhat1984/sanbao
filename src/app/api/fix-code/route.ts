@@ -10,6 +10,7 @@ Rules:
 - Return ONLY the raw code, no markdown fences, no explanations
 - If the code is HTML, return the full HTML document
 - If the code is React/JSX, return only the component code (no HTML wrapper)
+- If the code is Python, return only the Python code. Replace Unicode arrows/symbols in strings with ASCII equivalents (e.g. ← → ↑ ↓ with < > ^ v). Ensure all strings use only ASCII-safe characters.
 - Preserve the original formatting and style
 - Do NOT add comments about what was fixed`;
 

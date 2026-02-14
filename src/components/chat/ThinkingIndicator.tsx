@@ -1,62 +1,47 @@
 "use client";
 
-import { Scale, Brain, MessageSquare, Globe, ListChecks } from "lucide-react";
+import { Brain, MessageSquare, Globe, ListChecks } from "lucide-react";
 import { motion } from "framer-motion";
+import type { StreamingPhase } from "@/stores/chatStore";
 
 interface ThinkingIndicatorProps {
-  phase: "planning" | "thinking" | "answering" | null;
-  isToolWorking: boolean;
-  toolName?: string | null;
+  phase: StreamingPhase;
   agentName?: string;
 }
 
-const TOOL_LABELS: Record<string, string> = {
-  createContract: "Создаёт договор",
-  createClaim: "Готовит исковое заявление",
-  createComplaint: "Составляет жалобу",
-  analyzeNpa: "Анализирует НПА",
-  checkActuality: "Проверяет актуальность",
-  searchArticles: "Ищет статьи закона",
-};
+export function ThinkingIndicator({ phase, agentName }: ThinkingIndicatorProps) {
+  const name = agentName || "Leema";
 
-export function ThinkingIndicator({ phase, isToolWorking, toolName, agentName }: ThinkingIndicatorProps) {
-  const isThinking = phase === "thinking";
-  const isSearching = isToolWorking && toolName?.startsWith("Поиск:");
-
-  // Determine display state
   let label: string;
   let Icon: typeof Brain;
   let gradientClass: string;
   let dotColorClass: string;
 
-  if (phase === "planning") {
-    label = `${agentName || "Leema"} составляет план`;
-    Icon = ListChecks;
-    gradientClass = "from-amber-500 to-orange-500";
-    dotColorClass = "bg-amber-500";
-  } else if (isSearching) {
+  if (phase === "thinking") {
+    label = `${name} думает`;
+    Icon = Brain;
+    gradientClass = "from-violet-500 to-purple-600";
+    dotColorClass = "bg-violet-500";
+  } else if (phase === "searching") {
     label = "Ищет в интернете";
     Icon = Globe;
     gradientClass = "from-emerald-500 to-teal-600";
     dotColorClass = "bg-emerald-500";
-  } else if (isToolWorking && toolName) {
-    label = TOOL_LABELS[toolName] || toolName;
-    Icon = Scale;
-    gradientClass = "from-amber-500 to-orange-600";
+  } else if (phase === "planning") {
+    label = `${name} составляет план`;
+    Icon = ListChecks;
+    gradientClass = "from-amber-500 to-orange-500";
     dotColorClass = "bg-amber-500";
-  } else if (isThinking) {
-    label = `${agentName || "Leema"} думает`;
-    Icon = Brain;
-    gradientClass = "from-violet-500 to-purple-600";
-    dotColorClass = "bg-violet-500";
   } else {
-    label = `${agentName || "Leema"} отвечает`;
+    label = `${name} отвечает`;
     Icon = MessageSquare;
     gradientClass = "from-accent to-legal-ref";
     dotColorClass = "bg-accent";
   }
 
-  // Different animations per state
+  const isThinking = phase === "thinking";
+  const isSearching = phase === "searching";
+
   const iconAnimation = isSearching
     ? { rotateY: [0, 360] }
     : isThinking

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { useArtifactStore } from "@/stores/artifactStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
@@ -105,7 +106,6 @@ export function MessageInput() {
     updateLastAssistantMessage,
     setStreaming,
     setStreamingPhase,
-    setToolWorking,
     toggleThinking,
     toggleWebSearch,
     togglePlanning,
@@ -305,7 +305,7 @@ export function MessageInput() {
 
     setStreaming(true);
     setCurrentPlan(null);
-    setStreamingPhase(thinkingEnabled ? "thinking" : "answering");
+    // Phase is null — will be determined by the first stream chunk
 
     // Ensure we have a conversation for persistence
     let convId = activeConversationId;
@@ -345,10 +345,12 @@ export function MessageInput() {
     let fullPlan = "";
 
     try {
-      const apiMessages = [...messages, userMessage].map((m) => ({
-        role: m.role.toLowerCase(),
-        content: m.content,
-      }));
+      const apiMessages = [...messages, userMessage]
+        .filter((m) => m.content.trim() !== "")
+        .map((m) => ({
+          role: m.role.toLowerCase(),
+          content: m.content,
+        }));
 
       const attachmentsPayload = filesToSend.map((f) => ({
         name: f.name,
@@ -416,17 +418,15 @@ export function MessageInput() {
             const data = JSON.parse(line);
             switch (data.t) {
               case "r": // reasoning
+                setStreamingPhase("thinking");
                 fullReasoning += data.v;
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
               case "s": // web search status
-                setToolWorking(true, "Поиск: веб");
+                setStreamingPhase("searching");
                 break;
               case "c": // content
-                if (!fullContent) {
-                  setStreamingPhase("answering");
-                  setToolWorking(false);
-                }
+                setStreamingPhase("answering");
                 fullContent += data.v;
                 updateLastAssistantMessage(
                   fullContent,
@@ -434,9 +434,7 @@ export function MessageInput() {
                 );
                 break;
               case "p": // plan content
-                if (!fullPlan) {
-                  setStreamingPhase("planning");
-                }
+                setStreamingPhase("planning");
                 fullPlan += data.v;
                 updateCurrentPlan(data.v);
                 updateLastAssistantMessage(
@@ -522,6 +520,19 @@ export function MessageInput() {
         }
       }
 
+      // Auto-open first artifact
+      const docMatch = /<leema-doc\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/leema-doc>/.exec(fullContent);
+      if (docMatch) {
+        const { openArtifact } = useArtifactStore.getState();
+        openArtifact({
+          id: crypto.randomUUID(),
+          type: docMatch[1] as import("@/types/chat").ArtifactType,
+          title: docMatch[2],
+          content: docMatch[3].trim(),
+          version: 1,
+        });
+      }
+
       // Detect clarify questions from <leema-clarify> tag
       const clarifyMatch = /<leema-clarify>([\s\S]*?)<\/leema-clarify>/.exec(fullContent);
       if (clarifyMatch) {
@@ -560,7 +571,6 @@ export function MessageInput() {
     } finally {
       abortRef.current = null;
       setStreaming(false);
-      setToolWorking(false);
     }
   }, [
     input,
@@ -578,7 +588,6 @@ export function MessageInput() {
     updateLastAssistantMessage,
     setStreaming,
     setStreamingPhase,
-    setToolWorking,
     updateCurrentPlan,
     setCurrentPlan,
     setContextUsage,
@@ -594,7 +603,6 @@ export function MessageInput() {
   const handleStop = () => {
     abortRef.current?.abort();
     setStreaming(false);
-    setToolWorking(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

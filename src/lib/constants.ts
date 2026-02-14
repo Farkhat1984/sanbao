@@ -112,6 +112,7 @@ export const REACT_CDN_URL = "https://unpkg.com/react@18/umd/react.development.j
 export const REACT_DOM_CDN_URL = "https://unpkg.com/react-dom@18/umd/react-dom.development.js";
 export const BABEL_CDN_URL = "https://unpkg.com/@babel/standalone/babel.min.js";
 export const TAILWIND_CDN_URL = "https://cdn.tailwindcss.com";
+export const PYODIDE_CDN_URL = "https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js";
 
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;

@@ -338,7 +338,8 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
             isUser
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
-            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative"
+            isAssistant && !isExpanded && "max-h-[500px] overflow-auto relative",
+            isAssistant && isExpanded && "max-h-[80vh] overflow-auto"
           )}
         >
           {isAssistant ? (
@@ -424,9 +425,9 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
 
-          {/* Gradient fade for collapsed long messages */}
+          {/* Shadow hint for collapsed scrollable messages */}
           {isAssistant && !isExpanded && isOverflowing && (
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-surface-alt to-transparent rounded-b-2xl pointer-events-none" />
+            <div className="sticky bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-surface-alt to-transparent pointer-events-none" />
           )}
         </div>
 
