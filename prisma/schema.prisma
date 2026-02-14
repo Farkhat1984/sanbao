@@ -269,6 +269,7 @@ model Plan {
   highlighted         Boolean  @default(false)
 
   subscriptions Subscription[]
+  planModels    PlanModel[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -413,6 +414,81 @@ model AgentMcpServer {
   @@unique([agentId, mcpServerId])
 }
 
+// ─── AI Provider & Model models ────────────────────────
+
+model AiProvider {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  slug     String  @unique
+  baseUrl  String
+  apiKey   String  @db.Text
+  isActive Boolean @default(true)
+  priority Int     @default(0)
+
+  models AiModel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiModel {
+  id          String        @id @default(cuid())
+  providerId  String
+  modelId     String
+  displayName String
+  category    ModelCategory
+
+  temperature   Float?
+  topP          Float?
+  maxTokens     Int?
+  contextWindow Int?
+
+  costPer1kInput  Float @default(0)
+  costPer1kOutput Float @default(0)
+
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false)
+
+  provider   AiProvider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  planModels PlanModel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerId, modelId])
+  @@index([category, isActive])
+}
+
+model PlanModel {
+  id        String  @id @default(cuid())
+  planId    String
+  modelId   String
+  isDefault Boolean @default(false)
+
+  plan  Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  model AiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, modelId])
+}
+
+// ─── Email & Notifications ─────────────────────────────
+
+model EmailLog {
+  id       String      @id @default(cuid())
+  userId   String?
+  to       String
+  subject  String
+  type     EmailType
+  status   EmailStatus @default(PENDING)
+  error    String?     @db.Text
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, status])
+}
+
 // ─── Enums ───────────────────────────────────────────────
 
 enum UserRole {
@@ -453,4 +529,28 @@ enum McpStatus {
   CONNECTED
   DISCONNECTED
   ERROR
+}
+
+enum ModelCategory {
+  TEXT
+  IMAGE
+  VOICE
+  VIDEO
+  CODE
+  EMBEDDING
+}
+
+enum EmailType {
+  WELCOME
+  INVOICE
+  SUBSCRIPTION_EXPIRING
+  PAYMENT_FAILED
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
 }

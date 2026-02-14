@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { resolveModel } from "@/lib/model-router";
 
 const VALID_ICONS = [
   "Bot", "Scale", "Briefcase", "Shield", "BookOpen", "Gavel", "FileText",
@@ -57,20 +58,27 @@ export async function POST(req: Request) {
       ? `Создай скилл: ${description.trim()}. Юрисдикция: ${jurisdiction}`
       : `Создай скилл: ${description.trim()}`;
 
-    const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+    const textModel = await resolveModel("TEXT");
+    const apiUrl = textModel
+      ? `${textModel.provider.baseUrl}/chat/completions`
+      : "https://api.moonshot.ai/v1/chat/completions";
+    const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
+    const modelId = textModel?.modelId || "kimi-k2.5";
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "kimi-k2.5",
+        model: modelId,
         messages: [
           { role: "system", content: SYSTEM_GEN_PROMPT },
           { role: "user", content: userMsg },
         ],
-        temperature: 0.6,
-        max_tokens: 2048,
+        temperature: textModel?.temperature ?? 0.6,
+        max_tokens: textModel?.maxTokens || 2048,
         stream: false,
         thinking: { type: "disabled" },
       }),

@@ -16,6 +16,7 @@ import {
 import { buildMemoryContext } from "@/lib/memory";
 import { FEMIDA_ID, FEMIDA_SYSTEM_PROMPT, isSystemAgent } from "@/lib/system-agents";
 import { callMcpTool } from "@/lib/mcp-client";
+import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 
 const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассистент. Отвечай точно, полезно и по делу.
 
@@ -93,7 +94,8 @@ const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассис�
 - НЕ используй если пользователь дал достаточно информации для создания документа
 - После получения ответов — сразу создавай документ через <leema-doc>`;
 
-const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
+// Resolved dynamically via model-router; kept as fallback constant
+const MOONSHOT_URL_FALLBACK = "https://api.moonshot.ai/v1/chat/completions";
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -201,19 +203,27 @@ async function compactInBackground(
   existingSummary: string | null,
   messagesToSummarize: Array<{ role: string; content: string }>,
   maxTokens: number,
-  userId: string
+  userId: string,
+  textModel?: ResolvedModel | null
 ) {
   try {
     const compactionPrompt = buildCompactionPrompt(existingSummary, messagesToSummarize);
 
-    const response = await fetch(MOONSHOT_URL, {
+    const model = textModel || await resolveModel("TEXT");
+    const apiUrl = model
+      ? `${model.provider.baseUrl}/chat/completions`
+      : MOONSHOT_URL_FALLBACK;
+    const apiKey = model?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
+    const modelId = model?.modelId || "kimi-k2.5";
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "kimi-k2.5",
+        model: modelId,
         messages: [
           { role: "system", content: "Ты — ассистент для сжатия контекста разговора." },
           { role: "user", content: compactionPrompt },
@@ -274,10 +284,17 @@ function streamMoonshot(
     webSearchEnabled: boolean;
     mcpTools?: McpToolContext[];
     contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean };
+    textModel?: ResolvedModel | null;
   }
 ) {
   const encoder = new TextEncoder();
-  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], contextInfo } = options;
+  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], contextInfo, textModel } = options;
+
+  const apiUrl = textModel
+    ? `${textModel.provider.baseUrl}/chat/completions`
+    : MOONSHOT_URL_FALLBACK;
+  const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
+  const modelId = textModel?.modelId || "kimi-k2.5";
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -306,14 +323,14 @@ function streamMoonshot(
 
         // Tool-call loop: max 3 iterations to prevent infinite loops
         for (let turn = 0; turn < 3; turn++) {
-          const response = await fetch(MOONSHOT_URL, {
+          const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+              Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: "kimi-k2.5",
+              model: modelId,
               messages: currentMessages,
               max_tokens: maxTokens,
               temperature: thinkingEnabled ? 1.0 : 0.6,
@@ -912,12 +929,14 @@ export async function POST(req: Request) {
 
       // Fire compaction asynchronously (non-blocking)
       if (reqConvId) {
+        const compactModel = await resolveModel("TEXT", plan.id);
         compactInBackground(
           reqConvId,
           existingSummary,
           messagesToSummarize,
           plan.tokensPerMessage,
-          session.user.id
+          session.user.id,
+          compactModel
         );
       }
     }
@@ -952,7 +971,10 @@ export async function POST(req: Request) {
   const estimatedTokens = Math.max(100, Math.ceil(inputChars / 3));
   await incrementUsage(session.user.id, estimatedTokens);
 
-  // ─── Moonshot (Kimi K2.5) ──────────────────────────────
+  // ─── Resolve text model from DB ────────────────────────
+  const textModel = await resolveModel("TEXT", plan.id);
+
+  // ─── Moonshot-compatible providers (custom SSE streaming) ─
   if (effectiveProvider === "deepinfra") {
     const stream = streamMoonshot(apiMessages, {
       maxTokens: plan.tokensPerMessage,
@@ -960,6 +982,7 @@ export async function POST(req: Request) {
       webSearchEnabled,
       mcpTools: agentMcpTools,
       contextInfo,
+      textModel,
     });
 
     return new Response(stream, {

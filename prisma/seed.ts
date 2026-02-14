@@ -201,6 +201,112 @@ async function main() {
   }
 
   console.log("Built-in skills seeded: 4 skills");
+
+  // ─── AI Providers & Models ───────────────────────────
+
+  const moonshotProvider = await prisma.aiProvider.upsert({
+    where: { slug: "moonshot" },
+    update: {},
+    create: {
+      name: "Moonshot",
+      slug: "moonshot",
+      baseUrl: "https://api.moonshot.ai/v1",
+      apiKey: process.env.MOONSHOT_API_KEY || "sk-placeholder",
+      isActive: true,
+      priority: 10,
+    },
+  });
+
+  const deepinfraProvider = await prisma.aiProvider.upsert({
+    where: { slug: "deepinfra" },
+    update: {},
+    create: {
+      name: "DeepInfra",
+      slug: "deepinfra",
+      baseUrl: "https://api.deepinfra.com/v1/openai",
+      apiKey: process.env.DEEPINFRA_API_KEY || "placeholder",
+      isActive: true,
+      priority: 5,
+    },
+  });
+
+  // Kimi K2.5 — default TEXT model
+  await prisma.aiModel.upsert({
+    where: {
+      providerId_modelId: {
+        providerId: moonshotProvider.id,
+        modelId: "kimi-k2.5",
+      },
+    },
+    update: {},
+    create: {
+      providerId: moonshotProvider.id,
+      modelId: "kimi-k2.5",
+      displayName: "Kimi K2.5",
+      category: "TEXT",
+      temperature: 0.6,
+      topP: 0.95,
+      maxTokens: 8192,
+      contextWindow: 131072,
+      isActive: true,
+      isDefault: true,
+    },
+  });
+
+  // Flux Schnell — default IMAGE model
+  await prisma.aiModel.upsert({
+    where: {
+      providerId_modelId: {
+        providerId: deepinfraProvider.id,
+        modelId: "black-forest-labs/FLUX-1-schnell",
+      },
+    },
+    update: {},
+    create: {
+      providerId: deepinfraProvider.id,
+      modelId: "black-forest-labs/FLUX-1-schnell",
+      displayName: "Flux Schnell",
+      category: "IMAGE",
+      isActive: true,
+      isDefault: true,
+    },
+  });
+
+  // Qwen Image Edit — secondary IMAGE model for editing
+  await prisma.aiModel.upsert({
+    where: {
+      providerId_modelId: {
+        providerId: deepinfraProvider.id,
+        modelId: "Qwen/Qwen-Image-Edit",
+      },
+    },
+    update: {},
+    create: {
+      providerId: deepinfraProvider.id,
+      modelId: "Qwen/Qwen-Image-Edit",
+      displayName: "Qwen Image Edit",
+      category: "IMAGE",
+      isActive: true,
+      isDefault: false,
+    },
+  });
+
+  // Link all models to all plans
+  const allModels = await prisma.aiModel.findMany({ select: { id: true } });
+  const allPlans = await prisma.plan.findMany({ select: { id: true } });
+
+  for (const plan of allPlans) {
+    for (const model of allModels) {
+      await prisma.planModel.upsert({
+        where: { planId_modelId: { planId: plan.id, modelId: model.id } },
+        update: {},
+        create: { planId: plan.id, modelId: model.id },
+      });
+    }
+  }
+
+  console.log("AI providers seeded: Moonshot, DeepInfra");
+  console.log("AI models seeded: Kimi K2.5 (TEXT), Flux Schnell (IMAGE), Qwen Image Edit (IMAGE)");
 }
 
 main()

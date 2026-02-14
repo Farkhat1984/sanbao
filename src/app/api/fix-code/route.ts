@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-
-const MOONSHOT_URL = "https://api.moonshot.ai/v1/chat/completions";
+import { resolveModel } from "@/lib/model-router";
 
 const FIX_PROMPT = `You are a code fixer. You receive code that has a runtime error and must return ONLY the fixed code.
 
@@ -26,14 +25,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    const response = await fetch(MOONSHOT_URL, {
+    const textModel = await resolveModel("CODE");
+    const apiUrl = textModel
+      ? `${textModel.provider.baseUrl}/chat/completions`
+      : "https://api.moonshot.ai/v1/chat/completions";
+    const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
+    const modelId = textModel?.modelId || "kimi-k2.5";
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.MOONSHOT_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "kimi-k2.5",
+        model: modelId,
         messages: [
           { role: "system", content: FIX_PROMPT },
           {
@@ -41,8 +47,8 @@ export async function POST(req: Request) {
             content: `Error:\n${error}\n\nCode:\n${code}`,
           },
         ],
-        max_tokens: 8192,
-        temperature: 0.2,
+        max_tokens: textModel?.maxTokens || 8192,
+        temperature: textModel?.temperature ?? 0.2,
         stream: false,
       }),
     });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-
-const DEEPINFRA_URL = "https://api.deepinfra.com/v1/openai/images/edits";
+import { resolveModel } from "@/lib/model-router";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -28,7 +27,14 @@ export async function POST(req: Request) {
     const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
     const ext = mimeType.split("/")[1] || "png";
 
-    // Build FormData for DeepInfra API
+    // Resolve image model for editing (fallback to Qwen Image Edit)
+    const imageModel = await resolveModel("IMAGE");
+    const apiUrl = imageModel
+      ? `${imageModel.provider.baseUrl}/images/edits`
+      : "https://api.deepinfra.com/v1/openai/images/edits";
+    const apiKey = imageModel?.provider.apiKey || process.env.DEEPINFRA_API_KEY || "";
+
+    // Build FormData for API
     const formData = new FormData();
     const blob = new Blob([imageBuffer], { type: mimeType });
     formData.append("image", blob, `image.${ext}`);
@@ -37,10 +43,10 @@ export async function POST(req: Request) {
     formData.append("n", "1");
     formData.append("size", "1024x1024");
 
-    const response = await fetch(DEEPINFRA_URL, {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: formData,
     });

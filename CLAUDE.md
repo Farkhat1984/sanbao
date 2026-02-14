@@ -62,11 +62,17 @@ AI ответы содержат специальные `leema-*` теги, ко
 
 Парсинг стрима: `MessageInput.tsx` → `doSubmit()`. План-детекция на сервере: `route.ts` → `streamMoonshot()` / `createPlanDetectorStream()`.
 
-### AI Providers
+### AI Providers & Model Router
 
-- **Moonshot (Kimi K2.5)** — основной провайдер (`deepinfra`), ручной SSE-стриминг, поддержка web search через `$web_search` builtin tool
-- **OpenAI (gpt-4o)** / **Anthropic (claude-sonnet-4-5)** — через Vercel AI SDK `streamText`
-- Системные агенты: только Фемида (`FEMIDA_ID` в `src/lib/system-agents.ts`), кастомные агенты хранятся в БД
+- Модели хранятся в БД (`AiProvider` + `AiModel`) и разрешаются динамически через `src/lib/model-router.ts`
+- `resolveModel(category, planId?)` — выбирает модель по категории (TEXT/IMAGE/VOICE/VIDEO/CODE/EMBEDDING) и плану
+- Приоритет: план-дефолт → план-модель → глобальный дефолт → любая активная → env-fallback
+- **Moonshot (Kimi K2.5)** — дефолтный TEXT, ручной SSE-стриминг, web search через `$web_search`
+- **DeepInfra (Flux)** — дефолтный IMAGE
+- **OpenAI / Anthropic** — через Vercel AI SDK `streamText`
+- Admin API: `/api/admin/providers`, `/api/admin/models` (CRUD)
+- `PlanModel` — связь план↔модель для ограничения доступа
+- Системные агенты: Фемида (`src/lib/system-agents.ts`), кастомные — в БД
 
 ### Context Management
 
@@ -80,10 +86,11 @@ AI ответы содержат специальные `leema-*` теги, ко
 ### Data Layer
 
 - **Prisma + PostgreSQL** — схема в `prisma/schema.prisma`
-- Ключевые модели: User, Conversation, Message, Artifact, Agent, AgentFile, Skill, Task, Plan, Subscription, DailyUsage, UserMemory, ConversationSummary, ConversationPlan
-- Enums: UserRole (USER/PRO/ADMIN), MessageRole, ArtifactType (CONTRACT/CLAIM/COMPLAINT/DOCUMENT/CODE/ANALYSIS)
+- Ключевые модели: User, Conversation, Message, Artifact, Agent, AgentFile, Skill, Task, Plan, Subscription, DailyUsage, UserMemory, ConversationSummary, ConversationPlan, AiProvider, AiModel, PlanModel, EmailLog
+- Enums: UserRole (USER/PRO/ADMIN), MessageRole, ArtifactType, ModelCategory (TEXT/IMAGE/VOICE/VIDEO/CODE/EMBEDDING), EmailType, EmailStatus
 - Auth: NextAuth v5 с JWT-стратегией, провайдеры: Credentials, Google, GitHub
 - Биллинг: Plan → Subscription → DailyUsage, гранулярные лимиты (messages/day, tokens/month, requestsPerMinute, feature flags)
+- Email: `src/lib/email.ts` (Nodemailer SMTP), `src/lib/invoice.ts` (invoice генерация + рассылка), `EmailLog` для истории
 
 ### Key Libraries
 
