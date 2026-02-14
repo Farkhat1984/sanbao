@@ -1,7 +1,8 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { S3_DEFAULT_BUCKET, S3_DEFAULT_REGION, PRESIGNED_URL_EXPIRY } from "@/lib/constants";
 
-const bucket = process.env.S3_BUCKET || "leema-uploads";
+const bucket = process.env.S3_BUCKET || S3_DEFAULT_BUCKET;
 
 let client: S3Client | null = null;
 
@@ -9,7 +10,7 @@ function getClient(): S3Client | null {
   if (client) return client;
 
   const endpoint = process.env.S3_ENDPOINT;
-  const region = process.env.S3_REGION || "us-east-1";
+  const region = process.env.S3_REGION || S3_DEFAULT_REGION;
   const accessKeyId = process.env.S3_ACCESS_KEY;
   const secretAccessKey = process.env.S3_SECRET_KEY;
 
@@ -61,7 +62,7 @@ export async function deleteFile(key: string): Promise<void> {
   );
 }
 
-export async function getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+export async function getPresignedUrl(key: string, expiresIn = PRESIGNED_URL_EXPIRY): Promise<string> {
   const s3 = getClient();
   if (!s3) throw new Error("S3 not configured");
 

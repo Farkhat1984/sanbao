@@ -25,10 +25,11 @@ import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { cn } from "@/lib/utils";
 import { FEMIDA_ID } from "@/lib/system-agents";
+import { MAX_FILE_SIZE_PARSE, DEFAULT_PROVIDER } from "@/lib/constants";
 
 const CHAT_ACCEPTED_EXTENSIONS =
   ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls";
-const CHAT_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const CHAT_MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
 interface AttachedFile {
   id: string;
@@ -363,7 +364,7 @@ export function MessageInput() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: apiMessages,
-          provider: "deepinfra",
+          provider: DEFAULT_PROVIDER,
           agentId: activeAgentId,
           conversationId: convId,
           thinkingEnabled,

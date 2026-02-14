@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -21,9 +22,9 @@ export async function POST(req: Request) {
     const imageModel = await resolveModel("IMAGE");
     const apiUrl = imageModel
       ? `${imageModel.provider.baseUrl}/images/generations`
-      : "https://api.deepinfra.com/v1/openai/images/generations";
+      : `${DEEPINFRA_BASE_URL}/images/generations`;
     const apiKey = imageModel?.provider.apiKey || process.env.DEEPINFRA_API_KEY || "";
-    const modelId = imageModel?.modelId || "black-forest-labs/FLUX-1-schnell";
+    const modelId = imageModel?.modelId || DEFAULT_IMAGE_MODEL;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -34,8 +35,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: modelId,
         prompt: prompt.trim(),
-        n: 1,
-        size: "1024x1024",
+        n: DEFAULT_IMAGE_COUNT,
+        size: DEFAULT_IMAGE_SIZE,
         response_format: "b64_json",
       }),
     });

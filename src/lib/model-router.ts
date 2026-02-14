@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { ModelCategory } from "@prisma/client";
 import { decrypt } from "@/lib/crypto";
+import { CACHE_TTL as CONSTANTS_CACHE_TTL, MOONSHOT_BASE_URL, DEFAULT_TEXT_MODEL, DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL } from "@/lib/constants";
 
 export interface ResolvedModel {
   provider: {
@@ -21,7 +22,7 @@ export interface ResolvedModel {
 
 // In-memory cache: category+planId -> { model, expiresAt }
 const cache = new Map<string, { model: ResolvedModel; expiresAt: number }>();
-const CACHE_TTL = 60_000; // 1 minute
+const CACHE_TTL = CONSTANTS_CACHE_TTL;
 
 function cacheKey(category: ModelCategory, planId?: string) {
   return `${category}:${planId || "default"}`;
@@ -221,10 +222,10 @@ function getEnvFallback(category: ModelCategory): ResolvedModel | null {
       return {
         provider: {
           slug: "moonshot",
-          baseUrl: "https://api.moonshot.ai/v1",
+          baseUrl: MOONSHOT_BASE_URL,
           apiKey,
         },
-        modelId: "kimi-k2.5",
+        modelId: DEFAULT_TEXT_MODEL,
         displayName: "Kimi K2.5",
         category,
         temperature: null,
@@ -241,10 +242,10 @@ function getEnvFallback(category: ModelCategory): ResolvedModel | null {
       return {
         provider: {
           slug: "deepinfra",
-          baseUrl: "https://api.deepinfra.com/v1/openai",
+          baseUrl: DEEPINFRA_BASE_URL,
           apiKey,
         },
-        modelId: "black-forest-labs/FLUX-1-schnell",
+        modelId: DEFAULT_IMAGE_MODEL,
         displayName: "Flux Schnell",
         category,
         temperature: null,

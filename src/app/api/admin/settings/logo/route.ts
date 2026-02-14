@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { MAX_LOGO_SIZE } from "@/lib/constants";
 
-const MAX_SIZE = 512 * 1024; // 512 KB
+const MAX_SIZE = MAX_LOGO_SIZE;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
 
 export async function POST(req: Request) {

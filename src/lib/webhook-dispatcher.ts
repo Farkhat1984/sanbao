@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
+import { WEBHOOK_MAX_ATTEMPTS, WEBHOOK_TIMEOUT_MS } from "@/lib/constants";
 
 export async function dispatchWebhook(event: string, payload: Record<string, unknown>) {
   const webhooks = await prisma.webhook.findMany({
@@ -18,7 +19,7 @@ export async function dispatchWebhook(event: string, payload: Record<string, unk
       .digest("hex");
 
     let attempt = 1;
-    const maxAttempts = 3;
+    const maxAttempts = WEBHOOK_MAX_ATTEMPTS;
     let success = false;
     let statusCode: number | null = null;
     let response: string | null = null;
@@ -34,7 +35,7 @@ export async function dispatchWebhook(event: string, payload: Record<string, unk
             "X-Webhook-Event": event,
           },
           body,
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
         });
 
         statusCode = res.status;

@@ -5,6 +5,7 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
+import { DEFAULT_ICON_COLOR } from "@/lib/constants";
 
 export function Header() {
   const { isOpen: sidebarOpen, open } = useSidebarStore();
@@ -33,7 +34,7 @@ export function Header() {
           return (
             <div
               className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
-              style={{ backgroundColor: activeConv.agentIconColor || "#4F6EF7" }}
+              style={{ backgroundColor: activeConv.agentIconColor || DEFAULT_ICON_COLOR }}
             >
               <AgentIcon className="h-3.5 w-3.5 text-white" />
             </div>

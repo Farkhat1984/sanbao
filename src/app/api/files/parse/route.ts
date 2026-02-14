@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseFileToText } from "@/lib/parse-file";
+import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
 export async function POST(req: Request) {
   const session = await auth();

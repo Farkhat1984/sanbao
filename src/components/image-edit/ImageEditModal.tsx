@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
 
 interface ImageEditModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function ImageEditModal({ isOpen, onClose }: ImageEditModalProps) {
       setError("Поддерживаются только изображения (PNG, JPG, WEBP)");
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE_PARSE) {
       setError("Максимальный размер файла — 20 МБ");
       return;
     }

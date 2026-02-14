@@ -8,6 +8,7 @@ import {
   ShieldCheck, ClipboardCheck, Brain, Upload, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VALID_COLORS } from "@/lib/constants";
 
 const ICONS = [
   { name: "Bot", component: Bot },
@@ -32,16 +33,7 @@ const ICONS = [
   { name: "Brain", component: Brain },
 ] as const;
 
-const COLORS = [
-  "#4F6EF7",
-  "#7C3AED",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#EC4899",
-  "#06B6D4",
-  "#6366F1",
-];
+const COLORS = VALID_COLORS;
 
 // Reusable map for rendering agent icons by name
 export const ICON_MAP: Record<string, typeof Bot> = Object.fromEntries(

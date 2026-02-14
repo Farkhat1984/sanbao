@@ -5,6 +5,7 @@ import { Plus, Save, Trash2, Star, StarOff, Brain, Grid3X3 } from "lucide-react"
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { DEFAULT_TEMPERATURE_PREVIEW, DEFAULT_MAX_TOKENS, DEFAULT_CONTEXT_WINDOW } from "@/lib/constants";
 
 interface Model {
   id: string;
@@ -54,10 +55,10 @@ export default function AdminModelsPage() {
     modelId: "",
     displayName: "",
     category: "TEXT",
-    temperature: 0.7,
+    temperature: DEFAULT_TEMPERATURE_PREVIEW,
     topP: 1,
-    maxTokens: 4096,
-    contextWindow: 128000,
+    maxTokens: DEFAULT_MAX_TOKENS,
+    contextWindow: DEFAULT_CONTEXT_WINDOW,
     costPer1kInput: 0,
     costPer1kOutput: 0,
     supportsThinking: false,
@@ -86,7 +87,7 @@ export default function AdminModelsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: 0.7, topP: 1, maxTokens: 4096, contextWindow: 128000, costPer1kInput: 0, costPer1kOutput: 0, supportsThinking: false, maxThinkingTokens: 0 });
+      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: DEFAULT_TEMPERATURE_PREVIEW, topP: 1, maxTokens: DEFAULT_MAX_TOKENS, contextWindow: DEFAULT_CONTEXT_WINDOW, costPer1kInput: 0, costPer1kOutput: 0, supportsThinking: false, maxThinkingTokens: 0 });
       fetchData();
     }
   };

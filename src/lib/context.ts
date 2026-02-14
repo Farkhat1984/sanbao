@@ -1,3 +1,5 @@
+import { CONTEXT_COMPACTION_THRESHOLD, CONTEXT_KEEP_LAST_MESSAGES } from "@/lib/constants";
+
 // ─── Context management utilities for autocompact & planning ───
 
 export function estimateTokens(text: string): number {
@@ -23,7 +25,7 @@ export function checkContextWindow(
   messages: Array<{ role: string; content: string }>,
   systemPromptTokens: number,
   contextWindowSize: number,
-  threshold: number = 0.7
+  threshold: number = CONTEXT_COMPACTION_THRESHOLD
 ): ContextCheckResult {
   const messageTokens = estimateMessagesTokens(messages);
   const totalTokens = messageTokens + systemPromptTokens;
@@ -45,7 +47,7 @@ export interface CompactionSplit {
 
 export function splitMessagesForCompaction(
   messages: Array<{ role: string; content: string }>,
-  keepLast: number = 12
+  keepLast: number = CONTEXT_KEEP_LAST_MESSAGES
 ): CompactionSplit {
   if (messages.length <= keepLast) {
     return { messagesToSummarize: [], messagesToKeep: messages };

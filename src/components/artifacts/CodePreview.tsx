@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { RefreshCw, Maximize2, Minimize2, Loader2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { REACT_CDN_URL, REACT_DOM_CDN_URL, BABEL_CDN_URL, TAILWIND_CDN_URL, MAX_AUTO_FIX_ATTEMPTS } from "@/lib/constants";
 
 interface CodePreviewProps {
   code: string;
@@ -57,10 +58,10 @@ function buildPreviewHtml(code: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin><\/script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin><\/script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
-  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="${REACT_CDN_URL}" crossorigin><\/script>
+  <script src="${REACT_DOM_CDN_URL}" crossorigin><\/script>
+  <script src="${BABEL_CDN_URL}"><\/script>
+  <script src="${TAILWIND_CDN_URL}"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -104,7 +105,7 @@ function buildPreviewHtml(code: string): string {
 </html>`;
 }
 
-const MAX_FIX_ATTEMPTS = 3;
+const MAX_FIX_ATTEMPTS = MAX_AUTO_FIX_ATTEMPTS;
 
 export function CodePreview({ code, onCodeFixed }: CodePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);

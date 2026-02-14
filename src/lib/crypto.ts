@@ -5,7 +5,8 @@ const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
 function getKey(): Buffer {
-  const secret = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || "default-key-change-me-in-production!";
+  const secret = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET;
+  if (!secret) throw new Error("ENCRYPTION_KEY or NEXTAUTH_SECRET must be set");
   return crypto.createHash("sha256").update(secret).digest();
 }
 

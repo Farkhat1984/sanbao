@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_CURRENCY } from "@/lib/constants";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
       data: {
         userId,
         amount: 0,
-        currency: "KZT",
+        currency: DEFAULT_CURRENCY,
         status: "COMPLETED",
         provider: "manual",
       },

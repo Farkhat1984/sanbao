@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
 import { ArrowLeft, Save, Sparkles, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { Skill } from "@/types/skill";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
 
 const JURISDICTIONS = [
   { value: "RU", label: "Россия" },
@@ -33,8 +34,8 @@ export function SkillForm({ initial }: SkillFormProps) {
   const [systemPrompt, setSystemPrompt] = useState(initial?.systemPrompt || "");
   const [citationRules, setCitationRules] = useState(initial?.citationRules || "");
   const [jurisdiction, setJurisdiction] = useState(initial?.jurisdiction || "RU");
-  const [icon, setIcon] = useState(initial?.icon || "Scale");
-  const [iconColor, setIconColor] = useState(initial?.iconColor || "#4F6EF7");
+  const [icon, setIcon] = useState(initial?.icon || DEFAULT_SKILL_ICON);
+  const [iconColor, setIconColor] = useState(initial?.iconColor || DEFAULT_ICON_COLOR);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

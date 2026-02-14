@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL, DEFAULT_MAX_TOKENS_FIX, DEFAULT_TEMPERATURE_CODE_FIX } from "@/lib/constants";
 
 const FIX_PROMPT = `You are a code fixer. You receive code that has a runtime error and must return ONLY the fixed code.
 
@@ -28,9 +29,9 @@ export async function POST(req: Request) {
     const textModel = await resolveModel("CODE");
     const apiUrl = textModel
       ? `${textModel.provider.baseUrl}/chat/completions`
-      : "https://api.moonshot.ai/v1/chat/completions";
+      : MOONSHOT_CHAT_URL;
     const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = textModel?.modelId || "kimi-k2.5";
+    const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -47,8 +48,8 @@ export async function POST(req: Request) {
             content: `Error:\n${error}\n\nCode:\n${code}`,
           },
         ],
-        max_tokens: textModel?.maxTokens || 8192,
-        temperature: textModel?.temperature ?? 0.2,
+        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS_FIX,
+        temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE_CODE_FIX,
         stream: false,
       }),
     });

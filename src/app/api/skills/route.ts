@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -73,8 +74,8 @@ export async function POST(req: Request) {
       templates: templates || null,
       citationRules: citationRules?.trim() || null,
       jurisdiction: jurisdiction || "RU",
-      icon: icon || "Scale",
-      iconColor: iconColor || "#4F6EF7",
+      icon: icon || DEFAULT_SKILL_ICON,
+      iconColor: iconColor || DEFAULT_ICON_COLOR,
     },
   });
 

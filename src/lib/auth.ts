@@ -4,11 +4,11 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
 
-// Hardcoded admin credentials
-const ADMIN_LOGIN = "admin";
-const ADMIN_PASSWORD = "Ckdshfh231161!";
-const ADMIN_EMAIL = "admin@leema.local";
+const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@leema.local";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -36,8 +36,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const login = (credentials.email as string).trim();
           const password = credentials.password as string;
 
-          // Check hardcoded admin credentials
+          // Check admin credentials (disabled when ADMIN_PASSWORD is not set)
           if (
+            ADMIN_PASSWORD &&
             (login === ADMIN_LOGIN || login === ADMIN_EMAIL) &&
             password === ADMIN_PASSWORD
           ) {
@@ -48,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               create: {
                 email: ADMIN_EMAIL,
                 name: "Администратор",
-                password: await bcrypt.hash(ADMIN_PASSWORD, 12),
+                password: await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_SALT_ROUNDS),
                 role: "ADMIN",
               },
             });
@@ -115,7 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const ttlSetting = await prisma.systemSetting.findUnique({
             where: { key: "session_ttl_hours" },
           });
-          const ttlHours = ttlSetting ? parseInt(ttlSetting.value, 10) : 720; // default 30 days
+          const ttlHours = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
           const maxAge = ttlHours * 3600;
           const now = Math.floor(Date.now() / 1000);
           if (now - (token.iat as number) > maxAge) {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { CACHE_TTL } from "@/lib/constants";
 
 interface ActiveExperiment {
   id: string;
@@ -9,7 +10,6 @@ interface ActiveExperiment {
 }
 
 let cache: { experiments: ActiveExperiment[]; expiresAt: number } | null = null;
-const CACHE_TTL = 60_000;
 
 async function loadExperiments(): Promise<ActiveExperiment[]> {
   if (cache && cache.expiresAt > Date.now()) return cache.experiments;

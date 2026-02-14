@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { EmailType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SMTP_PORT, DEFAULT_EMAIL_FROM } from "@/lib/constants";
 
 // ─── SMTP Transport ─────────────────────────────────────
 
@@ -11,7 +12,7 @@ async function getTransporter() {
 
   // Try loading SMTP from SystemSettings first
   let host = process.env.SMTP_HOST;
-  let port = parseInt(process.env.SMTP_PORT || "587", 10);
+  let port = parseInt(process.env.SMTP_PORT || String(DEFAULT_SMTP_PORT), 10);
   let user = process.env.SMTP_USER;
   let pass = process.env.SMTP_PASS;
 
@@ -61,7 +62,7 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   const { to, subject, html, text, type, userId, metadata } = options;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@leema.ai";
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || DEFAULT_EMAIL_FROM;
 
   // Log the attempt
   const log = await prisma.emailLog.create({

@@ -2,10 +2,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { CACHE_TTL } from "@/lib/constants";
 
 // ─── IP whitelist cache ───
 let ipWhitelistCache: { ips: string[]; expiresAt: number } | null = null;
-const IP_CACHE_TTL = 60_000; // 1 minute
+const IP_CACHE_TTL = CACHE_TTL;
 
 async function getIpWhitelist(): Promise<string[]> {
   if (ipWhitelistCache && ipWhitelistCache.expiresAt > Date.now()) {

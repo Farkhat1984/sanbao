@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { resolveModel } from "@/lib/model-router";
+import { DEFAULT_MAX_TOKENS_PREVIEW, DEFAULT_TEMPERATURE_PREVIEW } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const result = await requireAdmin();
@@ -30,8 +31,8 @@ export async function POST(req: Request) {
           { role: "system", content: systemPrompt },
           { role: "user", content: message },
         ],
-        max_tokens: 512,
-        temperature: model.temperature ?? 0.7,
+        max_tokens: DEFAULT_MAX_TOKENS_PREVIEW,
+        temperature: model.temperature ?? DEFAULT_TEMPERATURE_PREVIEW,
       }),
     });
 

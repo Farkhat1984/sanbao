@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
 import Stripe from "stripe";
+import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
 
 /**
  * Stripe webhook handler.
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (endpointSecret && sig) {
     try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2026-01-28.clover" });
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: STRIPE_API_VERSION });
       const verified = stripe.webhooks.constructEvent(body, sig, endpointSecret) as unknown as typeof event;
       event = verified;
     } catch (err) {
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
             data: {
               userId,
               amount: (obj.amount_total as number) || 0,
-              currency: (obj.currency as string) || "KZT",
+              currency: (obj.currency as string) || DEFAULT_CURRENCY,
               status: "COMPLETED",
               provider: "stripe",
               externalId: obj.id as string,
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
 
           // Send invoice email (fire-and-forget)
           const amountTotal = (obj.amount_total as number) || 0;
-          const currency = (obj.currency as string) || "KZT";
+          const currency = (obj.currency as string) || DEFAULT_CURRENCY;
           const now = new Date();
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);

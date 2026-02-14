@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -47,8 +48,8 @@ export async function POST(req: Request) {
       templates: templates || null,
       citationRules: citationRules || null,
       jurisdiction: jurisdiction || "RU",
-      icon: icon || "Scale",
-      iconColor: iconColor || "#4F6EF7",
+      icon: icon || DEFAULT_SKILL_ICON,
+      iconColor: iconColor || DEFAULT_ICON_COLOR,
       isBuiltIn: isBuiltIn ?? true,
       isPublic: isPublic ?? true,
       status: "APPROVED", // Admin-created skills are auto-approved

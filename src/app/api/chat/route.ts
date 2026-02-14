@@ -20,6 +20,16 @@ import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 import { checkContentFilter } from "@/lib/content-filter";
 import { recordRequestDuration } from "@/lib/request-metrics";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
+import {
+  MOONSHOT_CHAT_URL,
+  DEFAULT_TEXT_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_TEMPERATURE_COMPACTION,
+  DEFAULT_TOP_P,
+  DEFAULT_MAX_TOKENS_COMPACTION,
+  DEFAULT_PROVIDER,
+  CONTEXT_KEEP_LAST_MESSAGES,
+} from "@/lib/constants";
 
 const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассистент. Отвечай точно, полезно и по делу.
 
@@ -98,7 +108,7 @@ const SYSTEM_PROMPT = `Ты — Leema, универсальный AI-ассис�
 - После получения ответов — сразу создавай документ через <leema-doc>`;
 
 // Resolved dynamically via model-router; kept as fallback constant
-const MOONSHOT_URL_FALLBACK = "https://api.moonshot.ai/v1/chat/completions";
+const MOONSHOT_URL_FALLBACK = MOONSHOT_CHAT_URL;
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -217,7 +227,7 @@ async function compactInBackground(
       ? `${model.provider.baseUrl}/chat/completions`
       : MOONSHOT_URL_FALLBACK;
     const apiKey = model?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = model?.modelId || "kimi-k2.5";
+    const modelId = model?.modelId || DEFAULT_TEXT_MODEL;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -231,8 +241,8 @@ async function compactInBackground(
           { role: "system", content: "Ты — ассистент для сжатия контекста разговора." },
           { role: "user", content: compactionPrompt },
         ],
-        max_tokens: Math.min(maxTokens, 2048),
-        temperature: 0.3,
+        max_tokens: Math.min(maxTokens, DEFAULT_MAX_TOKENS_COMPACTION),
+        temperature: DEFAULT_TEMPERATURE_COMPACTION,
         stream: false,
       }),
     });
@@ -297,7 +307,7 @@ function streamMoonshot(
     ? `${textModel.provider.baseUrl}/chat/completions`
     : MOONSHOT_URL_FALLBACK;
   const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-  const modelId = textModel?.modelId || "kimi-k2.5";
+  const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -336,8 +346,8 @@ function streamMoonshot(
               model: modelId,
               messages: currentMessages,
               max_tokens: maxTokens,
-              temperature: thinkingEnabled ? 1.0 : 0.6,
-              top_p: 0.95,
+              temperature: thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
+              top_p: DEFAULT_TOP_P,
               stream: true,
               ...((webSearchEnabled || mcpTools.length > 0)
                 ? {
@@ -706,7 +716,7 @@ export async function POST(req: Request) {
 
   const {
     messages,
-    provider = "deepinfra",
+    provider = DEFAULT_PROVIDER,
     agentId,
     skillId,
     thinkingEnabled = true,
@@ -948,7 +958,7 @@ export async function POST(req: Request) {
   if (contextCheck.needsCompaction) {
     const { messagesToSummarize, messagesToKeep } = splitMessagesForCompaction(
       messages,
-      12
+      CONTEXT_KEEP_LAST_MESSAGES
     );
 
     if (messagesToSummarize.length > 0) {
@@ -1037,8 +1047,8 @@ export async function POST(req: Request) {
     model,
     system: enrichedSystemPrompt,
     messages: effectiveMessages,
-    temperature: 0.6,
-    topP: 0.95,
+    temperature: DEFAULT_TEMPERATURE,
+    topP: DEFAULT_TOP_P,
     maxOutputTokens: plan.tokensPerMessage,
   });
 

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat";
+import { DEFAULT_PROVIDER } from "@/lib/constants";
 
 type StreamingPhase = "planning" | "thinking" | "answering" | null;
 
@@ -83,7 +84,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isToolWorking: false,
   activeToolName: null,
 
-  provider: "deepinfra",
+  provider: DEFAULT_PROVIDER as AIProvider,
   thinkingEnabled: false,
   webSearchEnabled: false,
   planningEnabled: false,

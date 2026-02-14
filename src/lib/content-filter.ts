@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { CACHE_TTL } from "@/lib/constants";
 
 let cachedWords: string[] | null = null;
 let cachedEnabled: boolean | null = null;
 let cacheTime = 0;
-const CACHE_TTL = 60_000; // 1 minute
 
 async function loadFilterConfig() {
   const now = Date.now();

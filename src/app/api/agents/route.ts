@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
+import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
 export async function GET() {
   const session = await auth();
@@ -78,8 +79,8 @@ export async function POST(req: Request) {
       description: description?.trim() || null,
       instructions: instructions.trim(),
       model: model || "openai",
-      icon: icon || "Bot",
-      iconColor: iconColor || "#4F6EF7",
+      icon: icon || DEFAULT_AGENT_ICON,
+      iconColor: iconColor || DEFAULT_ICON_COLOR,
       avatar: avatar || null,
     },
     include: { files: true },

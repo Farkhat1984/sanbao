@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { DEEPINFRA_BASE_URL, DEFAULT_IMAGE_EDIT_MODEL, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     const imageModel = await resolveModel("IMAGE");
     const apiUrl = imageModel
       ? `${imageModel.provider.baseUrl}/images/edits`
-      : "https://api.deepinfra.com/v1/openai/images/edits";
+      : `${DEEPINFRA_BASE_URL}/images/edits`;
     const apiKey = imageModel?.provider.apiKey || process.env.DEEPINFRA_API_KEY || "";
 
     // Build FormData for API
@@ -39,9 +40,9 @@ export async function POST(req: Request) {
     const blob = new Blob([imageBuffer], { type: mimeType });
     formData.append("image", blob, `image.${ext}`);
     formData.append("prompt", prompt);
-    formData.append("model", "Qwen/Qwen-Image-Edit");
-    formData.append("n", "1");
-    formData.append("size", "1024x1024");
+    formData.append("model", DEFAULT_IMAGE_EDIT_MODEL);
+    formData.append("n", String(DEFAULT_IMAGE_COUNT));
+    formData.append("size", DEFAULT_IMAGE_SIZE);
 
     const response = await fetch(apiUrl, {
       method: "POST",

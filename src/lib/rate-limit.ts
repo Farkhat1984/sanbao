@@ -1,11 +1,15 @@
+import {
+  VIOLATION_THRESHOLD, VIOLATION_WINDOW_MS, USER_BLOCK_DURATION_MS,
+  AUTH_MAX_PER_MINUTE as CONST_AUTH_MAX_PER_MINUTE,
+  AUTH_BLOCK_DURATION_MS as CONST_AUTH_BLOCK_DURATION_MS,
+  CACHE_CLEANUP_INTERVAL_MS,
+} from "@/lib/constants";
+
 const requestTimestamps = new Map<string, number[]>();
 
 // ─── Abuse tracking: auto-block after repeated rate limit violations ───
 const violationCounts = new Map<string, { count: number; lastViolation: number }>();
 const userBlocklist = new Map<string, number>(); // userId -> unblock timestamp
-const VIOLATION_THRESHOLD = 10; // violations before auto-block
-const VIOLATION_WINDOW_MS = 5 * 60_000; // 5-minute window
-const USER_BLOCK_DURATION_MS = 30 * 60_000; // 30-minute block
 
 function trackViolation(key: string): boolean {
   const now = Date.now();
@@ -69,9 +73,8 @@ export function checkMinuteRateLimit(
 const ipTimestamps = new Map<string, number[]>();
 const ipBlocklist = new Map<string, number>(); // IP -> unblock timestamp
 
-// 5 login attempts per minute, block for 15 min after exceeding
-const AUTH_MAX_PER_MINUTE = 5;
-const AUTH_BLOCK_DURATION_MS = 15 * 60_000;
+const AUTH_MAX_PER_MINUTE = CONST_AUTH_MAX_PER_MINUTE;
+const AUTH_BLOCK_DURATION_MS = CONST_AUTH_BLOCK_DURATION_MS;
 
 export function checkAuthRateLimit(ip: string): {
   allowed: boolean;
@@ -157,5 +160,5 @@ if (typeof setInterval !== "undefined") {
     for (const [key, v] of violationCounts) {
       if (now - v.lastViolation > VIOLATION_WINDOW_MS) violationCounts.delete(key);
     }
-  }, 300_000);
+  }, CACHE_CLEANUP_INTERVAL_MS);
 }

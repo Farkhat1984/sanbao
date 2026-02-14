@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -34,8 +35,8 @@ export async function POST(req: Request) {
       name,
       description: description || null,
       systemPrompt,
-      icon: icon || "Bot",
-      iconColor: iconColor || "#4F6EF7",
+      icon: icon || DEFAULT_AGENT_ICON,
+      iconColor: iconColor || DEFAULT_ICON_COLOR,
       model: model || "default",
       isActive: isActive ?? true,
       sortOrder: sortOrder ?? 0,

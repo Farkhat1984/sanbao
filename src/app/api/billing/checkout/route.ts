@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
+import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  return new Stripe(key, { apiVersion: "2026-01-28.clover" });
+  return new Stripe(key, { apiVersion: STRIPE_API_VERSION });
 }
 
 export async function POST(req: Request) {
@@ -45,7 +46,10 @@ export async function POST(req: Request) {
     }
   }
 
-  const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL;
+  if (!origin) {
+    return NextResponse.json({ error: "Origin or NEXTAUTH_URL must be configured" }, { status: 500 });
+  }
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -55,7 +59,7 @@ export async function POST(req: Request) {
     line_items: [
       {
         price_data: {
-          currency: "kzt",
+          currency: DEFAULT_CURRENCY.toLowerCase(),
           product_data: {
             name: `Leema — ${plan.name}`,
             description: plan.description || undefined,

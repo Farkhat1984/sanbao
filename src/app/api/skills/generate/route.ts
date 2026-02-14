@@ -1,18 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
-
-const VALID_ICONS = [
-  "Bot", "Scale", "Briefcase", "Shield", "BookOpen", "Gavel", "FileText",
-  "Building", "User", "HeartPulse", "GraduationCap", "Landmark",
-  "Code", "MessageSquare", "Globe", "Lightbulb", "FileSearch",
-  "ShieldCheck", "ClipboardCheck", "Brain",
-];
-
-const VALID_COLORS = [
-  "#4F6EF7", "#7C3AED", "#10B981", "#F59E0B",
-  "#EF4444", "#EC4899", "#06B6D4", "#6366F1",
-];
+import {
+  VALID_ICONS, VALID_COLORS, MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL,
+  DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
+} from "@/lib/constants";
 
 const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"];
 
@@ -61,9 +53,9 @@ export async function POST(req: Request) {
     const textModel = await resolveModel("TEXT");
     const apiUrl = textModel
       ? `${textModel.provider.baseUrl}/chat/completions`
-      : "https://api.moonshot.ai/v1/chat/completions";
+      : MOONSHOT_CHAT_URL;
     const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = textModel?.modelId || "kimi-k2.5";
+    const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -77,8 +69,8 @@ export async function POST(req: Request) {
           { role: "system", content: SYSTEM_GEN_PROMPT },
           { role: "user", content: userMsg },
         ],
-        temperature: textModel?.temperature ?? 0.6,
-        max_tokens: textModel?.maxTokens || 2048,
+        temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,
+        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS_GENERATE,
         stream: false,
         thinking: { type: "disabled" },
       }),
@@ -113,7 +105,7 @@ export async function POST(req: Request) {
       citationRules: parsed.citationRules || "",
       jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction) ? parsed.jurisdiction : "RU",
       icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : "Scale",
-      iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : "#4F6EF7",
+      iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
     };
 
     return NextResponse.json(result);

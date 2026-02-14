@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Save, Trash2, Power, PowerOff, GripVertical, Eye, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
 interface SystemAgent {
   id: string;
@@ -26,8 +27,8 @@ export default function AdminAgentsPage() {
     name: "",
     description: "",
     systemPrompt: "",
-    icon: "Bot",
-    iconColor: "#4F6EF7",
+    icon: DEFAULT_AGENT_ICON,
+    iconColor: DEFAULT_ICON_COLOR,
     model: "default",
   });
 
@@ -102,7 +103,7 @@ export default function AdminAgentsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewAgent({ name: "", description: "", systemPrompt: "", icon: "Bot", iconColor: "#4F6EF7", model: "default" });
+      setNewAgent({ name: "", description: "", systemPrompt: "", icon: DEFAULT_AGENT_ICON, iconColor: DEFAULT_ICON_COLOR, model: "default" });
       fetchAgents();
     }
   };

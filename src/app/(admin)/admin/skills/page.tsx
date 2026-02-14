@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Save, Trash2, Shield, Globe, CheckCircle, XCircle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
 
 interface Skill {
   id: string;
@@ -37,7 +38,7 @@ export default function AdminSkillsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Skill>>({});
   const [newSkill, setNewSkill] = useState({
-    name: "", description: "", systemPrompt: "", citationRules: "", jurisdiction: "RU", icon: "Scale", iconColor: "#4F6EF7",
+    name: "", description: "", systemPrompt: "", citationRules: "", jurisdiction: "RU", icon: DEFAULT_SKILL_ICON, iconColor: DEFAULT_ICON_COLOR,
   });
 
   const [stats, setStats] = useState<{ totalSkills: number; activeSkills: number; pendingSkills: number } | null>(null);
@@ -61,7 +62,7 @@ export default function AdminSkillsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewSkill({ name: "", description: "", systemPrompt: "", citationRules: "", jurisdiction: "RU", icon: "Scale", iconColor: "#4F6EF7" });
+      setNewSkill({ name: "", description: "", systemPrompt: "", citationRules: "", jurisdiction: "RU", icon: DEFAULT_SKILL_ICON, iconColor: DEFAULT_ICON_COLOR });
       fetchSkills();
     }
   };

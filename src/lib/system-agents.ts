@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_PROVIDER } from "@/lib/constants";
 
 export const FEMIDA_ID = "system-femida";
 
@@ -13,7 +14,7 @@ export const FEMIDA_AGENT = {
   description: "Юридический AI-ассистент для работы с договорами, исками и НПА РК",
   icon: "Scale",
   iconColor: "#7C3AED",
-  model: "deepinfra",
+  model: DEFAULT_PROVIDER,
 } as const;
 
 /** Full legal system prompt used by Фемида */

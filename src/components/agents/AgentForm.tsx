@@ -9,6 +9,7 @@ import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Agent, AgentFile } from "@/types/agent";
+import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
 interface AgentFormProps {
   agent?: Agent;
@@ -21,8 +22,8 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [name, setName] = useState(agent?.name || "");
   const [description, setDescription] = useState(agent?.description || "");
   const [instructions, setInstructions] = useState(agent?.instructions || "");
-  const [icon, setIcon] = useState(agent?.icon || "Bot");
-  const [iconColor, setIconColor] = useState(agent?.iconColor || "#4F6EF7");
+  const [icon, setIcon] = useState(agent?.icon || DEFAULT_AGENT_ICON);
+  const [iconColor, setIconColor] = useState(agent?.iconColor || DEFAULT_ICON_COLOR);
   const [files, setFiles] = useState<AgentFile[]>(agent?.files || []);
   const [avatar, setAvatar] = useState<string | null>(agent?.avatar || null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(
