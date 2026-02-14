@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserPlanAndUsage } from "@/lib/usage";
 
 export async function GET() {
   const session = await auth();
@@ -52,6 +53,20 @@ export async function POST(req: Request) {
   }
 
   const { title, agentId } = await req.json();
+
+  // Check maxConversations limit
+  const { plan } = await getUserPlanAndUsage(session.user.id);
+  if (plan && plan.maxConversations > 0) {
+    const count = await prisma.conversation.count({
+      where: { userId: session.user.id, archived: false },
+    });
+    if (count >= plan.maxConversations) {
+      return NextResponse.json(
+        { error: `Достигнут лимит диалогов (${plan.maxConversations}). Удалите старые или перейдите на более высокий тариф.` },
+        { status: 403 }
+      );
+    }
+  }
 
   const conversation = await prisma.conversation.create({
     data: {

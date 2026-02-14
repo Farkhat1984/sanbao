@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserPlanAndUsage } from "@/lib/usage";
 
 export async function GET() {
   const session = await auth();
@@ -45,6 +46,28 @@ export async function POST(req: Request) {
       { error: "Название и инструкции обязательны" },
       { status: 400 }
     );
+  }
+
+  // Check maxAgents limit (0 = no agents allowed, -1 = unlimited)
+  const { plan } = await getUserPlanAndUsage(session.user.id);
+  if (plan) {
+    if (plan.maxAgents === 0) {
+      return NextResponse.json(
+        { error: "Создание агентов недоступно на вашем тарифе" },
+        { status: 403 }
+      );
+    }
+    if (plan.maxAgents > 0) {
+      const agentCount = await prisma.agent.count({
+        where: { userId: session.user.id },
+      });
+      if (agentCount >= plan.maxAgents) {
+        return NextResponse.json(
+          { error: `Достигнут лимит агентов (${plan.maxAgents}). Перейдите на более высокий тариф.` },
+          { status: 403 }
+        );
+      }
+    }
   }
 
   const agent = await prisma.agent.create({

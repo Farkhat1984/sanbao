@@ -305,6 +305,16 @@ export function MessageInput() {
           addConversation(conv);
           setActiveConversation(conv.id);
           window.history.replaceState(null, "", `/chat/${conv.id}`);
+        } else if (convRes.status === 403) {
+          const err = await convRes.json().catch(() => ({ error: "Лимит диалогов" }));
+          addMessage({
+            id: crypto.randomUUID(),
+            role: "ASSISTANT",
+            content: `Ошибка: ${err.error}`,
+            createdAt: new Date().toISOString(),
+          });
+          setStreaming(false);
+          return;
         }
       } catch {
         // Continue without persistence if conversation creation fails

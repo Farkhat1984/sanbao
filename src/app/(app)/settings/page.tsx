@@ -62,13 +62,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/billing/current").then((r) => r.json()),
-      fetch("/api/billing/plans").then((r) => r.json()),
-    ]).then(([billingData, plansData]) => {
-      setBilling(billingData);
-      setPlans(plansData);
-      setLoadingBilling(false);
-    });
+      fetch("/api/billing/current").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/billing/plans").then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([billingData, plansData]) => {
+        if (billingData) setBilling(billingData);
+        if (Array.isArray(plansData)) setPlans(plansData);
+        setLoadingBilling(false);
+      })
+      .catch(() => setLoadingBilling(false));
   }, []);
 
   const themes = [

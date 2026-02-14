@@ -369,6 +369,14 @@ export async function POST(req: Request) {
     );
   }
 
+  // Web search access check
+  if (webSearchEnabled && !plan.canUseAdvancedTools) {
+    return NextResponse.json(
+      { error: "Веб-поиск доступен на тарифе Pro и выше" },
+      { status: 403 }
+    );
+  }
+
   // Build system prompt and determine provider
   let systemPrompt = SYSTEM_PROMPT;
   let effectiveProvider = provider;
@@ -405,8 +413,13 @@ export async function POST(req: Request) {
   // Process messages
   const apiMessages = buildApiMessages(messages, attachments, systemPrompt);
 
-  // Track usage
-  await incrementUsage(session.user.id, plan.tokensPerMessage);
+  // Track usage — estimate input tokens from message content (~3 chars per token for mixed ru/en)
+  const inputChars = messages.reduce(
+    (sum: number, m: { content: string }) => sum + (m.content?.length || 0),
+    0
+  );
+  const estimatedTokens = Math.max(100, Math.ceil(inputChars / 3));
+  await incrementUsage(session.user.id, estimatedTokens);
 
   // ─── Moonshot (Kimi K2.5) ──────────────────────────────
   if (effectiveProvider === "deepinfra") {

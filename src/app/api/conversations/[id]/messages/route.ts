@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { incrementTokens } from "@/lib/usage";
 
 export async function POST(
   req: Request,
@@ -53,6 +54,13 @@ export async function POST(
     where: { id: conversationId },
     data: updateData,
   });
+
+  // Track output token usage from assistant response
+  const assistantMsg = messages.find((m: { role: string }) => m.role === "ASSISTANT");
+  if (assistantMsg?.content) {
+    const outputTokens = Math.ceil(assistantMsg.content.length / 3);
+    await incrementTokens(session.user.id, outputTokens);
+  }
 
   return NextResponse.json({ count: created.count });
 }

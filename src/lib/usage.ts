@@ -61,3 +61,18 @@ export async function incrementUsage(userId: string, tokens: number) {
     },
   });
 }
+
+export async function incrementTokens(userId: string, tokens: number) {
+  await prisma.dailyUsage.upsert({
+    where: { userId_date: { userId, date: todayDate() } },
+    create: {
+      userId,
+      date: todayDate(),
+      messageCount: 0,
+      tokenCount: tokens,
+    },
+    update: {
+      tokenCount: { increment: tokens },
+    },
+  });
+}

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -83,6 +84,33 @@ async function main() {
   }
 
   console.log("Seed completed: 3 plans created (Free, Pro, Business)");
+
+  // ─── Admin user ──────────────────────────────────────────
+  const adminEmail = "admin@leema.kz";
+  const adminPassword = await bcrypt.hash("Ckdshfh231161!", 12);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { role: "ADMIN", password: adminPassword },
+    create: {
+      email: adminEmail,
+      name: "Admin",
+      password: adminPassword,
+      role: "ADMIN",
+    },
+  });
+
+  // Assign Business plan to admin
+  const businessPlan = await prisma.plan.findUnique({ where: { slug: "business" } });
+  if (businessPlan) {
+    await prisma.subscription.upsert({
+      where: { userId: admin.id },
+      update: { planId: businessPlan.id },
+      create: { userId: admin.id, planId: businessPlan.id },
+    });
+  }
+
+  console.log("Admin user created: admin@leema.kz (ADMIN, Business plan)");
 }
 
 main()
