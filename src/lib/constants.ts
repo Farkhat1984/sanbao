@@ -92,6 +92,7 @@ export const PRESIGNED_URL_EXPIRY = 3600;
 // ─── Billing ───
 export const DEFAULT_CURRENCY = "KZT";
 export const STRIPE_API_VERSION = "2026-01-28.clover" as const;
+export const SUBSCRIPTION_EXPIRY_WARNING_DAYS = 3;
 
 // ─── Auth ───
 export const BCRYPT_SALT_ROUNDS = 12;

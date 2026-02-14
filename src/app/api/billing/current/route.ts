@@ -8,11 +8,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { plan, usage, subscription, monthlyUsage } = await getUserPlanAndUsage(
+  const { plan, usage, subscription, monthlyUsage, expired } = await getUserPlanAndUsage(
     session.user.id
   );
 
   return NextResponse.json({
+    expired,
     plan: plan
       ? {
           slug: plan.slug,

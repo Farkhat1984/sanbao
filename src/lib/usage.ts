@@ -19,8 +19,29 @@ export async function getUserPlanAndUsage(userId: string) {
     include: { plan: true },
   });
 
-  const plan =
-    sub?.plan ?? (await prisma.plan.findFirst({ where: { isDefault: true } }));
+  const defaultPlan = await prisma.plan.findFirst({ where: { isDefault: true } });
+
+  let plan = sub?.plan ?? defaultPlan;
+  let expired = false;
+
+  // Check subscription expiry
+  if (sub && plan && !plan.isDefault) {
+    const now = new Date();
+    const subExpired = sub.expiresAt != null && sub.expiresAt < now;
+    const trialExpired = sub.trialEndsAt != null && sub.trialEndsAt < now;
+
+    if (subExpired || (trialExpired && !sub.expiresAt)) {
+      expired = true;
+      // Auto-downgrade to free plan
+      if (defaultPlan && defaultPlan.id !== sub.planId) {
+        await prisma.subscription.update({
+          where: { id: sub.id },
+          data: { planId: defaultPlan.id },
+        });
+      }
+      plan = defaultPlan;
+    }
+  }
 
   const usage = await prisma.dailyUsage.findUnique({
     where: { userId_date: { userId, date: todayDate() } },
@@ -43,7 +64,7 @@ export async function getUserPlanAndUsage(userId: string) {
     messageCount: monthlyAgg._sum.messageCount ?? 0,
   };
 
-  return { plan, usage, subscription: sub, monthlyUsage };
+  return { plan, usage, subscription: sub, monthlyUsage, expired };
 }
 
 export async function incrementUsage(userId: string, tokens: number) {
