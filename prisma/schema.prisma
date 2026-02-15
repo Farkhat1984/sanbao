@@ -225,9 +225,10 @@ model Agent {
   model        String  @default("openai")
   icon         String  @default("Bot")
   iconColor    String  @default("#4F6EF7")
-  avatar       String? @db.Text
-  isPublic     Boolean @default(false)
-  isSystem     Boolean @default(false)
+  avatar         String? @db.Text
+  starterPrompts String[] @default([])
+  isPublic       Boolean @default(false)
+  isSystem       Boolean @default(false)
   sortOrder    Int     @default(0)
   status       SkillStatus @default(DRAFT)
 
@@ -667,15 +668,16 @@ model EmailLog {
 // ─── System Agents ────────────────────────────────────────
 
 model SystemAgent {
-  id           String  @id @default(cuid())
-  name         String  @unique
-  description  String? @db.Text
-  systemPrompt String  @db.Text
-  icon         String  @default("Bot")
-  iconColor    String  @default("#4F6EF7")
-  model        String  @default("default")
-  isActive     Boolean @default(true)
-  sortOrder    Int     @default(0)
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String?  @db.Text
+  systemPrompt   String   @db.Text
+  icon           String   @default("Bot")
+  iconColor      String   @default("#4F6EF7")
+  model          String   @default("default")
+  starterPrompts String[] @default([])
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

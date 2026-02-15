@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
+import { X, Download, Copy, Printer, Check, Loader2, ChevronDown, ArrowLeft } from "lucide-react";
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
@@ -9,6 +9,7 @@ import { ArtifactTabs } from "./ArtifactTabs";
 import { DocumentPreview } from "./DocumentPreview";
 import { DocumentEditor } from "./DocumentEditor";
 import { CodePreview, isPythonCode } from "./CodePreview";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { markdownToDocx } from "@/lib/export-docx";
@@ -45,6 +46,7 @@ export function ArtifactPanel() {
     restoreVersion,
   } = useArtifactStore();
   const { setPendingInput } = useChatStore();
+  const isMobile = useIsMobile();
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
@@ -115,10 +117,23 @@ export function ArtifactPanel() {
     setFormatMenuOpen(false);
   };
 
+  const btnSize = isMobile ? "h-9 w-9" : "h-7 w-7";
+  const iconSize = isMobile ? "h-4 w-4" : "h-3.5 w-3.5";
+
   return (
     <div className="h-full flex flex-col bg-surface">
       {/* Header */}
       <div className="h-14 flex items-center gap-2 px-4 border-b border-border shrink-0">
+        {/* Mobile back button */}
+        {isMobile && (
+          <button
+            onClick={closePanel}
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0 -ml-1"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        )}
+
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {activeArtifact.title}
@@ -179,12 +194,12 @@ export function ArtifactPanel() {
         <div className="flex items-center gap-1">
           <button
             onClick={handleCopy}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-success" />
+              <Check className={cn(iconSize, "text-success")} />
             ) : (
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className={iconSize} />
             )}
           </button>
 
@@ -193,21 +208,19 @@ export function ArtifactPanel() {
             <button
               onClick={handleDownload}
               disabled={isExporting}
-              className="h-7 px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]"
+              className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]")}
             >
               {isExporting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className={cn(iconSize, "animate-spin")} />
               ) : (
-                <>
-                  <Download className="h-3.5 w-3.5" />
-                </>
+                <Download className={iconSize} />
               )}
             </button>
           ) : (
             <div className="relative flex items-center">
               <button
                 onClick={() => setFormatMenuOpen(!formatMenuOpen)}
-                className="h-7 pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer"
+                className={cn(isMobile ? "h-9" : "h-7", "pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer")}
               >
                 {FORMAT_LABELS[downloadFormat]}
                 <ChevronDown className="h-3 w-3 text-text-muted" />
@@ -215,12 +228,12 @@ export function ArtifactPanel() {
               <button
                 onClick={handleDownload}
                 disabled={isExporting}
-                className="h-7 px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50"
+                className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50")}
               >
                 {isExporting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className={cn(iconSize, "animate-spin")} />
                 ) : (
-                  <Download className="h-3.5 w-3.5" />
+                  <Download className={iconSize} />
                 )}
               </button>
 
@@ -260,17 +273,22 @@ export function ArtifactPanel() {
 
           <button
             onClick={() => window.print()}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
-            <Printer className="h-3.5 w-3.5" />
+            <Printer className={iconSize} />
           </button>
-          <div className="w-px h-5 bg-border mx-1" />
-          <button
-            onClick={closePanel}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {/* Close button — hidden on mobile (use back arrow instead) */}
+          {!isMobile && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <button
+                onClick={closePanel}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

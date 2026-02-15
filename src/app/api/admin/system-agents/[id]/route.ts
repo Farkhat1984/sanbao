@@ -29,6 +29,7 @@ export async function PUT(
   if (body.model !== undefined) data.model = body.model;
   if (body.isActive !== undefined) data.status = body.isActive ? "APPROVED" : "PENDING";
   if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
+  if (body.starterPrompts !== undefined) data.starterPrompts = Array.isArray(body.starterPrompts) ? body.starterPrompts.filter((s: string) => s.trim()) : [];
 
   const updated = await prisma.agent.update({ where: { id }, data });
 
@@ -42,6 +43,7 @@ export async function PUT(
     model: updated.model,
     isActive: updated.status === "APPROVED",
     sortOrder: updated.sortOrder,
+    starterPrompts: updated.starterPrompts || [],
   });
 }
 

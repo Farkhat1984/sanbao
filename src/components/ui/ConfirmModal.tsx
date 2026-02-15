@@ -84,7 +84,7 @@ export function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative z-10 w-full max-w-sm bg-surface border border-border rounded-2xl shadow-xl p-6"
+            className="relative z-10 w-full max-w-sm bg-surface border border-border rounded-2xl shadow-xl p-4 sm:p-6"
           >
             <div className="flex flex-col items-center text-center">
               <div

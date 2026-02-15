@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Scale,
+  Triangle,
   User,
   Copy,
   Check,
@@ -21,6 +21,7 @@ import { LegalReference } from "./LegalReference";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Artifact parsing ────────────────────────────────────
@@ -181,6 +182,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const { openArtifact, trackArtifact, findByTitle, applyEdits } = useArtifactStore();
+  const isMobile = useIsMobile();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
 
@@ -263,7 +265,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
     >
       {/* Avatar */}
       {(() => {
-        const AgentIcon = agentIcon ? (ICON_MAP[agentIcon] || Scale) : Scale;
+        const AgentIcon = agentIcon ? (ICON_MAP[agentIcon] || Triangle) : Triangle;
         return (
           <div
             className={cn(
@@ -453,10 +455,16 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
 
         {/* Actions */}
         {isAssistant && (
-          <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className={cn(
+            "flex items-center gap-1 mt-1.5 transition-opacity",
+            isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
             <button
               onClick={handleCopy}
-              className="h-6 px-2 rounded-md text-[10px] text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer"
+              className={cn(
+                "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
+              )}
             >
               {copied ? (
                 <Check className="h-3 w-3 text-success" />
@@ -465,7 +473,10 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
               )}
               {copied ? "Скопировано" : "Копировать"}
             </button>
-            <button className="h-6 px-2 rounded-md text-[10px] text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer">
+            <button className={cn(
+              "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+              isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
+            )}>
               <RotateCcw className="h-3 w-3" />
               Повторить
             </button>

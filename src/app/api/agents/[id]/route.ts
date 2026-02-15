@@ -63,7 +63,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, instructions, model, icon, iconColor, avatar, skillIds, mcpServerIds, toolIds, pluginIds } = body;
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = body;
 
   const existing = await prisma.agent.findFirst({
     where: { id, userId: session.user.id },
@@ -85,6 +85,7 @@ export async function PUT(
       ...(icon !== undefined && { icon }),
       ...(iconColor !== undefined && { iconColor }),
       ...(avatar !== undefined && { avatar: avatar || null }),
+      ...(starterPrompts !== undefined && { starterPrompts: Array.isArray(starterPrompts) ? starterPrompts.filter((s: string) => s.trim()) : [] }),
     },
     include: AGENT_INCLUDE,
   });

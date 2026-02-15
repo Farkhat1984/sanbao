@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* ─── Animated Border Angle ──────────────────────────── */
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
 /* ─── Sanbao Design System ─────────────────────────────── */
 
 :root {
@@ -161,6 +169,36 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Mobile / Safe-Area ─────────────────────────────── */
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-overlay-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-in-left {
+  animation: slideInFromLeft var(--duration-normal) var(--ease-smooth) both;
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom var(--duration-normal) var(--ease-smooth) both;
+}
+
 /* ─── Custom Scrollbar ────────────────────────────────── */
 
 ::-webkit-scrollbar {
@@ -210,28 +248,42 @@ body {
   -webkit-backdrop-filter: blur(16px);
 }
 
-/* ─── Gradient Border (for input focus) ───────────────── */
+/* ─── Gradient Border (animated rotating glow) ────────── */
 
-.gradient-border {
+@keyframes borderRotate {
+  to { --border-angle: 360deg; }
+}
+
+.gradient-border-animated {
   position: relative;
 }
 
-.gradient-border::before {
+.gradient-border-animated::before {
   content: "";
   position: absolute;
   inset: 0;
   padding: 1.5px;
   border-radius: inherit;
-  background: var(--accent-gradient);
+  background: conic-gradient(
+    from var(--border-angle),
+    var(--accent),
+    #a78bfa,
+    #ec4899,
+    #f59e0b,
+    #22c55e,
+    #3b82f6,
+    var(--accent)
+  );
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   -webkit-mask-composite: xor;
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-smooth);
+  animation: borderRotate 4s linear infinite;
   pointer-events: none;
+  opacity: 0.45;
+  transition: opacity var(--duration-normal) var(--ease-smooth);
 }
 
-.gradient-border:focus-within::before {
+.gradient-border-focused::before {
   opacity: 1;
 }
 

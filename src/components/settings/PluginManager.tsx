@@ -86,7 +86,7 @@ export function PluginManager() {
           <div
             key={plugin.id}
             className={cn(
-              "flex items-center justify-between p-3 rounded-xl border transition-colors",
+              "flex items-center justify-between p-3 sm:p-4 rounded-xl border transition-colors",
               plugin.isActive
                 ? "bg-surface-alt border-accent/20"
                 : "bg-surface-alt border-border opacity-70"

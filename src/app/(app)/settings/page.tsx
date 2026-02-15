@@ -185,7 +185,7 @@ function SettingsContent() {
 
   return (
     <div className="h-full">
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-10">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
         <h1 className="text-xl font-bold text-text-primary">Настройки</h1>
 
         {setup2fa && !mounted ? null : setup2fa && (

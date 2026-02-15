@@ -31,7 +31,7 @@ export const VALID_ICONS = [
   "Bot","Scale","Briefcase","Shield","BookOpen","Gavel","FileText",
   "Building","User","HeartPulse","GraduationCap","Landmark",
   "Code","MessageSquare","Globe","Lightbulb","FileSearch",
-  "ShieldCheck","ClipboardCheck","Brain",
+  "ShieldCheck","ClipboardCheck","Brain","Triangle","Sparkles",
 ];
 export const VALID_COLORS = [
   "#4F6EF7","#7C3AED","#10B981","#F59E0B",

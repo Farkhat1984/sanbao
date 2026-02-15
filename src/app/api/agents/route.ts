@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { name, description, instructions, model, icon, iconColor, avatar, skillIds, mcpServerIds } = body;
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds } = body;
 
   if (!name?.trim() || !instructions?.trim()) {
     return NextResponse.json(
@@ -106,6 +106,7 @@ export async function POST(req: Request) {
       icon: icon || DEFAULT_AGENT_ICON,
       iconColor: iconColor || DEFAULT_ICON_COLOR,
       avatar: avatar || null,
+      starterPrompts: Array.isArray(starterPrompts) ? starterPrompts.filter((s: string) => s.trim()) : [],
     },
     include: { files: true },
   });

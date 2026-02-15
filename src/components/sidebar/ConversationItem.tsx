@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { useSidebarStore } from "@/stores/sidebarStore";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn, truncate } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ConversationSummary } from "@/types/chat";
 
 interface ConversationItemProps {
@@ -23,7 +25,9 @@ export function ConversationItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { setActiveConversation, setActiveAgentId, removeConversation } = useChatStore();
+  const { close: closeSidebar } = useSidebarStore();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!showMenu) return;
@@ -40,6 +44,7 @@ export function ConversationItem({
     setActiveConversation(conversation.id);
     setActiveAgentId(conversation.agentId || null);
     router.push(`/chat/${conversation.id}`);
+    if (isMobile) closeSidebar();
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -91,21 +96,24 @@ export function ConversationItem({
         </span>
       </button>
 
-      {/* Three-dot menu */}
+      {/* Three-dot menu — always visible on mobile */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setShowMenu(!showMenu);
         }}
         className={cn(
-          "absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 rounded-md",
+          "absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md",
           "flex items-center justify-center text-text-muted",
-          "opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer",
+          "transition-opacity cursor-pointer",
           "hover:bg-surface-alt hover:text-text-primary",
+          isMobile
+            ? "h-8 w-8 opacity-100"
+            : "h-6 w-6 opacity-0 group-hover:opacity-100",
           showMenu && "opacity-100"
         )}
       >
-        <MoreHorizontal className="h-3.5 w-3.5" />
+        <MoreHorizontal className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
       </button>
 
       {/* Dropdown */}

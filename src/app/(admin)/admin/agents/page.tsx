@@ -13,6 +13,7 @@ interface SystemAgent {
   icon: string;
   iconColor: string;
   model: string;
+  starterPrompts: string[];
   isActive: boolean;
   sortOrder: number;
 }
@@ -30,6 +31,7 @@ export default function AdminAgentsPage() {
     icon: DEFAULT_AGENT_ICON,
     iconColor: DEFAULT_ICON_COLOR,
     model: "default",
+    starterPrompts: "" as string,
   });
 
   const fetchAgents = async () => {
@@ -99,20 +101,28 @@ export default function AdminAgentsPage() {
     const res = await fetch("/api/admin/system-agents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newAgent),
+      body: JSON.stringify({
+        ...newAgent,
+        starterPrompts: newAgent.starterPrompts.split("\n").map((s) => s.trim()).filter(Boolean),
+      }),
     });
     if (res.ok) {
       setAdding(false);
-      setNewAgent({ name: "", description: "", systemPrompt: "", icon: DEFAULT_AGENT_ICON, iconColor: DEFAULT_ICON_COLOR, model: "default" });
+      setNewAgent({ name: "", description: "", systemPrompt: "", icon: DEFAULT_AGENT_ICON, iconColor: DEFAULT_ICON_COLOR, model: "default", starterPrompts: "" });
       fetchAgents();
     }
   };
 
   const handleUpdate = async (id: string, data: Partial<SystemAgent>) => {
+    // Convert starterPrompts from newline-separated string to array if present
+    const payload = { ...data };
+    if (typeof payload.starterPrompts === "string") {
+      (payload as Record<string, unknown>).starterPrompts = (payload.starterPrompts as unknown as string).split("\n").map((s) => s.trim()).filter(Boolean);
+    }
     await fetch(`/api/admin/system-agents/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     setEditId(null);
     fetchAgents();
@@ -157,6 +167,10 @@ export default function AdminAgentsPage() {
           </div>
           <textarea placeholder="Описание" value={newAgent.description} onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value })} className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
           <textarea placeholder="Системный промпт" value={newAgent.systemPrompt} onChange={(e) => setNewAgent({ ...newAgent, systemPrompt: e.target.value })} className="w-full h-32 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
+          <div className="mb-3">
+            <label className="text-xs text-text-muted block mb-1">Стартовые подсказки (по одной на строку)</label>
+            <textarea placeholder={"Составь договор аренды\nПроверь документ на ошибки\nОбъясни статью закона"} value={newAgent.starterPrompts} onChange={(e) => setNewAgent({ ...newAgent, starterPrompts: e.target.value })} className="w-full h-20 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none" />
+          </div>
           <Button variant="gradient" size="sm" onClick={handleCreate}>
             <Save className="h-3.5 w-3.5" /> Создать
           </Button>
@@ -192,6 +206,15 @@ export default function AdminAgentsPage() {
                 </div>
                 <textarea value={editForm.description ?? a.description ?? ""} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Описание" className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
                 <textarea value={editForm.systemPrompt ?? a.systemPrompt} onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })} placeholder="Системный промпт" className="w-full h-32 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
+                <div className="mb-3">
+                  <label className="text-xs text-text-muted block mb-1">Стартовые подсказки (по одной на строку)</label>
+                  <textarea
+                    value={editForm.starterPrompts !== undefined ? (editForm.starterPrompts as unknown as string) : (a.starterPrompts || []).join("\n")}
+                    onChange={(e) => setEditForm({ ...editForm, starterPrompts: e.target.value as unknown as string[] })}
+                    placeholder={"Составь договор аренды\nПроверь документ"}
+                    className="w-full h-20 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button variant="gradient" size="sm" onClick={() => handleUpdate(a.id, editForm)}><Save className="h-3.5 w-3.5" /> Сохранить</Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>Отмена</Button>

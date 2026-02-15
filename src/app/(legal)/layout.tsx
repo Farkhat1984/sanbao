@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Scale, ArrowLeft } from "lucide-react";
+import { Triangle, ArrowLeft } from "lucide-react";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +12,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           </Link>
           <Link href="/login" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
-              <Scale className="h-4 w-4 text-white" />
+              <Triangle className="h-4 w-4 text-white" />
             </div>
             <span className="text-sm font-semibold text-text-primary">Sanbao</span>
           </Link>

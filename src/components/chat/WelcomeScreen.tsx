@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Triangle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
@@ -77,7 +77,7 @@ export function WelcomeScreen() {
         })() : (
           <>
             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
-              <Sparkles className="h-8 w-8 text-white" />
+              <Triangle className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">
               Добро пожаловать в Sanbao
@@ -88,6 +88,28 @@ export function WelcomeScreen() {
           </>
         )}
       </motion.div>
+
+      {/* Starter prompts from agent */}
+      {hasAgent && activeAgent.starterPrompts && activeAgent.starterPrompts.length > 0 && toolActions.length === 0 && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-wrap justify-center gap-2 max-w-2xl w-full"
+        >
+          {activeAgent.starterPrompts.map((prompt, i) => (
+            <motion.button
+              key={i}
+              variants={itemVariants}
+              onClick={() => handleQuickAction(prompt)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover text-sm text-text-primary transition-all duration-200 cursor-pointer group"
+            >
+              <span className="line-clamp-1">{prompt}</span>
+              <ArrowRight className="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors shrink-0" />
+            </motion.button>
+          ))}
+        </motion.div>
+      )}
 
       {/* Quick Actions from agent tools */}
       {toolActions.length > 0 && (

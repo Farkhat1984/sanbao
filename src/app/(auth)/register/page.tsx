@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Scale, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Triangle, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -51,7 +51,7 @@ export default function RegisterPage() {
       {/* Logo */}
       <div className="text-center mb-8">
         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Scale className="h-7 w-7 text-white" />
+          <Triangle className="h-7 w-7 text-white" />
         </div>
         <h1 className="text-2xl font-bold text-text-primary">
           Создать аккаунт

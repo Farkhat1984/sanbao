@@ -26,6 +26,7 @@ import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/stores/agentStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { MAX_FILE_SIZE_PARSE, DEFAULT_PROVIDER } from "@/lib/constants";
 
 const CHAT_ACCEPTED_EXTENSIONS =
@@ -118,6 +119,7 @@ export function MessageInput() {
 
   const { addTask } = useTaskStore();
   const { agentTools } = useAgentStore();
+  const isMobile = useIsMobile();
 
   // Detect speech support on client only (avoid hydration mismatch)
   const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
@@ -660,11 +662,14 @@ export function MessageInput() {
       />
 
       {/* Active feature badges */}
-      <div className="flex items-center gap-1.5 px-2">
+      <div className="flex items-center gap-1.5 flex-wrap px-2">
         {thinkingEnabled && (
           <button
             onClick={toggleThinking}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-[10px] font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors cursor-pointer"
+            className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors cursor-pointer",
+              isMobile ? "text-xs py-1" : "text-[10px]"
+            )}
           >
             <Brain className="h-3 w-3" />
             Thinking
@@ -674,7 +679,10 @@ export function MessageInput() {
         {webSearchEnabled && (
           <button
             onClick={toggleWebSearch}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
+            className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer",
+              isMobile ? "text-xs py-1" : "text-[10px]"
+            )}
           >
             <Globe className="h-3 w-3" />
             Веб-поиск
@@ -684,7 +692,10 @@ export function MessageInput() {
         {planningEnabled && (
           <button
             onClick={togglePlanning}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer"
+            className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer",
+              isMobile ? "text-xs py-1" : "text-[10px]"
+            )}
           >
             <ListChecks className="h-3 w-3" />
             Планирование
@@ -698,9 +709,8 @@ export function MessageInput() {
         data-tour="chat-input"
         className={cn(
           "relative rounded-[32px] transition-all duration-300",
-          "bg-surface border border-border",
-          isFocused &&
-            "shadow-[var(--shadow-input-focus)] border-transparent gradient-border"
+          "bg-surface gradient-border-animated",
+          isFocused && "shadow-[var(--shadow-input-focus)] gradient-border-focused"
         )}
       >
         {/* Attached files preview */}
@@ -730,7 +740,10 @@ export function MessageInput() {
                 )}
                 <button
                   onClick={() => removeFile(file.id)}
-                  className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-error text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  className={cn(
+                    "absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-error text-white flex items-center justify-center transition-opacity cursor-pointer",
+                    isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -1051,12 +1064,14 @@ export function MessageInput() {
 
         {/* Bottom hint */}
         <div className="px-5 pb-2 flex items-center justify-between">
-          <span className="text-[10px] text-text-muted">
-            {isRecording
-              ? "Нажмите на микрофон чтобы остановить"
-              : "Enter — отправить, Shift+Enter — новая строка"}
-          </span>
-          <span className="text-[10px] text-text-muted">
+          {!isMobile && (
+            <span className="text-[10px] text-text-muted">
+              {isRecording
+                ? "Нажмите на микрофон чтобы остановить"
+                : "Enter — отправить, Shift+Enter — новая строка"}
+            </span>
+          )}
+          <span className={cn("text-[10px] text-text-muted", isMobile && "ml-auto")}>
             Kimi K2.5 · Sanbao может ошибаться
           </span>
         </div>

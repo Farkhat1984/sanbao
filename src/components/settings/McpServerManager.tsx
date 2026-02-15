@@ -206,7 +206,7 @@ export function McpServerManager() {
                     onClick={() => handleDisconnect(srv.id)}
                     disabled={disconnectingId === srv.id}
                     title="Отключить"
-                    className="p-1.5 rounded-md hover:bg-orange-50 dark:hover:bg-orange-950 text-text-muted hover:text-orange-500 cursor-pointer transition-colors disabled:opacity-50"
+                    className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-orange-50 dark:hover:bg-orange-950 text-text-muted hover:text-orange-500 cursor-pointer transition-colors disabled:opacity-50"
                   >
                     {disconnectingId === srv.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -219,7 +219,7 @@ export function McpServerManager() {
                     onClick={() => handleConnect(srv.id)}
                     disabled={connectingId === srv.id}
                     title="Подключить"
-                    className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-950 text-text-muted hover:text-green-500 cursor-pointer transition-colors disabled:opacity-50"
+                    className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-green-50 dark:hover:bg-green-950 text-text-muted hover:text-green-500 cursor-pointer transition-colors disabled:opacity-50"
                   >
                     {connectingId === srv.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -232,7 +232,7 @@ export function McpServerManager() {
                   onClick={() => handleConnect(srv.id)}
                   disabled={connectingId === srv.id}
                   title="Переподключить"
-                  className="p-1.5 rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
+                  className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
                 >
                   {connectingId === srv.id ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -243,7 +243,7 @@ export function McpServerManager() {
                 <button
                   onClick={() => handleRemove(srv.id)}
                   title="Удалить"
-                  className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-text-muted hover:text-error cursor-pointer transition-colors"
+                  className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-text-muted hover:text-error cursor-pointer transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

@@ -7,7 +7,7 @@ import {
   PanelLeftClose,
   Settings,
   ShieldCheck,
-  Sparkles,
+  Triangle,
 } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
@@ -18,12 +18,16 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useIsMobile } from "@/hooks/useIsMobile";
+
 export function Sidebar() {
   const { close, searchQuery, setSearchQuery } = useSidebarStore();
   const { setActiveConversation, setActiveAgentId, setMessages, setConversations } = useChatStore();
   const { data: session } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
 
   // Load conversations from DB on mount
   useEffect(() => {
@@ -36,25 +40,40 @@ export function Sidebar() {
       .catch(() => {});
   }, [session?.user, setConversations]);
 
+  // Auto-close sidebar on route change (mobile only)
+  useEffect(() => {
+    if (isMobile) {
+      close();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   const handleNewChat = () => {
     setActiveConversation(null);
     setActiveAgentId(null);
     setMessages([]);
     router.push("/chat");
+    if (isMobile) close();
+  };
+
+  const handleNavigate = (path: string) => {
+    router.push(path);
+    if (isMobile) close();
   };
 
   return (
     <aside
       className={cn(
-        "w-[280px] h-screen flex flex-col border-r border-border",
-        "glass select-none shrink-0"
+        "h-screen flex flex-col border-r border-border",
+        "glass select-none shrink-0",
+        isMobile ? "w-full" : "w-[280px]"
       )}
     >
       {/* Header */}
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0">
-            <Sparkles className="h-4 w-4 text-white" />
+            <Triangle className="h-4 w-4 text-white" />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight">
             Sanbao
@@ -124,8 +143,11 @@ export function Sidebar() {
           {session?.user?.role === "ADMIN" && (
             <Tooltip content="Админ" side="top">
               <button
-                onClick={() => router.push("/admin")}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                onClick={() => handleNavigate("/admin")}
+                className={cn(
+                  "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                  isMobile ? "h-10 w-10" : "h-8 w-8"
+                )}
               >
                 <ShieldCheck className="h-4 w-4" />
               </button>
@@ -133,8 +155,11 @@ export function Sidebar() {
           )}
           <Tooltip content="Настройки" side="top">
             <button
-              onClick={() => router.push("/settings")}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+              onClick={() => handleNavigate("/settings")}
+              className={cn(
+                "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                isMobile ? "h-10 w-10" : "h-8 w-8"
+              )}
             >
               <Settings className="h-4 w-4" />
             </button>

@@ -34,7 +34,7 @@ export default function ProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-6 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="text-xl font-bold text-text-primary mb-6">Профиль</h1>
 
         {/* User Card */}
@@ -58,7 +58,7 @@ export default function ProfilePage() {
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-3 rounded-xl bg-surface-alt">
               <div className="flex items-center gap-2 text-text-muted mb-1">
                 <Calendar className="h-3.5 w-3.5" />

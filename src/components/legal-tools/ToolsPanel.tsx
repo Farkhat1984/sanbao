@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore, type AgentToolInfo } from "@/stores/agentStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { TemplateModal } from "./TemplateModal";
 import { ImageEditModal } from "@/components/image-edit/ImageEditModal";
@@ -35,6 +36,7 @@ interface ToolsPanelProps {
 export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
   const { setPendingInput } = useChatStore();
   const { agentTools } = useAgentStore();
+  const isMobile = useIsMobile();
   const [expandedToolId, setExpandedToolId] = useState<string | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<ToolTemplate | null>(null);
   const [imageEditOpen, setImageEditOpen] = useState(false);
@@ -82,14 +84,41 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
       <AnimatePresence>
         {isOpen && (
           <>
-            <div className="fixed inset-0 z-30" onClick={onClose} />
+            <div
+              className={cn(
+                "fixed inset-0 z-30",
+                isMobile && "mobile-overlay-backdrop"
+              )}
+              onClick={onClose}
+            />
             <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              initial={isMobile
+                ? { y: "100%", opacity: 1 }
+                : { opacity: 0, y: 8, scale: 0.97 }
+              }
+              animate={isMobile
+                ? { y: 0, opacity: 1 }
+                : { opacity: 1, y: 0, scale: 1 }
+              }
+              exit={isMobile
+                ? { y: "100%", opacity: 1 }
+                : { opacity: 0, y: 8, scale: 0.97 }
+              }
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="absolute bottom-full left-0 mb-2 z-40 w-[440px] bg-surface border border-border rounded-2xl shadow-xl overflow-hidden"
+              className={cn(
+                "bg-surface border border-border shadow-xl overflow-hidden",
+                isMobile
+                  ? "fixed bottom-0 left-0 right-0 z-40 rounded-t-2xl max-h-[70vh] overflow-y-auto safe-bottom"
+                  : "absolute bottom-full left-0 mb-2 z-40 w-[440px] rounded-2xl"
+              )}
             >
+              {/* Drag handle on mobile */}
+              {isMobile && (
+                <div className="flex justify-center pt-2 pb-1">
+                  <div className="w-10 h-1 rounded-full bg-border" />
+                </div>
+              )}
+
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-text-primary">
@@ -97,14 +126,20 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                 </h3>
                 <button
                   onClick={onClose}
-                  className="h-6 w-6 rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                  className={cn(
+                    "rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                    isMobile ? "h-8 w-8" : "h-6 w-6"
+                  )}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
                 </button>
               </div>
 
               {/* Tools Grid */}
-              <div className="p-3 grid grid-cols-2 gap-2">
+              <div className={cn(
+                "p-3 grid gap-2",
+                isMobile ? "grid-cols-1" : "grid-cols-2"
+              )}>
                 {agentTools.length === 0 && (
                   <p className="col-span-2 text-xs text-text-muted text-center py-4">
                     Нет доступных инструментов
@@ -122,7 +157,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                       className={cn(
                         "rounded-xl border border-border transition-all",
                         isExpanded
-                          ? "col-span-2 border-accent/30 bg-surface-alt/50"
+                          ? cn(isMobile ? "col-span-1" : "col-span-2", "border-accent/30 bg-surface-alt/50")
                           : "hover:border-border-hover hover:bg-surface-alt"
                       )}
                     >

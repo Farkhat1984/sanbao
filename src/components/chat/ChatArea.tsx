@@ -62,7 +62,7 @@ export function ChatArea() {
           <div className="max-w-3xl mx-auto">
             <button
               onClick={() => setTasksExpanded(!tasksExpanded)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 text-accent text-xs font-medium hover:bg-accent/15 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/10 text-accent text-xs font-medium hover:bg-accent/15 transition-colors cursor-pointer"
             >
               {tasksExpanded ? (
                 <ChevronDown className="h-3 w-3" />
@@ -70,7 +70,7 @@ export function ChatArea() {
                 <ChevronRight className="h-3 w-3" />
               )}
               <ListChecks className="h-3.5 w-3.5" />
-              {activeTasks.length} {activeTasks.length === 1 ? "задача" : "задачи"} в работе
+              <span>{activeTasks.length} {activeTasks.length === 1 ? "задача" : "задачи"} в работе</span>
             </button>
             {tasksExpanded && (
               <div className="mt-2 mb-1 max-h-48 overflow-y-auto">
@@ -112,7 +112,7 @@ export function ChatArea() {
       </div>
 
       {/* Context indicator + Input */}
-      <div className="shrink-0 pb-4 px-4">
+      <div className="shrink-0 pb-4 px-4 safe-bottom">
         <div className="max-w-3xl mx-auto">
           {contextUsage && (
             <ContextIndicator

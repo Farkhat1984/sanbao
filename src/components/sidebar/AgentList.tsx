@@ -10,6 +10,8 @@ import {
   Cable,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSidebarStore } from "@/stores/sidebarStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 
 const PLAYGROUND_ITEMS = [
@@ -46,7 +48,14 @@ const PLAYGROUND_ITEMS = [
 
 export function AgentList() {
   const router = useRouter();
+  const { close: closeSidebar } = useSidebarStore();
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(true);
+
+  const handleNavigate = (href: string) => {
+    router.push(href);
+    if (isMobile) closeSidebar();
+  };
 
   return (
     <div className="px-3 mb-1">
@@ -68,10 +77,11 @@ export function AgentList() {
           {PLAYGROUND_ITEMS.map((item) => (
             <button
               key={item.label}
-              onClick={() => !item.disabled && router.push(item.href)}
+              onClick={() => !item.disabled && handleNavigate(item.href)}
               className={cn(
-                "w-full h-8 rounded-lg flex items-center gap-2.5 px-2",
+                "w-full rounded-lg flex items-center gap-2.5 px-2",
                 "transition-colors",
+                isMobile ? "h-10" : "h-8",
                 item.disabled
                   ? "text-text-muted/50 cursor-default"
                   : "text-text-muted hover:text-text-primary hover:bg-surface-alt cursor-pointer"

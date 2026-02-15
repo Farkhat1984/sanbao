@@ -27,6 +27,7 @@ export async function GET() {
     model: a.model,
     isActive: a.status === "APPROVED",
     sortOrder: a.sortOrder,
+    starterPrompts: a.starterPrompts || [],
     tools: a.tools.map((t) => t.tool),
     plugins: a.plugins.map((p) => p.plugin),
   })));
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
   if (result.error) return result.error;
 
   const body = await req.json();
-  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder } = body;
+  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder, starterPrompts } = body;
 
   if (!name || !systemPrompt) {
     return NextResponse.json({ error: "Обязательные поля: name, systemPrompt" }, { status: 400 });
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
       isSystem: true,
       userId: null,
       sortOrder: sortOrder ?? 0,
+      starterPrompts: Array.isArray(starterPrompts) ? starterPrompts.filter((s: string) => s.trim()) : [],
     },
   });
 

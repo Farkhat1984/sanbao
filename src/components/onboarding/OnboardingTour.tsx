@@ -4,9 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, HelpCircle } from "lucide-react";
 import { useOnboardingStore } from "@/stores/onboardingStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface TourStep {
   targetSelector: string;
+  /** Mobile-only override for targetSelector */
+  mobileTargetSelector?: string;
   title: string;
   description: string;
   position: "top" | "bottom" | "left" | "right";
@@ -22,6 +25,7 @@ const STEPS: TourStep[] = [
   },
   {
     targetSelector: "[data-tour='sidebar']",
+    mobileTargetSelector: "[data-tour='sidebar-toggle']",
     title: "Управление чатами",
     description:
       "Создавайте чаты, управляйте AI-агентами под свои задачи и находите нужные диалоги через поиск.",
@@ -47,6 +51,7 @@ export function OnboardingTour() {
   const { hasSeenTour, currentStep, startTour, nextStep, completeTour } =
     useOnboardingStore();
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const isMobile = useIsMobile();
 
   // Auto-start tour for first-time users
   useEffect(() => {
@@ -63,17 +68,22 @@ export function OnboardingTour() {
       return;
     }
     const step = STEPS[currentStep];
-    if (!step.targetSelector) {
+    const selector =
+      isMobile && step.mobileTargetSelector
+        ? step.mobileTargetSelector
+        : step.targetSelector;
+
+    if (!selector) {
       setRect(null);
       return;
     }
-    const el = document.querySelector(step.targetSelector);
+    const el = document.querySelector(selector);
     if (el) {
       setRect(el.getBoundingClientRect());
     } else {
       setRect(null);
     }
-  }, [currentStep]);
+  }, [currentStep, isMobile]);
 
   const handleNext = useCallback(() => {
     if (currentStep !== null && currentStep >= STEPS.length - 1) {
@@ -99,8 +109,19 @@ export function OnboardingTour() {
   const step = STEPS[currentStep];
   const isLastStep = currentStep === STEPS.length - 1;
 
-  // Tooltip position
+  // Desktop: position near target element; Mobile: always bottom sheet
   const getTooltipStyle = (): React.CSSProperties => {
+    if (isMobile) {
+      // Bottom-sheet style on mobile
+      return {
+        position: "fixed",
+        bottom: 24,
+        left: 16,
+        right: 16,
+        transform: "none",
+      };
+    }
+
     if (!rect) {
       return {
         top: "50%",
@@ -110,19 +131,29 @@ export function OnboardingTour() {
     }
 
     const gap = 12;
+    const tooltipWidth = 288; // sm:w-72 = 18rem = 288px
+    const vw = window.innerWidth;
+
     switch (step.position) {
-      case "top":
+      case "top": {
+        let left = rect.left + rect.width / 2;
+        // Clamp so tooltip doesn't overflow edges
+        left = Math.max(tooltipWidth / 2 + 16, Math.min(left, vw - tooltipWidth / 2 - 16));
         return {
           bottom: window.innerHeight - rect.top + gap,
-          left: rect.left + rect.width / 2,
+          left,
           transform: "translateX(-50%)",
         };
-      case "bottom":
+      }
+      case "bottom": {
+        let left = rect.left + rect.width / 2;
+        left = Math.max(tooltipWidth / 2 + 16, Math.min(left, vw - tooltipWidth / 2 - 16));
         return {
           top: rect.bottom + gap,
-          left: rect.left + rect.width / 2,
+          left,
           transform: "translateX(-50%)",
         };
+      }
       case "right":
         return {
           top: rect.top + rect.height / 2,
@@ -132,7 +163,7 @@ export function OnboardingTour() {
       case "left":
         return {
           top: rect.top + rect.height / 2,
-          right: window.innerWidth - rect.left + gap,
+          right: vw - rect.left + gap,
           transform: "translateY(-50%)",
         };
     }
@@ -165,11 +196,27 @@ export function OnboardingTour() {
         {/* Tooltip */}
         <motion.div
           key={currentStep}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
+          initial={
+            isMobile
+              ? { opacity: 0, y: 60 }
+              : { opacity: 0, scale: 0.9 }
+          }
+          animate={
+            isMobile
+              ? { opacity: 1, y: 0 }
+              : { opacity: 1, scale: 1 }
+          }
+          exit={
+            isMobile
+              ? { opacity: 0, y: 60 }
+              : { opacity: 0, scale: 0.9 }
+          }
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="absolute z-[102] w-72 bg-surface border border-border rounded-xl shadow-2xl p-4"
+          className={
+            isMobile
+              ? "fixed z-[102] bg-surface border border-border rounded-2xl shadow-2xl p-5"
+              : "absolute z-[102] w-72 bg-surface border border-border rounded-xl shadow-2xl p-4"
+          }
           style={getTooltipStyle()}
         >
           {/* Step counter */}
@@ -179,32 +226,34 @@ export function OnboardingTour() {
             </span>
             <button
               onClick={completeTour}
-              className="h-5 w-5 rounded flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              className="h-6 w-6 rounded flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <h4 className="text-sm font-semibold text-text-primary mb-1">
+          <h4 className={`font-semibold text-text-primary mb-1 ${isMobile ? "text-base" : "text-sm"}`}>
             {step.title}
           </h4>
-          <p className="text-xs text-text-secondary leading-relaxed mb-3">
+          <p className={`text-text-secondary leading-relaxed mb-4 ${isMobile ? "text-sm" : "text-xs"}`}>
             {step.description}
           </p>
 
           <div className="flex items-center justify-between">
             <button
               onClick={completeTour}
-              className="text-[11px] text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              className={`text-text-muted hover:text-text-primary transition-colors cursor-pointer ${isMobile ? "text-sm" : "text-[11px]"}`}
             >
               Пропустить
             </button>
             <button
               onClick={handleNext}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent/90 transition-colors cursor-pointer"
+              className={`flex items-center gap-1 rounded-lg bg-accent text-white font-medium hover:bg-accent/90 transition-colors cursor-pointer ${
+                isMobile ? "px-5 py-2.5 text-sm" : "px-3 py-1.5 text-xs"
+              }`}
             >
               {isLastStep ? "Начать" : "Далее"}
-              {!isLastStep && <ChevronRight className="h-3 w-3" />}
+              {!isLastStep && <ChevronRight className={isMobile ? "h-4 w-4" : "h-3 w-3"} />}
             </button>
           </div>
         </motion.div>

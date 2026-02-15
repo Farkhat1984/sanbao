@@ -17,6 +17,7 @@ export interface Agent {
   icon: string;
   iconColor: string;
   avatar?: string | null;
+  starterPrompts?: string[];
   isSystem?: boolean;
   files: AgentFile[];
   skills?: Array<{ id: string; skill: { id: string; name: string; icon: string; iconColor: string } }>;

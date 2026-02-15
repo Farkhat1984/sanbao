@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp, Plus, X, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
@@ -40,6 +40,9 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [selectedPluginIds, setSelectedPluginIds] = useState<string[]>(
     agent?.plugins?.map((p) => p.plugin.id) || []
   );
+  const [starterPrompts, setStarterPrompts] = useState<string[]>(
+    agent?.starterPrompts || []
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export function AgentForm({ agent }: AgentFormProps) {
     setError(null);
 
     try {
-      const body = { name, description, instructions, icon, iconColor, avatar, skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds, pluginIds: selectedPluginIds };
+      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds, pluginIds: selectedPluginIds };
 
       const res = await fetch(
         isEdit ? `/api/agents/${agent.id}` : "/api/agents",
@@ -232,6 +235,54 @@ export function AgentForm({ agent }: AgentFormProps) {
           />
           <p className="text-xs text-text-muted mt-1">
             Системные инструкции определяют поведение агента в каждом чате
+          </p>
+        </div>
+
+        {/* Starter Prompts */}
+        <div>
+          <label className="text-sm font-medium text-text-primary mb-2 block">
+            <span className="flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4 text-text-muted" />
+              Стартовые подсказки
+            </span>
+          </label>
+          <div className="space-y-2">
+            {starterPrompts.map((prompt, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => {
+                    const updated = [...starterPrompts];
+                    updated[idx] = e.target.value;
+                    setStarterPrompts(updated);
+                  }}
+                  placeholder={`Подсказка ${idx + 1}, например: «Составь договор аренды»`}
+                  maxLength={200}
+                  className="flex-1 h-9 px-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            {starterPrompts.length < 6 && (
+              <button
+                type="button"
+                onClick={() => setStarterPrompts([...starterPrompts, ""])}
+                className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Добавить подсказку
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-text-muted mt-1">
+            Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -8,6 +8,7 @@ import { ArtifactPanel } from "@/components/artifacts/ArtifactPanel";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -16,12 +17,22 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { isOpen: artifactOpen, panelWidthPercent, setPanelWidthPercent } =
     useArtifactStore();
-  const { isOpen: sidebarOpen } = useSidebarStore();
+  const { isOpen: sidebarOpen, close: closeSidebar } = useSidebarStore();
+  const isMobile = useIsMobile();
   const mainRef = useRef<HTMLElement>(null);
   const isDragging = useRef(false);
 
+  // Auto-close sidebar on mobile on initial render
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      closeSidebar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (isMobile) return;
       e.preventDefault();
       isDragging.current = true;
       document.body.style.cursor = "col-resize";
@@ -47,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [setPanelWidthPercent]
+    [setPanelWidthPercent, isMobile]
   );
 
   return (
@@ -55,21 +66,49 @@ export function AppShell({ children }: AppShellProps) {
       {/* Onboarding Tour */}
       <OnboardingTour />
 
-      {/* Sidebar */}
-      <AnimatePresence initial={false}>
-        {sidebarOpen && (
-          <motion.div
-            data-tour="sidebar"
-            initial={{ width: 0 }}
-            animate={{ width: 280 }}
-            exit={{ width: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="shrink-0 overflow-hidden"
-          >
-            <Sidebar />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Sidebar — desktop: animated panel, mobile: overlay */}
+      {isMobile ? (
+        <AnimatePresence>
+          {sidebarOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-40 mobile-overlay-backdrop"
+                onClick={closeSidebar}
+              />
+              {/* Sidebar drawer */}
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px]"
+              >
+                <Sidebar />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      ) : (
+        <AnimatePresence initial={false}>
+          {sidebarOpen && (
+            <motion.div
+              data-tour="sidebar"
+              initial={{ width: 0 }}
+              animate={{ width: 280 }}
+              exit={{ width: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="shrink-0 overflow-hidden"
+            >
+              <Sidebar />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
@@ -80,28 +119,44 @@ export function AppShell({ children }: AppShellProps) {
             {children}
           </div>
 
-          {/* Artifact Panel */}
-          <AnimatePresence>
-            {artifactOpen && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: `${panelWidthPercent}%`, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="overflow-hidden shrink-0 relative"
-                style={{ width: `${panelWidthPercent}%` }}
-              >
-                {/* Resize handle */}
-                <div
-                  onMouseDown={handleMouseDown}
-                  className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-accent/40 active:bg-accent/60 transition-colors"
-                />
-                <div className="h-full border-l border-border">
+          {/* Artifact Panel — desktop: side-by-side, mobile: fullscreen overlay */}
+          {isMobile ? (
+            <AnimatePresence>
+              {artifactOpen && (
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="fixed inset-0 z-50 bg-surface"
+                >
                   <ArtifactPanel />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          ) : (
+            <AnimatePresence>
+              {artifactOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: `${panelWidthPercent}%`, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="overflow-hidden shrink-0 relative"
+                  style={{ width: `${panelWidthPercent}%` }}
+                >
+                  {/* Resize handle */}
+                  <div
+                    onMouseDown={handleMouseDown}
+                    className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-accent/40 active:bg-accent/60 transition-colors"
+                  />
+                  <div className="h-full border-l border-border">
+                    <ArtifactPanel />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </main>
       </div>
     </div>
