@@ -12,21 +12,16 @@ import {
   Sun,
   Moon,
   Monitor,
-  Globe,
-  Bell,
   LogOut,
   Sparkles,
   User,
   CreditCard,
   BarChart3,
-  Shield,
   Brain,
-  Puzzle,
   Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemoryManager } from "@/components/memory/MemoryManager";
-import { PluginManager } from "@/components/settings/PluginManager";
 
 interface PlanInfo {
   slug: string;
@@ -65,7 +60,6 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
   useEffect(() => {
     fetch("/api/auth/2fa").then((r) => r.json()).then((data) => {
       setTwoFa(data);
-      // Auto-trigger setup if redirected from admin with ?setup2fa=1
       if (autoSetup && !data.enabled && !data.qrCodeUrl) {
         fetch("/api/auth/2fa").then((r) => r.json()).then(setTwoFa);
       }
@@ -329,35 +323,6 @@ function SettingsContent() {
           </div>
         </section>
 
-        {/* Language */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Globe className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Язык</h2>
-          </div>
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-surface-alt border border-border">
-            <Globe className="h-4 w-4 text-text-muted" />
-            <span className="text-sm text-text-primary">Русский</span>
-          </div>
-        </section>
-
-        {/* Notifications */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Уведомления</h2>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-surface-alt border border-border">
-            <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-text-muted" />
-              <span className="text-sm text-text-primary">Email-уведомления</span>
-            </div>
-            <button className="w-10 h-6 rounded-full bg-accent relative cursor-pointer transition-colors">
-              <div className="w-4 h-4 rounded-full bg-white absolute right-1 top-1 transition-all" />
-            </button>
-          </div>
-        </section>
-
         {/* Memory */}
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -372,41 +337,8 @@ function SettingsContent() {
           </div>
         </section>
 
-        {/* Plugins */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Puzzle className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Плагины</h2>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-5">
-            <PluginManager />
-          </div>
-        </section>
-
         {/* 2FA */}
         <TwoFactorSection isAdmin={isAdmin} autoSetup={setup2fa} />
-
-        {/* Privacy */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Shield className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Конфиденциальность</h2>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-surface-alt border border-border">
-              <span className="text-sm text-text-primary">Сохранять историю чатов</span>
-              <button className="w-10 h-6 rounded-full bg-accent relative cursor-pointer transition-colors">
-                <div className="w-4 h-4 rounded-full bg-white absolute right-1 top-1 transition-all" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-surface-alt border border-border">
-              <span className="text-sm text-text-primary">Использовать данные для улучшения</span>
-              <button className="w-10 h-6 rounded-full bg-border relative cursor-pointer transition-colors">
-                <div className="w-4 h-4 rounded-full bg-white absolute left-1 top-1 transition-all" />
-              </button>
-            </div>
-          </div>
-        </section>
 
         {/* Logout */}
         <section className="pt-4 border-t border-border pb-8">

@@ -15,6 +15,7 @@
     "@aws-sdk/client-s3": "^3.990.0",
     "@aws-sdk/s3-request-presigner": "^3.990.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "@napi-rs/canvas": "^0.1.92",
     "@prisma/client": "^6.19.2",
     "@tiptap/extension-highlight": "^3.19.0",
     "@tiptap/extension-placeholder": "^3.19.0",

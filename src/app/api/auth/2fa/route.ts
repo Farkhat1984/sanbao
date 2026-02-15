@@ -45,7 +45,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { code, action } = await req.json();
+  const body = await req.json();
+  const code = String(body.code || "").replace(/\s/g, "");
+  const action = body.action;
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

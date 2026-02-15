@@ -52,13 +52,21 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name: sanitizedName,
         email: email.toLowerCase().trim(),
         password: hashedPassword,
       },
     });
+
+    // Auto-assign free subscription
+    const freePlan = await prisma.plan.findFirst({ where: { isDefault: true } });
+    if (freePlan) {
+      await prisma.subscription.create({
+        data: { userId: user.id, planId: freePlan.id },
+      });
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

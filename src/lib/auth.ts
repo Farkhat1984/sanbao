@@ -98,6 +98,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async createUser({ user }) {
+      // Auto-assign free subscription for new OAuth users
+      if (user.id) {
+        const freePlan = await prisma.plan.findFirst({ where: { isDefault: true } });
+        if (freePlan) {
+          await prisma.subscription.upsert({
+            where: { userId: user.id },
+            update: {},
+            create: { userId: user.id, planId: freePlan.id },
+          });
+        }
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

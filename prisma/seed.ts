@@ -4,20 +4,21 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  // ─── Plans ─────────────────────────────────────────────
   const plans = [
     {
       slug: "free",
       name: "Free",
-      description: "Базовый доступ к юридическому AI-ассистенту",
-      price: "0 ₸",
-      messagesPerDay: 20,
-      tokensPerMessage: 2000,
-      tokensPerMonth: 100000,
+      description: "Базовый доступ к AI-ассистенту",
+      price: "0",
+      messagesPerDay: 50,
+      tokensPerMessage: 4096,
+      tokensPerMonth: 1000000,
       requestsPerMinute: 3,
       contextWindowSize: 8192,
       maxConversations: 10,
-      maxAgents: 0,
-      documentsPerMonth: 0,
+      maxAgents: 1,
+      documentsPerMonth: 5,
       canUseAdvancedTools: false,
       canUseReasoning: false,
       canUseRag: false,
@@ -26,44 +27,48 @@ async function main() {
       isDefault: true,
       sortOrder: 0,
       highlighted: false,
+      trialDays: 0,
+      maxStorageMb: 100,
     },
     {
       slug: "pro",
       name: "Pro",
       description:
-        "Рассуждения, создание документов, кастомные агенты с RAG",
-      price: "9 900 ₸/мес",
-      messagesPerDay: 200,
-      tokensPerMessage: 8000,
-      tokensPerMonth: 2000000,
-      requestsPerMinute: 20,
-      contextWindowSize: 32000,
-      maxConversations: 100,
-      maxAgents: 5,
+        "Расширенные возможности: reasoning, RAG, продвинутые инструменты",
+      price: "4990",
+      messagesPerDay: 300,
+      tokensPerMessage: 8192,
+      tokensPerMonth: 10000000,
+      requestsPerMinute: 15,
+      contextWindowSize: 32768,
+      maxConversations: 50,
+      maxAgents: 10,
       documentsPerMonth: 50,
       canUseAdvancedTools: true,
       canUseReasoning: true,
       canUseRag: true,
       canUseGraph: false,
-      canChooseProvider: false,
+      canChooseProvider: true,
       isDefault: false,
       sortOrder: 1,
       highlighted: true,
+      trialDays: 7,
+      maxStorageMb: 1024,
     },
     {
       slug: "business",
       name: "Business",
       description:
-        "Полный доступ: безлимит документов, агенты с RAG + граф знаний",
-      price: "29 900 ₸/мес",
-      messagesPerDay: 0,
-      tokensPerMessage: 16000,
-      tokensPerMonth: 6000000,
-      requestsPerMinute: 60,
-      contextWindowSize: 128000,
+        "Максимум: все модели, graph, безлимит диалогов и агентов",
+      price: "24990",
+      messagesPerDay: 1000,
+      tokensPerMessage: 16384,
+      tokensPerMonth: 100000000,
+      requestsPerMinute: 30,
+      contextWindowSize: 131072,
       maxConversations: 0,
-      maxAgents: -1,
-      documentsPerMonth: -1,
+      maxAgents: 0,
+      documentsPerMonth: 0,
       canUseAdvancedTools: true,
       canUseReasoning: true,
       canUseRag: true,
@@ -72,6 +77,8 @@ async function main() {
       isDefault: false,
       sortOrder: 2,
       highlighted: false,
+      trialDays: 14,
+      maxStorageMb: 10240,
     },
   ];
 
@@ -83,25 +90,30 @@ async function main() {
     });
   }
 
-  console.log("Seed completed: 3 plans created (Free, Pro, Business)");
+  console.log("Plans seeded: Free, Pro, Business");
 
   // ─── Admin user ──────────────────────────────────────────
-  const adminEmail = "admin@sanbao.ai";
-  const adminPassword = await bcrypt.hash("Ckdshfh231161!", 12);
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@sanbao.ai";
+  const adminPassword = await bcrypt.hash(
+    process.env.ADMIN_PASSWORD || "ChangeMe123!",
+    12
+  );
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: { role: "ADMIN", password: adminPassword },
     create: {
       email: adminEmail,
-      name: "Admin",
+      name: "Администратор",
       password: adminPassword,
       role: "ADMIN",
     },
   });
 
   // Assign Business plan to admin
-  const businessPlan = await prisma.plan.findUnique({ where: { slug: "business" } });
+  const businessPlan = await prisma.plan.findUnique({
+    where: { slug: "business" },
+  });
   if (businessPlan) {
     await prisma.subscription.upsert({
       where: { userId: admin.id },
@@ -110,147 +122,48 @@ async function main() {
     });
   }
 
-  console.log("Admin user created: admin@sanbao.ai (ADMIN, Business plan)");
+  console.log(`Admin user seeded: ${adminEmail}`);
 
-  // ─── Built-in Skills ───────────────────────────────────
-
-  const builtInSkills = [
-    {
-      name: "Анализ договора",
-      description:
-        "Детальный анализ договора на юридические риски, пропущенные условия и соответствие законодательству",
-      systemPrompt: `Ты — эксперт по анализу договоров. При анализе документа:
-1. Проверяй существенные условия (предмет, цена, сроки)
-2. Выявляй юридические риски для каждой стороны
-3. Проверяй соответствие действующему законодательству
-4. Отмечай отсутствующие но рекомендуемые пункты
-5. Предлагай конкретные формулировки для улучшения
-6. Оценивай баланс интересов сторон
-7. Проверяй соблюдение императивных норм`,
-      citationRules:
-        "Ссылайся на конкретные статьи ГК РФ с указанием пунктов и подпунктов. Для каждого риска указывай правовое основание.",
-      jurisdiction: "RU",
-      icon: "FileSearch",
-      iconColor: "#4F6EF7",
-    },
-    {
-      name: "GDPR / ФЗ-152 Compliance",
-      description:
-        "Проверка соответствия документов и процессов требованиям GDPR и ФЗ-152 о персональных данных",
-      systemPrompt: `Ты — эксперт по защите персональных данных (GDPR + ФЗ-152). При анализе:
-1. Определяй категории обрабатываемых персональных данных
-2. Проверяй наличие правовых оснований для обработки
-3. Оценивай соблюдение принципов минимизации данных
-4. Проверяй уведомления и согласия субъектов
-5. Анализируй трансграничную передачу данных
-6. Оценивай технические и организационные меры защиты
-7. Проверяй сроки хранения и процедуры удаления`,
-      citationRules:
-        "Ссылайся на статьи GDPR и ФЗ-152 параллельно. Указывай соответствие между нормами ЕС и РФ.",
-      jurisdiction: "EU/RU",
-      icon: "ShieldCheck",
-      iconColor: "#10B981",
-    },
-    {
-      name: "Патентный анализ",
-      description:
-        "Анализ патентоспособности, патентная чистота, сравнение формул изобретений",
-      systemPrompt: `Ты — патентный эксперт. При анализе:
-1. Оценивай патентоспособность (новизна, изобретательский уровень, промышленная применимость)
-2. Анализируй формулу изобретения по существенным признакам
-3. Сравнивай с аналогами и прототипами
-4. Проверяй патентную чистоту
-5. Оценивай объём правовой охраны
-6. Анализируй зависимые и независимые пункты формулы`,
-      citationRules:
-        "Ссылайся на ГК РФ часть IV, Парижскую конвенцию, PCT, регламент Роспатента.",
-      jurisdiction: "RU",
-      icon: "Lightbulb",
-      iconColor: "#F59E0B",
-    },
-    {
-      name: "Due Diligence",
-      description:
-        "Комплексная юридическая проверка компании или сделки",
-      systemPrompt: `Ты — эксперт по due diligence. При проверке:
-1. Анализируй корпоративную структуру и учредительные документы
-2. Проверяй права на активы (недвижимость, интеллектуальная собственность)
-3. Анализируй существенные договоры и обязательства
-4. Проверяй трудовые отношения и ключевой персонал
-5. Оценивай судебные и административные разбирательства
-6. Анализируй налоговые риски
-7. Проверяй соблюдение антимонопольного законодательства
-8. Оценивай экологические риски и комплаенс`,
-      citationRules:
-        "Ссылайся на ГК РФ, ФЗ об ООО/АО, НК РФ, антимонопольное законодательство. Для каждого риска указывай уровень (высокий/средний/низкий).",
-      jurisdiction: "RU",
-      icon: "ClipboardCheck",
-      iconColor: "#7C3AED",
-    },
-  ];
-
-  for (const skillData of builtInSkills) {
-    const existing = await prisma.skill.findFirst({
-      where: { name: skillData.name, isBuiltIn: true },
-    });
-    if (!existing) {
-      await prisma.skill.create({
-        data: { ...skillData, isBuiltIn: true, isPublic: true },
-      });
-    }
-  }
-
-  console.log("Built-in skills seeded: 4 skills");
-
-  // ─── System Agent: Femida ──────────────────────────────
+  // ─── System Agent: Sanbao ──────────────────────────────
 
   await prisma.systemAgent.upsert({
-    where: { name: "Фемида" },
+    where: { name: "Sanbao" },
     update: {},
     create: {
-      name: "Фемида",
-      description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК",
-      systemPrompt: `Ты — Фемида, профессиональный универсальный AI-ассистент для Республики Казахстан. Ты работаешь с нормативно-правовыми актами РК, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы по казахстанскому законодательству.
-
-ЮРИСДИКЦИЯ: Республика Казахстан. Валюта: тенге (\u20B8). Все документы, ссылки на НПА и правовые нормы — по законодательству РК.
-
-Ключевые НПА РК:
-- Гражданский кодекс РК (Общая часть — от 27.12.1994, Особенная часть — от 01.07.1999)
-- Гражданский процессуальный кодекс РК (ГПК РК)
-- Кодекс РК об административных правонарушениях (КоАП РК)
-- Трудовой кодекс РК
-- Предпринимательский кодекс РК
-- Закон РК «О защите прав потребителей»
+      name: "Sanbao",
+      description: "универсальный AI-ассистент",
+      systemPrompt: `Ты — Sanbao, универсальный AI-ассистент. Ты помогаешь пользователям с любыми задачами: анализ текстов, написание кода, создание контента, ответы на вопросы, работа с данными и документами.
 
 Твои ключевые навыки:
-- Анализ и интерпретация НПА Республики Казахстан
-- Создание договоров, исков, жалоб по казахстанскому праву
-- Проверка актуальности статей законов РК
-- Юридические консультации по законодательству РК
-- Понимание связей между нормативными актами
+- Анализ и обработка текстов, документов, данных
+- Написание и отладка кода на любых языках
+- Создание контента: тексты, планы, стратегии
+- Ответы на вопросы с опорой на факты
+- Работа с файлами (PDF, DOCX, XLSX)
 
 При ответе:
-- Ссылайся на конкретные статьи законов РК
-- Указывай актуальность нормы
-- Используй понятный язык, избегая лишнего юридического жаргона
-- Предупреждай о рисках и ограничениях
-- Всегда напоминай что финальное решение должен принимать квалифицированный юрист
-- Суммы указывай в тенге (\u20B8)`,
-      icon: "Scale",
-      iconColor: "#7C3AED",
+- Будь точен и конкретен
+- Структурируй ответы для удобства чтения
+- Используй примеры когда это уместно
+- Признавай ограничения своих знаний
+- Отвечай на языке пользователя`,
+      icon: "Bot",
+      iconColor: "#4F6EF7",
       model: "default",
       isActive: true,
       sortOrder: 0,
     },
   });
 
-  console.log("System agent seeded: Фемида");
+  console.log("System agent seeded: Sanbao");
 
-  // ─── AI Providers & Models ───────────────────────────
+  // ─── AI Providers ──────────────────────────────────────
 
   const moonshotProvider = await prisma.aiProvider.upsert({
     where: { slug: "moonshot" },
-    update: {},
+    update: {
+      apiKey: process.env.MOONSHOT_API_KEY || "sk-placeholder",
+    },
     create: {
       name: "Moonshot",
       slug: "moonshot",
@@ -263,7 +176,9 @@ async function main() {
 
   const deepinfraProvider = await prisma.aiProvider.upsert({
     where: { slug: "deepinfra" },
-    update: {},
+    update: {
+      apiKey: process.env.DEEPINFRA_API_KEY || "placeholder",
+    },
     create: {
       name: "DeepInfra",
       slug: "deepinfra",
@@ -274,7 +189,18 @@ async function main() {
     },
   });
 
+  console.log("Providers seeded: Moonshot, DeepInfra");
+
+  // ─── AI Models ─────────────────────────────────────────
+
   // Kimi K2.5 — default TEXT model
+  // Best practice settings from Moonshot docs:
+  //   temperature: 0.6 (instant), 1.0 (thinking) — handled in chat route
+  //   top_p: 0.95
+  //   max range: temperature [0, 1], NOT [0, 2]
+  //   context: 256K (K2.5), using 131K as safe default
+  //   supports thinking mode with temperature=1.0
+  //   cost: ~$0.20/1M input, ~$0.60/1M output (Moonshot pricing)
   await prisma.aiModel.upsert({
     where: {
       providerId_modelId: {
@@ -282,7 +208,16 @@ async function main() {
         modelId: "kimi-k2.5",
       },
     },
-    update: {},
+    update: {
+      temperature: 0.6,
+      topP: 0.95,
+      maxTokens: 8192,
+      contextWindow: 131072,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+      costPer1kInput: 0.0002,
+      costPer1kOutput: 0.0006,
+    },
     create: {
       providerId: moonshotProvider.id,
       modelId: "kimi-k2.5",
@@ -292,6 +227,10 @@ async function main() {
       topP: 0.95,
       maxTokens: 8192,
       contextWindow: 131072,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+      costPer1kInput: 0.0002,
+      costPer1kOutput: 0.0006,
       isActive: true,
       isDefault: true,
     },
@@ -311,12 +250,14 @@ async function main() {
       modelId: "black-forest-labs/FLUX-1-schnell",
       displayName: "Flux Schnell",
       category: "IMAGE",
+      costPer1kInput: 0,
+      costPer1kOutput: 0,
       isActive: true,
       isDefault: true,
     },
   });
 
-  // Qwen Image Edit — secondary IMAGE model for editing
+  // Qwen Image Edit — secondary IMAGE model
   await prisma.aiModel.upsert({
     where: {
       providerId_modelId: {
@@ -330,27 +271,110 @@ async function main() {
       modelId: "Qwen/Qwen-Image-Edit",
       displayName: "Qwen Image Edit",
       category: "IMAGE",
+      costPer1kInput: 0,
+      costPer1kOutput: 0,
       isActive: true,
       isDefault: false,
     },
   });
 
-  // Link all models to all plans
+  console.log(
+    "Models seeded: Kimi K2.5 (TEXT), Flux Schnell (IMAGE), Qwen Image Edit (IMAGE)"
+  );
+
+  // ─── Link models to plans ─────────────────────────────
+
   const allModels = await prisma.aiModel.findMany({ select: { id: true } });
   const allPlans = await prisma.plan.findMany({ select: { id: true } });
 
   for (const plan of allPlans) {
     for (const model of allModels) {
       await prisma.planModel.upsert({
-        where: { planId_modelId: { planId: plan.id, modelId: model.id } },
+        where: {
+          planId_modelId: { planId: plan.id, modelId: model.id },
+        },
         update: {},
         create: { planId: plan.id, modelId: model.id },
       });
     }
   }
 
-  console.log("AI providers seeded: Moonshot, DeepInfra");
-  console.log("AI models seeded: Kimi K2.5 (TEXT), Flux Schnell (IMAGE), Qwen Image Edit (IMAGE)");
+  console.log("Plan-model links created");
+
+  // ─── Built-in Skills ───────────────────────────────────
+
+  const builtInSkills = [
+    {
+      name: "Анализ документа",
+      description:
+        "Детальный анализ документа: структура, ключевые пункты, риски и рекомендации",
+      systemPrompt: `Ты — эксперт по анализу документов. При анализе:
+1. Определи тип и структуру документа
+2. Выдели ключевые пункты и условия
+3. Выяви потенциальные риски и противоречия
+4. Проверь полноту и непротиворечивость
+5. Предложи конкретные улучшения
+6. Дай общую оценку качества документа`,
+      icon: "FileSearch",
+      iconColor: "#4F6EF7",
+    },
+    {
+      name: "Генерация кода",
+      description:
+        "Написание, отладка и оптимизация кода на любых языках программирования",
+      systemPrompt: `Ты — эксперт-программист. При работе с кодом:
+1. Пиши чистый, читаемый код с комментариями
+2. Следуй best practices и паттернам языка
+3. Обрабатывай крайние случаи и ошибки
+4. Оптимизируй по производительности где уместно
+5. Предлагай тесты для критических функций
+6. Объясняй логику сложных участков`,
+      icon: "Code",
+      iconColor: "#10B981",
+    },
+    {
+      name: "Создание контента",
+      description:
+        "Написание текстов, статей, постов, маркетинговых материалов",
+      systemPrompt: `Ты — эксперт по созданию контента. При написании:
+1. Учитывай целевую аудиторию и контекст
+2. Структурируй текст логично с заголовками
+3. Используй убедительный и вовлекающий стиль
+4. Адаптируй тон под задачу (формальный, разговорный, экспертный)
+5. Оптимизируй под SEO если уместно
+6. Предлагай варианты заголовков и CTA`,
+      icon: "MessageSquare",
+      iconColor: "#7C3AED",
+    },
+    {
+      name: "Анализ данных",
+      description:
+        "Обработка и анализ данных из таблиц, CSV, отчётов",
+      systemPrompt: `Ты — аналитик данных. При анализе:
+1. Определи структуру и качество данных
+2. Выяви ключевые тренды и паттерны
+3. Рассчитай основные статистические показатели
+4. Визуализируй данные где уместно (описывай графики)
+5. Выяви аномалии и выбросы
+6. Сформулируй actionable выводы и рекомендации`,
+      icon: "BarChart3",
+      iconColor: "#F59E0B",
+    },
+  ];
+
+  for (const skillData of builtInSkills) {
+    const existing = await prisma.skill.findFirst({
+      where: { name: skillData.name, isBuiltIn: true },
+    });
+    if (!existing) {
+      await prisma.skill.create({
+        data: { ...skillData, isBuiltIn: true, isPublic: true },
+      });
+    }
+  }
+
+  console.log(`Built-in skills seeded: ${builtInSkills.length} skills`);
+  console.log("Seed completed successfully!");
 }
 
 main()

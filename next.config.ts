@@ -2,6 +2,19 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: [
+    "@napi-rs/canvas",
+    "otplib",
+    "qrcode",
+    "bcryptjs",
+    "stripe",
+    "nodemailer",
+    "@aws-sdk/client-s3",
+    "@aws-sdk/s3-request-presigner",
+    "mammoth",
+    "pdf-parse",
+    "xlsx",
+  ],
   reactCompiler: true,
   headers: async () => [
     {
