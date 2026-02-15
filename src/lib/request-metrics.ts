@@ -28,17 +28,17 @@ export function recordRequestDuration(route: string, durationMs: number) {
 
 export function getRequestDurationMetrics(): string {
   const lines: string[] = [
-    "# HELP leema_request_duration_ms Request duration in milliseconds",
-    "# TYPE leema_request_duration_ms histogram",
+    "# HELP sanbao_request_duration_ms Request duration in milliseconds",
+    "# TYPE sanbao_request_duration_ms histogram",
   ];
 
   for (const [route, m] of routeMetrics) {
     for (const b of BUCKETS) {
-      lines.push(`leema_request_duration_ms_bucket{route="${route}",le="${b}"} ${m.buckets[String(b)]}`);
+      lines.push(`sanbao_request_duration_ms_bucket{route="${route}",le="${b}"} ${m.buckets[String(b)]}`);
     }
-    lines.push(`leema_request_duration_ms_bucket{route="${route}",le="+Inf"} ${m.buckets["+Inf"]}`);
-    lines.push(`leema_request_duration_ms_sum{route="${route}"} ${m.sumMs}`);
-    lines.push(`leema_request_duration_ms_count{route="${route}"} ${m.count}`);
+    lines.push(`sanbao_request_duration_ms_bucket{route="${route}",le="+Inf"} ${m.buckets["+Inf"]}`);
+    lines.push(`sanbao_request_duration_ms_sum{route="${route}"} ${m.sumMs}`);
+    lines.push(`sanbao_request_duration_ms_count{route="${route}"} ${m.count}`);
   }
 
   return lines.join("\n");

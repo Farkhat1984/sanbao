@@ -5,7 +5,7 @@ import { Save, Upload, Trash2, Image } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const SETTING_FIELDS = [
-  { key: "app_name", label: "Название приложения", placeholder: "Leema" },
+  { key: "app_name", label: "Название приложения", placeholder: "Sanbao" },
   { key: "global_system_prompt", label: "Глобальный системный промпт", placeholder: "Ты — AI-ассистент...", multiline: true },
   { key: "max_upload_size_mb", label: "Макс. размер файла (МБ)", placeholder: "10" },
   { key: "max_file_count", label: "Макс. количество файлов", placeholder: "5" },
@@ -13,15 +13,15 @@ const SETTING_FIELDS = [
   { key: "google_oauth_enabled", label: "Google OAuth", type: "toggle" },
   { key: "maintenance_mode", label: "Режим обслуживания", type: "toggle" },
   { key: "default_language", label: "Язык по умолчанию", placeholder: "ru" },
-  { key: "welcome_title", label: "Заголовок welcome-экрана", placeholder: "Добро пожаловать в Leema!" },
-  { key: "welcome_message", label: "Текст welcome-экрана", placeholder: "Я — юридический AI-ассистент...", multiline: true },
+  { key: "welcome_title", label: "Заголовок welcome-экрана", placeholder: "Добро пожаловать в Sanbao!" },
+  { key: "welcome_message", label: "Текст welcome-экрана", placeholder: "Я — универсальный AI-ассистент...", multiline: true },
   { key: "onboarding_enabled", label: "Онбординг включён", type: "toggle" },
   { key: "onboarding_steps", label: "Шаги онбординга (JSON)", placeholder: '[{"title":"Шаг 1","text":"..."}]', multiline: true },
   { key: "smtp_host", label: "SMTP Хост", placeholder: "smtp.gmail.com" },
   { key: "smtp_port", label: "SMTP Порт", placeholder: "587" },
   { key: "smtp_user", label: "SMTP Пользователь", placeholder: "email@example.com" },
   { key: "smtp_pass", label: "SMTP Пароль", placeholder: "••••••••" },
-  { key: "smtp_from", label: "SMTP Отправитель", placeholder: "Leema <noreply@leema.kz>" },
+  { key: "smtp_from", label: "SMTP Отправитель", placeholder: "Sanbao <noreply@sanbao.ai>" },
   { key: "session_ttl_hours", label: "TTL сессий (часы)", placeholder: "720" },
   { key: "admin_ip_whitelist", label: "IP whitelist для админки (через запятую)", placeholder: "127.0.0.1, 192.168.1.0" },
   { key: "content_filter_enabled", label: "Фильтр контента", type: "toggle" },

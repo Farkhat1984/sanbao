@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Leema — Юридический AI-ассистент",
+  title: "Sanbao — универсальный AI-ассистент",
   description:
     "Умный помощник для работы с нормативно-правовыми актами, создания договоров, исков и юридических документов",
 };

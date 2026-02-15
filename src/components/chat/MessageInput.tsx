@@ -487,8 +487,8 @@ export function MessageInput() {
         }).catch(() => {});
       }
 
-      // Detect and create tasks from <leema-task> tags
-      const taskRegex = /<leema-task\s+title="([^"]+)">([\s\S]*?)<\/leema-task>/g;
+      // Detect and create tasks from <sanbao-task> tags
+      const taskRegex = /<sanbao-task\s+title="([^"]+)">([\s\S]*?)<\/sanbao-task>/g;
       let taskMatch;
       while ((taskMatch = taskRegex.exec(fullContent)) !== null) {
         const taskTitle = taskMatch[1];
@@ -521,7 +521,7 @@ export function MessageInput() {
       }
 
       // Auto-open first artifact
-      const docMatch = /<leema-doc\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/leema-doc>/.exec(fullContent);
+      const docMatch = /<sanbao-doc\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/sanbao-doc>/.exec(fullContent);
       if (docMatch) {
         const { openArtifact } = useArtifactStore.getState();
         openArtifact({
@@ -533,8 +533,8 @@ export function MessageInput() {
         });
       }
 
-      // Detect clarify questions from <leema-clarify> tag
-      const clarifyMatch = /<leema-clarify>([\s\S]*?)<\/leema-clarify>/.exec(fullContent);
+      // Detect clarify questions from <sanbao-clarify> tag
+      const clarifyMatch = /<sanbao-clarify>([\s\S]*?)<\/sanbao-clarify>/.exec(fullContent);
       if (clarifyMatch) {
         try {
           const questions = JSON.parse(clarifyMatch[1]);
@@ -1058,7 +1058,7 @@ export function MessageInput() {
               : "Enter — отправить, Shift+Enter — новая строка"}
           </span>
           <span className="text-[10px] text-text-muted">
-            Kimi K2.5 · Leema может ошибаться
+            Kimi K2.5 · Sanbao может ошибаться
           </span>
         </div>
       </div>

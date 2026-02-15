@@ -14,7 +14,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
               <Scale className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-semibold text-text-primary">Leema</span>
+            <span className="text-sm font-semibold text-text-primary">Sanbao</span>
           </Link>
         </div>
       </header>

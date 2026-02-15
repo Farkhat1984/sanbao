@@ -86,7 +86,7 @@ async function main() {
   console.log("Seed completed: 3 plans created (Free, Pro, Business)");
 
   // ─── Admin user ──────────────────────────────────────────
-  const adminEmail = "admin@leema.kz";
+  const adminEmail = "admin@sanbao.ai";
   const adminPassword = await bcrypt.hash("Ckdshfh231161!", 12);
 
   const admin = await prisma.user.upsert({
@@ -110,7 +110,7 @@ async function main() {
     });
   }
 
-  console.log("Admin user created: admin@leema.kz (ADMIN, Business plan)");
+  console.log("Admin user created: admin@sanbao.ai (ADMIN, Business plan)");
 
   // ─── Built-in Skills ───────────────────────────────────
 
@@ -209,8 +209,8 @@ async function main() {
     update: {},
     create: {
       name: "Фемида",
-      description: "Юридический AI-ассистент для работы с договорами, исками и НПА РК",
-      systemPrompt: `Ты — Фемида, профессиональный юридический AI-ассистент для Республики Казахстан. Ты работаешь с нормативно-правовыми актами РК, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы по казахстанскому законодательству.
+      description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК",
+      systemPrompt: `Ты — Фемида, профессиональный универсальный AI-ассистент для Республики Казахстан. Ты работаешь с нормативно-правовыми актами РК, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы по казахстанскому законодательству.
 
 ЮРИСДИКЦИЯ: Республика Казахстан. Валюта: тенге (\u20B8). Все документы, ссылки на НПА и правовые нормы — по законодательству РК.
 

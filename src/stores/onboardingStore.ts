@@ -9,7 +9,7 @@ interface OnboardingState {
 }
 
 const TOUR_STEPS = 4;
-const STORAGE_KEY = "leema-onboarding-seen";
+const STORAGE_KEY = "sanbao-onboarding-seen";
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   hasSeenTour:

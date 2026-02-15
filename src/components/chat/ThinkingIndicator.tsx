@@ -10,7 +10,7 @@ interface ThinkingIndicatorProps {
 }
 
 export function ThinkingIndicator({ phase, agentName }: ThinkingIndicatorProps) {
-  const name = agentName || "Leema";
+  const name = agentName || "Sanbao";
 
   let label: string;
   let Icon: typeof Brain;

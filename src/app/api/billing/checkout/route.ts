@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         price_data: {
           currency: DEFAULT_CURRENCY.toLowerCase(),
           product_data: {
-            name: `Leema — ${plan.name}`,
+            name: `Sanbao — ${plan.name}`,
             description: plan.description || undefined,
           },
           unit_amount: finalAmount,

@@ -51,9 +51,9 @@ export default function LoginPage() {
         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Scale className="h-7 w-7 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary">Вход в Leema</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Вход в Sanbao</h1>
         <p className="text-sm text-text-secondary mt-1">
-          Юридический AI-ассистент
+          универсальный AI-ассистент
         </p>
       </div>
 

@@ -25,13 +25,13 @@ import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Artifact parsing ────────────────────────────────────
 
-const CLARIFY_REGEX = /<leema-clarify>[\s\S]*?<\/leema-clarify>/g;
+const CLARIFY_REGEX = /<sanbao-clarify>[\s\S]*?<\/sanbao-clarify>/g;
 
 const ARTIFACT_REGEX =
-  /<leema-doc\s+type="(\w+)"\s+title="([^"]*)">([\s\S]*?)<\/leema-doc>/g;
+  /<sanbao-doc\s+type="(\w+)"\s+title="([^"]*)">([\s\S]*?)<\/sanbao-doc>/g;
 
 const EDIT_REGEX =
-  /<leema-edit\s+target="([^"]*)">([\s\S]*?)<\/leema-edit>/g;
+  /<sanbao-edit\s+target="([^"]*)">([\s\S]*?)<\/sanbao-edit>/g;
 
 const REPLACE_REGEX =
   /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/replace>/g;
@@ -292,7 +292,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
       >
         {/* Name */}
         <span className="text-[11px] font-medium text-text-muted mb-1 block">
-          {isUser ? "Вы" : (agentName || "Leema")}
+          {isUser ? "Вы" : (agentName || "Sanbao")}
         </span>
 
         {/* Reasoning block */}
@@ -343,7 +343,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
           )}
         >
           {isAssistant ? (
-            <div className="prose-leema">
+            <div className="prose-sanbao">
               {hasSpecialParts ? (
                 // Render with inline artifact/edit cards
                 parts.map((part, i) => {

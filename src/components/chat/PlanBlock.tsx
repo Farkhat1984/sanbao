@@ -99,7 +99,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
       ? "По поводу плана"
       : `Уточнение (раунд ${round})`;
 
-    setPendingInput(`${prefix}: ${feedback.trim()}\n\nПожалуйста, обнови план с учётом моих уточнений и снова выведи его в <leema-plan>.`);
+    setPendingInput(`${prefix}: ${feedback.trim()}\n\nПожалуйста, обнови план с учётом моих уточнений и снова выведи его в <sanbao-plan>.`);
     setFeedback("");
     setShowFeedback(false);
     setPhase("refining");

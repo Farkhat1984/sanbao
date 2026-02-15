@@ -1,4 +1,4 @@
-# Leema — Styleguide
+# Sanbao — Styleguide
 
 **Стиль:** Soft Corporate Minimalism
 

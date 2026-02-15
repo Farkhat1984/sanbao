@@ -57,7 +57,7 @@ export function Sidebar() {
             <Sparkles className="h-4 w-4 text-white" />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight">
-            Leema
+            Sanbao
           </span>
         </div>
 

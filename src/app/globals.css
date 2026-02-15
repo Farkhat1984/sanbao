@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── Leema Design System ─────────────────────────────── */
+/* ─── Sanbao Design System ─────────────────────────────── */
 
 :root {
   /* Background */
@@ -285,20 +285,20 @@ body {
 
 /* ─── Markdown Styles ─────────────────────────────────── */
 
-.prose-leema h1,
-.prose-leema h2,
-.prose-leema h3 {
+.prose-sanbao h1,
+.prose-sanbao h2,
+.prose-sanbao h3 {
   color: var(--text-primary);
   font-weight: 600;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
 
-.prose-leema p {
+.prose-sanbao p {
   margin-bottom: 0.75em;
 }
 
-.prose-leema code {
+.prose-sanbao code {
   font-family: var(--font-mono);
   font-size: 0.875em;
   background: var(--bg-surface-alt);
@@ -306,7 +306,7 @@ body {
   padding: 0.2em 0.4em;
 }
 
-.prose-leema pre {
+.prose-sanbao pre {
   background: var(--bg-surface-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -314,48 +314,48 @@ body {
   overflow-x: auto;
 }
 
-.prose-leema pre code {
+.prose-sanbao pre code {
   background: transparent;
   padding: 0;
 }
 
-.prose-leema a {
+.prose-sanbao a {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.prose-leema a:hover {
+.prose-sanbao a:hover {
   color: var(--accent-hover);
 }
 
-.prose-leema ul,
-.prose-leema ol {
+.prose-sanbao ul,
+.prose-sanbao ol {
   padding-left: 1.5em;
   margin-bottom: 0.75em;
 }
 
-.prose-leema blockquote {
+.prose-sanbao blockquote {
   border-left: 3px solid var(--accent);
   padding-left: 1em;
   color: var(--text-secondary);
   font-style: italic;
 }
 
-.prose-leema table {
+.prose-sanbao table {
   width: 100%;
   border-collapse: collapse;
   margin: 1em 0;
 }
 
-.prose-leema th,
-.prose-leema td {
+.prose-sanbao th,
+.prose-sanbao td {
   padding: 0.5em 0.75em;
   border: 1px solid var(--border);
   text-align: left;
 }
 
-.prose-leema th {
+.prose-sanbao th {
   background: var(--bg-surface-alt);
   font-weight: 600;
 }

@@ -39,53 +39,53 @@ export async function GET() {
   ]);
 
   const lines: string[] = [
-    "# HELP leema_users_total Total number of registered users",
-    "# TYPE leema_users_total gauge",
-    `leema_users_total ${totalUsers}`,
+    "# HELP sanbao_users_total Total number of registered users",
+    "# TYPE sanbao_users_total gauge",
+    `sanbao_users_total ${totalUsers}`,
     "",
-    "# HELP leema_active_users_today Users active today",
-    "# TYPE leema_active_users_today gauge",
-    `leema_active_users_today ${activeUsersToday}`,
+    "# HELP sanbao_active_users_today Users active today",
+    "# TYPE sanbao_active_users_today gauge",
+    `sanbao_active_users_today ${activeUsersToday}`,
     "",
-    "# HELP leema_conversations_total Total conversations",
-    "# TYPE leema_conversations_total gauge",
-    `leema_conversations_total ${totalConversations}`,
+    "# HELP sanbao_conversations_total Total conversations",
+    "# TYPE sanbao_conversations_total gauge",
+    `sanbao_conversations_total ${totalConversations}`,
     "",
-    "# HELP leema_messages_today Messages sent today",
-    "# TYPE leema_messages_today gauge",
-    `leema_messages_today ${messagesToday}`,
+    "# HELP sanbao_messages_today Messages sent today",
+    "# TYPE sanbao_messages_today gauge",
+    `sanbao_messages_today ${messagesToday}`,
     "",
-    "# HELP leema_tokens_today Tokens used today",
-    "# TYPE leema_tokens_today gauge",
-    `leema_tokens_today ${tokensToday}`,
+    "# HELP sanbao_tokens_today Tokens used today",
+    "# TYPE sanbao_tokens_today gauge",
+    `sanbao_tokens_today ${tokensToday}`,
     "",
-    "# HELP leema_errors_1h Errors in last hour",
-    "# TYPE leema_errors_1h gauge",
-    `leema_errors_1h ${errorCount1h}`,
+    "# HELP sanbao_errors_1h Errors in last hour",
+    "# TYPE sanbao_errors_1h gauge",
+    `sanbao_errors_1h ${errorCount1h}`,
     "",
-    "# HELP leema_provider_requests_total Requests per provider",
-    "# TYPE leema_provider_requests_total counter",
+    "# HELP sanbao_provider_requests_total Requests per provider",
+    "# TYPE sanbao_provider_requests_total counter",
   ];
 
   for (const p of providerStats) {
-    lines.push(`leema_provider_requests_total{provider="${p.provider}"} ${p._count}`);
+    lines.push(`sanbao_provider_requests_total{provider="${p.provider}"} ${p._count}`);
   }
 
   lines.push("");
-  lines.push("# HELP leema_provider_tokens_total Tokens per provider");
-  lines.push("# TYPE leema_provider_tokens_total counter");
+  lines.push("# HELP sanbao_provider_tokens_total Tokens per provider");
+  lines.push("# TYPE sanbao_provider_tokens_total counter");
 
   for (const p of providerStats) {
     const total = (p._sum.inputTokens || 0) + (p._sum.outputTokens || 0);
-    lines.push(`leema_provider_tokens_total{provider="${p.provider}"} ${total}`);
+    lines.push(`sanbao_provider_tokens_total{provider="${p.provider}"} ${total}`);
   }
 
   lines.push("");
-  lines.push("# HELP leema_provider_cost_total Cost per provider");
-  lines.push("# TYPE leema_provider_cost_total counter");
+  lines.push("# HELP sanbao_provider_cost_total Cost per provider");
+  lines.push("# TYPE sanbao_provider_cost_total counter");
 
   for (const p of providerStats) {
-    lines.push(`leema_provider_cost_total{provider="${p.provider}"} ${p._sum.cost || 0}`);
+    lines.push(`sanbao_provider_cost_total{provider="${p.provider}"} ${p._sum.cost || 0}`);
   }
 
   // Request duration histogram

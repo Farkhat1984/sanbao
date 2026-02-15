@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   if (action === "test" && to) {
     const ok = await sendEmail({
       to,
-      subject: "Тестовое письмо — Leema",
+      subject: "Тестовое письмо — Sanbao",
       html: "<h2>Тест пройден!</h2><p>SMTP настроен и работает корректно.</p>",
       type: "WELCOME",
       metadata: { test: true },

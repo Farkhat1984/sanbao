@@ -1,9 +1,9 @@
 {
   "dashboard": {
     "id": null,
-    "uid": "leema-main",
-    "title": "Leema - Main Dashboard",
-    "tags": ["leema"],
+    "uid": "sanbao-main",
+    "title": "Sanbao - Main Dashboard",
+    "tags": ["sanbao"],
     "timezone": "browser",
     "panels": [
       {
@@ -11,28 +11,28 @@
         "title": "Total Users",
         "type": "stat",
         "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-        "targets": [{ "expr": "leema_users_total", "legendFormat": "Users" }]
+        "targets": [{ "expr": "sanbao_users_total", "legendFormat": "Users" }]
       },
       {
         "id": 2,
         "title": "Active Users Today",
         "type": "stat",
         "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-        "targets": [{ "expr": "leema_active_users_today", "legendFormat": "Active" }]
+        "targets": [{ "expr": "sanbao_active_users_today", "legendFormat": "Active" }]
       },
       {
         "id": 3,
         "title": "Messages Today",
         "type": "stat",
         "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-        "targets": [{ "expr": "leema_messages_today", "legendFormat": "Messages" }]
+        "targets": [{ "expr": "sanbao_messages_today", "legendFormat": "Messages" }]
       },
       {
         "id": 4,
         "title": "Errors (1h)",
         "type": "stat",
         "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-        "targets": [{ "expr": "leema_errors_1h", "legendFormat": "Errors" }],
+        "targets": [{ "expr": "sanbao_errors_1h", "legendFormat": "Errors" }],
         "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 5 }] } } }
       },
       {
@@ -40,21 +40,21 @@
         "title": "Tokens Today",
         "type": "gauge",
         "gridPos": { "h": 6, "w": 12, "x": 0, "y": 4 },
-        "targets": [{ "expr": "leema_tokens_today", "legendFormat": "Tokens" }]
+        "targets": [{ "expr": "sanbao_tokens_today", "legendFormat": "Tokens" }]
       },
       {
         "id": 6,
         "title": "Provider Requests",
         "type": "piechart",
         "gridPos": { "h": 6, "w": 12, "x": 12, "y": 4 },
-        "targets": [{ "expr": "leema_provider_requests_total", "legendFormat": "{{provider}}" }]
+        "targets": [{ "expr": "sanbao_provider_requests_total", "legendFormat": "{{provider}}" }]
       },
       {
         "id": 7,
         "title": "Provider Cost",
         "type": "table",
         "gridPos": { "h": 6, "w": 24, "x": 0, "y": 10 },
-        "targets": [{ "expr": "leema_provider_cost_total", "legendFormat": "{{provider}}", "format": "table" }]
+        "targets": [{ "expr": "sanbao_provider_cost_total", "legendFormat": "{{provider}}", "format": "table" }]
       }
     ],
     "time": { "from": "now-24h", "to": "now" },

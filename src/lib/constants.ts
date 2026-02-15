@@ -1,5 +1,5 @@
-export const APP_NAME = "Leema";
-export const APP_DESCRIPTION = "Юридический AI-ассистент";
+export const APP_NAME = "Sanbao";
+export const APP_DESCRIPTION = "универсальный AI-ассистент";
 
 export const LEGAL_TOOL_NAMES = {
   createContract: "createContract",
@@ -85,7 +85,7 @@ export const WEBHOOK_MAX_ATTEMPTS = 3;
 export const WEBHOOK_TIMEOUT_MS = 10_000;
 
 // ─── S3 defaults ───
-export const S3_DEFAULT_BUCKET = "leema-uploads";
+export const S3_DEFAULT_BUCKET = "sanbao-uploads";
 export const S3_DEFAULT_REGION = "us-east-1";
 export const PRESIGNED_URL_EXPIRY = 3600;
 
@@ -101,7 +101,7 @@ export const DEFAULT_SESSION_TTL_HOURS = 720;
 
 // ─── Email ───
 export const DEFAULT_SMTP_PORT = 587;
-export const DEFAULT_EMAIL_FROM = "noreply@leema.ai";
+export const DEFAULT_EMAIL_FROM = "noreply@sanbao.ai";
 
 // ─── Image generation ───
 export const DEFAULT_IMAGE_SIZE = "1024x1024";

@@ -1,4 +1,4 @@
-# Leema — Руководство администратора
+# Sanbao — Руководство администратора
 
 ## Доступ
 
@@ -92,7 +92,7 @@ docker compose -f docker-compose.monitoring.yml up -d
 ```
 
 - Prometheus: `http://localhost:9090` — скрейпит `/api/metrics`
-- Grafana: `http://localhost:3001` (admin/admin) — готовый дашборд "Leema Overview"
+- Grafana: `http://localhost:3001` (admin/admin) — готовый дашборд "Sanbao Overview"
 
 ### Метрики (`/api/metrics`)
 

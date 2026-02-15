@@ -30,7 +30,7 @@ export async function connectAndDiscoverTools(
             requestInit: { headers },
           });
 
-    const client = new Client({ name: "leema", version: "1.0.0" });
+    const client = new Client({ name: "sanbao", version: "1.0.0" });
     await client.connect(transportInstance);
 
     const { tools } = await client.listTools();
@@ -75,7 +75,7 @@ export async function callMcpTool(
             requestInit: { headers },
           });
 
-    const client = new Client({ name: "leema", version: "1.0.0" });
+    const client = new Client({ name: "sanbao", version: "1.0.0" });
     await client.connect(transportInstance);
 
     const response = await client.callTool({ name: toolName, arguments: args });

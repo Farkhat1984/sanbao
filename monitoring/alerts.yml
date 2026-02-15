@@ -1,8 +1,8 @@
 groups:
-  - name: leema-alerts
+  - name: sanbao-alerts
     rules:
       - alert: HighErrorRate
-        expr: leema_errors_1h > 50
+        expr: sanbao_errors_1h > 50
         for: 5m
         labels:
           severity: critical
@@ -11,7 +11,7 @@ groups:
           description: "More than 50 errors in the last hour (current: {{ $value }})"
 
       - alert: NoActiveUsers
-        expr: leema_active_users_today == 0
+        expr: sanbao_active_users_today == 0
         for: 1h
         labels:
           severity: warning
@@ -20,7 +20,7 @@ groups:
           description: "No users have been active today for over 1 hour"
 
       - alert: HighTokenUsage
-        expr: leema_tokens_today > 1000000
+        expr: sanbao_tokens_today > 1000000
         for: 5m
         labels:
           severity: warning

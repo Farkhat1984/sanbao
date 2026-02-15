@@ -149,13 +149,13 @@ function baseLayout(content: string): string {
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
 <tr><td style="background:linear-gradient(135deg,#4F6EF7,#7C3AED);padding:24px 32px;">
-<h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Leema</h1>
+<h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Sanbao</h1>
 </td></tr>
 <tr><td style="padding:32px;">
 ${content}
 </td></tr>
 <tr><td style="padding:16px 32px;border-top:1px solid #eef1f6;color:#8892a4;font-size:12px;text-align:center;">
-&copy; ${new Date().getFullYear()} Leema. Все права защищены.
+&copy; ${new Date().getFullYear()} Sanbao. Все права защищены.
 </td></tr>
 </table>
 </td></tr>
@@ -174,7 +174,7 @@ export async function welcomeEmail(userName: string): Promise<{ subject: string;
     };
   }
   return {
-    subject: "Добро пожаловать в Leema!",
+    subject: "Добро пожаловать в Sanbao!",
     html: baseLayout(`
       <h2 style="margin:0 0 16px;color:#1a1f36;">Здравствуйте${userName ? `, ${userName}` : ""}!</h2>
       <p style="color:#4a5568;line-height:1.6;">Ваш аккаунт успешно создан. Теперь вам доступен AI-ассистент для работы с документами и анализа.</p>
@@ -202,7 +202,7 @@ export async function invoiceEmail(data: {
     return { subject, html };
   }
   return {
-    subject: `Счёт #${data.invoiceNumber} — Leema`,
+    subject: `Счёт #${data.invoiceNumber} — Sanbao`,
     html: baseLayout(`
       <h2 style="margin:0 0 16px;color:#1a1f36;">Счёт за подписку</h2>
       <p style="color:#4a5568;line-height:1.6;">Здравствуйте, ${data.userName}!</p>
@@ -224,7 +224,7 @@ export async function invoiceEmail(data: {
           <td style="color:#4F6EF7;font-weight:700;text-align:right;font-size:16px;">${data.amount}</td>
         </tr>
       </table>
-      <p style="color:#4a5568;line-height:1.6;font-size:13px;">Спасибо за использование Leema!</p>
+      <p style="color:#4a5568;line-height:1.6;font-size:13px;">Спасибо за использование Sanbao!</p>
     `),
   };
 }
@@ -246,7 +246,7 @@ export async function subscriptionExpiringEmail(data: {
     return { subject, html };
   }
   return {
-    subject: "Ваша подписка скоро истекает — Leema",
+    subject: "Ваша подписка скоро истекает — Sanbao",
     html: baseLayout(`
       <h2 style="margin:0 0 16px;color:#1a1f36;">Подписка истекает</h2>
       <p style="color:#4a5568;line-height:1.6;">Здравствуйте, ${data.userName}!</p>
@@ -272,7 +272,7 @@ export async function paymentFailedEmail(data: {
     return { subject, html };
   }
   return {
-    subject: "Ошибка оплаты — Leema",
+    subject: "Ошибка оплаты — Sanbao",
     html: baseLayout(`
       <h2 style="margin:0 0 16px;color:#1a1f36;">Ошибка оплаты</h2>
       <p style="color:#4a5568;line-height:1.6;">Здравствуйте, ${data.userName}!</p>

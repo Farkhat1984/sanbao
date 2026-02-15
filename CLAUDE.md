@@ -15,7 +15,7 @@ npx prisma studio    # Visual DB browser
 
 ## Architecture
 
-**Leema** — юридический AI-ассистент (Next.js 16 App Router, TypeScript, PostgreSQL).
+**Sanbao** — универсальный AI-ассистент (Next.js 16 App Router, TypeScript, PostgreSQL).
 
 ### Routing
 
@@ -30,12 +30,12 @@ Zustand-сторы (`src/stores/`): chatStore, artifactStore, sidebarStore, task
 
 ### Custom Tag System
 
-AI-ответы содержат `leema-*` теги, парсятся клиентом:
-- `<leema-doc type="" title="">` — создание артефакта
-- `<leema-edit target="">` — правки документа
-- `<leema-plan>` — блок планирования
-- `<leema-task title="">` — чек-лист задач
-- `<leema-clarify>` — JSON-вопросы перед созданием документа
+AI-ответы содержат `sanbao-*` теги, парсятся клиентом:
+- `<sanbao-doc type="" title="">` — создание артефакта
+- `<sanbao-edit target="">` — правки документа
+- `<sanbao-plan>` — блок планирования
+- `<sanbao-task title="">` — чек-лист задач
+- `<sanbao-clarify>` — JSON-вопросы перед созданием документа
 
 Теги определены в `SYSTEM_PROMPT` (route.ts). При добавлении нового: regex → парсинг в MessageInput/MessageBubble → скрыть raw-тег.
 

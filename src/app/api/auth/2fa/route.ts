@@ -27,7 +27,7 @@ export async function GET() {
   }
 
   const secret = otp.generateSecret();
-  const otpauth = otp.generateURI({ issuer: "Leema", label: user.email!, secret });
+  const otpauth = otp.generateURI({ issuer: "Sanbao", label: user.email!, secret });
   const qrCodeUrl = await QRCode.toDataURL(otpauth);
 
   await prisma.user.update({

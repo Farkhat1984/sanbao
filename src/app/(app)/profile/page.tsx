@@ -82,7 +82,7 @@ export default function ProfilePage() {
 
         {/* Upgrade Card */}
         <div className="bg-gradient-to-r from-accent to-legal-ref rounded-2xl p-6 text-white">
-          <h3 className="text-lg font-bold mb-2">Leema Pro</h3>
+          <h3 className="text-lg font-bold mb-2">Sanbao Pro</h3>
           <p className="text-sm opacity-90 mb-4">
             Расширенные юридические инструменты, приоритетный доступ к AI,
             экспорт в DOCX/PDF и безлимитная история.

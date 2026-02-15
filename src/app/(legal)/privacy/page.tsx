@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Политика конфиденциальности — Leema",
+  title: "Политика конфиденциальности — Sanbao",
 };
 
 export default function PrivacyPage() {

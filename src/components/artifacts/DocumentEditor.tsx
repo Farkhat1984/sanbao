@@ -39,7 +39,7 @@ export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
     editorProps: {
       attributes: {
         class:
-          "prose-leema max-w-none p-6 min-h-full focus:outline-none text-text-primary",
+          "prose-sanbao max-w-none p-6 min-h-full focus:outline-none text-text-primary",
       },
     },
     onUpdate: ({ editor }) => {

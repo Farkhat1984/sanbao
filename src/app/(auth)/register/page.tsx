@@ -57,7 +57,7 @@ export default function RegisterPage() {
           Создать аккаунт
         </h1>
         <p className="text-sm text-text-secondary mt-1">
-          Начните работу с Leema
+          Начните работу с Sanbao
         </p>
       </div>
 
