@@ -6,6 +6,7 @@ import {
   Building, User, HeartPulse, GraduationCap, Landmark,
   Code, MessageSquare, Globe, Lightbulb, FileSearch,
   ShieldCheck, ClipboardCheck, Brain, Upload, X,
+  Wrench, AlertTriangle, BarChart3, CheckCircle, Search, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VALID_COLORS } from "@/lib/constants";
@@ -31,6 +32,12 @@ const ICONS = [
   { name: "ShieldCheck", component: ShieldCheck },
   { name: "ClipboardCheck", component: ClipboardCheck },
   { name: "Brain", component: Brain },
+  { name: "Wrench", component: Wrench },
+  { name: "AlertTriangle", component: AlertTriangle },
+  { name: "BarChart3", component: BarChart3 },
+  { name: "CheckCircle", component: CheckCircle },
+  { name: "Search", component: Search },
+  { name: "Sparkles", component: Sparkles },
 ] as const;
 
 const COLORS = VALID_COLORS;

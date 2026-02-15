@@ -17,9 +17,12 @@ export interface Agent {
   icon: string;
   iconColor: string;
   avatar?: string | null;
+  isSystem?: boolean;
   files: AgentFile[];
   skills?: Array<{ id: string; skill: { id: string; name: string; icon: string; iconColor: string } }>;
   mcpServers?: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string } }>;
+  tools?: Array<{ id: string; tool: { id: string; name: string; icon: string; iconColor: string } }>;
+  plugins?: Array<{ id: string; plugin: { id: string; name: string; icon: string; iconColor: string } }>;
   createdAt: string;
   updatedAt: string;
 }

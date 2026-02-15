@@ -1,0 +1,227 @@
+/**
+ * Tool Resolver — resolves the full hierarchy of tools, skills, and MCP servers
+ * for a given agent. Traverses:
+ *   agent.tools (direct)
+ *   agent.skills → skill.tools
+ *   agent.plugins → plugin.tools
+ *   agent.plugins → plugin.skills → skill.tools
+ *   agent.mcpServers (direct)
+ *   agent.plugins → plugin.mcpServers
+ */
+
+import { prisma } from "@/lib/prisma";
+
+export interface PromptTool {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  iconColor: string;
+  type: string;
+  config: Record<string, unknown>;
+  sortOrder: number;
+}
+
+export interface McpToolContext {
+  url: string;
+  transport: "SSE" | "STREAMABLE_HTTP";
+  apiKey: string | null;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export interface ResolvedAgentContext {
+  systemPrompt: string;
+  promptTools: PromptTool[];
+  mcpTools: McpToolContext[];
+  skillPrompts: string[];
+}
+
+export async function resolveAgentContext(
+  agentId: string
+): Promise<ResolvedAgentContext> {
+  const agent = await prisma.agent.findUnique({
+    where: { id: agentId },
+    include: {
+      files: { select: { extractedText: true, fileName: true } },
+      skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
+      mcpServers: { include: { mcpServer: true } },
+      tools: { include: { tool: true } },
+      plugins: {
+        include: {
+          plugin: {
+            include: {
+              tools: { include: { tool: true } },
+              skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
+              mcpServers: { include: { mcpServer: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!agent) {
+    return { systemPrompt: "", promptTools: [], mcpTools: [], skillPrompts: [] };
+  }
+
+  // Build system prompt
+  let systemPrompt = agent.instructions;
+
+  const filesContext = agent.files
+    .filter((f) => f.extractedText)
+    .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
+    .join("\n\n");
+
+  if (filesContext) {
+    systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
+  }
+
+  // Collect tools (deduplicate by id)
+  const toolMap = new Map<string, PromptTool>();
+  const mcpServerMap = new Map<string, boolean>(); // track deduplication
+  const mcpTools: McpToolContext[] = [];
+  const skillPrompts: string[] = [];
+  const seenSkillIds = new Set<string>();
+
+  // Helper: process a skill
+  const processSkill = (skill: {
+    id: string;
+    name: string;
+    systemPrompt: string;
+    citationRules: string | null;
+    jurisdiction: string | null;
+    tools: Array<{ tool: { id: string; name: string; description: string | null; icon: string; iconColor: string; type: string; config: unknown; sortOrder: number; isActive: boolean } }>;
+  }) => {
+    if (seenSkillIds.has(skill.id)) return;
+    seenSkillIds.add(skill.id);
+
+    let sp = `\n\n--- Скилл: ${skill.name} ---\n${skill.systemPrompt}`;
+    if (skill.citationRules) {
+      sp += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
+    }
+    if (skill.jurisdiction) {
+      sp += `\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+    }
+    skillPrompts.push(sp);
+
+    // Skill's tools
+    for (const st of skill.tools) {
+      if (st.tool.isActive && !toolMap.has(st.tool.id)) {
+        toolMap.set(st.tool.id, {
+          id: st.tool.id,
+          name: st.tool.name,
+          description: st.tool.description,
+          icon: st.tool.icon,
+          iconColor: st.tool.iconColor,
+          type: st.tool.type,
+          config: st.tool.config as Record<string, unknown>,
+          sortOrder: st.tool.sortOrder,
+        });
+      }
+    }
+  };
+
+  // Helper: process a tool record
+  const processTool = (tool: {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string;
+    iconColor: string;
+    type: string;
+    config: unknown;
+    sortOrder: number;
+    isActive: boolean;
+  }) => {
+    if (!tool.isActive || toolMap.has(tool.id)) return;
+    toolMap.set(tool.id, {
+      id: tool.id,
+      name: tool.name,
+      description: tool.description,
+      icon: tool.icon,
+      iconColor: tool.iconColor,
+      type: tool.type,
+      config: tool.config as Record<string, unknown>,
+      sortOrder: tool.sortOrder,
+    });
+  };
+
+  // Helper: process MCP server
+  const processMcpServer = (srv: {
+    id: string;
+    url: string;
+    transport: string;
+    apiKey: string | null;
+    status: string;
+    discoveredTools: unknown;
+  }) => {
+    if (srv.status !== "CONNECTED" || !srv.discoveredTools || !Array.isArray(srv.discoveredTools) || mcpServerMap.has(srv.id)) return;
+    mcpServerMap.set(srv.id, true);
+
+    const tools = srv.discoveredTools as Array<{
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }>;
+    for (const tool of tools) {
+      mcpTools.push({
+        url: srv.url,
+        transport: srv.transport as "SSE" | "STREAMABLE_HTTP",
+        apiKey: srv.apiKey,
+        name: tool.name,
+        description: tool.description || "",
+        inputSchema: tool.inputSchema || {},
+      });
+    }
+  };
+
+  // 1. Agent's direct tools
+  for (const at of agent.tools) {
+    processTool(at.tool);
+  }
+
+  // 2. Agent's direct skills
+  for (const as of agent.skills) {
+    processSkill(as.skill);
+  }
+
+  // 3. Agent's direct MCP servers
+  for (const ams of agent.mcpServers) {
+    processMcpServer(ams.mcpServer);
+  }
+
+  // 4. Agent's plugins
+  for (const ap of agent.plugins) {
+    const plugin = ap.plugin;
+    if (!plugin.isActive) continue;
+
+    // Plugin's tools
+    for (const pt of plugin.tools) {
+      processTool(pt.tool);
+    }
+
+    // Plugin's skills
+    for (const ps of plugin.skills) {
+      processSkill(ps.skill);
+    }
+
+    // Plugin's MCP servers
+    for (const pms of plugin.mcpServers) {
+      processMcpServer(pms.mcpServer);
+    }
+  }
+
+  // Sort tools by sortOrder
+  const promptTools = Array.from(toolMap.values()).sort(
+    (a, b) => a.sortOrder - b.sortOrder
+  );
+
+  return {
+    systemPrompt,
+    promptTools,
+    mcpTools,
+    skillPrompts,
+  };
+}

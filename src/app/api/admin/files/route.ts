@@ -51,8 +51,8 @@ export async function GET() {
       fileName: f.fileName,
       fileType: f.fileType,
       fileSize: f.fileSize,
-      userId: f.agent.userId,
-      userName: f.agent.user.name || f.agent.user.email,
+      userId: f.agent.userId || "system",
+      userName: f.agent.user?.name || f.agent.user?.email || "Системный",
       createdAt: f.createdAt,
     })),
   ];

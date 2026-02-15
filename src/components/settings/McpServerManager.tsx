@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ interface McpServer {
   apiKey: string | null;
   status: "CONNECTED" | "DISCONNECTED" | "ERROR";
   discoveredTools: McpToolInfo[] | null;
+  isGlobal?: boolean;
 }
 
 export function McpServerManager() {
@@ -30,6 +31,7 @@ export function McpServerManager() {
   const [apiKey, setApiKey] = useState("");
   const [adding, setAdding] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchServers = useCallback(async () => {
@@ -110,6 +112,27 @@ export function McpServerManager() {
     }
   };
 
+  const handleDisconnect = async (id: string) => {
+    setDisconnectingId(id);
+    try {
+      const res = await fetch(`/api/mcp/${id}/disconnect`, { method: "POST" });
+      if (res.ok) {
+        setServers((prev) =>
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, status: "DISCONNECTED", discoveredTools: null }
+              : s
+          )
+        );
+        if (expandedId === id) setExpandedId(null);
+      }
+    } catch {
+      // silent
+    } finally {
+      setDisconnectingId(null);
+    }
+  };
+
   const statusColor: Record<string, string> = {
     CONNECTED: "text-green-500",
     DISCONNECTED: "text-text-muted",
@@ -131,57 +154,84 @@ export function McpServerManager() {
     );
   }
 
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-text-muted">
-        MCP-серверы предоставляют AI дополнительные инструменты: поиск по базе
-        законов, работа с API, файловые операции и другие функции.
-      </p>
+  const systemServers = servers.filter((s) => s.isGlobal);
+  const userServers = servers.filter((s) => !s.isGlobal);
 
-      {servers.length === 0 && !showForm && (
-        <div className="text-center py-6 text-text-muted text-xs">
-          Нет подключённых MCP-серверов
-        </div>
-      )}
+  const renderServer = (srv: McpServer) => {
+    const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
+    const isExpanded = expandedId === srv.id;
+    const isSystem = srv.isGlobal;
+    const isConnected = srv.status === "CONNECTED";
 
-      {servers.map((srv) => {
-        const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
-        const isExpanded = expandedId === srv.id;
-
-        return (
-          <div key={srv.id} className="rounded-xl bg-surface-alt border border-border overflow-hidden">
-            <div className="flex items-center justify-between p-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Circle
-                  className={cn("h-2.5 w-2.5 fill-current shrink-0", statusColor[srv.status])}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate">
-                    {srv.name}
-                  </p>
-                  <p className="text-xs text-text-muted truncate">
-                    {srv.url}
-                    <span className="ml-2 opacity-60">{srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</span>
-                  </p>
-                </div>
+    return (
+      <div key={srv.id} className="rounded-xl bg-surface-alt border border-border overflow-hidden">
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Circle
+              className={cn("h-2.5 w-2.5 fill-current shrink-0", statusColor[srv.status])}
+            />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-text-primary truncate">
+                  {srv.name}
+                </p>
+                {isSystem && (
+                  <Globe className="h-3 w-3 text-accent shrink-0" />
+                )}
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {tools.length > 0 && (
+              <p className="text-xs text-text-muted truncate">
+                {srv.url}
+                <span className="ml-2 opacity-60">{srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {tools.length > 0 && (
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : srv.id)}
+                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+              >
+                <Wrench className="h-3 w-3" />
+                {tools.length}
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            )}
+            <span className={cn("text-xs", statusColor[srv.status])}>
+              {statusLabel[srv.status]}
+            </span>
+            {!isSystem && (
+              <>
+                {isConnected ? (
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : srv.id)}
-                    className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+                    onClick={() => handleDisconnect(srv.id)}
+                    disabled={disconnectingId === srv.id}
+                    title="Отключить"
+                    className="p-1.5 rounded-md hover:bg-orange-50 dark:hover:bg-orange-950 text-text-muted hover:text-orange-500 cursor-pointer transition-colors disabled:opacity-50"
                   >
-                    <Wrench className="h-3 w-3" />
-                    {tools.length}
-                    {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    {disconnectingId === srv.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <PowerOff className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleConnect(srv.id)}
+                    disabled={connectingId === srv.id}
+                    title="Подключить"
+                    className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-950 text-text-muted hover:text-green-500 cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    {connectingId === srv.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Power className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 )}
-                <span className={cn("text-xs", statusColor[srv.status])}>
-                  {statusLabel[srv.status]}
-                </span>
                 <button
                   onClick={() => handleConnect(srv.id)}
                   disabled={connectingId === srv.id}
+                  title="Переподключить"
                   className="p-1.5 rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
                 >
                   {connectingId === srv.id ? (
@@ -192,31 +242,68 @@ export function McpServerManager() {
                 </button>
                 <button
                   onClick={() => handleRemove(srv.id)}
+                  title="Удалить"
                   className="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-text-muted hover:text-error cursor-pointer transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
-              </div>
-            </div>
-
-            {isExpanded && tools.length > 0 && (
-              <div className="border-t border-border px-3 py-2 space-y-1">
-                {tools.map((tool) => (
-                  <div key={tool.name} className="flex items-start gap-2 py-1">
-                    <Wrench className="h-3 w-3 text-text-muted mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-xs font-medium text-text-primary">{tool.name}</span>
-                      {tool.description && (
-                        <p className="text-[11px] text-text-muted">{tool.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              </>
             )}
           </div>
-        );
-      })}
+        </div>
+
+        {isExpanded && tools.length > 0 && (
+          <div className="border-t border-border px-3 py-2 space-y-1">
+            {tools.map((tool) => (
+              <div key={tool.name} className="flex items-start gap-2 py-1">
+                <Wrench className="h-3 w-3 text-text-muted mt-0.5 shrink-0" />
+                <div>
+                  <span className="text-xs font-medium text-text-primary">{tool.name}</span>
+                  {tool.description && (
+                    <p className="text-[11px] text-text-muted">{tool.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-text-muted">
+        MCP-серверы предоставляют AI дополнительные инструменты: поиск по базе
+        законов, работа с API, файловые операции и другие функции.
+      </p>
+
+      {systemServers.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider">
+            <Globe className="h-3 w-3" />
+            Системные серверы
+          </div>
+          {systemServers.map(renderServer)}
+        </div>
+      )}
+
+      {userServers.length > 0 && (
+        <div className="space-y-2">
+          {systemServers.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider mt-2">
+              Пользовательские серверы
+            </div>
+          )}
+          {userServers.map(renderServer)}
+        </div>
+      )}
+
+      {servers.length === 0 && !showForm && (
+        <div className="text-center py-6 text-text-muted text-xs">
+          Нет подключённых MCP-серверов
+        </div>
+      )}
 
       {showForm && (
         <div className="space-y-2 p-3 rounded-xl border border-accent/20 bg-accent-light/30">

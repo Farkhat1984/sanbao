@@ -1,98 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import {
-  FileText,
-  Gavel,
-  AlertTriangle,
-  Search,
-  CheckCircle,
-  MessageSquare,
-  X,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
+import { FileText, X, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
+import { useAgentStore, type AgentToolInfo } from "@/stores/agentStore";
+import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn } from "@/lib/utils";
-import { getTemplatesForTool } from "@/lib/legal-templates";
 import { TemplateModal } from "./TemplateModal";
 import { ImageEditModal } from "@/components/image-edit/ImageEditModal";
-import type { LegalTemplate } from "@/lib/legal-templates";
 
-interface Tool {
+interface TemplateField {
   id: string;
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  prompt: string;
-  color: string;
+  label: string;
+  placeholder: string;
+  type: "text" | "date" | "number" | "textarea" | "select";
+  options?: string[];
+  required: boolean;
 }
 
-const tools: Tool[] = [
-  {
-    id: "contract",
-    icon: FileText,
-    title: "Создать договор",
-    description: "Составить договор по шаблону или с нуля",
-    prompt:
-      "Я хочу создать договор по законодательству РК. Пожалуйста, уточни: 1) Тип договора (купли-продажи, оказания услуг, аренды и т.д.), 2) Стороны договора (наименование, БИН/ИИН), 3) Основные условия и сумму в тенге.",
-    color: "text-blue-500 bg-blue-50 dark:bg-blue-950",
-  },
-  {
-    id: "claim",
-    icon: Gavel,
-    title: "Подготовить иск",
-    description: "Исковое заявление в суд РК",
-    prompt:
-      "Я хочу подготовить исковое заявление по законодательству РК. Пожалуйста, уточни: 1) Тип иска, 2) Суть спора, 3) Требования к ответчику, 4) В какой суд подаётся.",
-    color: "text-purple-500 bg-purple-50 dark:bg-purple-950",
-  },
-  {
-    id: "complaint",
-    icon: AlertTriangle,
-    title: "Составить жалобу",
-    description: "Жалоба в гос. органы РК или суд",
-    prompt:
-      "Я хочу составить жалобу по законодательству РК. Пожалуйста, уточни: 1) На что жалоба, 2) В какой орган направляется (прокуратура, акимат, суд и т.д.), 3) Суть нарушения.",
-    color: "text-amber-500 bg-amber-50 dark:bg-amber-950",
-  },
-  {
-    id: "search",
-    icon: Search,
-    title: "Поиск по НПА РК",
-    description: "Найти статью закона или нормативный акт РК",
-    prompt:
-      "Помоги найти нормативно-правовой акт Республики Казахстан. Что именно ищешь? Укажи тему, ключевые слова или номер закона.",
-    color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950",
-  },
-  {
-    id: "check",
-    icon: CheckCircle,
-    title: "Проверить актуальность",
-    description: "Проверка актуальности статьи закона РК",
-    prompt:
-      "Проверь актуальность следующей статьи закона РК. Укажи номер статьи и закона, и я проверю последние изменения и поправки.",
-    color: "text-cyan-500 bg-cyan-50 dark:bg-cyan-950",
-  },
-  {
-    id: "consult",
-    icon: MessageSquare,
-    title: "Консультация",
-    description: "Юридическая консультация по законодательству РК",
-    prompt:
-      "Мне нужна юридическая консультация по законодательству Казахстана. Опиши свою ситуацию, и я помогу разобраться с правовой стороной.",
-    color: "text-rose-500 bg-rose-50 dark:bg-rose-950",
-  },
-  {
-    id: "image-edit",
-    icon: Sparkles,
-    title: "Редактировать изображение",
-    description: "Изменить изображение с помощью AI",
-    prompt: "",
-    color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950",
-  },
-];
+interface ToolTemplate {
+  id: string;
+  name: string;
+  description: string;
+  fields: TemplateField[];
+  promptTemplate: string;
+}
 
 interface ToolsPanelProps {
   isOpen: boolean;
@@ -101,27 +34,37 @@ interface ToolsPanelProps {
 
 export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
   const { setPendingInput } = useChatStore();
+  const { agentTools } = useAgentStore();
   const [expandedToolId, setExpandedToolId] = useState<string | null>(null);
-  const [activeTemplate, setActiveTemplate] = useState<LegalTemplate | null>(
-    null
-  );
+  const [activeTemplate, setActiveTemplate] = useState<ToolTemplate | null>(null);
   const [imageEditOpen, setImageEditOpen] = useState(false);
 
-  const handleSelectTool = (tool: Tool) => {
-    if (tool.id === "image-edit") {
+  const getTemplates = (tool: AgentToolInfo): ToolTemplate[] => {
+    const config = tool.config as { templates?: ToolTemplate[] };
+    return Array.isArray(config?.templates) ? config.templates : [];
+  };
+
+  const getPrompt = (tool: AgentToolInfo): string => {
+    const config = tool.config as { prompt?: string };
+    return config?.prompt || "";
+  };
+
+  const handleSelectTool = (tool: AgentToolInfo) => {
+    if (tool.name === "Редактировать изображение") {
       setImageEditOpen(true);
       onClose();
       return;
     }
-    const templates = getTemplatesForTool(tool.id);
+    const templates = getTemplates(tool);
     if (templates.length > 0) {
       setExpandedToolId(expandedToolId === tool.id ? null : tool.id);
     } else {
-      sendPrompt(tool.prompt);
+      sendPrompt(getPrompt(tool));
     }
   };
 
   const sendPrompt = (prompt: string) => {
+    if (!prompt) return;
     setPendingInput(prompt);
     onClose();
     setExpandedToolId(null);
@@ -150,7 +93,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-text-primary">
-                  Юридические инструменты
+                  Инструменты
                 </h3>
                 <button
                   onClick={onClose}
@@ -162,10 +105,16 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
 
               {/* Tools Grid */}
               <div className="p-3 grid grid-cols-2 gap-2">
-                {tools.map((tool) => {
-                  const templates = getTemplatesForTool(tool.id);
+                {agentTools.length === 0 && (
+                  <p className="col-span-2 text-xs text-text-muted text-center py-4">
+                    Нет доступных инструментов
+                  </p>
+                )}
+                {agentTools.map((tool) => {
+                  const templates = getTemplates(tool);
                   const hasTemplates = templates.length > 0;
                   const isExpanded = expandedToolId === tool.id;
+                  const ToolIcon = ICON_MAP[tool.icon] || ICON_MAP.Wrench;
 
                   return (
                     <div
@@ -183,17 +132,15 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                       >
                         <div className="flex items-start gap-2">
                           <div
-                            className={cn(
-                              "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                              tool.color
-                            )}
+                            className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `${tool.iconColor}15` }}
                           >
-                            <tool.icon className="h-4 w-4" />
+                            <ToolIcon className="h-4 w-4" style={{ color: tool.iconColor }} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
                               <h4 className="text-xs font-semibold text-text-primary">
-                                {tool.title}
+                                {tool.name}
                               </h4>
                               {hasTemplates && (
                                 <ChevronRight
@@ -240,7 +187,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                                 </button>
                               ))}
                               <button
-                                onClick={() => sendPrompt(tool.prompt)}
+                                onClick={() => sendPrompt(getPrompt(tool))}
                                 className="w-full text-left px-3 py-2 rounded-lg text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-alt transition-colors cursor-pointer"
                               >
                                 Без шаблона — свободная форма

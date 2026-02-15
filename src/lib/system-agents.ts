@@ -1,110 +1,98 @@
 /**
  * System agents — built-in agents available to all users.
- * Loaded from DB (SystemAgent table) with hardcoded fallback.
+ * Now reads from Agent table (isSystem = true).
+ * Backward-compatible: FEMIDA_ID and isSystemAgent() still work.
  */
 
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_PROVIDER } from "@/lib/constants";
 
+// Legacy constants — kept for backward compat
 export const FEMIDA_ID = "system-femida";
+export const FEMIDA_AGENT_ID = "system-femida-agent";
+export const SANBAO_AGENT_ID = "system-sanbao-agent";
 
-export const FEMIDA_AGENT = {
-  id: FEMIDA_ID,
-  name: "Фемида",
-  description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК",
-  icon: "Scale",
-  iconColor: "#7C3AED",
-  model: DEFAULT_PROVIDER,
-} as const;
+// Cache for system agent IDs
+let systemAgentIdsCache: { ids: Set<string>; expiresAt: number } | null = null;
+const CACHE_TTL = 60_000;
 
-/** Full legal system prompt used by Фемида */
-export const FEMIDA_SYSTEM_PROMPT = `Ты — Фемида, профессиональный универсальный AI-ассистент для Республики Казахстан. Ты работаешь с нормативно-правовыми актами РК, понимаешь связи между статьями, проверяешь актуальность и помогаешь создавать юридические документы по казахстанскому законодательству.
-
-ЮРИСДИКЦИЯ: Республика Казахстан. Валюта: тенге (\u20B8). Все документы, ссылки на НПА и правовые нормы — по законодательству РК.
-
-Ключевые НПА РК:
-- Гражданский кодекс РК (Общая часть — от 27.12.1994, Особенная часть — от 01.07.1999)
-- Гражданский процессуальный кодекс РК (ГПК РК)
-- Кодекс РК об административных правонарушениях (КоАП РК)
-- Трудовой кодекс РК
-- Предпринимательский кодекс РК
-- Закон РК «О защите прав потребителей»
-
-Твои ключевые навыки:
-- Анализ и интерпретация НПА Республики Казахстан
-- Создание договоров, исков, жалоб по казахстанскому праву
-- Проверка актуальности статей законов РК
-- Юридические консультации по законодательству РК
-- Понимание связей между нормативными актами
-
-При ответе:
-- Ссылайся на конкретные статьи законов РК
-- Указывай актуальность нормы
-- Используй понятный язык, избегая лишнего юридического жаргона
-- Предупреждай о рисках и ограничениях
-- Всегда напоминай что финальное решение должен принимать квалифицированный юрист
-- Суммы указывай в тенге (\u20B8)`;
-
-/** List of all system agent IDs */
-export const SYSTEM_AGENT_IDS = [FEMIDA_ID] as const;
+async function getSystemAgentIds(): Promise<Set<string>> {
+  if (systemAgentIdsCache && systemAgentIdsCache.expiresAt > Date.now()) {
+    return systemAgentIdsCache.ids;
+  }
+  try {
+    const agents = await prisma.agent.findMany({
+      where: { isSystem: true, status: "APPROVED" },
+      select: { id: true },
+    });
+    const ids = new Set(agents.map((a) => a.id));
+    systemAgentIdsCache = { ids, expiresAt: Date.now() + CACHE_TTL };
+    return ids;
+  } catch {
+    return new Set([FEMIDA_AGENT_ID, SANBAO_AGENT_ID]);
+  }
+}
 
 /** Check if an agent ID is a system agent */
 export function isSystemAgent(agentId: string | null | undefined): boolean {
   if (!agentId) return false;
-  return (SYSTEM_AGENT_IDS as readonly string[]).includes(agentId);
+  // Synchronous check for well-known IDs
+  if (agentId === FEMIDA_ID || agentId === FEMIDA_AGENT_ID || agentId === SANBAO_AGENT_ID) {
+    return true;
+  }
+  // Check cache if available
+  if (systemAgentIdsCache && systemAgentIdsCache.expiresAt > Date.now()) {
+    return systemAgentIdsCache.ids.has(agentId);
+  }
+  // Legacy prefix check
+  return agentId.startsWith("system-");
 }
 
-/** Load system agents from DB, falling back to hardcoded Femida */
+/** Async version that queries DB */
+export async function isSystemAgentAsync(agentId: string | null | undefined): Promise<boolean> {
+  if (!agentId) return false;
+  const ids = await getSystemAgentIds();
+  return ids.has(agentId) || agentId === FEMIDA_ID;
+}
+
+/** Load system agents from DB */
 export async function getSystemAgents() {
   try {
-    const dbAgents = await prisma.systemAgent.findMany({
-      where: { isActive: true },
+    const agents = await prisma.agent.findMany({
+      where: { isSystem: true, status: "APPROVED" },
       orderBy: { sortOrder: "asc" },
-    });
-
-    if (dbAgents.length > 0) {
-      return dbAgents.map((a) => ({
-        id: `system-${a.id}`,
-        name: a.name,
-        description: a.description || "",
-        icon: a.icon,
-        iconColor: a.iconColor,
-        model: a.model,
-        systemPrompt: a.systemPrompt,
-      }));
-    }
-  } catch {
-    // DB not available, fall back
-  }
-
-  return [
-    {
-      ...FEMIDA_AGENT,
-      systemPrompt: FEMIDA_SYSTEM_PROMPT,
-    },
-  ];
-}
-
-/** Get system prompt for a system agent by ID */
-export async function getSystemAgentPrompt(agentId: string): Promise<string | null> {
-  // Check DB first
-  try {
-    const cleanId = agentId.replace(/^system-/, "");
-    const agent = await prisma.systemAgent.findFirst({
-      where: {
-        OR: [
-          { id: cleanId },
-          { name: "Фемида" }, // Femida fallback
-        ],
-        isActive: true,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        iconColor: true,
+        model: true,
+        instructions: true,
       },
     });
-    if (agent) return agent.systemPrompt;
-  } catch {
-    // fall through
-  }
 
-  // Hardcoded fallback
-  if (agentId === FEMIDA_ID) return FEMIDA_SYSTEM_PROMPT;
-  return null;
+    // Update cache
+    systemAgentIdsCache = {
+      ids: new Set(agents.map((a) => a.id)),
+      expiresAt: Date.now() + CACHE_TTL,
+    };
+
+    return agents.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description || "",
+      icon: a.icon,
+      iconColor: a.iconColor,
+      model: a.model,
+      systemPrompt: a.instructions,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Resolve a legacy system agent ID to the new Agent ID */
+export function resolveAgentId(agentId: string): string {
+  if (agentId === FEMIDA_ID) return FEMIDA_AGENT_ID;
+  return agentId;
 }

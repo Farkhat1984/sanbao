@@ -14,7 +14,8 @@ import {
   buildSystemPromptWithContext,
 } from "@/lib/context";
 import { buildMemoryContext } from "@/lib/memory";
-import { FEMIDA_ID, FEMIDA_SYSTEM_PROMPT, isSystemAgent } from "@/lib/system-agents";
+import { isSystemAgent, resolveAgentId } from "@/lib/system-agents";
+import { resolveAgentContext } from "@/lib/tool-resolver";
 import { callMcpTool } from "@/lib/mcp-client";
 import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 import { checkContentFilter } from "@/lib/content-filter";
@@ -743,50 +744,55 @@ export async function POST(req: Request) {
     );
   }
 
-  // Daily message limit
-  if (
-    plan.messagesPerDay > 0 &&
-    (usage?.messageCount ?? 0) >= plan.messagesPerDay
-  ) {
-    return NextResponse.json(
-      { error: `Достигнут дневной лимит сообщений (${plan.messagesPerDay}). Перейдите на более объёмный тариф для увеличения лимита.`, limit: plan.messagesPerDay },
-      { status: 429 }
-    );
-  }
+  const isAdmin = session.user.role === "ADMIN";
 
-  // Monthly token limit
-  if (
-    plan.tokensPerMonth > 0 &&
-    monthlyUsage.tokenCount >= plan.tokensPerMonth
-  ) {
-    return NextResponse.json(
-      { error: "Достигнут месячный лимит токенов. Перейдите на более объёмный тариф для продолжения работы.", limit: plan.tokensPerMonth },
-      { status: 429 }
-    );
-  }
+  // Skip all limits for admins
+  if (!isAdmin) {
+    // Daily message limit
+    if (
+      plan.messagesPerDay > 0 &&
+      (usage?.messageCount ?? 0) >= plan.messagesPerDay
+    ) {
+      return NextResponse.json(
+        { error: `Достигнут дневной лимит сообщений (${plan.messagesPerDay}). Перейдите на более объёмный тариф для увеличения лимита.`, limit: plan.messagesPerDay },
+        { status: 429 }
+      );
+    }
 
-  // Minute rate limit
-  if (!checkMinuteRateLimit(session.user.id, plan.requestsPerMinute)) {
-    return NextResponse.json(
-      { error: "Слишком много запросов. Подождите минуту." },
-      { status: 429 }
-    );
-  }
+    // Monthly token limit
+    if (
+      plan.tokensPerMonth > 0 &&
+      monthlyUsage.tokenCount >= plan.tokensPerMonth
+    ) {
+      return NextResponse.json(
+        { error: "Достигнут месячный лимит токенов. Перейдите на более объёмный тариф для продолжения работы.", limit: plan.tokensPerMonth },
+        { status: 429 }
+      );
+    }
 
-  // Reasoning access check
-  if (thinkingEnabled && !plan.canUseReasoning) {
-    return NextResponse.json(
-      { error: "Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках." },
-      { status: 403 }
-    );
-  }
+    // Minute rate limit
+    if (!checkMinuteRateLimit(session.user.id, plan.requestsPerMinute)) {
+      return NextResponse.json(
+        { error: "Слишком много запросов. Подождите минуту." },
+        { status: 429 }
+      );
+    }
 
-  // Web search access check
-  if (webSearchEnabled && !plan.canUseAdvancedTools) {
-    return NextResponse.json(
-      { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
-      { status: 403 }
-    );
+    // Reasoning access check
+    if (thinkingEnabled && !plan.canUseReasoning) {
+      return NextResponse.json(
+        { error: "Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках." },
+        { status: 403 }
+      );
+    }
+
+    // Web search access check
+    if (webSearchEnabled && !plan.canUseAdvancedTools) {
+      return NextResponse.json(
+        { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
+        { status: 403 }
+      );
+    }
   }
 
   // Content filter check on last user message
@@ -809,65 +815,15 @@ export async function POST(req: Request) {
   const agentMcpTools: McpToolContext[] = [];
 
   if (agentId) {
-    if (isSystemAgent(agentId)) {
-      // System agent: use hardcoded prompt
-      if (agentId === FEMIDA_ID) {
-        systemPrompt = `${FEMIDA_SYSTEM_PROMPT}\n\n${SYSTEM_PROMPT}`;
-      }
-    } else {
-      // User-created agent: load from DB
-      const agent = await prisma.agent.findFirst({
-        where: { id: agentId, userId: session.user.id },
-        include: {
-          files: { select: { extractedText: true, fileName: true } },
-          skills: { include: { skill: true } },
-          mcpServers: { include: { mcpServer: true } },
-        },
-      });
+    // Resolve legacy IDs (e.g. "system-femida" → "system-femida-agent")
+    const resolvedId = resolveAgentId(agentId);
 
-      if (agent) {
-        const filesContext = agent.files
-          .filter((f) => f.extractedText)
-          .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
-          .join("\n\n");
+    // Use unified resolver for ALL agents (system + user)
+    const ctx = await resolveAgentContext(resolvedId);
 
-        systemPrompt = `${agent.instructions}\n\n${SYSTEM_PROMPT}`;
-
-        if (filesContext) {
-          systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
-        }
-
-        // Append agent skills
-        for (const as of agent.skills) {
-          const sk = as.skill;
-          let skillPrompt = `\n\n--- Скилл: ${sk.name} ---\n${sk.systemPrompt}`;
-          if (sk.citationRules) {
-            skillPrompt += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${sk.citationRules}`;
-          }
-          if (sk.jurisdiction) {
-            skillPrompt += `\nЮРИСДИКЦИЯ: ${sk.jurisdiction}`;
-          }
-          systemPrompt += skillPrompt;
-        }
-
-        // Collect MCP tools from agent's connected servers
-        for (const ams of agent.mcpServers) {
-          const srv = ams.mcpServer;
-          if (srv.status === "CONNECTED" && srv.discoveredTools) {
-            const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
-            for (const tool of tools) {
-              agentMcpTools.push({
-                url: srv.url,
-                transport: srv.transport,
-                apiKey: srv.apiKey,
-                name: tool.name,
-                description: tool.description || "",
-                inputSchema: tool.inputSchema || {},
-              });
-            }
-          }
-        }
-      }
+    if (ctx.systemPrompt) {
+      systemPrompt = ctx.systemPrompt + "\n\n" + SYSTEM_PROMPT + ctx.skillPrompts.join("");
+      agentMcpTools.push(...ctx.mcpTools);
     }
   }
 

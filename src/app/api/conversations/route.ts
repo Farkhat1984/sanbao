@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
-import { isSystemAgent, FEMIDA_AGENT, FEMIDA_ID } from "@/lib/system-agents";
+import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
 
 export async function GET() {
   const session = await auth();
@@ -22,7 +22,7 @@ export async function GET() {
       updatedAt: true,
       agentId: true,
       systemAgentId: true,
-      agent: { select: { id: true, name: true, icon: true, iconColor: true } },
+      agent: { select: { id: true, name: true, icon: true, iconColor: true, isSystem: true } },
       messages: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -32,8 +32,8 @@ export async function GET() {
   });
 
   const result = conversations.map((c) => {
-    // System agent info
-    if (c.systemAgentId === FEMIDA_ID) {
+    // Use agent relation if available
+    if (c.agent) {
       return {
         id: c.id,
         title: c.title,
@@ -42,10 +42,30 @@ export async function GET() {
         createdAt: c.createdAt.toISOString(),
         updatedAt: c.updatedAt.toISOString(),
         lastMessage: c.messages[0]?.content,
-        agentId: FEMIDA_ID,
-        agentName: FEMIDA_AGENT.name,
-        agentIcon: FEMIDA_AGENT.icon,
-        agentIconColor: FEMIDA_AGENT.iconColor,
+        agentId: c.agent.id,
+        agentName: c.agent.name,
+        agentIcon: c.agent.icon,
+        agentIconColor: c.agent.iconColor,
+        isSystemAgent: c.agent.isSystem,
+      };
+    }
+
+    // Legacy fallback: systemAgentId without agent relation
+    // This handles old conversations before migration
+    if (c.systemAgentId) {
+      return {
+        id: c.id,
+        title: c.title,
+        pinned: c.pinned,
+        archived: c.archived,
+        createdAt: c.createdAt.toISOString(),
+        updatedAt: c.updatedAt.toISOString(),
+        lastMessage: c.messages[0]?.content,
+        agentId: resolveAgentId(c.systemAgentId),
+        agentName: c.systemAgentId === FEMIDA_ID ? "Фемида" : null,
+        agentIcon: c.systemAgentId === FEMIDA_ID ? "Scale" : null,
+        agentIconColor: c.systemAgentId === FEMIDA_ID ? "#7C3AED" : null,
+        isSystemAgent: true,
       };
     }
 
@@ -57,10 +77,11 @@ export async function GET() {
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
       lastMessage: c.messages[0]?.content,
-      agentId: c.agent?.id ?? null,
-      agentName: c.agent?.name ?? null,
-      agentIcon: c.agent?.icon ?? null,
-      agentIconColor: c.agent?.iconColor ?? null,
+      agentId: null,
+      agentName: null,
+      agentIcon: null,
+      agentIconColor: null,
+      isSystemAgent: false,
     };
   });
 
@@ -75,9 +96,9 @@ export async function POST(req: Request) {
 
   const { title, agentId } = await req.json();
 
-  // Check maxConversations limit
+  // Check maxConversations limit (admins bypass)
   const { plan } = await getUserPlanAndUsage(session.user.id);
-  if (plan && plan.maxConversations > 0) {
+  if (session.user.role !== "ADMIN" && plan && plan.maxConversations > 0) {
     const count = await prisma.conversation.count({
       where: { userId: session.user.id, archived: false },
     });
@@ -89,31 +110,23 @@ export async function POST(req: Request) {
     }
   }
 
-  // Separate system agents from user agents
-  const isSystem = isSystemAgent(agentId);
+  // Resolve legacy IDs and use agentId for all agents
+  const resolvedId = agentId ? resolveAgentId(agentId) : null;
 
   const conversation = await prisma.conversation.create({
     data: {
       title: title || "Новый чат",
       userId: session.user.id,
-      agentId: isSystem ? null : (agentId || null),
-      systemAgentId: isSystem ? agentId : null,
+      agentId: resolvedId,
     },
   });
 
   // Build response with agent info
   let agentInfo = null;
-  if (isSystem && agentId === FEMIDA_ID) {
-    agentInfo = {
-      id: FEMIDA_ID,
-      name: FEMIDA_AGENT.name,
-      icon: FEMIDA_AGENT.icon,
-      iconColor: FEMIDA_AGENT.iconColor,
-    };
-  } else if (agentId && !isSystem) {
-    const agent = await prisma.agent.findFirst({
-      where: { id: agentId, userId: session.user.id },
-      select: { id: true, name: true, icon: true, iconColor: true },
+  if (resolvedId) {
+    const agent = await prisma.agent.findUnique({
+      where: { id: resolvedId },
+      select: { id: true, name: true, icon: true, iconColor: true, isSystem: true },
     });
     agentInfo = agent;
   }
@@ -129,5 +142,6 @@ export async function POST(req: Request) {
     agentName: agentInfo?.name ?? null,
     agentIcon: agentInfo?.icon ?? null,
     agentIconColor: agentInfo?.iconColor ?? null,
+    isSystemAgent: agentInfo?.isSystem ?? false,
   });
 }

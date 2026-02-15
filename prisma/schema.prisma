@@ -80,6 +80,8 @@ model User {
   apiKeys       ApiKey[]
   payments      Payment[]
   fileUploads   FileUpload[]
+  tools         Tool[]
+  plugins       Plugin[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,7 +218,7 @@ model ConversationPlan {
 
 model Agent {
   id           String  @id @default(cuid())
-  userId       String
+  userId       String?
   name         String
   description  String? @db.Text
   instructions String  @db.Text
@@ -225,18 +227,23 @@ model Agent {
   iconColor    String  @default("#4F6EF7")
   avatar       String? @db.Text
   isPublic     Boolean @default(false)
+  isSystem     Boolean @default(false)
+  sortOrder    Int     @default(0)
   status       SkillStatus @default(DRAFT)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   files         AgentFile[]
   conversations Conversation[]
   skills        AgentSkill[]
   mcpServers    AgentMcpServer[]
+  tools         AgentTool[]
+  plugins       AgentPlugin[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, updatedAt])
+  @@index([isSystem, sortOrder])
 }
 
 model AgentFile {
@@ -340,6 +347,8 @@ model Skill {
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   agents AgentSkill[]
+  tools  SkillTool[]
+  plugins PluginSkill[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -357,6 +366,127 @@ model AgentSkill {
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, skillId])
+}
+
+// ─── Tools & Plugins ───────────────────────────────────
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  icon        String   @default("Wrench")
+  iconColor   String   @default("#4F6EF7")
+  type        ToolType @default(PROMPT_TEMPLATE)
+  config      Json     @default("{}")
+  inputSchema Json?
+  isGlobal    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  agents  AgentTool[]
+  skills  SkillTool[]
+  plugins PluginTool[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isGlobal, isActive])
+}
+
+model Plugin {
+  id          String  @id @default(cuid())
+  name        String
+  description String? @db.Text
+  icon        String  @default("Puzzle")
+  iconColor   String  @default("#4F6EF7")
+  version     String  @default("1.0.0")
+  isGlobal    Boolean @default(false)
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  agents     AgentPlugin[]
+  mcpServers PluginMcpServer[]
+  skills     PluginSkill[]
+  tools      PluginTool[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isGlobal, isActive])
+}
+
+model AgentTool {
+  id      String @id @default(cuid())
+  agentId String
+  toolId  String
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tool  Tool  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, toolId])
+}
+
+model AgentPlugin {
+  id       String @id @default(cuid())
+  agentId  String
+  pluginId String
+
+  agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, pluginId])
+}
+
+model PluginMcpServer {
+  id          String @id @default(cuid())
+  pluginId    String
+  mcpServerId String
+
+  plugin    Plugin    @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, mcpServerId])
+}
+
+model PluginSkill {
+  id       String @id @default(cuid())
+  pluginId String
+  skillId  String
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  skill  Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, skillId])
+}
+
+model PluginTool {
+  id       String @id @default(cuid())
+  pluginId String
+  toolId   String
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  tool   Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, toolId])
+}
+
+model SkillTool {
+  id      String @id @default(cuid())
+  skillId String
+  toolId  String
+
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  tool  Tool  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([skillId, toolId])
 }
 
 // ─── Persistent Tasks ──────────────────────────────────
@@ -416,6 +546,7 @@ model McpServer {
   user     User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   agents   AgentMcpServer[]
   toolLogs McpToolLog[]
+  plugins  PluginMcpServer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -917,6 +1048,13 @@ enum SkillStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ToolType {
+  PROMPT_TEMPLATE
+  WEBHOOK
+  URL
+  FUNCTION
 }
 
 enum NotificationType {

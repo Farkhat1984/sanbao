@@ -31,7 +31,9 @@
 | `/admin/providers` | AI-провайдеры: CRUD, тест-запрос, шифрование ключей |
 | `/admin/models` | Модели: параметры (temperature, top_p, maxTokens), thinking, стоимость |
 | `/admin/models/matrix` | Матрица план × модель — какие модели доступны каким планам |
-| `/admin/agents` | Системные агенты: CRUD, drag-and-drop сортировка, предпросмотр |
+| `/admin/agents` | Системные агенты: CRUD, drag-and-drop сортировка, предпросмотр. Используют таблицу Agent (isSystem=true) |
+| `/admin/tools` | Инструменты: CRUD, типы (PROMPT_TEMPLATE, WEBHOOK, URL, FUNCTION), JSON-конфиг с шаблонами, привязка к агентам |
+| `/admin/plugins` | Плагины: CRUD, привязка tools/skills/MCP-серверов, версионирование |
 | `/admin/skills` | Скиллы: CRUD, модерация (approve/reject), статистика использования |
 | `/admin/mcp` | Глобальные MCP-серверы: CRUD, health-check, логи вызовов инструментов |
 | `/admin/experiments` | A/B тестирование промптов: варианты, трафик, impressions, рейтинг |

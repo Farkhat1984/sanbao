@@ -25,7 +25,7 @@ import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { cn } from "@/lib/utils";
-import { FEMIDA_ID } from "@/lib/system-agents";
+import { useAgentStore } from "@/stores/agentStore";
 import { MAX_FILE_SIZE_PARSE, DEFAULT_PROVIDER } from "@/lib/constants";
 
 const CHAT_ACCEPTED_EXTENSIONS =
@@ -117,6 +117,7 @@ export function MessageInput() {
   } = useChatStore();
 
   const { addTask } = useTaskStore();
+  const { agentTools } = useAgentStore();
 
   // Detect speech support on client only (avoid hydration mismatch)
   const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
@@ -804,8 +805,8 @@ export function MessageInput() {
                         <span>Сделать фото</span>
                       </button>
 
-                      {/* Legal tools (only for Фемида) */}
-                      {activeAgentId === FEMIDA_ID && (
+                      {/* Agent tools (shown when agent has PROMPT_TEMPLATE tools) */}
+                      {agentTools.length > 0 && (
                         <button
                           onClick={handleOpenTools}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
@@ -813,7 +814,7 @@ export function MessageInput() {
                           <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center">
                             <Wrench className="h-3.5 w-3.5" />
                           </div>
-                          <span>Юр. инструменты</span>
+                          <span>Инструменты</span>
                         </button>
                       )}
 
@@ -963,9 +964,7 @@ export function MessageInput() {
             placeholder={
               isRecording
                 ? "Говорите..."
-                : activeAgentId === FEMIDA_ID
-                  ? "Задайте юридический вопрос..."
-                  : "Напишите сообщение..."
+                : "Напишите сообщение..."
             }
             rows={1}
             className={cn(

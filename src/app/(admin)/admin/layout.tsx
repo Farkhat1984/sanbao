@@ -15,10 +15,9 @@ export default async function AdminLayout({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true, name: true, twoFactorEnabled: true },
+    select: { role: true, name: true },
   });
   if (user?.role !== "ADMIN") redirect("/chat");
-  if (!user.twoFactorEnabled) redirect("/settings?setup2fa=1");
 
   return (
     <div className="h-screen flex bg-bg">

@@ -20,8 +20,8 @@ export default function ConversationPage() {
         return r.json();
       })
       .then((data) => {
-        // Restore activeAgentId: prefer systemAgentId (e.g. Фемида), fallback to regular agentId
-        setActiveAgentId(data.systemAgentId || data.agentId || null);
+        // Restore activeAgentId from conversation
+        setActiveAgentId(data.agentId || null);
 
         if (data.messages && Array.isArray(data.messages)) {
           setMessages(

@@ -73,7 +73,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
             {agent.name}
           </h3>
           <p className="text-xs text-violet-500 dark:text-violet-400 mt-0.5">
-            Юридический ассистент
+            Системный агент
           </p>
         </div>
       </div>

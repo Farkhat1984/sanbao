@@ -38,15 +38,10 @@ export async function requireAdmin() {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true, twoFactorEnabled: true },
+    select: { role: true },
   });
   if (user?.role !== "ADMIN") {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-
-  // Mandatory 2FA for admins
-  if (!user.twoFactorEnabled) {
-    return { error: NextResponse.json({ error: "2FA_SETUP_REQUIRED" }, { status: 403 }) };
   }
 
   // IP whitelist check

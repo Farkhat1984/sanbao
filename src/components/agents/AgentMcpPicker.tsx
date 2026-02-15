@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Circle, Wrench } from "lucide-react";
+import { Loader2, Circle, Wrench, Globe, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface McpServerItem {
@@ -10,6 +10,7 @@ interface McpServerItem {
   url: string;
   status: "CONNECTED" | "DISCONNECTED" | "ERROR";
   discoveredTools: Array<{ name: string }> | null;
+  isGlobal?: boolean;
 }
 
 interface AgentMcpPickerProps {
@@ -60,40 +61,69 @@ export function AgentMcpPicker({ selectedIds, onChange }: AgentMcpPickerProps) {
     );
   }
 
-  return (
-    <div className="space-y-2">
-      {servers.map((srv) => {
-        const selected = selectedIds.includes(srv.id);
-        const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
+  const systemServers = servers.filter((s) => s.isGlobal);
+  const userServers = servers.filter((s) => !s.isGlobal);
 
-        return (
-          <button
-            key={srv.id}
-            type="button"
-            onClick={() => toggle(srv.id)}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer border",
-              selected
-                ? "border-accent bg-accent/5"
-                : "border-border bg-surface-alt hover:border-border-hover"
+  const renderServer = (srv: McpServerItem) => {
+    const selected = selectedIds.includes(srv.id);
+    const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
+
+    return (
+      <button
+        key={srv.id}
+        type="button"
+        onClick={() => toggle(srv.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer border",
+          selected
+            ? "border-accent bg-accent/5"
+            : "border-border bg-surface-alt hover:border-border-hover"
+        )}
+      >
+        <Circle
+          className={cn("h-2 w-2 fill-current shrink-0", statusColor[srv.status])}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-medium text-text-primary truncate">{srv.name}</p>
+            {srv.isGlobal && (
+              <Globe className="h-3 w-3 text-accent shrink-0" />
             )}
-          >
-            <Circle
-              className={cn("h-2 w-2 fill-current shrink-0", statusColor[srv.status])}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-text-primary truncate">{srv.name}</p>
-              <p className="text-[11px] text-text-muted truncate">{srv.url}</p>
+          </div>
+          <p className="text-[11px] text-text-muted truncate">{srv.url}</p>
+        </div>
+        {tools.length > 0 && (
+          <span className="flex items-center gap-1 text-[11px] text-text-muted shrink-0">
+            <Wrench className="h-3 w-3" />
+            {tools.length}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {systemServers.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider">
+            <Globe className="h-3 w-3" />
+            Системные
+          </div>
+          {systemServers.map(renderServer)}
+        </div>
+      )}
+      {userServers.length > 0 && (
+        <div className="space-y-2">
+          {systemServers.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider">
+              <User className="h-3 w-3" />
+              Пользовательские
             </div>
-            {tools.length > 0 && (
-              <span className="flex items-center gap-1 text-[11px] text-text-muted shrink-0">
-                <Wrench className="h-3 w-3" />
-                {tools.length}
-              </span>
-            )}
-          </button>
-        );
-      })}
+          )}
+          {userServers.map(renderServer)}
+        </div>
+      )}
     </div>
   );
 }

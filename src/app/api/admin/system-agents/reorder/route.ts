@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   // Update sortOrder for each agent
   await Promise.all(
     order.map((id: string, index: number) =>
-      prisma.systemAgent.update({
+      prisma.agent.update({
         where: { id },
         data: { sortOrder: index },
       })

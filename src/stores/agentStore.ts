@@ -1,9 +1,20 @@
 import { create } from "zustand";
 import type { Agent, AgentSummary } from "@/types/agent";
 
+export interface AgentToolInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  iconColor: string;
+  config: Record<string, unknown>;
+  sortOrder: number;
+}
+
 interface AgentState {
   agents: AgentSummary[];
   activeAgent: Agent | null;
+  agentTools: AgentToolInfo[];
   isLoading: boolean;
 
   setAgents: (agents: AgentSummary[]) => void;
@@ -11,12 +22,14 @@ interface AgentState {
   updateAgent: (id: string, data: Partial<AgentSummary>) => void;
   removeAgent: (id: string) => void;
   setActiveAgent: (agent: Agent | null) => void;
+  setAgentTools: (tools: AgentToolInfo[]) => void;
   setLoading: (isLoading: boolean) => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
   agents: [],
   activeAgent: null,
+  agentTools: [],
   isLoading: false,
 
   setAgents: (agents) => set({ agents }),
@@ -36,5 +49,6 @@ export const useAgentStore = create<AgentState>((set) => ({
     })),
 
   setActiveAgent: (activeAgent) => set({ activeAgent }),
+  setAgentTools: (agentTools) => set({ agentTools }),
   setLoading: (isLoading) => set({ isLoading }),
 }));

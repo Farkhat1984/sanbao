@@ -3,14 +3,37 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { fillTemplate } from "@/lib/legal-templates";
-import type { LegalTemplate } from "@/lib/legal-templates";
+
+interface TemplateField {
+  id: string;
+  label: string;
+  placeholder: string;
+  type: "text" | "date" | "number" | "textarea" | "select";
+  options?: string[];
+  required: boolean;
+}
+
+interface ToolTemplate {
+  id: string;
+  name: string;
+  description: string;
+  fields: TemplateField[];
+  promptTemplate: string;
+}
 
 interface TemplateModalProps {
-  template: LegalTemplate | null;
+  template: ToolTemplate | null;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (filledPrompt: string) => void;
+}
+
+function fillTemplate(template: ToolTemplate, values: Record<string, string>): string {
+  let result = template.promptTemplate;
+  for (const [key, value] of Object.entries(values)) {
+    result = result.replaceAll(`{{${key}}}`, value);
+  }
+  return result;
 }
 
 export function TemplateModal({

@@ -7,6 +7,8 @@ import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
+import { AgentToolPicker } from "./AgentToolPicker";
+import { AgentPluginPicker } from "./AgentPluginPicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Agent, AgentFile } from "@/types/agent";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
@@ -32,6 +34,12 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>(
     agent?.mcpServers?.map((m) => m.mcpServer.id) || []
   );
+  const [selectedToolIds, setSelectedToolIds] = useState<string[]>(
+    agent?.tools?.map((t) => t.tool.id) || []
+  );
+  const [selectedPluginIds, setSelectedPluginIds] = useState<string[]>(
+    agent?.plugins?.map((p) => p.plugin.id) || []
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +59,7 @@ export function AgentForm({ agent }: AgentFormProps) {
     setError(null);
 
     try {
-      const body = { name, description, instructions, icon, iconColor, avatar, skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds };
+      const body = { name, description, instructions, icon, iconColor, avatar, skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds, pluginIds: selectedPluginIds };
 
       const res = await fetch(
         isEdit ? `/api/agents/${agent.id}` : "/api/agents",
@@ -270,6 +278,34 @@ export function AgentForm({ agent }: AgentFormProps) {
           />
           <p className="text-xs text-text-muted mt-1">
             MCP-серверы предоставляют агенту дополнительные инструменты
+          </p>
+        </div>
+
+        {/* Tools */}
+        <div>
+          <label className="text-sm font-medium text-text-primary mb-2 block">
+            Инструменты
+          </label>
+          <AgentToolPicker
+            selectedIds={selectedToolIds}
+            onChange={setSelectedToolIds}
+          />
+          <p className="text-xs text-text-muted mt-1">
+            Инструменты добавляют быстрые действия и шаблоны к чату с агентом
+          </p>
+        </div>
+
+        {/* Plugins */}
+        <div>
+          <label className="text-sm font-medium text-text-primary mb-2 block">
+            Плагины
+          </label>
+          <AgentPluginPicker
+            selectedIds={selectedPluginIds}
+            onChange={setSelectedPluginIds}
+          />
+          <p className="text-xs text-text-muted mt-1">
+            Плагины объединяют инструменты, скиллы и MCP-серверы в пакеты
           </p>
         </div>
 

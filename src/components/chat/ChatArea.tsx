@@ -5,7 +5,6 @@ import { ListChecks, ChevronDown, ChevronRight } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { useTaskStore } from "@/stores/taskStore";
-import { isSystemAgent } from "@/lib/system-agents";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { WelcomeScreen } from "./WelcomeScreen";
@@ -16,7 +15,7 @@ import { ClarifyModal } from "./ClarifyModal";
 
 export function ChatArea() {
   const { messages, isStreaming, streamingPhase, contextUsage, activeConversationId, activeAgentId, conversations } = useChatStore();
-  const { setActiveAgent } = useAgentStore();
+  const { setActiveAgent, setAgentTools } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [tasksExpanded, setTasksExpanded] = useState(false);
@@ -27,16 +26,24 @@ export function ChatArea() {
 
   // Load full agent data when activeAgentId changes
   useEffect(() => {
-    if (!activeAgentId || isSystemAgent(activeAgentId)) {
+    if (!activeAgentId) {
       setActiveAgent(null);
+      setAgentTools([]);
       return;
     }
 
+    // Load agent info
     fetch(`/api/agents/${activeAgentId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((agent) => setActiveAgent(agent))
       .catch(() => setActiveAgent(null));
-  }, [activeAgentId, setActiveAgent]);
+
+    // Load agent tools
+    fetch(`/api/agents/${activeAgentId}/tools`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((tools) => setAgentTools(Array.isArray(tools) ? tools : []))
+      .catch(() => setAgentTools([]));
+  }, [activeAgentId, setActiveAgent, setAgentTools]);
 
   const hasMessages = messages.length > 0;
   const activeTasks = tasks.filter((t) => t.status === "IN_PROGRESS");

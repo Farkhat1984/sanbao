@@ -9,13 +9,19 @@ export async function GET() {
   }
 
   const servers = await prisma.mcpServer.findMany({
-    where: { userId: session.user.id },
+    where: {
+      OR: [
+        { userId: session.user.id },
+        { isGlobal: true },
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 
   return NextResponse.json(
     servers.map((s) => ({
       ...s,
+      isGlobal: s.isGlobal,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     }))

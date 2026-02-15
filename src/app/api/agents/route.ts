@@ -10,28 +10,52 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const agents = await prisma.agent.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      icon: true,
-      iconColor: true,
-      model: true,
-      avatar: true,
-      updatedAt: true,
-      _count: { select: { conversations: true, files: true } },
-    },
+  // Parallel fetch: system agents + user agents
+  const [systemAgents, userAgents] = await Promise.all([
+    prisma.agent.findMany({
+      where: { isSystem: true, status: "APPROVED" },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        iconColor: true,
+        model: true,
+        avatar: true,
+        isSystem: true,
+        updatedAt: true,
+        _count: { select: { conversations: true, files: true } },
+      },
+    }),
+    prisma.agent.findMany({
+      where: { userId: session.user.id, isSystem: false },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        iconColor: true,
+        model: true,
+        avatar: true,
+        isSystem: true,
+        updatedAt: true,
+        _count: { select: { conversations: true, files: true } },
+      },
+    }),
+  ]);
+
+  return NextResponse.json({
+    systemAgents: systemAgents.map((a) => ({
+      ...a,
+      updatedAt: a.updatedAt.toISOString(),
+    })),
+    userAgents: userAgents.map((a) => ({
+      ...a,
+      updatedAt: a.updatedAt.toISOString(),
+    })),
   });
-
-  const result = agents.map((a) => ({
-    ...a,
-    updatedAt: a.updatedAt.toISOString(),
-  }));
-
-  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {
@@ -50,9 +74,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // Check maxAgents limit (0 = no agents allowed, -1 = unlimited)
+  // Check maxAgents limit (0 = no agents allowed, -1 = unlimited; admins bypass)
   const { plan } = await getUserPlanAndUsage(session.user.id);
-  if (plan) {
+  if (session.user.role !== "ADMIN" && plan) {
     if (plan.maxAgents === 0) {
       return NextResponse.json(
         { error: "Создание агентов недоступно на вашем тарифе" },
@@ -61,7 +85,7 @@ export async function POST(req: Request) {
     }
     if (plan.maxAgents > 0) {
       const agentCount = await prisma.agent.count({
-        where: { userId: session.user.id },
+        where: { userId: session.user.id, isSystem: false },
       });
       if (agentCount >= plan.maxAgents) {
         return NextResponse.json(

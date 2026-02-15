@@ -7,11 +7,29 @@ export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const agents = await prisma.systemAgent.findMany({
+  const agents = await prisma.agent.findMany({
+    where: { isSystem: true },
     orderBy: { sortOrder: "asc" },
+    include: {
+      tools: { include: { tool: { select: { id: true, name: true } } } },
+      plugins: { include: { plugin: { select: { id: true, name: true } } } },
+    },
   });
 
-  return NextResponse.json(agents);
+  // Map to compatible format for admin page
+  return NextResponse.json(agents.map((a) => ({
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    systemPrompt: a.instructions,
+    icon: a.icon,
+    iconColor: a.iconColor,
+    model: a.model,
+    isActive: a.status === "APPROVED",
+    sortOrder: a.sortOrder,
+    tools: a.tools.map((t) => t.tool),
+    plugins: a.plugins.map((p) => p.plugin),
+  })));
 }
 
 export async function POST(req: Request) {
@@ -25,23 +43,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Обязательные поля: name, systemPrompt" }, { status: 400 });
   }
 
-  const existing = await prisma.systemAgent.findUnique({ where: { name } });
-  if (existing) {
-    return NextResponse.json({ error: "Агент с таким именем уже существует" }, { status: 409 });
-  }
-
-  const agent = await prisma.systemAgent.create({
+  const agent = await prisma.agent.create({
     data: {
       name,
       description: description || null,
-      systemPrompt,
+      instructions: systemPrompt,
       icon: icon || DEFAULT_AGENT_ICON,
       iconColor: iconColor || DEFAULT_ICON_COLOR,
       model: model || "default",
-      isActive: isActive ?? true,
+      status: isActive === false ? "PENDING" : "APPROVED",
+      isSystem: true,
+      userId: null,
       sortOrder: sortOrder ?? 0,
     },
   });
 
-  return NextResponse.json(agent, { status: 201 });
+  return NextResponse.json({
+    id: agent.id,
+    name: agent.name,
+    description: agent.description,
+    systemPrompt: agent.instructions,
+    icon: agent.icon,
+    iconColor: agent.iconColor,
+    model: agent.model,
+    isActive: agent.status === "APPROVED",
+    sortOrder: agent.sortOrder,
+  }, { status: 201 });
 }

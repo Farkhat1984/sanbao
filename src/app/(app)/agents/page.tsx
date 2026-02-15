@@ -1,26 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Bot } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAgentStore } from "@/stores/agentStore";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { SystemAgentCard } from "@/components/agents/SystemAgentCard";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { FEMIDA_AGENT } from "@/lib/system-agents";
+
+interface SystemAgentInfo {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  iconColor: string;
+  isSystem: boolean;
+}
 
 export default function AgentsPage() {
   const router = useRouter();
   const { agents, setAgents, isLoading, setLoading } = useAgentStore();
   const [loaded, setLoaded] = useState(false);
+  const [systemAgents, setSystemAgents] = useState<SystemAgentInfo[]>([]);
 
   useEffect(() => {
     setLoading(true);
     fetch("/api/agents")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setAgents(data);
+        if (data.systemAgents) setSystemAgents(data.systemAgents);
+        if (data.userAgents) setAgents(data.userAgents);
       })
       .catch(() => {})
       .finally(() => {
@@ -73,8 +82,10 @@ export default function AgentsPage() {
         {/* Agent Grid — System agents first, then user agents */}
         {loaded && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* System agent: Фемида */}
-            <SystemAgentCard agent={FEMIDA_AGENT} />
+            {/* System agents from API */}
+            {systemAgents.map((agent) => (
+              <SystemAgentCard key={agent.id} agent={agent} />
+            ))}
 
             {/* User agents */}
             {agents.map((agent) => (
