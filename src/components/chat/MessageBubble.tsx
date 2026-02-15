@@ -14,10 +14,11 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
+import { ArticleLink } from "./ArticleLink";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
@@ -130,20 +131,37 @@ function parseContentWithArtifacts(rawContent: string): ParsedPart[] {
 
 // ─── Markdown renderer ───────────────────────────────────
 
+/** Allow article:// protocol through URL sanitization */
+function urlTransform(url: string): string {
+  if (url.startsWith("article://")) return url;
+  return defaultUrlTransform(url);
+}
+
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
     <p className="mb-2 last:mb-0">{children}</p>
   ),
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-accent hover:underline inline-flex items-center gap-0.5"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+    // article://criminal_code/188 → clickable ArticleLink
+    if (href?.startsWith("article://")) {
+      const parts = href.replace("article://", "").split("/");
+      const code = parts[0] || "";
+      const article = parts[1] || "";
+      if (code && article) {
+        return <ArticleLink code={code} article={article}>{children}</ArticleLink>;
+      }
+    }
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-accent hover:underline inline-flex items-center gap-0.5"
+      >
+        {children}
+      </a>
+    );
+  },
   code: ({
     className,
     children,
@@ -354,6 +372,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
                       <ReactMarkdown
                         key={i}
                         remarkPlugins={[remarkGfm]}
+                        urlTransform={urlTransform}
                         components={markdownComponents}
                       >
                         {part.content}
@@ -417,6 +436,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
               ) : (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  urlTransform={urlTransform}
                   components={markdownComponents}
                 >
                   {message.content.replace(CLARIFY_REGEX, "").trim()}

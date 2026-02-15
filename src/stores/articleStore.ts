@@ -1,0 +1,85 @@
+import { create } from "zustand";
+
+export interface ArticleData {
+  code: string;        // "criminal_code"
+  article: string;     // "188"
+  title: string;       // "Кража"
+  text: string;        // full article text
+  annotation: string;  // notes/comments
+}
+
+interface ArticleState {
+  isOpen: boolean;
+  isExpanded: boolean;
+  activeArticle: ArticleData | null;
+  loading: boolean;
+  error: string | null;
+  cache: Map<string, ArticleData>;
+  /** Last requested code/article for retry on error */
+  _lastRequest: { code: string; article: string } | null;
+
+  openArticle: (code: string, article: string) => Promise<void>;
+  closePanel: () => void;
+  toggleExpanded: () => void;
+  retry: () => void;
+}
+
+export const useArticleStore = create<ArticleState>((set, get) => ({
+  isOpen: false,
+  isExpanded: false,
+  activeArticle: null,
+  loading: false,
+  error: null,
+  cache: new Map(),
+  _lastRequest: null,
+
+  openArticle: async (code, article) => {
+    const key = `${code}/${article}`;
+    const cached = get().cache.get(key);
+
+    if (cached) {
+      set({ isOpen: true, activeArticle: cached, error: null, loading: false, _lastRequest: { code, article } });
+      return;
+    }
+
+    set({ isOpen: true, loading: true, error: null, activeArticle: null, _lastRequest: { code, article } });
+
+    try {
+      const res = await fetch(
+        `/api/articles?code=${encodeURIComponent(code)}&article=${encodeURIComponent(article)}`
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Ошибка ${res.status}`);
+      }
+
+      const data: ArticleData = await res.json();
+      const newCache = new Map(get().cache);
+      newCache.set(key, data);
+
+      set({ activeArticle: data, loading: false, cache: newCache });
+    } catch (e) {
+      set({
+        error: e instanceof Error ? e.message : "Не удалось загрузить статью",
+        loading: false,
+      });
+    }
+  },
+
+  closePanel: () =>
+    set({ isOpen: false, activeArticle: null, isExpanded: false, error: null }),
+
+  toggleExpanded: () =>
+    set((s) => ({ isExpanded: !s.isExpanded })),
+
+  retry: () => {
+    const { _lastRequest } = get();
+    if (!_lastRequest) return;
+    const key = `${_lastRequest.code}/${_lastRequest.article}`;
+    const newCache = new Map(get().cache);
+    newCache.delete(key);
+    set({ cache: newCache, error: null });
+    get().openArticle(_lastRequest.code, _lastRequest.article);
+  },
+}));

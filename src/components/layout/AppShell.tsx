@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { ArtifactPanel } from "@/components/artifacts/ArtifactPanel";
+import { ArticlePanel } from "@/components/chat/ArticlePanel";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { useArticleStore } from "@/stores/articleStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -17,6 +19,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { isOpen: artifactOpen, panelWidthPercent, setPanelWidthPercent } =
     useArtifactStore();
+  const { isOpen: articleOpen } = useArticleStore();
   const { isOpen: sidebarOpen, close: closeSidebar } = useSidebarStore();
   const isMobile = useIsMobile();
   const mainRef = useRef<HTMLElement>(null);
@@ -156,6 +159,13 @@ export function AppShell({ children }: AppShellProps) {
                 </motion.div>
               )}
             </AnimatePresence>
+          )}
+
+          {/* Article Panel — desktop: inline in flex, mobile: fixed overlay (handled inside) */}
+          {isMobile ? (
+            <ArticlePanel />
+          ) : (
+            articleOpen && <ArticlePanel />
           )}
         </main>
       </div>

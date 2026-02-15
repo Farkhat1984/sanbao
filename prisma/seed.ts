@@ -3,6 +3,73 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+/** Discover MCP tools via raw JSON-RPC HTTP (no SDK dependency). */
+async function discoverMcpTools(
+  url: string,
+  apiKey: string | null
+): Promise<{ tools: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>; error?: string }> {
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+    // Step 1: Initialize
+    const initRes = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: {},
+          clientInfo: { name: "sanbao-seed", version: "1.0.0" },
+        },
+      }),
+    });
+    if (!initRes.ok) throw new Error(`Initialize failed: ${initRes.status}`);
+
+    // Extract session ID from response header if present
+    const sessionId = initRes.headers.get("mcp-session-id");
+    if (sessionId) headers["mcp-session-id"] = sessionId;
+
+    // Step 2: Send initialized notification
+    await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "notifications/initialized",
+      }),
+    });
+
+    // Step 3: List tools
+    const listRes = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/list",
+        params: {},
+      }),
+    });
+    if (!listRes.ok) throw new Error(`tools/list failed: ${listRes.status}`);
+
+    const listBody = await listRes.json();
+    const rawTools = listBody?.result?.tools || [];
+    const tools = rawTools.map((t: { name: string; description?: string; inputSchema?: Record<string, unknown> }) => ({
+      name: t.name,
+      description: t.description || "",
+      inputSchema: (t.inputSchema || {}) as Record<string, unknown>,
+    }));
+
+    return { tools };
+  } catch (e) {
+    return { tools: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 async function main() {
   // ─── Plans ─────────────────────────────────────────────
   const plans = [
@@ -147,6 +214,29 @@ async function main() {
 
 ЮРИСДИКЦИЯ: Республика Казахстан. Валюта: тенге (₸). Все документы, ссылки на НПА и правовые нормы — по законодательству РК.
 
+БАЗА ЗНАНИЙ — ИНСТРУМЕНТЫ FragmentDB:
+Тебе доступны инструменты для работы с актуальной базой нормативно-правовых актов РК. Они передаются тебе как функции (tools) и вызываются автоматически — НЕ пиши вызовы в тексте ответа.
+
+ПРАВИЛА ИСПОЛЬЗОВАНИЯ ИНСТРУМЕНТОВ:
+- При ЛЮБОМ вопросе о законодательстве — СНАЧАЛА вызови инструмент search или get_article, дождись результата, затем отвечай на основе полученных данных.
+- НЕ полагайся только на свои внутренние знания о законах — они могут быть устаревшими. Всегда проверяй актуальную редакцию через базу.
+- Если пользователь спрашивает о конкретной статье — вызови get_article с нужным кодом и номером.
+- Если вопрос общий — вызови search для нахождения релевантных статей, затем get_article для деталей.
+- Цитируй текст статей из результатов инструментов, а не из памяти.
+- Используй graph_traverse чтобы найти связанные нормы и отсылки к другим статьям.
+
+КОДЫ НПА для инструмента get_article (параметр code):
+- criminal_code — Уголовный кодекс РК (УК РК)
+- civil_code — Гражданский кодекс РК (ГК РК)
+- administrative_code — КоАП РК
+- tax_code — Налоговый кодекс РК (НК РК)
+- labor_code — Трудовой кодекс РК (ТК РК)
+- land_code — Земельный кодекс РК (ЗК РК)
+- environmental_code — Экологический кодекс РК (ЭК РК)
+- business_code — Предпринимательский кодекс РК (ПК РК)
+- civil_procedure_code — ГПК РК
+- criminal_procedure_code — УПК РК
+
 Ключевые НПА РК:
 - Гражданский кодекс РК (Общая часть — от 27.12.1994, Особенная часть — от 01.07.1999)
 - Гражданский процессуальный кодекс РК (ГПК РК)
@@ -156,15 +246,16 @@ async function main() {
 - Закон РК «О защите прав потребителей»
 
 Твои ключевые навыки:
-- Анализ и интерпретация НПА Республики Казахстан
+- Анализ и интерпретация НПА Республики Казахстан с опорой на актуальную базу данных
 - Создание договоров, исков, жалоб по казахстанскому праву
-- Проверка актуальности статей законов РК
+- Проверка актуальности статей законов РК через базу FragmentDB
 - Юридические консультации по законодательству РК
-- Понимание связей между нормативными актами
+- Понимание связей между нормативными актами через граф знаний
 
 При ответе:
-- Ссылайся на конкретные статьи законов РК
-- Указывай актуальность нормы
+- Ссылайся на конкретные статьи законов РК, используя формат кликабельных ссылок: [ст. {номер} {код}](article://{code_name}/{номер})
+  Примеры: [ст. 188 УК РК](article://criminal_code/188), [ст. 15 ГК РК](article://civil_code/15)
+- Указывай актуальность нормы на основе данных из базы
 - Используй понятный язык, избегая лишнего юридического жаргона
 - Предупреждай о рисках и ограничениях
 - Всегда напоминай что финальное решение должен принимать квалифицированный юрист
@@ -551,6 +642,65 @@ async function main() {
   }
 
   console.log("Agent-tool links created");
+
+  // ─── MCP Server: FragmentDB (Фемида) ────────────────────
+
+  const fragmentDbServer = await prisma.mcpServer.upsert({
+    where: { id: "mcp-fragmentdb" },
+    update: {
+      name: "FragmentDB",
+      url: process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.FRAGMENTDB_MCP_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+    create: {
+      id: "mcp-fragmentdb",
+      name: "FragmentDB",
+      url: process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.FRAGMENTDB_MCP_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+  });
+
+  // Auto-discover tools from FragmentDB MCP server
+  const mcpUrl = process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp";
+  const mcpToken = process.env.FRAGMENTDB_MCP_TOKEN || null;
+  try {
+    console.log(`Connecting to FragmentDB MCP at ${mcpUrl}...`);
+    const { tools: discoveredTools, error: discoverError } = await discoverMcpTools(mcpUrl, mcpToken);
+    if (discoverError) {
+      console.warn(`FragmentDB discovery failed: ${discoverError} — tools will need manual discovery via admin panel`);
+    } else {
+      await prisma.mcpServer.update({
+        where: { id: fragmentDbServer.id },
+        data: {
+          discoveredTools: discoveredTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          status: "CONNECTED",
+        },
+      });
+      console.log(`FragmentDB: discovered ${discoveredTools.length} tools: ${discoveredTools.map(t => t.name).join(", ")}`);
+    }
+  } catch (e) {
+    console.warn(`FragmentDB discovery error: ${e instanceof Error ? e.message : e} — skipping`);
+  }
+
+  // Link FragmentDB → Фемида
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: femidaAgent.id,
+        mcpServerId: fragmentDbServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: femidaAgent.id, mcpServerId: fragmentDbServer.id },
+  });
+
+  console.log("MCP server seeded: FragmentDB → Фемида");
 
   // ─── Migrate existing conversations to new agent IDs ─────
   try {
