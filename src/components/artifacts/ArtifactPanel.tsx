@@ -307,7 +307,11 @@ export function ArtifactPanel() {
                 <CodePreview
                   code={activeArtifact.content}
                   onRequestChatFix={(error) => {
-                    setPendingInput(`В артефакте «${activeArtifact.title}» ошибка выполнения:\n\`\`\`\n${error}\n\`\`\`\nИсправь только место с ошибкой.`);
+                    const isPygame = isPythonCode(activeArtifact.content) && /pygame/i.test(activeArtifact.content);
+                    const fixPrompt = isPygame
+                      ? `В артефакте «${activeArtifact.title}» ошибка pygame в браузере:\n\`\`\`\n${error}\n\`\`\`\nPygame не работает в браузерном превью. Перепиши эту игру/программу на HTML5 Canvas + JavaScript, сохранив всю логику и геймплей. Создай новый артефакт.`
+                      : `В артефакте «${activeArtifact.title}» ошибка выполнения:\n\`\`\`\n${error}\n\`\`\`\nИсправь только место с ошибкой.`;
+                    setPendingInput(fixPrompt);
                   }}
                 />
               )}
