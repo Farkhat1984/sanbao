@@ -20,12 +20,37 @@ export async function POST(req: Request) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10_000);
+        const headers: Record<string, string> = {};
+        if (server.apiKey) headers["Authorization"] = `Bearer ${server.apiKey}`;
 
-        const res = await fetch(server.url, {
-          method: "GET",
-          signal: controller.signal,
-          headers: server.apiKey ? { Authorization: `Bearer ${server.apiKey}` } : {},
-        });
+        let res: Response;
+
+        if (server.transport === "STREAMABLE_HTTP") {
+          // Streamable HTTP: send JSON-RPC initialize request
+          headers["Content-Type"] = "application/json";
+          res = await fetch(server.url, {
+            method: "POST",
+            signal: controller.signal,
+            headers,
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "initialize",
+              params: {
+                protocolVersion: "2024-11-05",
+                capabilities: {},
+                clientInfo: { name: "sanbao-healthcheck", version: "1.0.0" },
+              },
+            }),
+          });
+        } else {
+          // SSE: simple GET to check endpoint is alive
+          res = await fetch(server.url, {
+            method: "GET",
+            signal: controller.signal,
+            headers,
+          });
+        }
         clearTimeout(timeout);
 
         const latency = Date.now() - start;

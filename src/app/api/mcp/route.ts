@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       userId,
       name: name.trim(),
       url: url.trim(),
-      transport: transport || "SSE",
+      transport: transport || "STREAMABLE_HTTP",
       apiKey: apiKey?.trim() || null,
     },
   });

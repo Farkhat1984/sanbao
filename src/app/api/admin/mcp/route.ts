@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     data: {
       name,
       url,
-      transport: transport || "SSE",
+      transport: transport || "STREAMABLE_HTTP",
       apiKey: apiKey || null,
       isGlobal: true,
       isEnabled: body.isEnabled !== false,

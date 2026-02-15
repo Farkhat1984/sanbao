@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe, ToggleLeft, ToggleRight } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -28,13 +28,17 @@ export function McpServerManager() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [transport, setTransport] = useState<"SSE" | "STREAMABLE_HTTP">("SSE");
+  const [transport, setTransport] = useState<"SSE" | "STREAMABLE_HTTP">("STREAMABLE_HTTP");
   const [apiKey, setApiKey] = useState("");
   const [adding, setAdding] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Search & filter
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "system" | "user">("all");
 
   const fetchServers = useCallback(async () => {
     try {
@@ -69,7 +73,7 @@ export function McpServerManager() {
       if (res.ok) {
         const server = await res.json();
         setServers((s) => [server, ...s]);
-        setName(""); setUrl(""); setApiKey(""); setTransport("SSE");
+        setName(""); setUrl(""); setApiKey(""); setTransport("STREAMABLE_HTTP");
         setShowForm(false);
       }
     } catch {
@@ -167,6 +171,24 @@ export function McpServerManager() {
     ERROR: "Ошибка",
   };
 
+  // Filtered servers
+  const allSystem = useMemo(() => servers.filter((s) => s.isGlobal), [servers]);
+  const allUser = useMemo(() => servers.filter((s) => !s.isGlobal), [servers]);
+
+  const filteredSystem = useMemo(() => {
+    if (filterType === "user") return [];
+    const q = search.toLowerCase();
+    if (!q) return allSystem;
+    return allSystem.filter((s) => s.name.toLowerCase().includes(q) || s.url.toLowerCase().includes(q));
+  }, [allSystem, search, filterType]);
+
+  const filteredUser = useMemo(() => {
+    if (filterType === "system") return [];
+    const q = search.toLowerCase();
+    if (!q) return allUser;
+    return allUser.filter((s) => s.name.toLowerCase().includes(q) || s.url.toLowerCase().includes(q));
+  }, [allUser, search, filterType]);
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-muted text-xs py-4">
@@ -176,8 +198,8 @@ export function McpServerManager() {
     );
   }
 
-  const systemServers = servers.filter((s) => s.isGlobal);
-  const userServers = servers.filter((s) => !s.isGlobal);
+  const hasServers = servers.length > 0;
+  const hasResults = filteredSystem.length > 0 || filteredUser.length > 0;
 
   const renderSystemServer = (srv: McpServer) => {
     const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
@@ -358,28 +380,65 @@ export function McpServerManager() {
         законов, работа с API, файловые операции и другие функции.
       </p>
 
-      {systemServers.length > 0 && (
+      {/* ── Search & Filter ── */}
+      {hasServers && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск серверов..."
+              className="w-full h-8 pl-8 pr-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div className="flex gap-0.5 rounded-lg border border-border p-0.5 bg-surface-alt">
+            {([["all", "Все"], ["system", "Системные"], ["user", "Мои"]] as const).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setFilterType(val)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                  filterType === val ? "bg-accent text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filteredSystem.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider">
             <Globe className="h-3 w-3" />
             Системные серверы
+            <span className="text-text-muted/60">({filteredSystem.length})</span>
           </div>
-          {systemServers.map(renderSystemServer)}
+          {filteredSystem.map(renderSystemServer)}
         </div>
       )}
 
-      {userServers.length > 0 && (
+      {filteredUser.length > 0 && (
         <div className="space-y-2">
-          {systemServers.length > 0 && (
+          {filteredSystem.length > 0 && (
             <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider mt-2">
               Пользовательские серверы
+              <span className="text-text-muted/60">({filteredUser.length})</span>
             </div>
           )}
-          {userServers.map(renderUserServer)}
+          {filteredUser.map(renderUserServer)}
         </div>
       )}
 
-      {servers.length === 0 && !showForm && (
+      {hasServers && !hasResults && (
+        <div className="text-center py-6 text-text-muted text-xs">
+          Ничего не найдено
+        </div>
+      )}
+
+      {!hasServers && !showForm && (
         <div className="text-center py-6 text-text-muted text-xs">
           Нет подключённых MCP-серверов
         </div>
@@ -405,8 +464,8 @@ export function McpServerManager() {
               onChange={(e) => setTransport(e.target.value as "SSE" | "STREAMABLE_HTTP")}
               className="flex-1 px-3 py-2 text-sm rounded-lg bg-surface border border-border text-text-primary focus:outline-none focus:border-accent cursor-pointer"
             >
-              <option value="SSE">SSE</option>
               <option value="STREAMABLE_HTTP">Streamable HTTP</option>
+              <option value="SSE">SSE (legacy)</option>
             </select>
           </div>
           <input
