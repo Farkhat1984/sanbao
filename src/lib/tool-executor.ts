@@ -1,10 +1,9 @@
 /**
- * Tool Executor — executes WEBHOOK, URL, and FUNCTION type tools.
+ * Tool Executor — executes WEBHOOK and URL type tools.
  * PROMPT_TEMPLATE tools are handled purely on the frontend.
  */
 
-const TOOL_TIMEOUT_MS = 30_000;
-const RESPONSE_CAP = 10 * 1024; // 10KB
+import { TOOL_TIMEOUT_MS, TOOL_RESPONSE_CAP } from "@/lib/constants";
 
 /** Interpolate {{key}} placeholders in a string */
 function interpolate(template: string, vars: Record<string, unknown>): string {
@@ -49,7 +48,7 @@ export async function executeWebhookTool(
     clearTimeout(timeout);
 
     const text = await response.text();
-    const truncated = text.length > RESPONSE_CAP ? text.slice(0, RESPONSE_CAP) + "...[truncated]" : text;
+    const truncated = text.length > TOOL_RESPONSE_CAP ? text.slice(0, TOOL_RESPONSE_CAP) + "...[truncated]" : text;
 
     if (!response.ok) {
       return { success: false, error: `HTTP ${response.status}: ${truncated}` };
@@ -85,7 +84,7 @@ export async function executeUrlTool(
     clearTimeout(timeout);
 
     const text = await response.text();
-    const truncated = text.length > RESPONSE_CAP ? text.slice(0, RESPONSE_CAP) + "...[truncated]" : text;
+    const truncated = text.length > TOOL_RESPONSE_CAP ? text.slice(0, TOOL_RESPONSE_CAP) + "...[truncated]" : text;
 
     if (!response.ok) {
       return { success: false, error: `HTTP ${response.status}: ${truncated}` };
@@ -98,31 +97,4 @@ export async function executeUrlTool(
       error: err instanceof Error ? err.message : "Unknown error",
     };
   }
-}
-
-// Internal function registry — extend as needed
-type InternalFunction = (input: Record<string, unknown>) => Promise<ToolExecutionResult>;
-
-const FUNCTION_REGISTRY: Record<string, InternalFunction> = {
-  // Example: "echo" function
-  echo: async (input) => ({
-    success: true,
-    result: JSON.stringify(input),
-  }),
-};
-
-export async function executeFunctionTool(
-  config: { functionName: string },
-  input: Record<string, unknown>
-): Promise<ToolExecutionResult> {
-  const fn = FUNCTION_REGISTRY[config.functionName];
-  if (!fn) {
-    return { success: false, error: `Unknown function: ${config.functionName}` };
-  }
-  return fn(input);
-}
-
-/** Register a custom internal function */
-export function registerFunction(name: string, fn: InternalFunction) {
-  FUNCTION_REGISTRY[name] = fn;
 }

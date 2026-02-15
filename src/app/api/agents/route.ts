@@ -1,14 +1,13 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { agentCreateSchema } from "@/lib/validation";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   // Parallel fetch: system agents + user agents
   const [systemAgents, userAgents] = await Promise.all([
@@ -29,7 +28,7 @@ export async function GET() {
       },
     }),
     prisma.agent.findMany({
-      where: { userId: session.user.id, isSystem: false },
+      where: { userId, isSystem: false },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -46,91 +45,75 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({
-    systemAgents: systemAgents.map((a) => ({
-      ...a,
-      updatedAt: a.updatedAt.toISOString(),
-    })),
-    userAgents: userAgents.map((a) => ({
-      ...a,
-      updatedAt: a.updatedAt.toISOString(),
-    })),
+  return jsonOk({
+    systemAgents: systemAgents.map(serializeDates),
+    userAgents: userAgents.map(serializeDates),
   });
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId, session } = result.auth;
 
-  const body = await req.json();
-  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds } = body;
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
 
-  if (!name?.trim() || !instructions?.trim()) {
-    return NextResponse.json(
-      { error: "Название и инструкции обязательны" },
-      { status: 400 }
-    );
+  const parsed = agentCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds } = parsed.data;
 
   // Check maxAgents limit (0 = no agents allowed, -1 = unlimited; admins bypass)
-  const { plan } = await getUserPlanAndUsage(session.user.id);
+  const { plan } = await getUserPlanAndUsage(userId);
   if (session.user.role !== "ADMIN" && plan) {
     if (plan.maxAgents === 0) {
-      return NextResponse.json(
-        { error: "Создание агентов недоступно на вашем тарифе" },
-        { status: 403 }
-      );
+      return jsonError("Создание агентов недоступно на вашем тарифе", 403);
     }
     if (plan.maxAgents > 0) {
       const agentCount = await prisma.agent.count({
-        where: { userId: session.user.id, isSystem: false },
+        where: { userId, isSystem: false },
       });
       if (agentCount >= plan.maxAgents) {
-        return NextResponse.json(
-          { error: `Достигнут лимит агентов (${plan.maxAgents}). Перейдите на более высокий тариф.` },
-          { status: 403 }
-        );
+        return jsonError(`Достигнут лимит агентов (${plan.maxAgents}). Перейдите на более высокий тариф.`, 403);
       }
     }
   }
 
   const agent = await prisma.agent.create({
     data: {
-      userId: session.user.id,
-      name: name.trim(),
-      description: description?.trim() || null,
-      instructions: instructions.trim(),
-      model: model || "openai",
+      userId,
+      name,
+      description,
+      instructions,
+      model,
       icon: icon || DEFAULT_AGENT_ICON,
       iconColor: iconColor || DEFAULT_ICON_COLOR,
       avatar: avatar || null,
-      starterPrompts: Array.isArray(starterPrompts) ? starterPrompts.filter((s: string) => s.trim()) : [],
+      starterPrompts: starterPrompts.filter((s: string) => s.trim()),
     },
     include: { files: true },
   });
 
   // Create skill associations
-  if (Array.isArray(skillIds) && skillIds.length > 0) {
+  if (skillIds.length > 0) {
     await prisma.agentSkill.createMany({
       data: skillIds.map((skillId: string) => ({ agentId: agent.id, skillId })),
     });
   }
 
   // Create MCP server associations
-  if (Array.isArray(mcpServerIds) && mcpServerIds.length > 0) {
+  if (mcpServerIds.length > 0) {
     await prisma.agentMcpServer.createMany({
       data: mcpServerIds.map((mcpServerId: string) => ({ agentId: agent.id, mcpServerId })),
     });
   }
 
-  return NextResponse.json({
-    ...agent,
-    createdAt: agent.createdAt.toISOString(),
-    updatedAt: agent.updatedAt.toISOString(),
+  return jsonOk({
+    ...serializeDates(agent),
     files: [],
     skills: [],
     mcpServers: [],
-  });
+  }, 201);
 }

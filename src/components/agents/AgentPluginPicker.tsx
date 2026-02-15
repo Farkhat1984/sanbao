@@ -27,7 +27,7 @@ export function AgentPluginPicker({ selectedIds, onChange }: AgentPluginPickerPr
     fetch("/api/plugins")
       .then((r) => r.json())
       .then((data) => setPlugins(Array.isArray(data) ? data : []))
-      .catch(() => {})
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 

@@ -37,7 +37,7 @@ export function Sidebar() {
       .then((data) => {
         if (Array.isArray(data)) setConversations(data);
       })
-      .catch(() => {});
+      .catch(console.error);
   }, [session?.user, setConversations]);
 
   // Auto-close sidebar on route change (mobile only)

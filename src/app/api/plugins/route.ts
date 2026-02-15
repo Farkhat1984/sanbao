@@ -1,17 +1,16 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_ICON_COLOR, DEFAULT_PLUGIN_ICON } from "@/lib/constants";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const plugins = await prisma.plugin.findMany({
     where: {
       OR: [
-        { userId: session.user.id },
+        { userId },
         { isGlobal: true },
       ],
       isActive: true,
@@ -24,39 +23,33 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(plugins.map((p) => ({
-    ...p,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
-  })));
+  return jsonOk(plugins.map(serializeDates));
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
-  const { name, description, icon, iconColor, version } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
+
+  const { name, description, icon, iconColor, version } = body;
 
   if (!name?.trim()) {
-    return NextResponse.json({ error: "Название обязательно" }, { status: 400 });
+    return jsonError("Название обязательно", 400);
   }
 
   const plugin = await prisma.plugin.create({
     data: {
-      userId: session.user.id,
+      userId,
       name: name.trim(),
       description: description?.trim() || null,
-      icon: icon || "Puzzle",
-      iconColor: iconColor || "#4F6EF7",
+      icon: icon || DEFAULT_PLUGIN_ICON,
+      iconColor: iconColor || DEFAULT_ICON_COLOR,
       version: version || "1.0.0",
     },
   });
 
-  return NextResponse.json({
-    ...plugin,
-    createdAt: plugin.createdAt.toISOString(),
-    updatedAt: plugin.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(plugin), 201);
 }

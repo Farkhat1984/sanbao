@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { CACHE_TTL } from "@/lib/constants";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // ─── IP whitelist cache ───
 let ipWhitelistCache: { ips: string[]; expiresAt: number } | null = null;
@@ -42,6 +43,12 @@ export async function requireAdmin() {
   });
   if (user?.role !== "ADMIN") {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  // Admin rate limit: 60 requests/minute per admin user
+  const allowed = checkRateLimit(`admin:${session.user.id}`, 60, 60_000);
+  if (!allowed) {
+    return { error: NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 }) };
   }
 
   // IP whitelist check

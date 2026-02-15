@@ -1,48 +1,39 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const memories = await prisma.userMemory.findMany({
-    where: { userId: session.user.id },
+    where: { userId },
     orderBy: { updatedAt: "desc" },
   });
 
-  const result = memories.map((m) => ({
-    ...m,
-    createdAt: m.createdAt.toISOString(),
-    updatedAt: m.updatedAt.toISOString(),
-  }));
-
-  return NextResponse.json(result);
+  return jsonOk(memories.map(serializeDates));
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
-  const { key, content, source } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
+
+  const { key, content, source } = body;
 
   if (!key?.trim() || !content?.trim()) {
-    return NextResponse.json(
-      { error: "Ключ и содержимое обязательны" },
-      { status: 400 }
-    );
+    return jsonError("Ключ и содержимое обязательны", 400);
   }
 
   const memory = await prisma.userMemory.upsert({
     where: {
-      userId_key: { userId: session.user.id, key: key.trim() },
+      userId_key: { userId, key: key.trim() },
     },
     create: {
-      userId: session.user.id,
+      userId,
       key: key.trim(),
       content: content.trim(),
       source: source || "manual",
@@ -53,9 +44,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({
-    ...memory,
-    createdAt: memory.createdAt.toISOString(),
-    updatedAt: memory.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(memory), 201);
 }

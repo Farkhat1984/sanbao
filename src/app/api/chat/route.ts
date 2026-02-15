@@ -1,6 +1,3 @@
-import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -14,30 +11,25 @@ import {
   buildSystemPromptWithContext,
 } from "@/lib/context";
 import { buildMemoryContext } from "@/lib/memory";
-import { isSystemAgent, resolveAgentId } from "@/lib/system-agents";
+import { resolveAgentId } from "@/lib/system-agents";
 import { resolveAgentContext } from "@/lib/tool-resolver";
-import { callMcpTool } from "@/lib/mcp-client";
 import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 import { checkContentFilter } from "@/lib/content-filter";
 import { recordRequestDuration } from "@/lib/request-metrics";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
-import {
-  getNativeToolDefinitions,
-  isNativeTool,
-  executeNativeTool,
-  type NativeToolContext,
-} from "@/lib/native-tools";
+import type { NativeToolContext } from "@/lib/native-tools";
 import {
   MOONSHOT_CHAT_URL,
   DEFAULT_TEXT_MODEL,
-  DEFAULT_TEMPERATURE,
   DEFAULT_TEMPERATURE_COMPACTION,
-  DEFAULT_TOP_P,
   DEFAULT_MAX_TOKENS_COMPACTION,
   DEFAULT_PROVIDER,
   CONTEXT_KEEP_LAST_MESSAGES,
-  NATIVE_TOOL_MAX_TURNS,
 } from "@/lib/constants";
+
+import { buildApiMessages, type ChatAttachment } from "@/lib/chat/message-builder";
+import { streamMoonshot, type McpToolContext } from "@/lib/chat/moonshot-stream";
+import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
 
 const SYSTEM_PROMPT = `Ты — Sanbao, AI ERP-платформа нового поколения для профессионалов. Ты объединяешь мощь нескольких AI-моделей, гибкую систему агентов, инструменты (Tools), скиллы (Skills), плагины (Plugins) и MCP-серверы в единую интеллектуальную среду. Твоя задача — помогать пользователям эффективно решать любые профессиональные задачи: создание документов, анализ данных, написание кода, автоматизация процессов, юридическая работа и многое другое.
 
@@ -122,112 +114,9 @@ Sanbao — модульная AI-система с многоуровневой 
 ПРАВИЛО ОДНОГО ДЕЙСТВИЯ:
 В каждом ответе — МАКСИМУМ ОДИН специальный тег: <sanbao-clarify>, <sanbao-plan>, <sanbao-task> или <sanbao-doc>/<sanbao-edit>. Не комбинируй.`;
 
-// Resolved dynamically via model-router; kept as fallback constant
-const MOONSHOT_URL_FALLBACK = MOONSHOT_CHAT_URL;
-
-// ─── Moonshot built-in web search tool ───────────────────
-
-const WEB_SEARCH_BUILTIN = {
-  type: "builtin_function" as const,
-  function: { name: "$web_search" },
-};
-
-// ─── SSE Parser ──────────────────────────────────────────
-
-async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split("\n");
-      buffer = lines.pop()!;
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
-          try {
-            yield JSON.parse(trimmed.slice(6));
-          } catch {
-            // Skip malformed JSON
-          }
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-
-// ─── Attachment types ────────────────────────────────────
-
-interface ChatAttachment {
-  name: string;
-  type: string;
-  base64?: string;
-  textContent?: string;
-}
-
-// ─── Process messages with attachments ───────────────────
-
-function buildApiMessages(
-  messages: Array<{ role: string; content: string }>,
-  attachments: ChatAttachment[],
-  systemPrompt: string
-) {
-  const apiMessages: Array<Record<string, unknown>> = [
-    { role: "system", content: systemPrompt },
-  ];
-
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
-
-    // Skip assistant messages with empty content (streaming placeholders)
-    if (msg.role === "assistant" && !msg.content.trim()) continue;
-
-    // Only attach files to the last user message
-    if (i === messages.length - 1 && msg.role === "user" && attachments.length > 0) {
-      const imageAttachments = attachments.filter((a) => a.type?.startsWith("image/"));
-      const textAttachments = attachments.filter((a) => !a.type?.startsWith("image/"));
-
-      let textContent = msg.content;
-
-      // Prepend text file contents
-      if (textAttachments.length > 0) {
-        const textParts = textAttachments
-          .map((a) => `--- Файл: ${a.name} ---\n${a.textContent}`)
-          .join("\n\n");
-        textContent = `${textParts}\n\n${textContent}`;
-      }
-
-      // If there are images, use multimodal format
-      if (imageAttachments.length > 0) {
-        const content: Array<Record<string, unknown>> = [];
-        for (const img of imageAttachments) {
-          content.push({
-            type: "image_url",
-            image_url: { url: `data:${img.type};base64,${img.base64}` },
-          });
-        }
-        content.push({ type: "text", text: textContent });
-        apiMessages.push({ role: msg.role, content });
-      } else {
-        apiMessages.push({ role: msg.role, content: textContent });
-      }
-    } else {
-      apiMessages.push(msg);
-    }
-  }
-
-  return apiMessages;
-}
-
 // ─── Background compaction ───────────────────────────────
+
+const MOONSHOT_URL_FALLBACK = MOONSHOT_CHAT_URL;
 
 async function compactInBackground(
   conversationId: string,
@@ -296,470 +185,6 @@ async function compactInBackground(
   }
 }
 
-// ─── Moonshot (Kimi K2.5) streaming handler ─────────────
-
-interface McpToolContext {
-  url: string;
-  transport: "SSE" | "STREAMABLE_HTTP";
-  apiKey: string | null;
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-}
-
-function streamMoonshot(
-  apiMessages: Array<Record<string, unknown>>,
-  options: {
-    maxTokens: number;
-    thinkingEnabled: boolean;
-    webSearchEnabled: boolean;
-    mcpTools?: McpToolContext[];
-    nativeToolCtx?: NativeToolContext;
-    contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean };
-    textModel?: ResolvedModel | null;
-  }
-) {
-  const encoder = new TextEncoder();
-  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], nativeToolCtx, contextInfo, textModel } = options;
-  const nativeToolDefs = getNativeToolDefinitions();
-
-  const apiUrl = textModel
-    ? `${textModel.provider.baseUrl}/chat/completions`
-    : MOONSHOT_URL_FALLBACK;
-  const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-  const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        // Emit context info as first chunk
-        if (contextInfo) {
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                t: "x",
-                v: JSON.stringify({
-                  action: "context_info",
-                  ...contextInfo,
-                }),
-              }) + "\n"
-            )
-          );
-        }
-
-        const currentMessages = [...apiMessages];
-        let searchNotified = false;
-
-        // Plan detection state
-        let insidePlan = false;
-        let planBuffer = "";
-
-        // Tool-call loop
-        for (let turn = 0; turn < NATIVE_TOOL_MAX_TURNS; turn++) {
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: modelId,
-              messages: currentMessages,
-              max_tokens: maxTokens,
-              temperature: thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
-              top_p: DEFAULT_TOP_P,
-              stream: true,
-              tools: [
-                ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
-                ...nativeToolDefs,
-                ...mcpTools.map((t) => ({
-                  type: "function" as const,
-                  function: {
-                    name: t.name,
-                    description: t.description,
-                    parameters: t.inputSchema,
-                  },
-                })),
-              ],
-              ...(!thinkingEnabled
-                ? { thinking: { type: "disabled" } }
-                : {}),
-            }),
-          });
-
-          if (!response.ok) {
-            const errText = await response.text().catch(() => "Unknown error");
-            let errMsg = `Ошибка API: ${response.status}`;
-            try {
-              const errJson = JSON.parse(errText);
-              errMsg = errJson.error?.message || errMsg;
-            } catch {
-              // use default
-            }
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: "e", v: errMsg }) + "\n")
-            );
-            return;
-          }
-
-          if (!response.body) {
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: "e", v: "Пустой ответ от API" }) + "\n"
-              )
-            );
-            return;
-          }
-
-          // Collect tool calls and reasoning from this turn
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const toolCallMap: Record<number, { id: string; type: string; function: { name: string; arguments: string } }> = {};
-          let hasToolCallFinish = false;
-          let turnReasoningContent = "";
-
-          for await (const chunk of parseSSEStream(response.body)) {
-            // Handle SSE error events from Moonshot API
-            if (chunk.type === "error" || chunk.error) {
-              const errMsg = chunk.error?.message || "Ошибка API провайдера";
-              console.error(chunk);
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "e", v: errMsg }) + "\n")
-              );
-              return;
-            }
-
-            const choice = chunk.choices?.[0];
-            if (!choice) continue;
-
-            const delta = choice.delta;
-
-            // Accumulate tool_calls (streamed in parts)
-            if (delta?.tool_calls) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              for (const tc of delta.tool_calls as any[]) {
-                const idx = tc.index ?? 0;
-                if (tc.id) {
-                  toolCallMap[idx] = {
-                    id: tc.id,
-                    type: tc.type || "builtin_function",
-                    function: {
-                      name: tc.function?.name || "",
-                      arguments: tc.function?.arguments || "",
-                    },
-                  };
-                } else if (tc.function?.arguments && toolCallMap[idx]) {
-                  toolCallMap[idx].function.arguments += tc.function.arguments;
-                }
-              }
-
-              if (!searchNotified) {
-                searchNotified = true;
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: "searching" }) + "\n"
-                  )
-                );
-              }
-            }
-
-            if (choice.finish_reason === "tool_calls") {
-              hasToolCallFinish = true;
-            }
-
-            // Stream reasoning and accumulate for tool-call messages
-            if (thinkingEnabled && delta?.reasoning_content) {
-              turnReasoningContent += delta.reasoning_content;
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "r", v: delta.reasoning_content }) + "\n"
-                )
-              );
-            }
-
-            // Stream content with plan detection
-            if (delta?.content) {
-              planBuffer += delta.content;
-
-              // Check for plan opening tag
-              if (!insidePlan && planBuffer.includes("<sanbao-plan>")) {
-                const idx = planBuffer.indexOf("<sanbao-plan>");
-                const before = planBuffer.slice(0, idx);
-                if (before) {
-                  controller.enqueue(
-                    encoder.encode(JSON.stringify({ t: "c", v: before }) + "\n")
-                  );
-                }
-                planBuffer = planBuffer.slice(idx + "<sanbao-plan>".length);
-                insidePlan = true;
-              }
-
-              if (insidePlan) {
-                // Check for plan closing tag
-                if (planBuffer.includes("</sanbao-plan>")) {
-                  const idx = planBuffer.indexOf("</sanbao-plan>");
-                  const planText = planBuffer.slice(0, idx);
-                  if (planText) {
-                    controller.enqueue(
-                      encoder.encode(JSON.stringify({ t: "p", v: planText }) + "\n")
-                    );
-                  }
-                  planBuffer = planBuffer.slice(idx + "</sanbao-plan>".length);
-                  insidePlan = false;
-                  // Flush remaining as content
-                  if (planBuffer) {
-                    controller.enqueue(
-                      encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
-                    );
-                    planBuffer = "";
-                  }
-                } else if (planBuffer.length > 20) {
-                  // Flush accumulated plan content incrementally
-                  controller.enqueue(
-                    encoder.encode(JSON.stringify({ t: "p", v: planBuffer }) + "\n")
-                  );
-                  planBuffer = "";
-                }
-              } else {
-                // Keep tail that could be a partial "<sanbao-plan>" tag
-                const TAG = "<sanbao-plan>";
-                let safeFlush = planBuffer;
-                let keepTail = "";
-                for (let k = 1; k < TAG.length; k++) {
-                  if (planBuffer.endsWith(TAG.slice(0, k))) {
-                    safeFlush = planBuffer.slice(0, -k);
-                    keepTail = planBuffer.slice(-k);
-                    break;
-                  }
-                }
-                if (safeFlush) {
-                  controller.enqueue(
-                    encoder.encode(JSON.stringify({ t: "c", v: safeFlush }) + "\n")
-                  );
-                }
-                planBuffer = keepTail;
-              }
-            }
-          }
-
-          // Flush remaining plan buffer
-          if (planBuffer) {
-            const type = insidePlan ? "p" : "c";
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: type, v: planBuffer }) + "\n")
-            );
-            planBuffer = "";
-          }
-
-          // If model finished with tool_calls, send results back and loop
-          const collectedCalls = Object.values(toolCallMap);
-          if (hasToolCallFinish && collectedCalls.length > 0) {
-            currentMessages.push({
-              role: "assistant",
-              tool_calls: collectedCalls,
-              // When thinking is enabled, the API requires reasoning_content on assistant messages
-              ...(thinkingEnabled ? { reasoning_content: turnReasoningContent || "" } : {}),
-            });
-
-            // Build a map of MCP tool names for quick lookup
-            const mcpToolMap = new Map(mcpTools.map((t) => [t.name, t]));
-
-            for (const tc of collectedCalls) {
-              const mcpDef = mcpToolMap.get(tc.function.name);
-              if (mcpDef) {
-                // MCP tool call — execute via MCP client
-                let args: Record<string, unknown> = {};
-                try {
-                  args = JSON.parse(tc.function.arguments || "{}");
-                } catch {
-                  // fallback empty
-                }
-                const mcpResult = await callMcpTool(
-                  mcpDef.url,
-                  mcpDef.transport,
-                  mcpDef.apiKey,
-                  tc.function.name,
-                  args
-                );
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: mcpResult.error
-                    ? `Error: ${mcpResult.error}`
-                    : mcpResult.result,
-                });
-              } else if (isNativeTool(tc.function.name) && nativeToolCtx) {
-                // Native tool call — execute server-side
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: "using_tool" }) + "\n"
-                  )
-                );
-                let args: Record<string, unknown> = {};
-                try {
-                  args = JSON.parse(tc.function.arguments || "{}");
-                } catch {
-                  // fallback empty
-                }
-                const result = await executeNativeTool(
-                  tc.function.name,
-                  args,
-                  nativeToolCtx
-                );
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: result,
-                });
-              } else {
-                // Built-in tool (web search) — pass arguments as content
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: tc.function.arguments,
-                });
-              }
-            }
-
-            continue;
-          }
-
-          break;
-        }
-      } catch {
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({ t: "e", v: "Ошибка подключения к API" }) + "\n"
-          )
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return stream;
-}
-
-// ─── Plan detection wrapper for AI SDK streams ──────────
-
-function createPlanDetectorStream(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fullStream: AsyncIterable<any>,
-  contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean },
-  hasReasoning?: boolean
-): ReadableStream {
-  const encoder = new TextEncoder();
-
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        // Emit context info
-        if (contextInfo) {
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                t: "x",
-                v: JSON.stringify({ action: "context_info", ...contextInfo }),
-              }) + "\n"
-            )
-          );
-        }
-
-        let insidePlan = false;
-        let planBuffer = "";
-
-        for await (const part of fullStream) {
-          // Stream reasoning chunks from AI SDK
-          if (hasReasoning && part.type === "reasoning-delta") {
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: "r", v: part.text }) + "\n")
-            );
-            continue;
-          }
-
-          // Only process text deltas for plan detection + content
-          if (part.type !== "text-delta") continue;
-          const chunk = part.text;
-          if (!chunk) continue;
-
-          planBuffer += chunk;
-
-          if (!insidePlan && planBuffer.includes("<sanbao-plan>")) {
-            const idx = planBuffer.indexOf("<sanbao-plan>");
-            const before = planBuffer.slice(0, idx);
-            if (before) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "c", v: before }) + "\n")
-              );
-            }
-            planBuffer = planBuffer.slice(idx + "<sanbao-plan>".length);
-            insidePlan = true;
-          }
-
-          if (insidePlan) {
-            if (planBuffer.includes("</sanbao-plan>")) {
-              const idx = planBuffer.indexOf("</sanbao-plan>");
-              const planText = planBuffer.slice(0, idx);
-              if (planText) {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify({ t: "p", v: planText }) + "\n")
-                );
-              }
-              planBuffer = planBuffer.slice(idx + "</sanbao-plan>".length);
-              insidePlan = false;
-              if (planBuffer) {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify({ t: "c", v: planBuffer }) + "\n")
-                );
-                planBuffer = "";
-              }
-            } else if (planBuffer.length > 20) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "p", v: planBuffer }) + "\n")
-              );
-              planBuffer = "";
-            }
-          } else {
-            // Keep tail that could be a partial "<sanbao-plan>" tag
-            const TAG = "<sanbao-plan>";
-            let safeFlush = planBuffer;
-            let keepTail = "";
-            for (let k = 1; k < TAG.length; k++) {
-              if (planBuffer.endsWith(TAG.slice(0, k))) {
-                safeFlush = planBuffer.slice(0, -k);
-                keepTail = planBuffer.slice(-k);
-                break;
-              }
-            }
-            if (safeFlush) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "c", v: safeFlush }) + "\n")
-              );
-            }
-            planBuffer = keepTail;
-          }
-        }
-
-        // Flush remaining
-        if (planBuffer) {
-          const type = insidePlan ? "p" : "c";
-          controller.enqueue(
-            encoder.encode(JSON.stringify({ t: type, v: planBuffer }) + "\n")
-          );
-        }
-      } catch {
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({ t: "e", v: "Ошибка генерации ответа" }) + "\n"
-          )
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-}
-
 // ─── Main handler ────────────────────────────────────────
 
 export async function POST(req: Request) {
@@ -783,57 +208,37 @@ export async function POST(req: Request) {
     conversationId: reqConvId,
   } = await req.json();
 
+  // ─── Plan & usage checks ────────────────────────────────
+
   const { plan, usage, monthlyUsage } = await getUserPlanAndUsage(session.user.id);
   if (!plan) {
-    return NextResponse.json(
-      { error: "Нет настроенного тарифа" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Нет настроенного тарифа" }, { status: 500 });
   }
 
   const isAdmin = session.user.role === "ADMIN";
 
-  // Skip all limits for admins
   if (!isAdmin) {
-    // Daily message limit
-    if (
-      plan.messagesPerDay > 0 &&
-      (usage?.messageCount ?? 0) >= plan.messagesPerDay
-    ) {
+    if (plan.messagesPerDay > 0 && (usage?.messageCount ?? 0) >= plan.messagesPerDay) {
       return NextResponse.json(
         { error: `Достигнут дневной лимит сообщений (${plan.messagesPerDay}). Перейдите на более объёмный тариф для увеличения лимита.`, limit: plan.messagesPerDay },
         { status: 429 }
       );
     }
-
-    // Monthly token limit
-    if (
-      plan.tokensPerMonth > 0 &&
-      monthlyUsage.tokenCount >= plan.tokensPerMonth
-    ) {
+    if (plan.tokensPerMonth > 0 && monthlyUsage.tokenCount >= plan.tokensPerMonth) {
       return NextResponse.json(
         { error: "Достигнут месячный лимит токенов. Перейдите на более объёмный тариф для продолжения работы.", limit: plan.tokensPerMonth },
         { status: 429 }
       );
     }
-
-    // Minute rate limit
     if (!checkMinuteRateLimit(session.user.id, plan.requestsPerMinute)) {
-      return NextResponse.json(
-        { error: "Слишком много запросов. Подождите минуту." },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Слишком много запросов. Подождите минуту." }, { status: 429 });
     }
-
-    // Reasoning access check
     if (thinkingEnabled && !plan.canUseReasoning) {
       return NextResponse.json(
         { error: "Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках." },
         { status: 403 }
       );
     }
-
-    // Web search access check
     if (webSearchEnabled && !plan.canUseAdvancedTools) {
       return NextResponse.json(
         { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
@@ -842,7 +247,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // Content filter check on last user message
+  // ─── Content filter ─────────────────────────────────────
+
   const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
   if (lastUserMsg) {
     const filterResult = await checkContentFilter(
@@ -856,25 +262,23 @@ export async function POST(req: Request) {
     }
   }
 
-  // Build system prompt and determine provider
+  // ─── Build system prompt & resolve agent context ────────
+
   let systemPrompt = SYSTEM_PROMPT;
   let effectiveProvider = provider;
   const agentMcpTools: McpToolContext[] = [];
 
   if (agentId) {
-    // Resolve legacy IDs (e.g. "system-femida" → "system-femida-agent")
     const resolvedId = resolveAgentId(agentId);
-
-    // Use unified resolver for ALL agents (system + user)
     const ctx = await resolveAgentContext(resolvedId);
-
     if (ctx.systemPrompt) {
       systemPrompt = ctx.systemPrompt + "\n\n" + SYSTEM_PROMPT + ctx.skillPrompts.join("");
       agentMcpTools.push(...ctx.mcpTools);
     }
   }
 
-  // ─── Load user-enabled global MCP servers ────────────────
+  // ─── Load user-enabled global MCP servers ───────────────
+
   const userGlobalMcps = await prisma.userMcpServer.findMany({
     where: { userId: session.user.id, isActive: true },
     include: {
@@ -888,7 +292,6 @@ export async function POST(req: Request) {
     if (!srv.isGlobal || !srv.isEnabled || srv.status !== "CONNECTED" || !Array.isArray(srv.discoveredTools)) continue;
     const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
     for (const tool of tools) {
-      // Deduplicate with agent-level MCP tools
       if (!agentMcpTools.some((t) => t.name === tool.name)) {
         agentMcpTools.push({
           url: srv.url,
@@ -924,20 +327,15 @@ export async function POST(req: Request) {
     }
   }
 
-  // ─── Load skill ──────────────────────────────────────────
+  // ─── Load skill ─────────────────────────────────────────
 
   if (skillId) {
     const skill = await prisma.skill.findFirst({
       where: {
         id: skillId,
-        OR: [
-          { isBuiltIn: true },
-          { userId: session.user.id },
-          { isPublic: true },
-        ],
+        OR: [{ isBuiltIn: true }, { userId: session.user.id }, { isPublic: true }],
       },
     });
-
     if (skill) {
       let skillPrompt = skill.systemPrompt;
       if (skill.citationRules) {
@@ -968,7 +366,7 @@ export async function POST(req: Request) {
       "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.\n\nВАЖНО: Когда используешь веб-поиск, ОБЯЗАТЕЛЬНО в конце ответа добавь раздел «Источники:» со списком URL-ссылок откуда была взята информация. Формат:\n\nИсточники:\n- [Название](URL)\n- [Название](URL)";
   }
 
-  // ─── Load context from DB (summary + plan memory + user memory) ──
+  // ─── Load context from DB ───────────────────────────────
 
   let existingSummary: string | null = null;
   let planMemory: string | null = null;
@@ -977,9 +375,7 @@ export async function POST(req: Request) {
   const [contextData, userMemories, activeTasks] = await Promise.all([
     reqConvId
       ? Promise.all([
-          prisma.conversationSummary.findUnique({
-            where: { conversationId: reqConvId },
-          }),
+          prisma.conversationSummary.findUnique({ where: { conversationId: reqConvId } }),
           prisma.conversationPlan.findFirst({
             where: { conversationId: reqConvId, isActive: true },
             orderBy: { createdAt: "desc" },
@@ -1011,25 +407,20 @@ export async function POST(req: Request) {
     userMemoryContext = buildMemoryContext(userMemories);
   }
 
-  // Build tasks context for re-injection (survives compaction)
   let tasksContext: string | null = null;
   if (activeTasks.length > 0) {
     tasksContext = activeTasks.map((t) => {
       const steps = t.steps as Array<{ text: string; done: boolean }>;
-      const done = steps.filter((s) => s.done).map((s) => `  ✓ ${s.text}`);
-      const pending = steps.filter((s) => !s.done).map((s) => `  ○ ${s.text}`);
+      const done = steps.filter((s) => s.done).map((s) => `  \u2713 ${s.text}`);
+      const pending = steps.filter((s) => !s.done).map((s) => `  \u25CB ${s.text}`);
       return `**${t.title}** (${t.progress}%)\n${done.join("\n")}\n${pending.join("\n")}`;
     }).join("\n\n");
   }
 
-  // ─── Autocompact: check context window ─────────────────
+  // ─── Autocompact ────────────────────────────────────────
 
   const systemTokens = estimateTokens(systemPrompt);
-  const contextCheck = checkContextWindow(
-    messages,
-    systemTokens,
-    plan.contextWindowSize
-  );
+  const contextCheck = checkContextWindow(messages, systemTokens, plan.contextWindowSize);
 
   let effectiveMessages = messages;
   let isCompacting = false;
@@ -1039,41 +430,24 @@ export async function POST(req: Request) {
       messages,
       CONTEXT_KEEP_LAST_MESSAGES
     );
-
     if (messagesToSummarize.length > 0) {
       effectiveMessages = messagesToKeep;
       isCompacting = true;
-
-      // Fire compaction asynchronously (non-blocking)
       if (reqConvId) {
         const compactModel = await resolveModel("TEXT", plan.id);
-        compactInBackground(
-          reqConvId,
-          existingSummary,
-          messagesToSummarize,
-          plan.tokensPerMessage,
-          session.user.id,
-          compactModel
-        );
+        compactInBackground(reqConvId, existingSummary, messagesToSummarize, plan.tokensPerMessage, session.user.id, compactModel);
       }
     }
   }
 
-  // ─── Build enriched system prompt ──────────────────────
+  // ─── Build enriched system prompt & API messages ────────
 
   const enrichedSystemPrompt = buildSystemPromptWithContext(
-    systemPrompt,
-    existingSummary,
-    planMemory,
-    userMemoryContext,
-    tasksContext
+    systemPrompt, existingSummary, planMemory, userMemoryContext, tasksContext
   );
 
-  // ─── Build API messages ────────────────────────────────
+  const apiMessages = buildApiMessages(effectiveMessages, attachments as ChatAttachment[], enrichedSystemPrompt);
 
-  const apiMessages = buildApiMessages(effectiveMessages, attachments, enrichedSystemPrompt);
-
-  // Context info for frontend
   const contextInfo = {
     usagePercent: Math.round(contextCheck.usagePercent * 100),
     totalTokens: contextCheck.totalTokens,
@@ -1083,16 +457,17 @@ export async function POST(req: Request) {
 
   // Track usage
   const inputChars = messages.reduce(
-    (sum: number, m: { content: string }) => sum + (m.content?.length || 0),
-    0
+    (sum: number, m: { content: string }) => sum + (m.content?.length || 0), 0
   );
   const estimatedTokens = Math.max(100, Math.ceil(inputChars / 3));
   await incrementUsage(session.user.id, estimatedTokens);
 
-  // ─── Resolve text model from DB ────────────────────────
+  // ─── Resolve text model ─────────────────────────────────
+
   const textModel = await resolveModel("TEXT", plan.id);
 
-  // ─── Native tool context ─────────────────────────────────
+  // ─── Native tool context ────────────────────────────────
+
   const nativeToolCtx: NativeToolContext = {
     userId: session.user.id,
     conversationId: reqConvId || null,
@@ -1107,6 +482,7 @@ export async function POST(req: Request) {
   };
 
   // ─── Moonshot-compatible providers (custom SSE streaming) ─
+
   if (effectiveProvider === "deepinfra") {
     const stream = streamMoonshot(apiMessages, {
       maxTokens: plan.tokensPerMessage,
@@ -1120,51 +496,24 @@ export async function POST(req: Request) {
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
-      },
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
     });
   }
 
   // ─── Other providers (OpenAI, Anthropic via AI SDK) ─────
-  const canUseProvider =
-    plan.canChooseProvider || effectiveProvider === "openai";
 
-  const isAnthropic = canUseProvider && effectiveProvider === "anthropic";
-  let model;
-  if (isAnthropic) {
-    model = anthropic("claude-sonnet-4-5-20250929");
-  } else {
-    model = openai("gpt-4o");
-  }
-
-  const result = streamText({
-    model,
-    system: enrichedSystemPrompt,
+  const stream = streamAiSdk({
+    provider: effectiveProvider,
+    canUseProvider: plan.canChooseProvider || effectiveProvider === "openai",
+    systemPrompt: enrichedSystemPrompt,
     messages: effectiveMessages,
-    // Anthropic requires temperature=1 when thinking is enabled
-    temperature: isAnthropic && thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
-    topP: DEFAULT_TOP_P,
-    maxOutputTokens: plan.tokensPerMessage,
-    // Pass thinking/reasoning config for providers that support it
-    ...(thinkingEnabled && isAnthropic
-      ? { providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: Math.min(plan.tokensPerMessage, 10000) } } } }
-      : {}),
-  });
-
-  // Wrap AI SDK full stream with plan detection and reasoning
-  const stream = createPlanDetectorStream(
-    result.fullStream,
+    thinkingEnabled,
+    maxTokens: plan.tokensPerMessage,
     contextInfo,
-    thinkingEnabled && isAnthropic
-  );
+  });
 
   recordRequestDuration("/api/chat", Date.now() - _requestStart);
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
   });
 }

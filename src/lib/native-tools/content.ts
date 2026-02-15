@@ -23,10 +23,13 @@ registerNativeTool({
     }
 
     const query = (args.query as string).toLowerCase();
+    const MAX_FILES = 20;
+    const MAX_RESPONSE_SIZE = 30_000; // ~30KB total response cap
 
     const files = await prisma.agentFile.findMany({
       where: { agentId: ctx.agentId, extractedText: { not: null } },
       select: { id: true, fileName: true, extractedText: true },
+      take: MAX_FILES,
     });
 
     if (files.length === 0) {
@@ -35,25 +38,29 @@ registerNativeTool({
 
     // Substring search with context window
     const results: Array<{ fileName: string; snippets: string[] }> = [];
+    let totalSize = 0;
 
     for (const file of files) {
+      if (totalSize >= MAX_RESPONSE_SIZE) break;
+
       const text = file.extractedText || "";
       const lower = text.toLowerCase();
       const snippets: string[] = [];
       let pos = 0;
 
-      while (snippets.length < 5) {
+      while (snippets.length < 5 && totalSize < MAX_RESPONSE_SIZE) {
         const idx = lower.indexOf(query, pos);
         if (idx === -1) break;
 
         // Extract ~300 chars around the match
         const start = Math.max(0, idx - 150);
         const end = Math.min(text.length, idx + query.length + 150);
-        snippets.push(
+        const snippet =
           (start > 0 ? "..." : "") +
           text.slice(start, end) +
-          (end < text.length ? "..." : "")
-        );
+          (end < text.length ? "..." : "");
+        snippets.push(snippet);
+        totalSize += snippet.length;
         pos = idx + query.length;
       }
 

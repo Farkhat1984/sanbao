@@ -62,7 +62,7 @@ export default function AdminToolsPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sortOrder: i }),
-      }).catch(() => {});
+      }).catch(console.error);
     }
   };
 

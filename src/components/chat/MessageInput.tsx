@@ -21,9 +21,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useTaskStore } from "@/stores/taskStore";
+import dynamic from "next/dynamic";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
-import { ImageGenerateModal } from "@/components/image-edit/ImageGenerateModal";
 import { AlertModal } from "@/components/ui/AlertModal";
+
+const ImageGenerateModal = dynamic(
+  () => import("@/components/image-edit/ImageGenerateModal").then((m) => m.ImageGenerateModal),
+  { ssr: false }
+);
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/stores/agentStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -281,8 +286,9 @@ export function MessageInput() {
 
   useEffect(() => {
     if (pendingInput && !isStreaming) {
+      const input = pendingInput;
       setPendingInput(null);
-      doSubmit(pendingInput);
+      doSubmit(input);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingInput]);
@@ -491,7 +497,7 @@ export function MessageInput() {
               { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
             ],
           }),
-        }).catch(() => {});
+        }).catch(console.error);
       }
 
       // Detect and create tasks from <sanbao-task> tags
@@ -523,7 +529,7 @@ export function MessageInput() {
             .then((task) => {
               if (task) addTask(task);
             })
-            .catch(() => {});
+            .catch(console.error);
         }
       }
 
@@ -565,7 +571,7 @@ export function MessageInput() {
                 { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
               ],
             }),
-          }).catch(() => {});
+          }).catch(console.error);
         }
       } else {
         addMessage({

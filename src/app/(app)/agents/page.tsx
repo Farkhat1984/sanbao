@@ -31,7 +31,7 @@ export default function AgentsPage() {
         if (data.systemAgents) setSystemAgents(data.systemAgents);
         if (data.userAgents) setAgents(data.userAgents);
       })
-      .catch(() => {})
+      .catch(console.error)
       .finally(() => {
         setLoading(false);
         setLoaded(true);

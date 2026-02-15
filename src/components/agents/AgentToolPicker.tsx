@@ -27,7 +27,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
     fetch("/api/tools")
       .then((r) => r.json())
       .then((data) => setTools(Array.isArray(data) ? data : []))
-      .catch(() => {})
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 

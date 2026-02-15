@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { ListChecks, ChevronDown, ChevronRight } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
@@ -14,7 +14,7 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, contextUsage, activeConversationId, activeAgentId, conversations } = useChatStore();
+  const { messages, isStreaming, streamingPhase, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
   const { setActiveAgent, setAgentTools } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -53,6 +53,19 @@ export function ChatArea() {
   const agentName = activeConv?.agentName ?? undefined;
   const agentIcon = activeConv?.agentIcon ?? undefined;
   const agentIconColor = activeConv?.agentIconColor ?? undefined;
+
+  // Retry: find the user message before the given assistant message and re-submit it
+  const handleRetry = useCallback((assistantMessageId: string) => {
+    const idx = messages.findIndex((m) => m.id === assistantMessageId);
+    if (idx <= 0) return;
+    // Walk backwards to find the preceding user message
+    for (let i = idx - 1; i >= 0; i--) {
+      if (messages[i].role === "USER" && messages[i].content.trim()) {
+        setPendingInput(messages[i].content);
+        break;
+      }
+    }
+  }, [messages, setPendingInput]);
 
   return (
     <div className="h-full flex flex-col">
@@ -95,6 +108,7 @@ export function ChatArea() {
                 agentName={agentName}
                 agentIcon={agentIcon}
                 agentIconColor={agentIconColor}
+                onRetry={handleRetry}
               />
             ))}
 

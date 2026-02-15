@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { conversationUpdateSchema } from "@/lib/validation";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
+  const { searchParams } = new URL(req.url);
+  const before = searchParams.get("before"); // cursor for older messages
 
   const conversation = await prisma.conversation.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
     include: {
       messages: {
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        ...(before ? { cursor: { id: before }, skip: 1 } : {}),
         include: {
           legalRefs: true,
           artifacts: true,
@@ -28,46 +32,58 @@ export async function GET(
   });
 
   if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
-  return NextResponse.json(conversation);
+  // Reverse to chronological order for client
+  conversation.messages.reverse();
+
+  return jsonOk(conversation);
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonError("Invalid JSON", 400);
+  }
+
+  const parsed = conversationUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Invalid data", 400);
+  }
 
   const conversation = await prisma.conversation.updateMany({
-    where: { id, userId: session.user.id },
-    data: body,
+    where: { id, userId },
+    data: parsed.data,
   });
 
-  return NextResponse.json(conversation);
+  return jsonOk(conversation);
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   await prisma.conversation.deleteMany({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

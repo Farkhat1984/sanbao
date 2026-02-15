@@ -43,12 +43,14 @@ export async function dispatchWebhook(event: string, payload: Record<string, unk
         success = res.ok;
 
         if (!success && attempt < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          const backoff = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
+          await new Promise((r) => setTimeout(r, backoff));
         }
       } catch (err) {
         error = err instanceof Error ? err.message : "Unknown error";
         if (attempt < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          const backoff = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
+          await new Promise((r) => setTimeout(r, backoff));
         }
       }
       attempt++;

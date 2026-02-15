@@ -1,28 +1,26 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const task = await prisma.task.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
     include: { conversation: { select: { title: true } } },
   });
 
   if (!task) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
-  return NextResponse.json({
+  return jsonOk(serializeDates({
     id: task.id,
     title: task.title,
     steps: task.steps,
@@ -30,28 +28,27 @@ export async function GET(
     progress: task.progress,
     conversationId: task.conversationId,
     conversationTitle: task.conversation?.title || null,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-  });
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  }));
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.task.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
   const body = await req.json();
@@ -82,33 +79,28 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json({
-    ...task,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(task));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.task.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
   await prisma.task.delete({ where: { id } });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

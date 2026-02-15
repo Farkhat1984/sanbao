@@ -27,16 +27,18 @@ export async function GET(req: Request) {
     where: { createdAt: { gte: since } },
   });
 
-  // Registrations by day (raw query approximation via daily counts)
-  const users = await prisma.user.findMany({
-    where: { createdAt: { gte: since } },
-    select: { createdAt: true },
-  });
+  // Registrations by day (server-side grouping)
+  const regRows = await prisma.$queryRaw<{ day: string; count: bigint }[]>`
+    SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::bigint AS count
+    FROM "User"
+    WHERE "createdAt" >= ${since}
+    GROUP BY day
+    ORDER BY day ASC
+  `;
 
   const regsByDay: Record<string, number> = {};
-  for (const u of users) {
-    const key = u.createdAt.toISOString().slice(0, 10);
-    regsByDay[key] = (regsByDay[key] || 0) + 1;
+  for (const row of regRows) {
+    regsByDay[row.day] = Number(row.count);
   }
 
   // Top 10 users by token usage

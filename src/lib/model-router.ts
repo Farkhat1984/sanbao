@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { ModelCategory } from "@prisma/client";
 import { decrypt } from "@/lib/crypto";
 import { CACHE_TTL as CONSTANTS_CACHE_TTL, MOONSHOT_BASE_URL, DEFAULT_TEXT_MODEL, DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL } from "@/lib/constants";
+import { BoundedMap } from "@/lib/bounded-map";
 
 export interface ResolvedModel {
   provider: {
@@ -21,7 +22,7 @@ export interface ResolvedModel {
 }
 
 // In-memory cache: category+planId -> { model, expiresAt }
-const cache = new Map<string, { model: ResolvedModel; expiresAt: number }>();
+const cache = new BoundedMap<string, { model: ResolvedModel; expiresAt: number }>(200);
 const CACHE_TTL = CONSTANTS_CACHE_TTL;
 
 function cacheKey(category: ModelCategory, planId?: string) {
@@ -50,80 +51,37 @@ export async function resolveModel(
 
   let resolved: ResolvedModel | null = null;
 
-  // 1. Plan-specific default
-  if (planId) {
-    const planModel = await prisma.planModel.findFirst({
-      where: {
-        planId,
-        isDefault: true,
-        model: {
-          category,
-          isActive: true,
-          provider: { isActive: true },
-        },
-      },
-      include: { model: { include: { provider: true } } },
-    });
+  // Single query: fetch all active models in this category, then resolve by priority
+  const allModels = await prisma.aiModel.findMany({
+    where: {
+      category,
+      isActive: true,
+      provider: { isActive: true },
+    },
+    include: {
+      provider: true,
+      planModels: planId ? { where: { planId } } : false,
+    },
+    orderBy: [{ isDefault: "desc" }, { provider: { priority: "desc" } }],
+  });
 
-    if (planModel) {
-      resolved = toResolvedModel(planModel.model);
-    }
+  if (allModels.length > 0) {
+    // Priority: plan-default → plan-any → global-default → any active
+    type ModelRow = (typeof allModels)[number];
+    const planModelsArr = planId ? allModels.filter((m) => (m as ModelRow & { planModels?: unknown[] }).planModels?.length) : [];
+    const planDefault = planModelsArr.find((m) => {
+      const pm = (m as ModelRow & { planModels?: { isDefault: boolean }[] }).planModels;
+      return pm?.some((p) => p.isDefault);
+    });
+    const planAny = planModelsArr[0];
+    const globalDefault = allModels.find((m) => m.isDefault);
+    const anyActive = allModels[0];
+
+    const pick = planDefault || planAny || globalDefault || anyActive;
+    if (pick) resolved = toResolvedModel(pick);
   }
 
-  // 2. Any plan-assigned model for this category
-  if (!resolved && planId) {
-    const planModel = await prisma.planModel.findFirst({
-      where: {
-        planId,
-        model: {
-          category,
-          isActive: true,
-          provider: { isActive: true },
-        },
-      },
-      include: { model: { include: { provider: true } } },
-    });
-
-    if (planModel) {
-      resolved = toResolvedModel(planModel.model);
-    }
-  }
-
-  // 3. Global default model
-  if (!resolved) {
-    const model = await prisma.aiModel.findFirst({
-      where: {
-        category,
-        isDefault: true,
-        isActive: true,
-        provider: { isActive: true },
-      },
-      include: { provider: true },
-    });
-
-    if (model) {
-      resolved = toResolvedModel(model);
-    }
-  }
-
-  // 4. Any active model in this category
-  if (!resolved) {
-    const model = await prisma.aiModel.findFirst({
-      where: {
-        category,
-        isActive: true,
-        provider: { isActive: true },
-      },
-      include: { provider: true },
-      orderBy: { provider: { priority: "desc" } },
-    });
-
-    if (model) {
-      resolved = toResolvedModel(model);
-    }
-  }
-
-  // 5. Fallback to env vars
+  // Fallback to env vars
   if (!resolved) {
     resolved = getEnvFallback(category);
   }

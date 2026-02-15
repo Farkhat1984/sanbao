@@ -1,14 +1,10 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   // Fetch user's own servers + enabled global servers
   const [userServers, globalServers, userLinks] = await Promise.all([
@@ -29,45 +25,40 @@ export async function GET() {
   // Build a map of user's active global MCP choices
   const userLinkMap = new Map(userLinks.map((l) => [l.mcpServerId, l.isActive]));
 
-  const result = [
+  const items = [
     ...globalServers.map((s) => ({
-      ...s,
+      ...serializeDates(s),
       apiKey: null, // hide global server API keys from users
       isGlobal: true,
-      userActive: userLinkMap.get(s.id) ?? false, // not active until user opts in
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
+      userActive: userLinkMap.get(s.id) ?? false,
     })),
     ...userServers.map((s) => ({
-      ...s,
+      ...serializeDates(s),
       isGlobal: false,
-      userActive: true, // user's own servers are always active
-      createdAt: s.createdAt.toISOString(),
-      updatedAt: s.updatedAt.toISOString(),
+      userActive: true,
     })),
   ];
 
-  return NextResponse.json(result);
+  return jsonOk(items);
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
-  const { name, url, transport, apiKey } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
+
+  const { name, url, transport, apiKey } = body;
 
   if (!name?.trim() || !url?.trim()) {
-    return NextResponse.json(
-      { error: "Название и URL обязательны" },
-      { status: 400 }
-    );
+    return jsonError("Название и URL обязательны", 400);
   }
 
   const server = await prisma.mcpServer.create({
     data: {
-      userId: session.user.id,
+      userId,
       name: name.trim(),
       url: url.trim(),
       transport: transport || "SSE",
@@ -75,11 +66,9 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({
-    ...server,
+  return jsonOk({
+    ...serializeDates(server),
     isGlobal: false,
     userActive: true,
-    createdAt: server.createdAt.toISOString(),
-    updatedAt: server.updatedAt.toISOString(),
-  });
+  }, 201);
 }

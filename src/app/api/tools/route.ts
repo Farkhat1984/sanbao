@@ -1,17 +1,17 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { toolCreateSchema } from "@/lib/validation";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const tools = await prisma.tool.findMany({
     where: {
       OR: [
-        { userId: session.user.id },
+        { userId },
         { isGlobal: true },
       ],
       isActive: true,
@@ -19,41 +19,31 @@ export async function GET() {
     orderBy: { sortOrder: "asc" },
   });
 
-  return NextResponse.json(tools.map((t) => ({
-    ...t,
-    createdAt: t.createdAt.toISOString(),
-    updatedAt: t.updatedAt.toISOString(),
-  })));
+  return jsonOk(tools.map(serializeDates));
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
+
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
+
+  const parsed = toolCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
 
-  const { name, description, icon, iconColor, type, config, inputSchema } = await req.json();
-
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "Название обязательно" }, { status: 400 });
-  }
-
+  const { config, inputSchema, ...rest } = parsed.data;
   const tool = await prisma.tool.create({
     data: {
-      userId: session.user.id,
-      name: name.trim(),
-      description: description?.trim() || null,
-      icon: icon || "Wrench",
-      iconColor: iconColor || "#4F6EF7",
-      type: type || "PROMPT_TEMPLATE",
-      config: config || {},
-      inputSchema: inputSchema || null,
+      userId,
+      ...rest,
+      config: config as Prisma.InputJsonValue,
+      ...(inputSchema ? { inputSchema: inputSchema as Prisma.InputJsonValue } : {}),
     },
   });
 
-  return NextResponse.json({
-    ...tool,
-    createdAt: tool.createdAt.toISOString(),
-    updatedAt: tool.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(tool), 201);
 }

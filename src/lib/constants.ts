@@ -17,6 +17,7 @@ export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   DOCUMENT: "Документ",
   CODE: "Код",
   ANALYSIS: "Правовой анализ",
+  IMAGE: "Изображение",
 };
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -25,6 +26,26 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const DEFAULT_ICON_COLOR = "#4F6EF7";
 export const DEFAULT_AGENT_ICON = "Bot";
 export const DEFAULT_SKILL_ICON = "Scale";
+export const DEFAULT_TOOL_ICON = "Wrench";
+export const DEFAULT_PLUGIN_ICON = "Puzzle";
+
+// ─── Pagination ───
+export const DEFAULT_PAGINATION_LIMIT = 50;
+export const MAX_PAGINATION_LIMIT = 100;
+export const CSV_EXPORT_MAX_ROWS = 50_000;
+
+// ─── Conversation ───
+export const CONVERSATION_TITLE_MAX_LENGTH = 60;
+
+// ─── API Keys ───
+export const API_KEY_PREFIX = "lma_";
+export const API_KEY_BYTES = 32;
+export const WEBHOOK_SECRET_PREFIX = "whsec_";
+export const WEBHOOK_SECRET_BYTES = 24;
+
+// ─── Tool Executor ───
+export const TOOL_TIMEOUT_MS = 30_000;
+export const TOOL_RESPONSE_CAP = 10 * 1024; // 10KB
 
 // ─── Icon & Color palettes ───
 export const VALID_ICONS = [

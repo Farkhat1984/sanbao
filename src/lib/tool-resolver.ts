@@ -10,6 +10,19 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { BoundedMap } from "@/lib/bounded-map";
+
+const AGENT_CONTEXT_TTL = 30_000; // 30 seconds
+const agentContextCache = new BoundedMap<string, { context: ResolvedAgentContext; expiresAt: number }>(200);
+
+/** Invalidate agent context cache (call after admin changes agents/tools/plugins). */
+export function invalidateAgentContextCache(agentId?: string) {
+  if (agentId) {
+    agentContextCache.delete(agentId);
+  } else {
+    agentContextCache.clear();
+  }
+}
 
 export interface PromptTool {
   id: string;
@@ -41,6 +54,12 @@ export interface ResolvedAgentContext {
 export async function resolveAgentContext(
   agentId: string
 ): Promise<ResolvedAgentContext> {
+  // Check cache
+  const cached = agentContextCache.get(agentId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.context;
+  }
+
   const agent = await prisma.agent.findUnique({
     where: { id: agentId },
     include: {
@@ -229,10 +248,15 @@ export async function resolveAgentContext(
     (a, b) => a.sortOrder - b.sortOrder
   );
 
-  return {
+  const result: ResolvedAgentContext = {
     systemPrompt,
     promptTools,
     mcpTools,
     skillPrompts,
   };
+
+  // Cache for 30 seconds
+  agentContextCache.set(agentId, { context: result, expiresAt: Date.now() + AGENT_CONTEXT_TTL });
+
+  return result;
 }

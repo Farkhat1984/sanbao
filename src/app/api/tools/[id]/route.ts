@@ -1,54 +1,47 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const tool = await prisma.tool.findFirst({
     where: {
       id,
-      OR: [{ userId: session.user.id }, { isGlobal: true }],
+      OR: [{ userId }, { isGlobal: true }],
     },
   });
 
   if (!tool) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
-  return NextResponse.json({
-    ...tool,
-    createdAt: tool.createdAt.toISOString(),
-    updatedAt: tool.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(tool));
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
   const body = await req.json();
 
   const tool = await prisma.tool.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!tool) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
   const updated = await prisma.tool.update({
@@ -66,32 +59,27 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json({
-    ...updated,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(updated));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const tool = await prisma.tool.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!tool) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
   await prisma.tool.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  return jsonOk({ success: true });
 }

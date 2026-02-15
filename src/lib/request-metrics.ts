@@ -1,5 +1,7 @@
 // In-memory request duration tracking for Prometheus
 
+import { BoundedMap } from "@/lib/bounded-map";
+
 interface RouteDuration {
   count: number;
   sumMs: number;
@@ -7,7 +9,7 @@ interface RouteDuration {
 }
 
 const BUCKETS = [50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000];
-const routeMetrics = new Map<string, RouteDuration>();
+const routeMetrics = new BoundedMap<string, RouteDuration>(500);
 
 export function recordRequestDuration(route: string, durationMs: number) {
   let m = routeMetrics.get(route);

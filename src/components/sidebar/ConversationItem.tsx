@@ -56,7 +56,7 @@ export function ConversationItem({
   const handleDeleteConfirm = () => {
     setShowDeleteConfirm(false);
     removeConversation(conversation.id);
-    fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(() => {});
+    fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(console.error);
     if (isActive) {
       setActiveConversation(null);
       setActiveAgentId(null);

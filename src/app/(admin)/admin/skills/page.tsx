@@ -51,7 +51,7 @@ export default function AdminSkillsPage() {
 
   useEffect(() => { fetchSkills(); }, [filter]);
   useEffect(() => {
-    fetch("/api/admin/skills/stats").then((r) => r.json()).then(setStats).catch(() => {});
+    fetch("/api/admin/skills/stats").then((r) => r.json()).then(setStats).catch(console.error);
   }, []);
 
   const handleCreate = async () => {

@@ -26,7 +26,7 @@ export function AgentMcpPicker({ selectedIds, onChange }: AgentMcpPickerProps) {
     fetch("/api/mcp")
       .then((r) => r.json())
       .then((data) => setServers(data))
-      .catch(() => {})
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 

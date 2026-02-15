@@ -94,6 +94,26 @@ Universal metadata-driven system. All agents (system and user) use the same `Age
 - **Frontend**: agentStore.agentTools loaded in ChatArea, consumed by WelcomeScreen, ToolsPanel, MessageInput
 - **Legacy compat**: `resolveAgentId()` maps old "system-femida" → "system-femida-agent". SystemAgent table kept (deprecated)
 
+### Native Tools
+
+Built-in tools executed server-side without external calls. Dispatch order in `route.ts`: MCP tools → Native tools → `$web_search`.
+
+- **Registry:** `src/lib/native-tools/registry.ts` — `registerNativeTool()`, avoids circular deps
+- **Entry:** `src/lib/native-tools.ts` — re-exports + side-effect imports of all tool modules
+- **Modules:** `system.ts` (time, user info, context), `http-request.ts`, `productivity.ts` (tasks, memory, notifications, scratchpad), `analysis.ts` (calculate, CSV, chart data), `content.ts` (read/search knowledge)
+- **14 tools:** `http_request`, `get_current_time`, `get_user_info`, `get_conversation_context`, `create_task`, `save_memory`, `send_notification`, `write_scratchpad`, `read_scratchpad`, `calculate`, `analyze_csv`, `read_knowledge`, `search_knowledge`, `generate_chart_data`
+- Tool call loop max 5 iterations (`NATIVE_TOOL_MAX_TURNS` in route.ts)
+- Stream phase `using_tool` via `{t:"s", v:"using_tool"}`
+- Adding a new native tool: create function in appropriate module → call `registerNativeTool()` → it auto-registers on import
+
+### MCP Integration
+
+- `src/lib/mcp-client.ts` — connects to MCP servers via `@modelcontextprotocol/sdk`
+- **Admin toggle:** `McpServer.isEnabled` controls user visibility
+- **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
+- `route.ts` loads user-enabled global MCPs + user's own connected MCPs
+- User pages: `/mcp` for managing personal MCP connections
+
 ### Key Patterns
 
 - **Admin API routes:** `const result = await requireAdmin(); if (result.error) return result.error;`

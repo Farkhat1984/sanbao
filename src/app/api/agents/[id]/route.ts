@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 const AGENT_INCLUDE = {
@@ -10,26 +9,13 @@ const AGENT_INCLUDE = {
   plugins: { include: { plugin: { select: { id: true, name: true, icon: true, iconColor: true } } } },
 };
 
-function serializeAgent(agent: Record<string, unknown> & { createdAt: Date; updatedAt: Date; files: Array<{ createdAt: Date } & Record<string, unknown>> }) {
-  return {
-    ...agent,
-    createdAt: agent.createdAt.toISOString(),
-    updatedAt: agent.updatedAt.toISOString(),
-    files: agent.files.map((f) => ({
-      ...f,
-      createdAt: f.createdAt.toISOString(),
-    })),
-  };
-}
-
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
@@ -38,7 +24,7 @@ export async function GET(
     where: {
       id,
       OR: [
-        { userId: session.user.id },
+        { userId },
         { isSystem: true },
       ],
     },
@@ -46,31 +32,30 @@ export async function GET(
   });
 
   if (!agent) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
-  return NextResponse.json(serializeAgent(agent));
+  return jsonOk(serializeDates(agent));
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
   const body = await req.json();
   const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = body;
 
   const existing = await prisma.agent.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
   const agent = await prisma.agent.update({
@@ -133,32 +118,31 @@ export async function PUT(
   // Refetch with relations if associations were updated
   if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(pluginIds)) {
     const updated = await prisma.agent.findUnique({ where: { id }, include: AGENT_INCLUDE });
-    return NextResponse.json(serializeAgent(updated!));
+    return jsonOk(serializeDates(updated!));
   }
 
-  return NextResponse.json(serializeAgent(agent));
+  return jsonOk(serializeDates(agent));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.agent.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
   await prisma.agent.delete({ where: { id } });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
+import { parsePagination } from "@/lib/validation";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -10,8 +12,7 @@ export async function GET(req: Request) {
   const userId = searchParams.get("userId");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+  const { page, limit } = parsePagination(searchParams);
 
   const where: Record<string, unknown> = {};
   if (userId) where.userId = userId;
@@ -32,17 +33,11 @@ export async function GET(req: Request) {
       take: csvLimit,
     });
 
-    const header = "Date,UserId,Provider,Model,InputTokens,OutputTokens,Cost\n";
-    const rows = allLogs.map((l) =>
-      `${l.createdAt.toISOString()},${l.userId},${l.provider},${l.model},${l.inputTokens},${l.outputTokens},${l.cost}`
-    ).join("\n");
-
-    return new NextResponse(header + rows, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="token-usage-${new Date().toISOString().slice(0, 10)}.csv"`,
-      },
-    });
+    const csv = buildCsvDocument(
+      ["Date", "UserId", "Provider", "Model", "InputTokens", "OutputTokens", "Cost"],
+      allLogs.map((l) => [l.createdAt.toISOString(), l.userId, l.provider, l.model, l.inputTokens, l.outputTokens, l.cost])
+    );
+    return csvResponse(csv, `token-usage-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
   const [logs, total] = await Promise.all([

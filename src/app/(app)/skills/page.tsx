@@ -27,7 +27,7 @@ export default function SkillsPage() {
           setSkills(data);
         }
       })
-      .catch(() => {})
+      .catch(console.error)
       .finally(() => {
         setIsLoading(false);
         setLoaded(true);

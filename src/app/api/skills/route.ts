@@ -1,13 +1,12 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { skillCreateSchema } from "@/lib/validation";
 
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { searchParams } = new URL(req.url);
   const marketplace = searchParams.get("marketplace") === "true";
@@ -18,7 +17,7 @@ export async function GET(req: Request) {
       : {
           OR: [
             { isBuiltIn: true },
-            { userId: session.user.id },
+            { userId },
           ],
         },
     orderBy: [{ isBuiltIn: "desc" }, { updatedAt: "desc" }],
@@ -40,48 +39,36 @@ export async function GET(req: Request) {
     },
   });
 
-  const result = skills.map((s) => ({
-    ...s,
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
-  }));
-
-  return NextResponse.json(result);
+  return jsonOk(skills.map(serializeDates));
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
-  const body = await req.json();
-  const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor } = body;
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
 
-  if (!name?.trim() || !systemPrompt?.trim()) {
-    return NextResponse.json(
-      { error: "Название и системный промпт обязательны" },
-      { status: 400 }
-    );
+  const parsed = skillCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
+  const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor } = parsed.data;
 
   const skill = await prisma.skill.create({
     data: {
-      userId: session.user.id,
-      name: name.trim(),
-      description: description?.trim() || null,
-      systemPrompt: systemPrompt.trim(),
-      templates: templates || null,
-      citationRules: citationRules?.trim() || null,
-      jurisdiction: jurisdiction || "RU",
+      userId,
+      name,
+      description,
+      systemPrompt,
+      ...(templates ? { templates } : {}),
+      citationRules,
+      jurisdiction,
       icon: icon || DEFAULT_SKILL_ICON,
       iconColor: iconColor || DEFAULT_ICON_COLOR,
     },
   });
 
-  return NextResponse.json({
-    ...skill,
-    createdAt: skill.createdAt.toISOString(),
-    updatedAt: skill.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(skill), 201);
 }

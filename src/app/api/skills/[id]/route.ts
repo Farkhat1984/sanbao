@@ -1,15 +1,13 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
@@ -18,40 +16,35 @@ export async function GET(
       id,
       OR: [
         { isBuiltIn: true },
-        { userId: session.user.id },
+        { userId },
         { isPublic: true },
       ],
     },
   });
 
   if (!skill) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
-  return NextResponse.json({
-    ...skill,
-    createdAt: skill.createdAt.toISOString(),
-    updatedAt: skill.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(skill));
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.skill.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено или нет доступа" }, { status: 404 });
+    return jsonError("Не найдено или нет доступа", 404);
   }
 
   const body = await req.json();
@@ -72,33 +65,28 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json({
-    ...skill,
-    createdAt: skill.createdAt.toISOString(),
-    updatedAt: skill.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(skill));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.skill.findFirst({
-    where: { id, userId: session.user.id, isBuiltIn: false },
+    where: { id, userId, isBuiltIn: false },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено или нельзя удалить" }, { status: 404 });
+    return jsonError("Не найдено или нельзя удалить", 404);
   }
 
   await prisma.skill.delete({ where: { id } });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

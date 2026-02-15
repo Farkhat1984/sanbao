@@ -4,12 +4,15 @@ import {
   AUTH_BLOCK_DURATION_MS as CONST_AUTH_BLOCK_DURATION_MS,
   CACHE_CLEANUP_INTERVAL_MS,
 } from "@/lib/constants";
+import { BoundedMap } from "@/lib/bounded-map";
 
-const requestTimestamps = new Map<string, number[]>();
+const RATE_LIMIT_MAX_ENTRIES = 50_000;
+
+const requestTimestamps = new BoundedMap<string, number[]>(RATE_LIMIT_MAX_ENTRIES);
 
 // ─── Abuse tracking: auto-block after repeated rate limit violations ───
-const violationCounts = new Map<string, { count: number; lastViolation: number }>();
-const userBlocklist = new Map<string, number>(); // userId -> unblock timestamp
+const violationCounts = new BoundedMap<string, { count: number; lastViolation: number }>(RATE_LIMIT_MAX_ENTRIES);
+const userBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES); // userId -> unblock timestamp
 
 function trackViolation(key: string): boolean {
   const now = Date.now();
@@ -70,8 +73,8 @@ export function checkMinuteRateLimit(
 
 // ─── IP-based rate limiting for auth routes (brute force protection) ───
 
-const ipTimestamps = new Map<string, number[]>();
-const ipBlocklist = new Map<string, number>(); // IP -> unblock timestamp
+const ipTimestamps = new BoundedMap<string, number[]>(RATE_LIMIT_MAX_ENTRIES);
+const ipBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES); // IP -> unblock timestamp
 
 const AUTH_MAX_PER_MINUTE = CONST_AUTH_MAX_PER_MINUTE;
 const AUTH_BLOCK_DURATION_MS = CONST_AUTH_BLOCK_DURATION_MS;
@@ -113,7 +116,7 @@ export function checkAuthRateLimit(ip: string): {
 
 // ─── Generic rate limiter for any key + window ───
 
-const genericTimestamps = new Map<string, number[]>();
+const genericTimestamps = new BoundedMap<string, number[]>(RATE_LIMIT_MAX_ENTRIES);
 
 export function checkRateLimit(
   key: string,
@@ -135,30 +138,21 @@ export function checkRateLimit(
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, timestamps] of requestTimestamps) {
+    requestTimestamps.cleanup((timestamps) => {
       const recent = timestamps.filter((t) => now - t < 60_000);
-      if (recent.length === 0) requestTimestamps.delete(key);
-      else requestTimestamps.set(key, recent);
-    }
-    for (const [key, timestamps] of ipTimestamps) {
+      return recent.length === 0;
+    });
+    ipTimestamps.cleanup((timestamps) => {
       const recent = timestamps.filter((t) => now - t < 60_000);
-      if (recent.length === 0) ipTimestamps.delete(key);
-      else ipTimestamps.set(key, recent);
-    }
-    for (const [key, timestamps] of genericTimestamps) {
+      return recent.length === 0;
+    });
+    genericTimestamps.cleanup((timestamps) => {
       const recent = timestamps.filter((t) => now - t < 300_000);
-      if (recent.length === 0) genericTimestamps.delete(key);
-      else genericTimestamps.set(key, recent);
-    }
+      return recent.length === 0;
+    });
     // Cleanup expired blocklist entries
-    for (const [ip, until] of ipBlocklist) {
-      if (now >= until) ipBlocklist.delete(ip);
-    }
-    for (const [uid, until] of userBlocklist) {
-      if (now >= until) userBlocklist.delete(uid);
-    }
-    for (const [key, v] of violationCounts) {
-      if (now - v.lastViolation > VIOLATION_WINDOW_MS) violationCounts.delete(key);
-    }
+    ipBlocklist.cleanup((until) => now >= until);
+    userBlocklist.cleanup((until) => now >= until);
+    violationCounts.cleanup((v) => now - v.lastViolation > VIOLATION_WINDOW_MS);
   }, CACHE_CLEANUP_INTERVAL_MS);
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CACHE_TTL } from "@/lib/constants";
+import { fireAndForget } from "@/lib/logger";
 
 interface ActiveExperiment {
   id: string;
@@ -19,8 +20,8 @@ async function loadExperiments(): Promise<ActiveExperiment[]> {
     select: { id: true, key: true, variantA: true, variantB: true, trafficPct: true },
   });
 
-  cache = { experiments, expiresAt: Date.now() + CACHE_TTL };
-  return experiments;
+  cache = { experiments: experiments ?? [], expiresAt: Date.now() + CACHE_TTL };
+  return cache.experiments;
 }
 
 export function invalidateExperimentCache() {
@@ -50,15 +51,17 @@ export async function resolveWithExperiment(
 
     if (inBucket) {
       // Track impression (fire-and-forget)
-      prisma.promptExperiment
-        .update({ where: { id: experiment.id }, data: { impressionsB: { increment: 1 } } })
-        .catch(() => {});
+      fireAndForget(
+        prisma.promptExperiment.update({ where: { id: experiment.id }, data: { impressionsB: { increment: 1 } } }),
+        "ab-experiment:impressionB"
+      );
       return { value: experiment.variantB, experimentId: experiment.id, variant: "B" };
     }
 
-    prisma.promptExperiment
-      .update({ where: { id: experiment.id }, data: { impressionsA: { increment: 1 } } })
-      .catch(() => {});
+    fireAndForget(
+      prisma.promptExperiment.update({ where: { id: experiment.id }, data: { impressionsA: { increment: 1 } } }),
+      "ab-experiment:impressionA"
+    );
     return { value: experiment.variantA, experimentId: experiment.id, variant: "A" };
   } catch {
     return { value: defaultValue };

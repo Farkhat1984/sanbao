@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { fireAndForget } from "@/lib/logger";
 
 interface ApiKeyAuthResult {
   userId: string;
@@ -49,10 +50,10 @@ export async function authenticateApiKey(
   }
 
   // Update last used (fire-and-forget)
-  prisma.apiKey.update({
-    where: { id: apiKey.id },
-    data: { lastUsed: new Date() },
-  }).catch(() => {});
+  fireAndForget(
+    prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsed: new Date() } }),
+    "api-key-auth:updateLastUsed"
+  );
 
   return { auth: { userId: apiKey.user.id, keyId: apiKey.id } };
 }

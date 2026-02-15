@@ -3,6 +3,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { fireAndForget } from "@/lib/logger";
 
 export interface McpToolInfo {
   name: string;
@@ -93,18 +94,21 @@ export async function callMcpTool(
 
     // Log tool call
     if (context?.mcpServerId) {
-      prisma.mcpToolLog.create({
-        data: {
-          mcpServerId: context.mcpServerId,
-          toolName,
-          input: args as Prisma.InputJsonValue,
-          output: { text: textContent.slice(0, 10000) } as Prisma.InputJsonValue,
-          durationMs: Date.now() - start,
-          success: true,
-          userId: context.userId || null,
-          conversationId: context.conversationId || null,
-        },
-      }).catch(() => {}); // fire-and-forget
+      fireAndForget(
+        prisma.mcpToolLog.create({
+          data: {
+            mcpServerId: context.mcpServerId,
+            toolName,
+            input: args as Prisma.InputJsonValue,
+            output: { text: textContent.slice(0, 10000) } as Prisma.InputJsonValue,
+            durationMs: Date.now() - start,
+            success: true,
+            userId: context.userId || null,
+            conversationId: context.conversationId || null,
+          },
+        }),
+        "mcp-client:logToolCall"
+      );
     }
 
     return { result: textContent };
@@ -113,18 +117,21 @@ export async function callMcpTool(
 
     // Log failed tool call
     if (context?.mcpServerId) {
-      prisma.mcpToolLog.create({
-        data: {
-          mcpServerId: context.mcpServerId,
-          toolName,
-          input: args as Prisma.InputJsonValue,
-          durationMs: Date.now() - start,
-          success: false,
-          error: errorMsg,
-          userId: context.userId || null,
-          conversationId: context.conversationId || null,
-        },
-      }).catch(() => {}); // fire-and-forget
+      fireAndForget(
+        prisma.mcpToolLog.create({
+          data: {
+            mcpServerId: context.mcpServerId,
+            toolName,
+            input: args as Prisma.InputJsonValue,
+            durationMs: Date.now() - start,
+            success: false,
+            error: errorMsg,
+            userId: context.userId || null,
+            conversationId: context.conversationId || null,
+          },
+        }),
+        "mcp-client:logFailedToolCall"
+      );
     }
 
     return { result: "", error: errorMsg };

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
+import { parsePagination } from "@/lib/validation";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -11,8 +13,7 @@ export async function GET(req: Request) {
   const action = searchParams.get("action");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+  const { page, limit } = parsePagination(searchParams);
 
   const where: Record<string, unknown> = {};
   if (actor) where.actorId = actor;
@@ -34,17 +35,11 @@ export async function GET(req: Request) {
       take: csvLimit,
     });
 
-    const header = "Date,ActorId,Action,Target,TargetId,IP\n";
-    const rows = allLogs.map((l) =>
-      `${l.createdAt.toISOString()},${l.actorId},${l.action},${l.target},${l.targetId || ""},${l.ip || ""}`
-    ).join("\n");
-
-    return new NextResponse(header + rows, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="audit-log-${new Date().toISOString().slice(0, 10)}.csv"`,
-      },
-    });
+    const csv = buildCsvDocument(
+      ["Date", "ActorId", "Action", "Target", "TargetId", "IP"],
+      allLogs.map((l) => [l.createdAt.toISOString(), l.actorId, l.action, l.target, l.targetId || "", l.ip || ""])
+    );
+    return csvResponse(csv, `audit-log-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
   const [logs, total] = await Promise.all([

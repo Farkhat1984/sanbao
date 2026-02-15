@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
+import { parsePagination } from "@/lib/validation";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+  const { page, limit } = parsePagination(searchParams);
   const route = searchParams.get("route");
 
   const format = searchParams.get("format");
@@ -24,17 +25,11 @@ export async function GET(req: Request) {
       take: csvLimit,
     });
 
-    const header = "Date,Route,Method,Message,UserId\n";
-    const rows = allErrors.map((e) =>
-      `${e.createdAt.toISOString()},${e.route},${e.method},"${e.message.replace(/"/g, '""')}",${e.userId || ""}`
-    ).join("\n");
-
-    return new NextResponse(header + rows, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="errors-${new Date().toISOString().slice(0, 10)}.csv"`,
-      },
-    });
+    const csv = buildCsvDocument(
+      ["Date", "Route", "Method", "Message", "UserId"],
+      allErrors.map((e) => [e.createdAt.toISOString(), e.route, e.method, e.message, e.userId || ""])
+    );
+    return csvResponse(csv, `errors-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
   const [errors, total] = await Promise.all([

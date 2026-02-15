@@ -1,17 +1,15 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const conversations = await prisma.conversation.findMany({
-    where: { userId: session.user.id, archived: false },
+    where: { userId, archived: false },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -31,7 +29,7 @@ export async function GET() {
     },
   });
 
-  const result = conversations.map((c) => {
+  const items = conversations.map((c) => {
     // Use agent relation if available
     if (c.agent) {
       return {
@@ -51,7 +49,6 @@ export async function GET() {
     }
 
     // Legacy fallback: systemAgentId without agent relation
-    // This handles old conversations before migration
     if (c.systemAgentId) {
       return {
         id: c.id,
@@ -85,28 +82,27 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json(result);
+  return jsonOk(items);
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId, session } = result.auth;
 
-  const { title, agentId } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
+
+  const { title, agentId } = body;
 
   // Check maxConversations limit (admins bypass)
-  const { plan } = await getUserPlanAndUsage(session.user.id);
+  const { plan } = await getUserPlanAndUsage(userId);
   if (session.user.role !== "ADMIN" && plan && plan.maxConversations > 0) {
     const count = await prisma.conversation.count({
-      where: { userId: session.user.id, archived: false },
+      where: { userId, archived: false },
     });
     if (count >= plan.maxConversations) {
-      return NextResponse.json(
-        { error: `Достигнут лимит диалогов (${plan.maxConversations}). Удалите старые или перейдите на более высокий тариф.` },
-        { status: 403 }
-      );
+      return jsonError(`Достигнут лимит диалогов (${plan.maxConversations}). Удалите старые или перейдите на более высокий тариф.`, 403);
     }
   }
 
@@ -116,7 +112,7 @@ export async function POST(req: Request) {
   const conversation = await prisma.conversation.create({
     data: {
       title: title || "Новый чат",
-      userId: session.user.id,
+      userId,
       agentId: resolvedId,
     },
   });
@@ -124,14 +120,13 @@ export async function POST(req: Request) {
   // Build response with agent info
   let agentInfo = null;
   if (resolvedId) {
-    const agent = await prisma.agent.findUnique({
+    agentInfo = await prisma.agent.findUnique({
       where: { id: resolvedId },
       select: { id: true, name: true, icon: true, iconColor: true, isSystem: true },
     });
-    agentInfo = agent;
   }
 
-  return NextResponse.json({
+  return jsonOk({
     id: conversation.id,
     title: conversation.title,
     pinned: false,
@@ -143,5 +138,5 @@ export async function POST(req: Request) {
     agentIcon: agentInfo?.icon ?? null,
     agentIconColor: agentInfo?.iconColor ?? null,
     isSystemAgent: agentInfo?.isSystem ?? false,
-  });
+  }, 201);
 }

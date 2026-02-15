@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
+import { fireAndForget } from "@/lib/logger";
 
 /**
  * Stripe webhook handler.
@@ -71,13 +72,14 @@ export async function POST(req: Request) {
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-          sendInvoiceEmail({
+          const invoicePromise = sendInvoiceEmail({
             userId,
             planName: plan.name,
             amount: `${(amountTotal / 100).toLocaleString("ru-RU")} ${currency.toUpperCase()}`,
             periodStart: now,
             periodEnd,
-          }).catch((err) => console.error("Invoice email error:", err));
+          });
+          fireAndForget(invoicePromise, "billing:sendInvoiceEmail");
         }
       }
       break;
@@ -103,10 +105,11 @@ export async function POST(req: Request) {
           include: { plan: { select: { name: true } } },
         });
         if (sub) {
-          sendPaymentFailedNotification({
+          const failedNotifPromise = sendPaymentFailedNotification({
             userId: customerId,
             planName: sub.plan.name,
-          }).catch((err) => console.error("Payment failed email error:", err));
+          });
+          fireAndForget(failedNotifPromise, "billing:sendPaymentFailedNotification");
         }
       }
       break;

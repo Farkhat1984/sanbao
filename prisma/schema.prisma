@@ -131,6 +131,7 @@ model Message {
   createdAt DateTime @default(now())
 
   @@index([conversationId, createdAt])
+  @@index([toolName])
 }
 
 model Artifact {
@@ -150,6 +151,7 @@ model Artifact {
   updatedAt DateTime @updatedAt
 
   @@index([conversationId])
+  @@index([type])
 }
 
 model LegalReference {
@@ -704,6 +706,7 @@ model EmailLog {
 
 // ─── System Agents ────────────────────────────────────────
 
+/// @deprecated Use Agent with isSystem=true instead. Kept for backward compatibility.
 model SystemAgent {
   id             String   @id @default(cuid())
   name           String   @unique

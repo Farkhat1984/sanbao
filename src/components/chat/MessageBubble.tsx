@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Pencil,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -23,6 +23,7 @@ import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Artifact parsing ────────────────────────────────────
@@ -37,16 +38,6 @@ const EDIT_REGEX =
 
 const REPLACE_REGEX =
   /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/replace>/g;
-
-const ARTIFACT_TYPE_LABELS: Record<string, string> = {
-  CONTRACT: "Договор",
-  CLAIM: "Иск",
-  COMPLAINT: "Жалоба",
-  DOCUMENT: "Документ",
-  CODE: "Код",
-  ANALYSIS: "Анализ",
-  IMAGE: "Изображение",
-};
 
 interface ParsedPart {
   type: "text" | "artifact" | "edit";
@@ -194,9 +185,10 @@ interface MessageBubbleProps {
   agentName?: string;
   agentIcon?: string;
   agentIconColor?: string;
+  onRetry?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, agentName, agentIcon, agentIconColor }: MessageBubbleProps) {
+export function MessageBubble({ message, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const { openArtifact, trackArtifact, findByTitle, applyEdits } = useArtifactStore();
@@ -227,9 +219,15 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Parse artifacts and edits from assistant messages
-  const parts = isAssistant ? parseContentWithArtifacts(message.content) : [];
-  const hasSpecialParts = parts.some((p) => p.type === "artifact" || p.type === "edit");
+  // Parse artifacts and edits from assistant messages (memoized — regex parsing is expensive)
+  const parts = useMemo(
+    () => (isAssistant ? parseContentWithArtifacts(message.content) : []),
+    [isAssistant, message.content]
+  );
+  const hasSpecialParts = useMemo(
+    () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
+    [parts]
+  );
 
   // Auto-apply edits to existing artifacts (run once per message)
   useEffect(() => {
@@ -493,13 +491,18 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor }:
               )}
               {copied ? "Скопировано" : "Копировать"}
             </button>
-            <button className={cn(
-              "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
-              isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
-            )}>
-              <RotateCcw className="h-3 w-3" />
-              Повторить
-            </button>
+            {onRetry && (
+              <button
+                onClick={() => onRetry(message.id)}
+                className={cn(
+                  "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                  isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
+                )}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Повторить
+              </button>
+            )}
           </div>
         )}
       </div>

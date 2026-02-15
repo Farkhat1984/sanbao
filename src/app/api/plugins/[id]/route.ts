@@ -1,22 +1,20 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const plugin = await prisma.plugin.findFirst({
     where: {
       id,
-      OR: [{ userId: session.user.id }, { isGlobal: true }],
+      OR: [{ userId }, { isGlobal: true }],
     },
     include: {
       tools: { include: { tool: true } },
@@ -26,34 +24,29 @@ export async function GET(
   });
 
   if (!plugin) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
-  return NextResponse.json({
-    ...plugin,
-    createdAt: plugin.createdAt.toISOString(),
-    updatedAt: plugin.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(plugin));
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
   const body = await req.json();
 
   const plugin = await prisma.plugin.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!plugin) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
   const updated = await prisma.plugin.update({
@@ -68,32 +61,27 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json({
-    ...updated,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(updated));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const plugin = await prisma.plugin.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!plugin) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
   await prisma.plugin.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  return jsonOk({ success: true });
 }

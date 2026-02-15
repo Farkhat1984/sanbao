@@ -12,22 +12,13 @@ import { CodePreview, isPythonCode } from "./CodePreview";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
 import { markdownToDocx } from "@/lib/export-docx";
 import { exportToPdf } from "@/lib/export-pdf";
 import { exportAsText, exportAsHtml, exportAsMarkdown, sanitizeFilename } from "@/lib/export-utils";
 import { exportAsXlsx } from "@/lib/export-xlsx";
 import type { ExportFormat } from "@/lib/export-utils";
 import type { ArtifactType } from "@/types/chat";
-
-const TYPE_LABELS: Record<string, string> = {
-  CONTRACT: "Договор",
-  CLAIM: "Иск",
-  COMPLAINT: "Жалоба",
-  DOCUMENT: "Документ",
-  CODE: "Код",
-  ANALYSIS: "Анализ",
-  IMAGE: "Изображение",
-};
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
   docx: "DOCX",
@@ -156,7 +147,7 @@ export function ArtifactPanel() {
           </h3>
           <div className="flex items-center gap-2 mt-0.5">
             <Badge variant="legal" className="text-[10px]">
-              {TYPE_LABELS[activeArtifact.type] || activeArtifact.type}
+              {ARTIFACT_TYPE_LABELS[activeArtifact.type] || activeArtifact.type}
             </Badge>
             {/* Version selector */}
             {activeArtifact.versions && activeArtifact.versions.length > 1 ? (

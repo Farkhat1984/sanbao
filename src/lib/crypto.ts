@@ -43,6 +43,19 @@ export function decrypt(ciphertext: string): string {
   return decrypted;
 }
 
+const HEX_PATTERN = /^[0-9a-f]+$/i;
+
 export function isEncrypted(value: string): boolean {
-  return value.includes(":") && value.split(":").length === 3;
+  const parts = value.split(":");
+  if (parts.length !== 3) return false;
+  const [iv, tag, ciphertext] = parts;
+  // IV = 12 bytes = 24 hex chars, Tag = 16 bytes = 32 hex chars, ciphertext > 0
+  return (
+    iv.length === 24 &&
+    tag.length === 32 &&
+    ciphertext.length > 0 &&
+    HEX_PATTERN.test(iv) &&
+    HEX_PATTERN.test(tag) &&
+    HEX_PATTERN.test(ciphertext)
+  );
 }

@@ -1,32 +1,27 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
   const { content } = await req.json();
 
   if (!content?.trim()) {
-    return NextResponse.json(
-      { error: "Содержимое обязательно" },
-      { status: 400 }
-    );
+    return jsonError("Содержимое обязательно", 400);
   }
 
   const existing = await prisma.userMemory.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
   const memory = await prisma.userMemory.update({
@@ -34,33 +29,28 @@ export async function PUT(
     data: { content: content.trim() },
   });
 
-  return NextResponse.json({
-    ...memory,
-    createdAt: memory.createdAt.toISOString(),
-    updatedAt: memory.updatedAt.toISOString(),
-  });
+  return jsonOk(serializeDates(memory));
 }
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
   const existing = await prisma.userMemory.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId },
   });
 
   if (!existing) {
-    return NextResponse.json({ error: "Не найдено" }, { status: 404 });
+    return jsonError("Не найдено", 404);
   }
 
   await prisma.userMemory.delete({ where: { id } });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }
