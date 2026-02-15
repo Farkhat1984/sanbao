@@ -119,7 +119,7 @@ export function Sidebar() {
       </div>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
         <ConversationList />
       </div>
 

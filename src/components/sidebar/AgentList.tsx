@@ -62,7 +62,7 @@ export function AgentList() {
       {/* Section Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-1.5 py-1.5 text-[11px] font-medium text-text-muted uppercase tracking-wider hover:text-text-primary transition-colors cursor-pointer"
+        className="w-full flex items-center gap-1.5 py-1.5 text-[11px] font-medium text-text-secondary uppercase tracking-wider hover:text-text-primary transition-colors cursor-pointer"
       >
         {expanded ? (
           <ChevronDown className="h-3 w-3" />
@@ -84,7 +84,7 @@ export function AgentList() {
                 isMobile ? "h-10" : "h-8",
                 item.disabled
                   ? "text-text-muted/50 cursor-default"
-                  : "text-text-muted hover:text-text-primary hover:bg-surface-alt cursor-pointer"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-alt cursor-pointer"
               )}
             >
               <div

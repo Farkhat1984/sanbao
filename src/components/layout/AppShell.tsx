@@ -89,7 +89,7 @@ export function AppShell({ children }: AppShellProps) {
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px]"
+                className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] overscroll-contain touch-pan-y"
               >
                 <Sidebar />
               </motion.div>

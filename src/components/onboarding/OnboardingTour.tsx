@@ -94,7 +94,8 @@ export function OnboardingTour() {
   }, [currentStep, nextStep, completeTour]);
 
   if (currentStep === null) {
-    // Help button to restart tour
+    // Only show help button if user hasn't completed the tour yet
+    if (hasSeenTour) return null;
     return (
       <button
         onClick={startTour}

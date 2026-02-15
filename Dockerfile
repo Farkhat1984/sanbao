@@ -13,6 +13,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
+# Compile seed.ts to JS for production use
+RUN npx tsc prisma/seed.ts --esModuleInterop --module commonjs --outDir prisma/out --skipLibCheck
+
+# --- Prisma CLI (for db push at startup) ---
+FROM base AS prisma-cli
+WORKDIR /tmp/prisma-cli
+RUN npm init -y > /dev/null 2>&1 && npm install prisma@6.19.2 --save-exact 2>/dev/null
 
 # --- Production ---
 FROM base AS runner
@@ -43,9 +50,12 @@ COPY --from=deps /app/node_modules/mammoth ./node_modules/mammoth
 COPY --from=deps /app/node_modules/pdf-parse ./node_modules/pdf-parse
 COPY --from=deps /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 COPY --from=deps /app/node_modules/xlsx ./node_modules/xlsx
-COPY prisma ./prisma/
+# Prisma CLI with all dependencies (for db push at startup)
+COPY --from=prisma-cli /tmp/prisma-cli/node_modules /app/prisma-cli/node_modules
+COPY prisma/schema.prisma ./prisma/
+COPY --from=builder /app/prisma/out/seed.js ./prisma/
+COPY --chmod=755 docker-entrypoint.sh ./
 
-USER nextjs
 EXPOSE 3004
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
