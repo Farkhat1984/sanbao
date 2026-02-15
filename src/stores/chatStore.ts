@@ -2,11 +2,12 @@ import { create } from "zustand";
 import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat";
 import { DEFAULT_PROVIDER } from "@/lib/constants";
 
-export type StreamingPhase = "thinking" | "searching" | "planning" | "answering" | null;
+export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | null;
 
 const PHASE_PRIORITY: Record<string, number> = {
   thinking: 1,
   searching: 2,
+  using_tool: 2,
   planning: 3,
   answering: 4,
 };

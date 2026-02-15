@@ -17,7 +17,7 @@ export async function PUT(
     return NextResponse.json({ error: "Сервер не найден" }, { status: 404 });
   }
 
-  const allowedFields = ["name", "url", "transport", "apiKey", "status"];
+  const allowedFields = ["name", "url", "transport", "apiKey", "status", "isEnabled"];
   const data: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) data[field] = body[field];

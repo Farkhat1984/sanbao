@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       transport: transport || "SSE",
       apiKey: apiKey || null,
       isGlobal: true,
+      isEnabled: body.isEnabled !== false,
       userId: null,
     },
   });

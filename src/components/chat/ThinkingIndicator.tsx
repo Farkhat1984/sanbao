@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, MessageSquare, Globe, ListChecks } from "lucide-react";
+import { Brain, MessageSquare, Globe, ListChecks, Wrench } from "lucide-react";
 import { motion } from "framer-motion";
 import type { StreamingPhase } from "@/stores/chatStore";
 
@@ -27,6 +27,11 @@ export function ThinkingIndicator({ phase, agentName }: ThinkingIndicatorProps) 
     Icon = Globe;
     gradientClass = "from-emerald-500 to-teal-600";
     dotColorClass = "bg-emerald-500";
+  } else if (phase === "using_tool") {
+    label = "Использует инструменты";
+    Icon = Wrench;
+    gradientClass = "from-blue-500 to-cyan-600";
+    dotColorClass = "bg-blue-500";
   } else if (phase === "planning") {
     label = `${name} составляет план`;
     Icon = ListChecks;
@@ -41,14 +46,17 @@ export function ThinkingIndicator({ phase, agentName }: ThinkingIndicatorProps) 
 
   const isThinking = phase === "thinking";
   const isSearching = phase === "searching";
+  const isUsingTool = phase === "using_tool";
 
   const iconAnimation = isSearching
     ? { rotateY: [0, 360] }
     : isThinking
       ? { scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }
-      : { rotateZ: [0, -8, 8, -4, 4, 0] };
+      : isUsingTool
+        ? { rotate: [0, 90, 180, 270, 360] }
+        : { rotateZ: [0, -8, 8, -4, 4, 0] };
 
-  const iconDuration = isSearching ? 2 : isThinking ? 1.5 : 2;
+  const iconDuration = isSearching ? 2 : isThinking ? 1.5 : isUsingTool ? 1.8 : 2;
 
   return (
     <motion.div

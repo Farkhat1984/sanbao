@@ -75,6 +75,7 @@ model User {
   tasks         Task[]
   memories      UserMemory[]
   mcpServers    McpServer[]
+  userMcpLinks  UserMcpServer[]
   tokenLogs     TokenLog[]
   notifications Notification[]
   apiKeys       ApiKey[]
@@ -104,6 +105,7 @@ model Conversation {
   summary     ConversationSummary?
   plans       ConversationPlan[]
   tasks       Task[]
+  scratchpads Scratchpad[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,6 +257,7 @@ model AgentFile {
   fileUrl       String
   fileSize      Int
   extractedText String? @db.Text
+  inContext      Boolean @default(true)
 
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
@@ -529,6 +532,23 @@ model UserMemory {
   @@index([userId])
 }
 
+// ─── Conversation Scratchpad ───────────────────────────
+
+model Scratchpad {
+  id             String @id @default(cuid())
+  conversationId String
+  key            String
+  content        String @db.Text
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([conversationId, key])
+  @@index([conversationId])
+}
+
 // ─── MCP models ─────────────────────────────────────────
 
 model McpServer {
@@ -541,6 +561,7 @@ model McpServer {
   status               McpStatus    @default(DISCONNECTED)
   discoveredTools      Json?
   isGlobal             Boolean      @default(false)
+  isEnabled            Boolean      @default(true)
   lastHealthCheck      DateTime?
   healthCheckInterval  Int          @default(300) // seconds
 
@@ -548,12 +569,28 @@ model McpServer {
   agents   AgentMcpServer[]
   toolLogs McpToolLog[]
   plugins  PluginMcpServer[]
+  userLinks UserMcpServer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([isGlobal])
+  @@index([isGlobal, isEnabled])
+}
+
+model UserMcpServer {
+  id          String  @id @default(cuid())
+  userId      String
+  mcpServerId String
+  isActive    Boolean @default(true)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mcpServerId])
+  @@index([userId, isActive])
 }
 
 model AgentMcpServer {

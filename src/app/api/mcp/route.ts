@@ -8,24 +8,46 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const servers = await prisma.mcpServer.findMany({
-    where: {
-      OR: [
-        { userId: session.user.id },
-        { isGlobal: true },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const userId = session.user.id;
 
-  return NextResponse.json(
-    servers.map((s) => ({
+  // Fetch user's own servers + enabled global servers
+  const [userServers, globalServers, userLinks] = await Promise.all([
+    prisma.mcpServer.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.mcpServer.findMany({
+      where: { isGlobal: true, isEnabled: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.userMcpServer.findMany({
+      where: { userId },
+      select: { mcpServerId: true, isActive: true },
+    }),
+  ]);
+
+  // Build a map of user's active global MCP choices
+  const userLinkMap = new Map(userLinks.map((l) => [l.mcpServerId, l.isActive]));
+
+  const result = [
+    ...globalServers.map((s) => ({
       ...s,
-      isGlobal: s.isGlobal,
+      apiKey: null, // hide global server API keys from users
+      isGlobal: true,
+      userActive: userLinkMap.get(s.id) ?? false, // not active until user opts in
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
-    }))
-  );
+    })),
+    ...userServers.map((s) => ({
+      ...s,
+      isGlobal: false,
+      userActive: true, // user's own servers are always active
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    })),
+  ];
+
+  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {
@@ -55,6 +77,8 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ...server,
+    isGlobal: false,
+    userActive: true,
     createdAt: server.createdAt.toISOString(),
     updatedAt: server.updatedAt.toISOString(),
   });

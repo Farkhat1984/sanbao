@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
 
   const server = await prisma.mcpServer.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, OR: [{ userId: session.user.id }, { isGlobal: true, isEnabled: true }] },
   });
 
   if (!server) {
@@ -23,6 +23,7 @@ export async function GET(
 
   return NextResponse.json({
     ...server,
+    ...(server.isGlobal ? { apiKey: null } : {}),
     createdAt: server.createdAt.toISOString(),
     updatedAt: server.updatedAt.toISOString(),
   });
@@ -41,11 +42,26 @@ export async function PUT(
   const body = await req.json();
 
   const existing = await prisma.mcpServer.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id },
   });
 
   if (!existing) {
     return NextResponse.json({ error: "Не найден" }, { status: 404 });
+  }
+
+  // Toggle user activation of a global MCP server
+  if (existing.isGlobal && body.userActive !== undefined) {
+    const link = await prisma.userMcpServer.upsert({
+      where: { userId_mcpServerId: { userId: session.user.id, mcpServerId: id } },
+      create: { userId: session.user.id, mcpServerId: id, isActive: body.userActive },
+      update: { isActive: body.userActive },
+    });
+    return NextResponse.json({ success: true, isActive: link.isActive });
+  }
+
+  // Edit user's own server
+  if (existing.userId !== session.user.id) {
+    return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
   }
 
   const server = await prisma.mcpServer.update({

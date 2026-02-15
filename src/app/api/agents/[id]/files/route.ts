@@ -110,6 +110,45 @@ export async function POST(
   });
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const { fileId, inContext } = await req.json();
+
+  const agent = await prisma.agent.findFirst({
+    where: { id, userId: session.user.id },
+  });
+
+  if (!agent) {
+    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+  }
+
+  const file = await prisma.agentFile.findFirst({
+    where: { id: fileId, agentId: id },
+  });
+
+  if (!file) {
+    return NextResponse.json({ error: "Файл не найден" }, { status: 404 });
+  }
+
+  const updated = await prisma.agentFile.update({
+    where: { id: fileId },
+    data: { inContext: inContext ?? true },
+  });
+
+  return NextResponse.json({
+    ...updated,
+    createdAt: updated.createdAt.toISOString(),
+  });
+}
+
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

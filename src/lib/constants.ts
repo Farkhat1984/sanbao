@@ -114,6 +114,14 @@ export const BABEL_CDN_URL = "https://unpkg.com/@babel/standalone/babel.min.js";
 export const TAILWIND_CDN_URL = "https://cdn.tailwindcss.com";
 export const PYODIDE_CDN_URL = "https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js";
 
+// ─── Native Tools ───
+export const NATIVE_TOOL_HTTP_TIMEOUT_MS = 30_000;
+export const NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS = 60_000;
+export const NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES = 50 * 1024; // 50KB
+export const NATIVE_TOOL_CSV_MAX_BYTES = 100 * 1024; // 100KB
+export const NATIVE_TOOL_CSV_MAX_ROWS = 10_000;
+export const NATIVE_TOOL_MAX_TURNS = 5;
+
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;
 export const DEFAULT_PROVIDER = "deepinfra";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X } from "lucide-react";
+import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -13,6 +13,7 @@ interface McpServer {
   status: string;
   discoveredTools: unknown;
   isGlobal: boolean;
+  isEnabled: boolean;
   lastHealthCheck: string | null;
   createdAt: string;
 }
@@ -237,6 +238,17 @@ export default function AdminMcpPage() {
     setSaving(false);
   };
 
+  const handleToggleEnabled = async (id: string, currentEnabled: boolean) => {
+    const res = await fetch(`/api/admin/mcp/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isEnabled: !currentEnabled }),
+    });
+    if (res.ok) {
+      setServers((prev) => prev.map((s) => s.id === id ? { ...s, isEnabled: !currentEnabled } : s));
+    }
+  };
+
   const handleAddPreset = (preset: McpPreset) => {
     setNewServer({
       name: preset.name,
@@ -340,7 +352,7 @@ export default function AdminMcpPage() {
       {/* ── Servers List ── */}
       {tab === "servers" && <div className="space-y-3">
         {servers.map((s) => (
-          <div key={s.id} className="bg-surface border border-border rounded-2xl p-5">
+          <div key={s.id} className={`bg-surface border border-border rounded-2xl p-5 ${!s.isEnabled ? "opacity-60" : ""}`}>
             {editingId === s.id ? (
               /* ── Inline Edit Mode ── */
               <div>
@@ -382,6 +394,13 @@ export default function AdminMcpPage() {
                   {Array.isArray(s.discoveredTools) && (
                     <span className="text-xs text-text-muted">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
                   )}
+                  <button
+                    onClick={() => handleToggleEnabled(s.id, s.isEnabled)}
+                    title={s.isEnabled ? "Отключить для пользователей" : "Включить для пользователей"}
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-orange-500 hover:bg-orange-500/10" : "text-text-muted hover:text-success hover:bg-success/10"}`}
+                  >
+                    {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" /> : <ToggleLeft className="h-4.5 w-4.5" />}
+                  </button>
                   <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>

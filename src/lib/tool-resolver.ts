@@ -44,7 +44,7 @@ export async function resolveAgentContext(
   const agent = await prisma.agent.findUnique({
     where: { id: agentId },
     include: {
-      files: { select: { extractedText: true, fileName: true } },
+      files: { select: { extractedText: true, fileName: true, inContext: true, fileSize: true } },
       skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
       mcpServers: { include: { mcpServer: true } },
       tools: { include: { tool: true } },
@@ -69,13 +69,24 @@ export async function resolveAgentContext(
   // Build system prompt
   let systemPrompt = agent.instructions;
 
-  const filesContext = agent.files
-    .filter((f) => f.extractedText)
+  // In-context files: inject content directly into system prompt
+  const inContextFiles = agent.files.filter((f) => f.inContext && f.extractedText);
+  const lazyFiles = agent.files.filter((f) => !f.inContext);
+
+  const filesContext = inContextFiles
     .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
     .join("\n\n");
 
   if (filesContext) {
     systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
+  }
+
+  // Lazy files: only list names, agent must use read_knowledge tool to access
+  if (lazyFiles.length > 0) {
+    const fileList = lazyFiles
+      .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
+      .join("\n");
+    systemPrompt += `\n\n--- Файлы знаний (доступны через инструмент read_knowledge) ---\n${fileList}\nДля чтения содержимого этих файлов используй инструмент read_knowledge с поисковым запросом.`;
   }
 
   // Collect tools (deduplicate by id)

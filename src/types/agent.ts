@@ -5,6 +5,7 @@ export interface AgentFile {
   fileUrl: string;
   fileSize: number;
   extractedText?: string | null;
+  inContext?: boolean;
   createdAt: string;
 }
 

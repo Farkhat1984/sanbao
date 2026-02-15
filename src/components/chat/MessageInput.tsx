@@ -429,8 +429,8 @@ export function MessageInput() {
                 fullReasoning += data.v;
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
-              case "s": // web search status
-                setStreamingPhase("searching");
+              case "s": // status (searching / using_tool)
+                setStreamingPhase(data.v === "using_tool" ? "using_tool" : "searching");
                 break;
               case "c": // content
                 setStreamingPhase("answering");

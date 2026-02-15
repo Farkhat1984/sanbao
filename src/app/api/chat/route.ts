@@ -22,6 +22,12 @@ import { checkContentFilter } from "@/lib/content-filter";
 import { recordRequestDuration } from "@/lib/request-metrics";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
 import {
+  getNativeToolDefinitions,
+  isNativeTool,
+  executeNativeTool,
+  type NativeToolContext,
+} from "@/lib/native-tools";
+import {
   MOONSHOT_CHAT_URL,
   DEFAULT_TEXT_MODEL,
   DEFAULT_TEMPERATURE,
@@ -30,6 +36,7 @@ import {
   DEFAULT_MAX_TOKENS_COMPACTION,
   DEFAULT_PROVIDER,
   CONTEXT_KEEP_LAST_MESSAGES,
+  NATIVE_TOOL_MAX_TURNS,
 } from "@/lib/constants";
 
 const SYSTEM_PROMPT = `Ты — Sanbao, AI ERP-платформа нового поколения для профессионалов. Ты объединяешь мощь нескольких AI-моделей, гибкую систему агентов, инструменты (Tools), скиллы (Skills), плагины (Plugins) и MCP-серверы в единую интеллектуальную среду. Твоя задача — помогать пользователям эффективно решать любые профессиональные задачи: создание документов, анализ данных, написание кода, автоматизация процессов, юридическая работа и многое другое.
@@ -307,12 +314,14 @@ function streamMoonshot(
     thinkingEnabled: boolean;
     webSearchEnabled: boolean;
     mcpTools?: McpToolContext[];
+    nativeToolCtx?: NativeToolContext;
     contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean };
     textModel?: ResolvedModel | null;
   }
 ) {
   const encoder = new TextEncoder();
-  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], contextInfo, textModel } = options;
+  const { maxTokens, thinkingEnabled, webSearchEnabled, mcpTools = [], nativeToolCtx, contextInfo, textModel } = options;
+  const nativeToolDefs = getNativeToolDefinitions();
 
   const apiUrl = textModel
     ? `${textModel.provider.baseUrl}/chat/completions`
@@ -345,8 +354,8 @@ function streamMoonshot(
         let insidePlan = false;
         let planBuffer = "";
 
-        // Tool-call loop: max 3 iterations to prevent infinite loops
-        for (let turn = 0; turn < 3; turn++) {
+        // Tool-call loop
+        for (let turn = 0; turn < NATIVE_TOOL_MAX_TURNS; turn++) {
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -360,21 +369,18 @@ function streamMoonshot(
               temperature: thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
               top_p: DEFAULT_TOP_P,
               stream: true,
-              ...((webSearchEnabled || mcpTools.length > 0)
-                ? {
-                    tools: [
-                      ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
-                      ...mcpTools.map((t) => ({
-                        type: "function" as const,
-                        function: {
-                          name: t.name,
-                          description: t.description,
-                          parameters: t.inputSchema,
-                        },
-                      })),
-                    ],
-                  }
-                : {}),
+              tools: [
+                ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
+                ...nativeToolDefs,
+                ...mcpTools.map((t) => ({
+                  type: "function" as const,
+                  function: {
+                    name: t.name,
+                    description: t.description,
+                    parameters: t.inputSchema,
+                  },
+                })),
+              ],
               ...(!thinkingEnabled
                 ? { thinking: { type: "disabled" } }
                 : {}),
@@ -580,6 +586,29 @@ function streamMoonshot(
                   content: mcpResult.error
                     ? `Error: ${mcpResult.error}`
                     : mcpResult.result,
+                });
+              } else if (isNativeTool(tc.function.name) && nativeToolCtx) {
+                // Native tool call — execute server-side
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ t: "s", v: "using_tool" }) + "\n"
+                  )
+                );
+                let args: Record<string, unknown> = {};
+                try {
+                  args = JSON.parse(tc.function.arguments || "{}");
+                } catch {
+                  // fallback empty
+                }
+                const result = await executeNativeTool(
+                  tc.function.name,
+                  args,
+                  nativeToolCtx
+                );
+                currentMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: result,
                 });
               } else {
                 // Built-in tool (web search) — pass arguments as content
@@ -845,6 +874,56 @@ export async function POST(req: Request) {
     }
   }
 
+  // ─── Load user-enabled global MCP servers ────────────────
+  const userGlobalMcps = await prisma.userMcpServer.findMany({
+    where: { userId: session.user.id, isActive: true },
+    include: {
+      mcpServer: {
+        select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true, isGlobal: true, isEnabled: true },
+      },
+    },
+  });
+  for (const link of userGlobalMcps) {
+    const srv = link.mcpServer;
+    if (!srv.isGlobal || !srv.isEnabled || srv.status !== "CONNECTED" || !Array.isArray(srv.discoveredTools)) continue;
+    const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+    for (const tool of tools) {
+      // Deduplicate with agent-level MCP tools
+      if (!agentMcpTools.some((t) => t.name === tool.name)) {
+        agentMcpTools.push({
+          url: srv.url,
+          transport: srv.transport as "SSE" | "STREAMABLE_HTTP",
+          apiKey: srv.apiKey,
+          name: tool.name,
+          description: tool.description || "",
+          inputSchema: tool.inputSchema || {},
+        });
+      }
+    }
+  }
+
+  // Also load user's own connected MCP servers
+  const userOwnMcps = await prisma.mcpServer.findMany({
+    where: { userId: session.user.id, status: "CONNECTED", isGlobal: false },
+    select: { url: true, transport: true, apiKey: true, discoveredTools: true },
+  });
+  for (const srv of userOwnMcps) {
+    if (!Array.isArray(srv.discoveredTools)) continue;
+    const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+    for (const tool of tools) {
+      if (!agentMcpTools.some((t) => t.name === tool.name)) {
+        agentMcpTools.push({
+          url: srv.url,
+          transport: srv.transport as "SSE" | "STREAMABLE_HTTP",
+          apiKey: srv.apiKey,
+          name: tool.name,
+          description: tool.description || "",
+          inputSchema: tool.inputSchema || {},
+        });
+      }
+    }
+  }
+
   // ─── Load skill ──────────────────────────────────────────
 
   if (skillId) {
@@ -1013,6 +1092,20 @@ export async function POST(req: Request) {
   // ─── Resolve text model from DB ────────────────────────
   const textModel = await resolveModel("TEXT", plan.id);
 
+  // ─── Native tool context ─────────────────────────────────
+  const nativeToolCtx: NativeToolContext = {
+    userId: session.user.id,
+    conversationId: reqConvId || null,
+    agentId: agentId || null,
+    sessionUser: { name: session.user.name, email: session.user.email },
+    planName: plan.name,
+    planLimits: {
+      maxMessagesPerDay: plan.messagesPerDay,
+      maxAgents: plan.maxAgents,
+      maxStorageMb: plan.maxStorageMb,
+    },
+  };
+
   // ─── Moonshot-compatible providers (custom SSE streaming) ─
   if (effectiveProvider === "deepinfra") {
     const stream = streamMoonshot(apiMessages, {
@@ -1020,6 +1113,7 @@ export async function POST(req: Request) {
       thinkingEnabled,
       webSearchEnabled,
       mcpTools: agentMcpTools,
+      nativeToolCtx,
       contextInfo,
       textModel,
     });

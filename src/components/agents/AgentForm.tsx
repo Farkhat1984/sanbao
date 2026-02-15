@@ -296,6 +296,7 @@ export function AgentForm({ agent }: AgentFormProps) {
             files={files}
             onFileAdded={(f) => setFiles((prev) => [...prev, f])}
             onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
+            onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
           />
           {!isEdit && (
             <p className="text-xs text-text-muted mt-2">

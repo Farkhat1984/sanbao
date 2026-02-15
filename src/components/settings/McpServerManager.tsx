@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ interface McpServer {
   status: "CONNECTED" | "DISCONNECTED" | "ERROR";
   discoveredTools: McpToolInfo[] | null;
   isGlobal?: boolean;
+  userActive?: boolean;
 }
 
 export function McpServerManager() {
@@ -33,6 +34,7 @@ export function McpServerManager() {
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchServers = useCallback(async () => {
     try {
@@ -133,6 +135,26 @@ export function McpServerManager() {
     }
   };
 
+  const handleToggleGlobal = async (id: string, currentActive: boolean) => {
+    setTogglingId(id);
+    try {
+      const res = await fetch(`/api/mcp/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userActive: !currentActive }),
+      });
+      if (res.ok) {
+        setServers((prev) =>
+          prev.map((s) => s.id === id ? { ...s, userActive: !currentActive } : s)
+        );
+      }
+    } catch {
+      // silent
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const statusColor: Record<string, string> = {
     CONNECTED: "text-green-500",
     DISCONNECTED: "text-text-muted",
@@ -157,10 +179,79 @@ export function McpServerManager() {
   const systemServers = servers.filter((s) => s.isGlobal);
   const userServers = servers.filter((s) => !s.isGlobal);
 
-  const renderServer = (srv: McpServer) => {
+  const renderSystemServer = (srv: McpServer) => {
     const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
     const isExpanded = expandedId === srv.id;
-    const isSystem = srv.isGlobal;
+    const isActive = srv.userActive ?? false;
+
+    return (
+      <div key={srv.id} className={cn("rounded-xl bg-surface-alt border border-border overflow-hidden transition-opacity", !isActive && "opacity-50")}>
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Globe className="h-3.5 w-3.5 text-accent shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
+              <p className="text-xs text-text-muted truncate">
+                {tools.length > 0 ? `${tools.length} инструментов` : srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {isActive && tools.length > 0 && (
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : srv.id)}
+                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+              >
+                <Wrench className="h-3 w-3" />
+                {tools.length}
+                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            )}
+            <button
+              onClick={() => handleToggleGlobal(srv.id, isActive)}
+              disabled={togglingId === srv.id}
+              title={isActive ? "Отключить" : "Подключить"}
+              className={cn(
+                "h-9 w-9 sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 flex items-center justify-center gap-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50",
+                isActive
+                  ? "text-success hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950"
+                  : "text-text-muted hover:text-success hover:bg-green-50 dark:hover:bg-green-950"
+              )}
+            >
+              {togglingId === srv.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isActive ? (
+                <ToggleRight className="h-4 w-4" />
+              ) : (
+                <ToggleLeft className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline text-xs">{isActive ? "Вкл" : "Выкл"}</span>
+            </button>
+          </div>
+        </div>
+
+        {isActive && isExpanded && tools.length > 0 && (
+          <div className="border-t border-border px-3 py-2 space-y-1">
+            {tools.map((tool) => (
+              <div key={tool.name} className="flex items-start gap-2 py-1">
+                <Wrench className="h-3 w-3 text-text-muted mt-0.5 shrink-0" />
+                <div>
+                  <span className="text-xs font-medium text-text-primary">{tool.name}</span>
+                  {tool.description && (
+                    <p className="text-[11px] text-text-muted">{tool.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderUserServer = (srv: McpServer) => {
+    const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
+    const isExpanded = expandedId === srv.id;
     const isConnected = srv.status === "CONNECTED";
 
     return (
@@ -171,14 +262,7 @@ export function McpServerManager() {
               className={cn("h-2.5 w-2.5 fill-current shrink-0", statusColor[srv.status])}
             />
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-text-primary truncate">
-                  {srv.name}
-                </p>
-                {isSystem && (
-                  <Globe className="h-3 w-3 text-accent shrink-0" />
-                )}
-              </div>
+              <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
               <p className="text-xs text-text-muted truncate">
                 {srv.url}
                 <span className="ml-2 opacity-60">{srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</span>
@@ -199,56 +283,52 @@ export function McpServerManager() {
             <span className={cn("text-xs", statusColor[srv.status])}>
               {statusLabel[srv.status]}
             </span>
-            {!isSystem && (
-              <>
-                {isConnected ? (
-                  <button
-                    onClick={() => handleDisconnect(srv.id)}
-                    disabled={disconnectingId === srv.id}
-                    title="Отключить"
-                    className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-orange-50 dark:hover:bg-orange-950 text-text-muted hover:text-orange-500 cursor-pointer transition-colors disabled:opacity-50"
-                  >
-                    {disconnectingId === srv.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <PowerOff className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+            {isConnected ? (
+              <button
+                onClick={() => handleDisconnect(srv.id)}
+                disabled={disconnectingId === srv.id}
+                title="Отключить"
+                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-orange-50 dark:hover:bg-orange-950 text-text-muted hover:text-orange-500 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {disconnectingId === srv.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <button
-                    onClick={() => handleConnect(srv.id)}
-                    disabled={connectingId === srv.id}
-                    title="Подключить"
-                    className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-green-50 dark:hover:bg-green-950 text-text-muted hover:text-green-500 cursor-pointer transition-colors disabled:opacity-50"
-                  >
-                    {connectingId === srv.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Power className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+                  <PowerOff className="h-3.5 w-3.5" />
                 )}
-                <button
-                  onClick={() => handleConnect(srv.id)}
-                  disabled={connectingId === srv.id}
-                  title="Переподключить"
-                  className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
-                >
-                  {connectingId === srv.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleRemove(srv.id)}
-                  title="Удалить"
-                  className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-text-muted hover:text-error cursor-pointer transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </>
+              </button>
+            ) : (
+              <button
+                onClick={() => handleConnect(srv.id)}
+                disabled={connectingId === srv.id}
+                title="Подключить"
+                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-green-50 dark:hover:bg-green-950 text-text-muted hover:text-green-500 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {connectingId === srv.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Power className="h-3.5 w-3.5" />
+                )}
+              </button>
             )}
+            <button
+              onClick={() => handleConnect(srv.id)}
+              disabled={connectingId === srv.id}
+              title="Переподключить"
+              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
+            >
+              {connectingId === srv.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <button
+              onClick={() => handleRemove(srv.id)}
+              title="Удалить"
+              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-red-50 dark:hover:bg-red-950 text-text-muted hover:text-error cursor-pointer transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
@@ -284,7 +364,7 @@ export function McpServerManager() {
             <Globe className="h-3 w-3" />
             Системные серверы
           </div>
-          {systemServers.map(renderServer)}
+          {systemServers.map(renderSystemServer)}
         </div>
       )}
 
@@ -295,7 +375,7 @@ export function McpServerManager() {
               Пользовательские серверы
             </div>
           )}
-          {userServers.map(renderServer)}
+          {userServers.map(renderUserServer)}
         </div>
       )}
 
@@ -359,7 +439,7 @@ export function McpServerManager() {
           className="w-full"
         >
           <Plus className="h-3.5 w-3.5" />
-          Добавить MCP-сервер
+          Добавить свой MCP-сервер
         </Button>
       )}
     </div>

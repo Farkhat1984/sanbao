@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, FileText, Loader2 } from "lucide-react";
+import { Upload, X, FileText, Loader2, BookOpen, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentFile } from "@/types/agent";
 import { MAX_FILE_SIZE } from "@/lib/constants";
@@ -11,6 +11,7 @@ interface AgentFileUploadProps {
   files: AgentFile[];
   onFileAdded: (file: AgentFile) => void;
   onFileRemoved: (fileId: string) => void;
+  onFileUpdated?: (file: AgentFile) => void;
 }
 
 export function AgentFileUpload({
@@ -18,6 +19,7 @@ export function AgentFileUpload({
   files,
   onFileAdded,
   onFileRemoved,
+  onFileUpdated,
 }: AgentFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -79,6 +81,23 @@ export function AgentFileUpload({
       }
     } catch {
       // Ignore delete errors
+    }
+  };
+
+  const handleToggleContext = async (fileId: string, currentInContext: boolean) => {
+    if (!agentId) return;
+    try {
+      const res = await fetch(`/api/agents/${agentId}/files`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId, inContext: !currentInContext }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onFileUpdated?.(updated);
+      }
+    } catch {
+      // silent
     }
   };
 
@@ -152,32 +171,55 @@ export function AgentFileUpload({
       {/* File List */}
       {files.length > 0 && (
         <div className="space-y-2">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-surface-alt border border-border"
-            >
-              <FileText className="h-4 w-4 text-text-muted shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-text-primary truncate">
-                  {file.fileName}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {formatSize(file.fileSize)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(file.id);
-                }}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+          {files.map((file) => {
+            const isInContext = file.inContext !== false;
+            return (
+              <div
+                key={file.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-xl bg-surface-alt border border-border",
+                  !isInContext && "opacity-60"
+                )}
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
+                <FileText className="h-4 w-4 text-text-muted shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-text-primary truncate">
+                    {file.fileName}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {formatSize(file.fileSize)}
+                    {!isInContext && " · по запросу"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleContext(file.id, isInContext);
+                  }}
+                  title={isInContext ? "В контексте — нажмите чтобы перевести в режим 'по запросу'" : "По запросу — нажмите чтобы включить в контекст"}
+                  className={cn(
+                    "h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer",
+                    isInContext
+                      ? "text-accent hover:text-text-muted hover:bg-surface-hover"
+                      : "text-text-muted hover:text-accent hover:bg-accent/10"
+                  )}
+                >
+                  {isInContext ? <BookOpen className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(file.id);
+                  }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
