@@ -90,7 +90,16 @@ export function ArtifactPanel() {
           // Switch to preview tab so the DOM element is rendered
           if (activeTab !== "preview") {
             setTab("preview");
-            await new Promise((r) => setTimeout(r, 300));
+            // Wait for React to render DocumentPreview and ref to attach
+            await new Promise<void>((resolve) => {
+              const check = () => {
+                if (previewRef.current) resolve();
+                else requestAnimationFrame(check);
+              };
+              requestAnimationFrame(check);
+              // Safety timeout
+              setTimeout(resolve, 1000);
+            });
           }
           if (previewRef.current) {
             await exportToPdf(previewRef.current, activeArtifact.title);

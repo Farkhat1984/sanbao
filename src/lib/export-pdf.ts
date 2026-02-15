@@ -59,10 +59,31 @@ export async function exportToPdf(
       scale: 2,
       useCORS: true,
       logging: false,
+      // Capture full scrollable height, not just the visible viewport
+      scrollY: 0,
+      windowHeight: element.scrollHeight,
+      height: element.scrollHeight,
       onclone: (_doc: Document, clonedEl: HTMLElement) => {
         // Browser resolves oklab()/oklch() → rgb() in getComputedStyle.
-        // Apply resolved values as inline styles so html2canvas can parse them.
         resolveColorsToRgb(element, clonedEl);
+
+        // Remove overflow clipping on the cloned element and all ancestors
+        // so html2canvas captures the full content, not just the viewport.
+        let node: HTMLElement | null = clonedEl;
+        while (node) {
+          const ov = node.style.overflow || getComputedStyle(node).overflow;
+          if (ov === "auto" || ov === "hidden" || ov === "scroll") {
+            node.style.overflow = "visible";
+            node.style.height = "auto";
+            node.style.maxHeight = "none";
+          }
+          node = node.parentElement;
+        }
+
+        // Ensure the cloned element itself shows full content
+        clonedEl.style.overflow = "visible";
+        clonedEl.style.height = "auto";
+        clonedEl.style.maxHeight = "none";
       },
     },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },

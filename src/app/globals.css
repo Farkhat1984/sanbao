@@ -592,14 +592,38 @@ body {
     margin: 0 !important;
     font-size: 12pt;
     color: #000 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Remove overflow clipping from all ancestors during print */
+  .prose-legal,
+  .prose-legal ~ *,
+  [class*="overflow"] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
   }
 
   .prose-legal h1 {
     font-size: 14pt;
+    page-break-after: avoid;
   }
 
   .prose-legal h2 {
     font-size: 13pt;
+    page-break-after: avoid;
+  }
+
+  .prose-legal h3,
+  .prose-legal h4 {
+    page-break-after: avoid;
+  }
+
+  .prose-legal p,
+  .prose-legal li {
+    orphans: 3;
+    widows: 3;
   }
 
   .prose-legal table {
@@ -609,5 +633,16 @@ body {
   .prose-legal th,
   .prose-legal td {
     border-color: #000 !important;
+  }
+
+  .prose-legal pre,
+  .prose-legal blockquote {
+    page-break-inside: avoid;
+  }
+
+  /* Hide shadows and decorative elements */
+  .shadow-lg,
+  .shadow-md {
+    box-shadow: none !important;
   }
 }
