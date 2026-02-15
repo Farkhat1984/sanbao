@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     "mammoth",
     "pdf-parse",
     "xlsx",
+    "officeparser",
   ],
   reactCompiler: true,
   headers: async () => [

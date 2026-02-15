@@ -1,6 +1,7 @@
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
+import { parseOffice } from "officeparser";
 
 export async function parseFileToText(
   buffer: Buffer,
@@ -56,6 +57,42 @@ export async function parseFileToText(
     }
 
     return sheets.join("\n\n").trim();
+  }
+
+  // CSV
+  if (mimeType === "text/csv" || ext === "csv") {
+    return buffer.toString("utf-8").trim();
+  }
+
+  // HTML
+  if (mimeType === "text/html" || ext === "html" || ext === "htm") {
+    let html = buffer.toString("utf-8");
+    html = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+    html = html.replace(/<style[\s\S]*?<\/style>/gi, "");
+    html = html.replace(/<[^>]+>/g, " ");
+    html = html
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    return html.replace(/\s+/g, " ").trim();
+  }
+
+  // PPTX
+  if (
+    mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    ext === "pptx"
+  ) {
+    const ast = await parseOffice(buffer);
+    return ast.toText().trim();
+  }
+
+  // RTF
+  if (mimeType === "application/rtf" || ext === "rtf") {
+    const ast = await parseOffice(buffer);
+    return ast.toText().trim();
   }
 
   // Plain text / Markdown

@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { markdownToDocx } from "@/lib/export-docx";
 import { exportToPdf } from "@/lib/export-pdf";
-import { exportAsText, sanitizeFilename } from "@/lib/export-utils";
+import { exportAsText, exportAsHtml, exportAsMarkdown, sanitizeFilename } from "@/lib/export-utils";
+import { exportAsXlsx } from "@/lib/export-xlsx";
 import type { ExportFormat } from "@/lib/export-utils";
 import type { ArtifactType } from "@/types/chat";
 
@@ -32,6 +33,9 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   docx: "DOCX",
   pdf: "PDF",
   txt: "TXT",
+  xlsx: "XLSX",
+  html: "HTML",
+  md: "MD",
 };
 
 export function ArtifactPanel() {
@@ -104,6 +108,18 @@ export function ArtifactPanel() {
         }
         case "txt": {
           exportAsText(activeArtifact.content, activeArtifact.title);
+          break;
+        }
+        case "xlsx": {
+          exportAsXlsx(activeArtifact.content, activeArtifact.title);
+          break;
+        }
+        case "html": {
+          exportAsHtml(activeArtifact.content, activeArtifact.title);
+          break;
+        }
+        case "md": {
+          exportAsMarkdown(activeArtifact.content, activeArtifact.title);
           break;
         }
       }
@@ -245,7 +261,7 @@ export function ArtifactPanel() {
                     onClick={() => setFormatMenuOpen(false)}
                   />
                   <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
-                    {(["docx", "pdf", "txt"] as ExportFormat[]).map((fmt) => (
+                    {(["docx", "pdf", "txt", "xlsx", "html", "md"] as ExportFormat[]).map((fmt) => (
                       <button
                         key={fmt}
                         onClick={() => handleSelectFormat(fmt)}
@@ -259,6 +275,9 @@ export function ArtifactPanel() {
                           {fmt === "docx" && "Word (.docx)"}
                           {fmt === "pdf" && "PDF (.pdf)"}
                           {fmt === "txt" && "Текст (.txt)"}
+                          {fmt === "xlsx" && "Excel (.xlsx)"}
+                          {fmt === "html" && "HTML (.html)"}
+                          {fmt === "md" && "Markdown (.md)"}
                         </span>
                         {downloadFormat === fmt && (
                           <Check className="h-3 w-3 text-accent" />

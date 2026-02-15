@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText } from "lucide-react";
+import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -27,14 +27,143 @@ interface ToolLog {
   createdAt: string;
 }
 
+interface McpPreset {
+  name: string;
+  description: string;
+  category: string;
+  categoryColor: string;
+  defaultUrl: string;
+  transport: "SSE" | "STREAMABLE_HTTP";
+  setupCommand: string;
+  githubUrl: string;
+  envVars: string[];
+}
+
+const MCP_PRESETS: McpPreset[] = [
+  {
+    name: "GitHub",
+    description: "Управление репозиториями, PR, issues, branches. Code review и CI/CD автоматизация.",
+    category: "Разработка",
+    categoryColor: "#4F6EF7",
+    defaultUrl: "http://localhost:3101/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-github",
+    githubUrl: "https://github.com/github/github-mcp-server",
+    envVars: ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+  },
+  {
+    name: "PostgreSQL",
+    description: "SQL запросы, анализ данных, управление схемой. Прямой доступ к PostgreSQL базам.",
+    category: "Базы данных",
+    categoryColor: "#10B981",
+    defaultUrl: "http://localhost:3102/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-postgres postgresql://user:pass@localhost/db",
+    githubUrl: "https://github.com/crystaldba/postgres-mcp",
+    envVars: ["DATABASE_URL"],
+  },
+  {
+    name: "Brave Search",
+    description: "Приватный веб-поиск без трекинга. Поиск новостей, изображений, видео с фильтрацией.",
+    category: "Поиск",
+    categoryColor: "#F59E0B",
+    defaultUrl: "http://localhost:3103/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-brave-search",
+    githubUrl: "https://github.com/modelcontextprotocol/servers",
+    envVars: ["BRAVE_API_KEY"],
+  },
+  {
+    name: "Filesystem",
+    description: "Чтение, запись, поиск файлов и директорий. Безопасный доступ к файловой системе.",
+    category: "Файлы",
+    categoryColor: "#7C3AED",
+    defaultUrl: "http://localhost:3104/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-filesystem /path/to/dir",
+    githubUrl: "https://github.com/modelcontextprotocol/servers",
+    envVars: [],
+  },
+  {
+    name: "Playwright",
+    description: "Браузерная автоматизация и E2E тестирование. Скриншоты, навигация, взаимодействие.",
+    category: "Тестирование",
+    categoryColor: "#EF4444",
+    defaultUrl: "http://localhost:3105/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @playwright/mcp@latest",
+    githubUrl: "https://github.com/microsoft/playwright-mcp",
+    envVars: [],
+  },
+  {
+    name: "Docker",
+    description: "Управление контейнерами, образами, volumes. Build, run, stop, logs контейнеров.",
+    category: "DevOps",
+    categoryColor: "#06B6D4",
+    defaultUrl: "http://localhost:3106/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-docker",
+    githubUrl: "https://github.com/modelcontextprotocol/servers",
+    envVars: [],
+  },
+  {
+    name: "Notion",
+    description: "Управление страницами, базами данных и контентом Notion. Поиск и создание записей.",
+    category: "Продуктивность",
+    categoryColor: "#EC4899",
+    defaultUrl: "http://localhost:3107/sse",
+    transport: "SSE",
+    setupCommand: "npx -y @modelcontextprotocol/server-notion",
+    githubUrl: "https://github.com/modelcontextprotocol/servers",
+    envVars: ["NOTION_API_KEY"],
+  },
+  {
+    name: "n8n",
+    description: "Создание и управление workflow-автоматизациями. 400+ интеграций, триггеры, webhook.",
+    category: "Автоматизация",
+    categoryColor: "#6366F1",
+    defaultUrl: "http://localhost:3108/sse",
+    transport: "SSE",
+    setupCommand: "npx -y n8n-mcp-server",
+    githubUrl: "https://github.com/n8n-io/n8n",
+    envVars: ["N8N_API_KEY", "N8N_BASE_URL"],
+  },
+  {
+    name: "Exa",
+    description: "Семантический веб-поиск с AI. Поиск по смыслу, анализ контента, поиск похожих страниц.",
+    category: "Поиск",
+    categoryColor: "#F59E0B",
+    defaultUrl: "http://localhost:3109/sse",
+    transport: "SSE",
+    setupCommand: "npx -y exa-mcp-server",
+    githubUrl: "https://github.com/exa-labs/exa-mcp-server",
+    envVars: ["EXA_API_KEY"],
+  },
+  {
+    name: "Supabase",
+    description: "Управление проектами Supabase: таблицы, RLS, auth, storage, edge functions.",
+    category: "Базы данных",
+    categoryColor: "#10B981",
+    defaultUrl: "http://localhost:3110/sse",
+    transport: "SSE",
+    setupCommand: "npx -y supabase-mcp-server",
+    githubUrl: "https://github.com/supabase/supabase",
+    envVars: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+  },
+];
+
 export default function AdminMcpPage() {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [tab, setTab] = useState<"servers" | "logs">("servers");
+  const [tab, setTab] = useState<"servers" | "logs" | "catalog">("servers");
   const [toolLogs, setToolLogs] = useState<ToolLog[]>([]);
   const [newServer, setNewServer] = useState({ name: "", url: "", transport: "SSE", apiKey: "" });
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState({ name: "", url: "", transport: "SSE", apiKey: "" });
+  const [saving, setSaving] = useState(false);
 
   const fetchServers = async () => {
     const res = await fetch("/api/admin/mcp");
@@ -77,11 +206,61 @@ export default function AdminMcpPage() {
     fetchServers();
   };
 
+  const handleStartEdit = (s: McpServer) => {
+    setEditingId(s.id);
+    setEditData({ name: s.name, url: s.url, transport: s.transport, apiKey: "" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditData({ name: "", url: "", transport: "SSE", apiKey: "" });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    const payload: Record<string, string> = {};
+    if (editData.name) payload.name = editData.name;
+    if (editData.url) payload.url = editData.url;
+    if (editData.transport) payload.transport = editData.transport;
+    if (editData.apiKey) payload.apiKey = editData.apiKey;
+    const res = await fetch(`/api/admin/mcp/${editingId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      setEditingId(null);
+      setEditData({ name: "", url: "", transport: "SSE", apiKey: "" });
+      fetchServers();
+    }
+    setSaving(false);
+  };
+
+  const handleAddPreset = (preset: McpPreset) => {
+    setNewServer({
+      name: preset.name,
+      url: preset.defaultUrl,
+      transport: preset.transport,
+      apiKey: "",
+    });
+    setAdding(true);
+    setTab("servers");
+  };
+
+  const handleCopyCommand = (command: string, idx: number) => {
+    navigator.clipboard.writeText(command);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
   const statusColor = (s: string) => {
     if (s === "CONNECTED") return "bg-success";
     if (s === "ERROR") return "bg-error";
     return "bg-text-muted";
   };
+
+  const existingNames = new Set(servers.map((s) => s.name));
 
   if (loading) {
     return (
@@ -112,9 +291,11 @@ export default function AdminMcpPage() {
 
       <div className="flex gap-1 mb-4">
         <button onClick={() => setTab("servers")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "servers" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>Серверы</button>
+        <button onClick={() => setTab("catalog")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "catalog" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><Bookmark className="h-3 w-3 inline mr-1" />Каталог</button>
         <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><FileText className="h-3 w-3 inline mr-1" />Tool Logs</button>
       </div>
 
+      {/* ── Tool Logs ── */}
       {tab === "logs" && (
         <div className="space-y-2">
           {toolLogs.map((log) => (
@@ -137,6 +318,7 @@ export default function AdminMcpPage() {
         </div>
       )}
 
+      {/* ── Add Server Form ── */}
       {tab === "servers" && adding && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Новый MCP-сервер</h3>
@@ -155,34 +337,135 @@ export default function AdminMcpPage() {
         </div>
       )}
 
+      {/* ── Servers List ── */}
       {tab === "servers" && <div className="space-y-3">
         {servers.map((s) => (
           <div key={s.id} className="bg-surface border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {s.status === "CONNECTED" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-text-muted" />}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-text-primary">{s.name}</span>
-                    <div className={`h-2 w-2 rounded-full ${statusColor(s.status)}`} />
-                    <Badge variant="default">{s.transport}</Badge>
-                  </div>
-                  <p className="text-xs text-text-muted mt-0.5 font-mono">{s.url}
-                    {s.lastHealthCheck && <span className="ml-2 font-sans">Last check: {new Date(s.lastHealthCheck).toLocaleString("ru-RU")}</span>}
-                  </p>
+            {editingId === s.id ? (
+              /* ── Inline Edit Mode ── */
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-text-primary">Редактирование</h3>
+                  <button onClick={handleCancelEdit} className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"><X className="h-3.5 w-3.5" /></button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <input placeholder="Название" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
+                  <input placeholder="URL" value={editData.url} onChange={(e) => setEditData({ ...editData, url: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
+                  <select value={editData.transport} onChange={(e) => setEditData({ ...editData, transport: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent">
+                    <option value="SSE">SSE</option>
+                    <option value="STREAMABLE_HTTP">Streamable HTTP</option>
+                  </select>
+                  <input placeholder="Новый API Key (не менять — оставить пустым)" type="password" value={editData.apiKey} onChange={(e) => setEditData({ ...editData, apiKey: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Button variant="gradient" size="sm" onClick={handleSaveEdit} isLoading={saving}><Save className="h-3.5 w-3.5" /> Сохранить</Button>
+                  <Button variant="secondary" size="sm" onClick={handleCancelEdit}>Отмена</Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {Array.isArray(s.discoveredTools) && (
-                  <span className="text-xs text-text-muted">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
-                )}
-                <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+            ) : (
+              /* ── View Mode ── */
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {s.status === "CONNECTED" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-text-muted" />}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-text-primary">{s.name}</span>
+                      <div className={`h-2 w-2 rounded-full ${statusColor(s.status)}`} />
+                      <Badge variant="default">{s.transport}</Badge>
+                    </div>
+                    <p className="text-xs text-text-muted mt-0.5 font-mono">{s.url}
+                      {s.lastHealthCheck && <span className="ml-2 font-sans">Last check: {new Date(s.lastHealthCheck).toLocaleString("ru-RU")}</span>}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {Array.isArray(s.discoveredTools) && (
+                    <span className="text-xs text-text-muted">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
+                  )}
+                  <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ))}
         {servers.length === 0 && <p className="text-sm text-text-muted text-center py-8">Глобальные MCP-серверы не добавлены</p>}
       </div>}
+
+      {/* ── Catalog (Presets) ── */}
+      {tab === "catalog" && (
+        <div>
+          <p className="text-sm text-text-muted mb-4">
+            Топ-10 популярных MCP-серверов на 2026 год. Нажмите &laquo;Добавить&raquo; для быстрой настройки.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {MCP_PRESETS.map((preset, idx) => {
+              const alreadyAdded = existingNames.has(preset.name);
+              return (
+                <div key={preset.name} className="bg-surface border border-border rounded-2xl p-5 flex flex-col">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-9 w-9 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: preset.categoryColor }}>
+                        {preset.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-text-primary">{preset.name}</h3>
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md" style={{ backgroundColor: preset.categoryColor + "18", color: preset.categoryColor }}>
+                          {preset.category}
+                        </span>
+                      </div>
+                    </div>
+                    <a
+                      href={preset.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-text-muted hover:text-accent transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+
+                  <p className="text-xs text-text-secondary mb-3 flex-1">{preset.description}</p>
+
+                  <div className="bg-surface-alt rounded-lg p-2.5 mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Установка</span>
+                      <button
+                        onClick={() => handleCopyCommand(preset.setupCommand, idx)}
+                        className="text-text-muted hover:text-accent transition-colors cursor-pointer"
+                      >
+                        {copiedIdx === idx ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    </div>
+                    <code className="text-[11px] text-text-primary font-mono break-all leading-relaxed">{preset.setupCommand}</code>
+                  </div>
+
+                  {preset.envVars.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {preset.envVars.map((v) => (
+                        <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-alt text-text-muted border border-border">{v}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-border">
+                    <Badge variant="default">{preset.transport}</Badge>
+                    {alreadyAdded ? (
+                      <span className="text-xs text-success font-medium flex items-center gap-1">
+                        <Check className="h-3 w-3" /> Добавлен
+                      </span>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => handleAddPreset(preset)}>
+                        <Plus className="h-3 w-3" /> Добавить
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

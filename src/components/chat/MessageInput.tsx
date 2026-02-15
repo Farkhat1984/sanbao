@@ -30,7 +30,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { MAX_FILE_SIZE_PARSE, DEFAULT_PROVIDER } from "@/lib/constants";
 
 const CHAT_ACCEPTED_EXTENSIONS =
-  ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls";
+  ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls,.csv,.html,.htm,.pptx,.rtf";
 const CHAT_MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
 interface AttachedFile {
@@ -65,9 +65,12 @@ const DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/rtf",
+  "text/html",
 ];
 
-const DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"];
+const DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".pptx", ".rtf", ".html", ".htm"];
 
 function isDocumentFile(file: File): boolean {
   if (DOCUMENT_TYPES.includes(file.type)) return true;
@@ -205,18 +208,19 @@ export function MessageInput() {
 
         const isImage = file.type.startsWith("image/");
         const isText =
-          file.type === "text/plain" || file.name.endsWith(".md");
+          file.type === "text/plain" || file.type === "text/csv" ||
+          file.name.endsWith(".md") || file.name.endsWith(".csv");
         const isDocument = isDocumentFile(file);
 
         if (!isImage && !isText && !isDocument) {
-          setAlertMessage({ title: "Формат не поддерживается", description: `«${file.name}» — поддерживаются PNG, JPG, WebP, TXT, MD, PDF, DOCX, XLSX` });
+          setAlertMessage({ title: "Формат не поддерживается", description: `«${file.name}» — поддерживаются PNG, JPG, WebP, TXT, MD, CSV, PDF, DOCX, XLSX, PPTX, RTF, HTML` });
           continue;
         }
 
         const attached: AttachedFile = {
           id: crypto.randomUUID(),
           name: file.name,
-          type: file.type || (file.name.endsWith(".md") ? "text/plain" : ""),
+          type: file.type || (file.name.endsWith(".md") ? "text/plain" : file.name.endsWith(".csv") ? "text/csv" : ""),
           size: file.size,
         };
 
@@ -802,7 +806,7 @@ export function MessageInput() {
                         <div className="flex-1 text-left">
                           <span>Прикрепить файл</span>
                           <p className="text-[10px] text-text-muted mt-0.5">
-                            PDF, DOCX, XLSX, PNG, TXT
+                            PDF, DOCX, XLSX, PPTX, CSV, HTML, RTF, PNG
                           </p>
                         </div>
                       </button>

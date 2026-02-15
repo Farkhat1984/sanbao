@@ -405,10 +405,11 @@ function streamMoonshot(
             return;
           }
 
-          // Collect tool calls from this turn
+          // Collect tool calls and reasoning from this turn
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const toolCallMap: Record<number, { id: string; type: string; function: { name: string; arguments: string } }> = {};
           let hasToolCallFinish = false;
+          let turnReasoningContent = "";
 
           for await (const chunk of parseSSEStream(response.body)) {
             // Handle SSE error events from Moonshot API
@@ -459,8 +460,9 @@ function streamMoonshot(
               hasToolCallFinish = true;
             }
 
-            // Stream reasoning
+            // Stream reasoning and accumulate for tool-call messages
             if (thinkingEnabled && delta?.reasoning_content) {
+              turnReasoningContent += delta.reasoning_content;
               controller.enqueue(
                 encoder.encode(
                   JSON.stringify({ t: "r", v: delta.reasoning_content }) + "\n"
@@ -548,6 +550,8 @@ function streamMoonshot(
             currentMessages.push({
               role: "assistant",
               tool_calls: collectedCalls,
+              // When thinking is enabled, the API requires reasoning_content on assistant messages
+              ...(thinkingEnabled ? { reasoning_content: turnReasoningContent || "" } : {}),
             });
 
             // Build a map of MCP tool names for quick lookup
@@ -610,8 +614,10 @@ function streamMoonshot(
 // ─── Plan detection wrapper for AI SDK streams ──────────
 
 function createPlanDetectorStream(
-  textStream: AsyncIterable<string>,
-  contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fullStream: AsyncIterable<any>,
+  contextInfo?: { usagePercent: number; totalTokens: number; contextWindowSize: number; compacting: boolean },
+  hasReasoning?: boolean
 ): ReadableStream {
   const encoder = new TextEncoder();
 
@@ -633,7 +639,18 @@ function createPlanDetectorStream(
         let insidePlan = false;
         let planBuffer = "";
 
-        for await (const chunk of textStream) {
+        for await (const part of fullStream) {
+          // Stream reasoning chunks from AI SDK
+          if (hasReasoning && part.type === "reasoning-delta") {
+            controller.enqueue(
+              encoder.encode(JSON.stringify({ t: "r", v: part.text }) + "\n")
+            );
+            continue;
+          }
+
+          // Only process text deltas for plan detection + content
+          if (part.type !== "text-delta") continue;
+          const chunk = part.text;
           if (!chunk) continue;
 
           planBuffer += chunk;
@@ -1020,8 +1037,9 @@ export async function POST(req: Request) {
   const canUseProvider =
     plan.canChooseProvider || effectiveProvider === "openai";
 
+  const isAnthropic = canUseProvider && effectiveProvider === "anthropic";
   let model;
-  if (canUseProvider && effectiveProvider === "anthropic") {
+  if (isAnthropic) {
     model = anthropic("claude-sonnet-4-5-20250929");
   } else {
     model = openai("gpt-4o");
@@ -1031,13 +1049,22 @@ export async function POST(req: Request) {
     model,
     system: enrichedSystemPrompt,
     messages: effectiveMessages,
-    temperature: DEFAULT_TEMPERATURE,
+    // Anthropic requires temperature=1 when thinking is enabled
+    temperature: isAnthropic && thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
     topP: DEFAULT_TOP_P,
     maxOutputTokens: plan.tokensPerMessage,
+    // Pass thinking/reasoning config for providers that support it
+    ...(thinkingEnabled && isAnthropic
+      ? { providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: Math.min(plan.tokensPerMessage, 10000) } } } }
+      : {}),
   });
 
-  // Wrap AI SDK text stream with plan detection
-  const stream = createPlanDetectorStream(result.textStream, contextInfo);
+  // Wrap AI SDK full stream with plan detection and reasoning
+  const stream = createPlanDetectorStream(
+    result.fullStream,
+    contextInfo,
+    thinkingEnabled && isAnthropic
+  );
 
   recordRequestDuration("/api/chat", Date.now() - _requestStart);
   return new Response(stream, {
