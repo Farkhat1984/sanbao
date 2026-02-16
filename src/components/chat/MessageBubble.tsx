@@ -133,6 +133,11 @@ const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
     <p className="mb-2 last:mb-0">{children}</p>
   ),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="table-wrapper">
+      <table>{children}</table>
+    </div>
+  ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
     // article://criminal_code/188 → clickable ArticleLink
     if (href?.startsWith("article://")) {
@@ -358,7 +363,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
             isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative",
-            isAssistant && isExpanded && "overflow-visible"
+            isAssistant && isExpanded && "overflow-x-auto"
           )}
         >
           {isAssistant ? (

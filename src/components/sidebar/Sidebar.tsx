@@ -68,9 +68,9 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "h-screen flex flex-col border-r border-border",
+        "flex flex-col border-r border-border",
         "glass select-none shrink-0",
-        isMobile ? "w-full" : "w-[280px]"
+        isMobile ? "w-full h-full" : "w-[280px] h-screen"
       )}
     >
       {/* Header */}
@@ -128,7 +128,7 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border p-3 shrink-0">
+      <div className={cn("border-t border-border p-3 shrink-0", isMobile && "safe-bottom")}>
         <div className="flex items-center gap-2">
           <Avatar
             src={session?.user?.image}
