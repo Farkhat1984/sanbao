@@ -95,9 +95,20 @@ export async function POST(
         orderBy: { createdAt: "desc" },
       });
 
-      const newMemory = existing?.memory && decisions
+      const MAX_PLAN_MEMORY_CHARS = 2000;
+      let newMemory = existing?.memory && decisions
         ? `${existing.memory}\n\n--- Обновление ---\n${decisions}`
         : decisions || existing?.memory || null;
+
+      // Truncate plan memory to prevent unbounded growth
+      if (newMemory && newMemory.length > MAX_PLAN_MEMORY_CHARS) {
+        // Keep the most recent decisions by trimming from the start
+        const sections = newMemory.split("\n\n--- Обновление ---\n");
+        while (sections.length > 1 && sections.join("\n\n--- Обновление ---\n").length > MAX_PLAN_MEMORY_CHARS) {
+          sections.shift();
+        }
+        newMemory = sections.join("\n\n--- Обновление ---\n");
+      }
 
       // Atomically deactivate previous plans and create new one
       await prisma.$transaction(async (tx) => {

@@ -45,6 +45,14 @@ vi.mock("@/lib/prisma", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    $transaction: vi.fn(async (fn: any) => {
+      // Execute the transaction callback passing the same prisma mock as tx
+      if (typeof fn === "function") {
+        const { prisma: self } = await import("@/lib/prisma");
+        return fn(self);
+      }
+    }),
   },
 }));
 
