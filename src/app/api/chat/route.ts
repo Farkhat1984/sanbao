@@ -16,6 +16,7 @@ import { resolveAgentContext } from "@/lib/tool-resolver";
 import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 import { checkContentFilter } from "@/lib/content-filter";
 import { recordRequestDuration } from "@/lib/request-metrics";
+import { CORRELATION_HEADER, runWithCorrelationId, generateCorrelationId } from "@/lib/correlation";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
 import type { NativeToolContext } from "@/lib/native-tools";
 import {
@@ -280,6 +281,9 @@ async function compactInBackground(
 // ─── Main handler ────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const requestId = req.headers.get(CORRELATION_HEADER) || generateCorrelationId();
+
+  return runWithCorrelationId(requestId, async () => {
   const _requestStart = Date.now();
 
   const session = await auth();
@@ -612,7 +616,11 @@ export async function POST(req: Request) {
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
     return new Response(stream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        [CORRELATION_HEADER]: requestId,
+      },
     });
   }
 
@@ -630,6 +638,11 @@ export async function POST(req: Request) {
 
   recordRequestDuration("/api/chat", Date.now() - _requestStart);
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache",
+      [CORRELATION_HEADER]: requestId,
+    },
   });
+  }); // end runWithCorrelationId
 }

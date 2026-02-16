@@ -11,16 +11,27 @@
 
 import { prisma } from "@/lib/prisma";
 import { BoundedMap } from "@/lib/bounded-map";
+import { cacheGet, cacheSet, cacheDel, getRedis } from "@/lib/redis";
 
 const AGENT_CONTEXT_TTL = 30_000; // 30 seconds
+const REDIS_AGENT_TTL = 60; // 60 seconds in Redis (shared L2)
+const REDIS_PREFIX = "agent_ctx:";
 const agentContextCache = new BoundedMap<string, { context: ResolvedAgentContext; expiresAt: number }>(200);
 
 /** Invalidate agent context cache (call after admin changes agents/tools/plugins). */
 export function invalidateAgentContextCache(agentId?: string) {
   if (agentId) {
     agentContextCache.delete(agentId);
+    cacheDel(`${REDIS_PREFIX}${agentId}`).catch(() => {});
   } else {
     agentContextCache.clear();
+    // Flush all agent_ctx:* keys from Redis
+    const client = getRedis();
+    if (client) {
+      client.keys(`${REDIS_PREFIX}*`).then((keys) => {
+        if (keys.length > 0) client.del(...keys).catch(() => {});
+      }).catch(() => {});
+    }
   }
 }
 
@@ -54,10 +65,22 @@ export interface ResolvedAgentContext {
 export async function resolveAgentContext(
   agentId: string
 ): Promise<ResolvedAgentContext> {
-  // Check cache
+  // L1: in-memory cache (per-process, ~30s TTL)
   const cached = agentContextCache.get(agentId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.context;
+  }
+
+  // L2: Redis cache (shared across replicas, ~60s TTL)
+  try {
+    const redisVal = await cacheGet(`${REDIS_PREFIX}${agentId}`);
+    if (redisVal) {
+      const ctx = JSON.parse(redisVal) as ResolvedAgentContext;
+      agentContextCache.set(agentId, { context: ctx, expiresAt: Date.now() + AGENT_CONTEXT_TTL });
+      return ctx;
+    }
+  } catch {
+    // Redis unavailable or parse error — fall through to DB
   }
 
   const agent = await prisma.agent.findUnique({
@@ -255,8 +278,11 @@ export async function resolveAgentContext(
     skillPrompts,
   };
 
-  // Cache for 30 seconds
+  // L1: in-memory
   agentContextCache.set(agentId, { context: result, expiresAt: Date.now() + AGENT_CONTEXT_TTL });
+
+  // L2: Redis (fire-and-forget)
+  cacheSet(`${REDIS_PREFIX}${agentId}`, JSON.stringify(result), REDIS_AGENT_TTL).catch(() => {});
 
   return result;
 }

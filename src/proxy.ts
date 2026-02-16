@@ -1,6 +1,14 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
+// ─── Correlation ID ───
+
+const CORRELATION_HEADER = "x-request-id";
+
+function getOrCreateRequestId(req: Request): string {
+  return req.headers.get(CORRELATION_HEADER) || crypto.randomUUID();
+}
+
 // ─── Security headers ───
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -62,8 +70,18 @@ export default auth((req) => {
     }
   }
 
-  // Add security headers
-  const response = NextResponse.next();
+  // Generate / propagate correlation ID
+  const requestId = getOrCreateRequestId(req);
+
+  // Forward x-request-id to API routes via request headers
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set(CORRELATION_HEADER, requestId);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Set on response so nginx / client can see it
+  response.headers.set(CORRELATION_HEADER, requestId);
+
   addSecurityHeaders(response);
   return response;
 });

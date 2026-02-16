@@ -4,8 +4,12 @@
  * In production (NODE_ENV=production or LOG_FORMAT=json), outputs JSON lines
  * compatible with ELK / Loki / CloudWatch / Datadog.
  *
+ * Automatically includes x-request-id (correlation ID) when available.
+ *
  * Also exports legacy helpers (logWarn, logError, fireAndForget).
  */
+
+import { getCorrelationId } from "@/lib/correlation";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -13,6 +17,7 @@ interface LogEntry {
   level: LogLevel;
   msg: string;
   ts: string;
+  requestId?: string;
   [key: string]: unknown;
 }
 
@@ -29,8 +34,10 @@ function shouldLog(level: LogLevel): boolean {
 function emit(level: LogLevel, msg: string, meta?: Record<string, unknown>) {
   if (!shouldLog(level)) return;
 
+  const requestId = getCorrelationId() ?? undefined;
+
   if (useJson) {
-    const entry: LogEntry = { level, msg, ts: new Date().toISOString(), ...meta };
+    const entry: LogEntry = { level, msg, ts: new Date().toISOString(), ...(requestId && { requestId }), ...meta };
     const line = JSON.stringify(entry);
     if (level === "error") {
       process.stderr?.write?.(line + "\n") ?? console.error(line);
@@ -39,13 +46,14 @@ function emit(level: LogLevel, msg: string, meta?: Record<string, unknown>) {
     }
   } else {
     const prefix = `[${level.toUpperCase()}]`;
+    const rid = requestId ? ` [${requestId.slice(0, 8)}]` : "";
     const metaStr = meta && Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
     if (level === "error") {
-      console.error(`${prefix} ${msg}${metaStr}`);
+      console.error(`${prefix}${rid} ${msg}${metaStr}`);
     } else if (level === "warn") {
-      console.warn(`${prefix} ${msg}${metaStr}`);
+      console.warn(`${prefix}${rid} ${msg}${metaStr}`);
     } else {
-      console.log(`${prefix} ${msg}${metaStr}`);
+      console.log(`${prefix}${rid} ${msg}${metaStr}`);
     }
   }
 }

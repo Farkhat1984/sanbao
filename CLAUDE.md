@@ -69,7 +69,8 @@ Zustand stores in `src/stores/`: chatStore, artifactStore, panelStore, sidebarSt
 ### Security
 
 - **Auth:** NextAuth v5, JWT, Credentials + Google OAuth, 2FA TOTP (`otplib` OTP class)
-- **Middleware:** `src/proxy.ts` (Edge Runtime) — auth wrapper, admin IP whitelist, maintenance mode, suspicious path blocking
+- **Middleware:** `src/proxy.ts` (Edge Runtime) — auth wrapper, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
+- **CSP:** Content-Security-Policy header via `next.config.ts` (dynamic CDN/Sentry domains)
 - **Admin guard:** `src/lib/admin.ts` → `requireAdmin()` — role + 2FA + IP whitelist
 - **Rate-limit:** `src/lib/rate-limit.ts` — Redis-first with in-memory fallback, auto-block on abuse (10 violations → 30 min block)
 - **API keys:** `src/lib/crypto.ts` AES-256-GCM; `src/lib/api-key-auth.ts` — per-key rate limit
@@ -93,6 +94,7 @@ Zustand stores in `src/stores/`: chatStore, artifactStore, panelStore, sidebarSt
 - `src/lib/redis.ts` — Redis client (ioredis) with graceful degradation (no-op if `REDIS_URL` not set)
 - `cacheGet()`, `cacheSet()`, `cacheDel()`, `cacheIncr()`, `redisRateLimit()` — all return null/no-op when unavailable
 - `src/lib/usage.ts` — plan+usage cache in Redis (30s TTL, key `plan:${userId}`)
+- **Two-level agent context cache:** L1 in-memory BoundedMap (30s) + L2 Redis (60s, key `agent_ctx:{id}`), shared across replicas
 - Rate limiting: distributed via Redis, fallback to in-memory BoundedMap
 
 ### Job Queues
@@ -140,12 +142,15 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 
 - `src/lib/logger.ts` — structured JSON logger in production, readable console in dev
 - `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()` — all with metadata
+- Auto-includes `requestId` (correlation ID) from `AsyncLocalStorage` when available
+- `src/lib/correlation.ts` — `AsyncLocalStorage`-based context, `generateCorrelationId()`, `runWithCorrelationId()`
 - `LOG_FORMAT=json` (default in prod), `LOG_LEVEL=info` (configurable)
 - Legacy helpers: `logWarn()`, `logError()`, `fireAndForget()` — backward-compatible wrappers
 
 ### Monitoring
 
-- `GET /api/health` — health check (DB, Redis, AI providers, MCP). Returns 503 during shutdown
+- `GET /api/health` — full liveness check (DB, Redis, AI providers, MCP). Returns 503 during shutdown
+- `GET /api/ready` — lightweight readiness probe (DB `SELECT 1` + Redis ping). Used by k8s readinessProbe
 - `GET /api/metrics` — Prometheus-compatible metrics (business, process, Redis, request duration histogram)
 - `src/lib/request-metrics.ts` — in-memory request duration tracking with histogram buckets
 - Grafana dashboard auto-provisioned via `k8s/monitoring/grafana.yml`
