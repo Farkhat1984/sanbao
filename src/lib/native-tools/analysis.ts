@@ -66,6 +66,12 @@ function safeEvaluate(expression: string): number {
     throw new Error("Выражение содержит недопустимые символы");
   }
 
+  // Blocklist dangerous patterns that could escape the sandbox
+  const DANGEROUS = /constructor|prototype|__proto__|this|global|process|require|import|window|eval|Function/i;
+  if (DANGEROUS.test(expr)) {
+    throw new Error("Выражение содержит запрещённые конструкции");
+  }
+
   // Build evaluator function with Math functions in scope
   const fnArgs = Object.keys(MATH_FUNCTIONS).map((k) => `__fn_${k}`);
   const fnVals = Object.values(MATH_FUNCTIONS);

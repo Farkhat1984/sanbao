@@ -474,11 +474,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // A/B experiment: allow overriding global system prompt
+  // A/B experiment: prepend experiment text to system prompt (never fully replace)
   {
     const ab = await resolveWithExperiment("global_system_prompt", systemPrompt, session.user.id);
-    if (ab.experimentId) {
-      systemPrompt = ab.value;
+    if (ab.experimentId && ab.value && ab.value !== systemPrompt) {
+      systemPrompt = `${ab.value}\n\n${systemPrompt}`;
     }
   }
 
