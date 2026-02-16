@@ -24,6 +24,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // Body size limits: max 10MB base64 (~7.5MB decoded), max 2000 chars prompt
+    const MAX_BASE64_LENGTH = 10 * 1024 * 1024; // ~10MB
+    if (typeof image !== "string" || image.length > MAX_BASE64_LENGTH) {
+      return NextResponse.json(
+        { error: "Изображение слишком большое (макс. 10MB)" },
+        { status: 413 }
+      );
+    }
+    if (typeof prompt !== "string" || prompt.length > 2000) {
+      return NextResponse.json(
+        { error: "Описание слишком длинное (макс. 2000 символов)" },
+        { status: 400 }
+      );
+    }
+
     // Convert base64 to buffer
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
     const imageBuffer = Buffer.from(base64Data, "base64");

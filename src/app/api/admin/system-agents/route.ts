@@ -14,6 +14,7 @@ export async function GET() {
       tools: { include: { tool: { select: { id: true, name: true } } } },
       plugins: { include: { plugin: { select: { id: true, name: true } } } },
     },
+    take: 500,
   });
 
   // Map to compatible format for admin page

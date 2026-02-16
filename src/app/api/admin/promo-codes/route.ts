@@ -8,6 +8,7 @@ export async function GET() {
 
   const codes = await prisma.promoCode.findMany({
     orderBy: { createdAt: "desc" },
+    take: 500,
   });
 
   return NextResponse.json(codes);

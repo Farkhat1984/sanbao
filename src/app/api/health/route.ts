@@ -2,13 +2,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 import { isShutdown } from "@/lib/shutdown";
+import { timingSafeEqual } from "crypto";
+
+function isTokenValid(header: string | null, token: string): boolean {
+  const expected = `Bearer ${token}`;
+  if (!header || header.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
 
 export async function GET(req: Request) {
   // Check if caller is authenticated admin (for detailed response)
   let isAdmin = false;
   const authHeader = req.headers.get("authorization");
   const metricsToken = process.env.METRICS_TOKEN;
-  if (metricsToken && authHeader === `Bearer ${metricsToken}`) {
+  if (metricsToken && isTokenValid(authHeader, metricsToken)) {
     isAdmin = true;
   }
   // If shutting down, immediately return 503 so LB drains this instance

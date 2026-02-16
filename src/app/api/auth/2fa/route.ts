@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { OTP } from "otplib";
 import QRCode from "qrcode";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { encrypt, decrypt } from "@/lib/crypto";
 
 const otp = new OTP();
 
@@ -31,9 +32,10 @@ export async function GET() {
   const otpauth = otp.generateURI({ issuer: "Sanbao", label: user.email!, secret });
   const qrCodeUrl = await QRCode.toDataURL(otpauth);
 
+  // Encrypt secret before storing in DB
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { twoFactorSecret: secret },
+    data: { twoFactorSecret: encrypt(secret) },
   });
 
   return NextResponse.json({ secret, qrCodeUrl, enabled: false });
@@ -74,7 +76,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Secret not set or code missing" }, { status: 400 });
     }
 
-    const result = await otp.verify({ token: code, secret: user.twoFactorSecret });
+    const decryptedSecret = decrypt(user.twoFactorSecret);
+    const result = await otp.verify({ token: code, secret: decryptedSecret });
     if (!result.valid) {
       return NextResponse.json({ error: "Неверный код" }, { status: 400 });
     }
@@ -96,7 +99,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Code required to disable 2FA" }, { status: 400 });
     }
 
-    const result = await otp.verify({ token: code, secret: user.twoFactorSecret });
+    const decryptedSecret = decrypt(user.twoFactorSecret);
+    const result = await otp.verify({ token: code, secret: decryptedSecret });
     if (!result.valid) {
       return NextResponse.json({ error: "Неверный код" }, { status: 400 });
     }
@@ -115,7 +119,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Code required" }, { status: 400 });
     }
 
-    const result = await otp.verify({ token: code, secret: user.twoFactorSecret });
+    const decryptedSecret = decrypt(user.twoFactorSecret);
+    const result = await otp.verify({ token: code, secret: decryptedSecret });
     return NextResponse.json({ valid: result.valid });
   }
 

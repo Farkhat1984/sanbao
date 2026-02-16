@@ -23,7 +23,7 @@ services:
           memory: 512M
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/sanbao
@@ -37,8 +37,7 @@ services:
       LOG_CONNECTIONS: 0
       LOG_DISCONNECTIONS: 0
       AUTH_TYPE: plain
-    ports:
-      - "6432:5432"
+    # No external port mapping — accessed only via internal docker network
     depends_on:
       db:
         condition: service_healthy
@@ -52,8 +51,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly no
-    ports:
-      - "6379:6379"
+    # No external port mapping — accessed only via internal docker network
     volumes:
       - redisdata:/data
     healthcheck:

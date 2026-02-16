@@ -17,6 +17,7 @@ export async function GET(req: Request) {
   const templates = await prisma.documentTemplate.findMany({
     where,
     orderBy: { name: "asc" },
+    take: 500,
   });
 
   return NextResponse.json(templates);

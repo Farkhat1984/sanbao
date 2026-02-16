@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
 import { encrypt } from "@/lib/crypto";
+import { isUrlSafe } from "@/lib/ssrf";
 
 export async function GET(
   _req: Request,
@@ -40,6 +41,14 @@ export async function PUT(
   const provider = await prisma.aiProvider.findUnique({ where: { id } });
   if (!provider) {
     return NextResponse.json({ error: "Провайдер не найден" }, { status: 404 });
+  }
+
+  // SSRF protection on provider base URL
+  if (body.baseUrl && !isUrlSafe(body.baseUrl)) {
+    return NextResponse.json(
+      { error: "Недопустимый baseUrl: приватные и локальные адреса запрещены" },
+      { status: 400 }
+    );
   }
 
   const allowedFields = ["name", "slug", "baseUrl", "apiKey", "isActive", "priority"];

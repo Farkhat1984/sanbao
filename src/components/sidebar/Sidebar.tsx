@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Plus,
   Search,
@@ -40,10 +40,14 @@ export function Sidebar() {
       .catch(console.error);
   }, [session?.user, setConversations]);
 
-  // Auto-close sidebar on route change (mobile only)
+  // Auto-close sidebar on route change (mobile only) — skip initial mount
+  const prevPathname = useRef(pathname);
   useEffect(() => {
-    if (isMobile) {
-      close();
+    if (prevPathname.current !== pathname) {
+      prevPathname.current = pathname;
+      if (isMobile) {
+        close();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);

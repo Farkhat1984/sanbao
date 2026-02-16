@@ -101,5 +101,6 @@ export const config = {
     "/skills/:path*",
     "/mcp/:path*",
     "/admin/:path*",
+    "/api/:path*",
   ],
 };

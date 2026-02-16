@@ -45,6 +45,14 @@ export interface FilterResult {
   matched?: string[];
 }
 
+// Strip zero-width characters and normalize Unicode for bypass prevention
+function normalizeText(text: string): string {
+  return text
+    .normalize("NFKD") // Decompose ligatures, compatibility chars
+    .replace(/[\u200B-\u200F\u2028-\u202F\uFEFF\u00AD]/g, "") // Zero-width & soft-hyphen
+    .toLowerCase();
+}
+
 /** Check text against content filter. */
 export async function checkContentFilter(text: string): Promise<FilterResult> {
   const { enabled, words } = await loadFilterConfig();
@@ -52,8 +60,8 @@ export async function checkContentFilter(text: string): Promise<FilterResult> {
     return { blocked: false };
   }
 
-  const lower = text.toLowerCase();
-  const matched = words.filter((w) => lower.includes(w));
+  const normalized = normalizeText(text);
+  const matched = words.filter((w) => normalized.includes(w));
 
   if (matched.length > 0) {
     return { blocked: true, matched };

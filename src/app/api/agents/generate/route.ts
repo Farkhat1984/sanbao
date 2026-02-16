@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import {
   VALID_ICONS, VALID_COLORS, MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL,
   DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
@@ -33,10 +34,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit: 10 requests/minute per user
+  if (!(await checkMinuteRateLimit(`agent-gen:${session.user.id}`, 10))) {
+    return NextResponse.json({ error: "Слишком много запросов" }, { status: 429 });
+  }
+
   const { description } = await req.json();
 
-  if (!description?.trim()) {
-    return NextResponse.json({ error: "Описание обязательно" }, { status: 400 });
+  if (!description?.trim() || description.length > 5000) {
+    return NextResponse.json({ error: "Описание обязательно (макс. 5000 символов)" }, { status: 400 });
   }
 
   try {

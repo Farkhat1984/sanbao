@@ -1,5 +1,6 @@
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { skillUpdateSchema } from "@/lib/validation";
 
 export async function GET(
   _req: Request,
@@ -48,21 +49,19 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor, isPublic } = body;
+  const parsed = skillUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+  }
+
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parsed.data)) {
+    if (value !== undefined) data[key] = value;
+  }
 
   const skill = await prisma.skill.update({
     where: { id },
-    data: {
-      ...(name !== undefined && { name: name.trim() }),
-      ...(description !== undefined && { description: description?.trim() || null }),
-      ...(systemPrompt !== undefined && { systemPrompt: systemPrompt.trim() }),
-      ...(templates !== undefined && { templates }),
-      ...(citationRules !== undefined && { citationRules: citationRules?.trim() || null }),
-      ...(jurisdiction !== undefined && { jurisdiction }),
-      ...(icon !== undefined && { icon }),
-      ...(iconColor !== undefined && { iconColor }),
-      ...(isPublic !== undefined && { isPublic }),
-    },
+    data,
   });
 
   return jsonOk(serializeDates(skill));

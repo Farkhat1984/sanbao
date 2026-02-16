@@ -24,6 +24,7 @@ export async function GET(req: Request) {
       _count: { select: { agents: true } },
     },
     orderBy: [{ isBuiltIn: "desc" }, { createdAt: "desc" }],
+    take: 500,
   });
 
   return NextResponse.json(skills);

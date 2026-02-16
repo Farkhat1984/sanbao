@@ -67,8 +67,8 @@ COPY prisma/schema.prisma ./prisma/
 COPY --from=builder /app/prisma/out/seed.js ./prisma/
 COPY --chmod=755 docker-entrypoint.sh ./
 
-# Sentry config files (if present)
-COPY sentry.*.config.ts ./  2>/dev/null || true
+# Sentry config files
+COPY sentry.client.config.ts sentry.server.config.ts sentry.edge.config.ts ./
 
 EXPOSE 3004
 

@@ -9,6 +9,7 @@ export async function GET() {
   const plans = await prisma.plan.findMany({
     orderBy: { sortOrder: "asc" },
     include: { _count: { select: { subscriptions: true } } },
+    take: 500,
   });
 
   return NextResponse.json(plans);

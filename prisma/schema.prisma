@@ -833,6 +833,8 @@ model ApiKey {
   userId    String
   name      String
   key       String    @unique
+  keyHash   String?   @unique // SHA-256 hash for secure lookup
+  keyPrefix String?   // First 12 chars for display (e.g. "lma_abc12345")
   lastUsed  DateTime?
   expiresAt DateTime?
   isActive  Boolean   @default(true)
@@ -844,6 +846,7 @@ model ApiKey {
 
   @@index([userId])
   @@index([key])
+  @@index([keyHash])
 }
 
 // ─── Webhooks ─────────────────────────────────────────────

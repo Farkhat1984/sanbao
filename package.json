@@ -19,7 +19,7 @@
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@napi-rs/canvas": "^0.1.92",
     "@prisma/client": "^6.19.2",
-    "@prisma/extension-read-replicas": "^0.5.0",
+    "@prisma/extension-read-replicas": "0.4.1",
     "@sentry/nextjs": "^10.39.0",
     "@tiptap/extension-highlight": "^3.19.0",
     "@tiptap/extension-placeholder": "^3.19.0",

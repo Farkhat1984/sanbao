@@ -9,13 +9,14 @@ export async function GET() {
   if (result.error) return result.error;
 
   const [plans, models, planModels] = await Promise.all([
-    prisma.plan.findMany({ select: { id: true, name: true, slug: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.plan.findMany({ select: { id: true, name: true, slug: true }, orderBy: { sortOrder: "asc" }, take: 500 }),
     prisma.aiModel.findMany({
       where: { isActive: true },
       select: { id: true, displayName: true, category: true, provider: { select: { name: true } } },
       orderBy: [{ category: "asc" }, { displayName: "asc" }],
+      take: 500,
     }),
-    prisma.planModel.findMany(),
+    prisma.planModel.findMany({ take: 500 }),
   ]);
 
   return NextResponse.json({ plans, models, planModels });

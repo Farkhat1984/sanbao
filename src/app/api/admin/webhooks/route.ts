@@ -9,6 +9,7 @@ export async function GET() {
 
   const webhooks = await prisma.webhook.findMany({
     orderBy: { createdAt: "desc" },
+    take: 500,
   });
 
   return NextResponse.json(webhooks);

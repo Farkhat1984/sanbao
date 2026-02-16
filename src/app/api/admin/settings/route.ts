@@ -8,7 +8,7 @@ export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const settings = await prisma.systemSetting.findMany();
+  const settings = await prisma.systemSetting.findMany({ take: 500 });
   const map: Record<string, string> = {};
   for (const s of settings) map[s.key] = s.value;
 

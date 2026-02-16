@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
 import { encrypt } from "@/lib/crypto";
+import { isUrlSafe } from "@/lib/ssrf";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -11,6 +12,7 @@ export async function GET() {
   const providers = await prisma.aiProvider.findMany({
     orderBy: { priority: "desc" },
     include: { _count: { select: { models: true } } },
+    take: 500,
   });
 
   // Mask API keys in response
@@ -32,6 +34,14 @@ export async function POST(req: Request) {
   if (!name || !slug || !baseUrl || !apiKey) {
     return NextResponse.json(
       { error: "Обязательные поля: name, slug, baseUrl, apiKey" },
+      { status: 400 }
+    );
+  }
+
+  // SSRF protection on provider base URL
+  if (!isUrlSafe(baseUrl)) {
+    return NextResponse.json(
+      { error: "Недопустимый baseUrl: приватные и локальные адреса запрещены" },
       { status: 400 }
     );
   }

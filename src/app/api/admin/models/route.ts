@@ -86,32 +86,33 @@ export async function POST(req: Request) {
     );
   }
 
-  // If setting as default, unset other defaults in same category
-  if (isDefault) {
-    await prisma.aiModel.updateMany({
-      where: { category: category, isDefault: true },
-      data: { isDefault: false },
+  // Atomic default swap + create in transaction to prevent race conditions
+  const model = await prisma.$transaction(async (tx) => {
+    if (isDefault) {
+      await tx.aiModel.updateMany({
+        where: { category: category, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+    return tx.aiModel.create({
+      data: {
+        providerId,
+        modelId,
+        displayName,
+        category,
+        temperature: temperature ?? null,
+        topP: topP ?? null,
+        maxTokens: maxTokens ?? null,
+        contextWindow: contextWindow ?? null,
+        costPer1kInput: costPer1kInput ?? 0,
+        costPer1kOutput: costPer1kOutput ?? 0,
+        supportsThinking: supportsThinking ?? false,
+        maxThinkingTokens: maxThinkingTokens || null,
+        isActive: isActive ?? true,
+        isDefault: isDefault ?? false,
+      },
+      include: { provider: { select: { id: true, name: true, slug: true } } },
     });
-  }
-
-  const model = await prisma.aiModel.create({
-    data: {
-      providerId,
-      modelId,
-      displayName,
-      category,
-      temperature: temperature ?? null,
-      topP: topP ?? null,
-      maxTokens: maxTokens ?? null,
-      contextWindow: contextWindow ?? null,
-      costPer1kInput: costPer1kInput ?? 0,
-      costPer1kOutput: costPer1kOutput ?? 0,
-      supportsThinking: supportsThinking ?? false,
-      maxThinkingTokens: maxThinkingTokens || null,
-      isActive: isActive ?? true,
-      isDefault: isDefault ?? false,
-    },
-    include: { provider: { select: { id: true, name: true, slug: true } } },
   });
 
   invalidateModelCache();

@@ -1,5 +1,6 @@
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { agentUpdateSchema } from "@/lib/validation";
 
 const AGENT_INCLUDE = {
   files: true,
@@ -48,7 +49,11 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = body;
+  const parsed = agentUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+  }
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = parsed.data;
 
   const existing = await prisma.agent.findFirst({
     where: { id, userId },

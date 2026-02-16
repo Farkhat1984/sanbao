@@ -145,16 +145,20 @@ export async function POST() {
     select: { id: true, fileSize: true },
   });
 
-  // Alternative: find agentFiles whose agentId doesn't match any agent
-  const allAgentIds = (await prisma.agent.findMany({ select: { id: true } })).map((a) => a.id);
-  const orphanedRecords = await prisma.agentFile.findMany({
-    where: { agentId: { notIn: allAgentIds.length > 0 ? allAgentIds : ["_none_"] } },
-  });
+  // Find agentFiles whose agentId doesn't match any agent (using raw query for efficiency)
+  const orphanedRecords = await prisma.$queryRaw<Array<{ id: string; fileUrl: string; fileSize: number }>>`
+    SELECT af.id, af."fileUrl", af."fileSize" FROM "AgentFile" af
+    LEFT JOIN "Agent" a ON af."agentId" = a.id
+    WHERE a.id IS NULL
+    LIMIT 1000
+  `;
 
-  // Delete orphaned files from disk
+  // Delete orphaned files from disk (with path traversal protection)
+  const publicDir = path.resolve(process.cwd(), "public");
   for (const rec of orphanedRecords) {
     try {
-      const filePath = path.join(process.cwd(), "public", rec.fileUrl);
+      const filePath = path.resolve(process.cwd(), "public", rec.fileUrl);
+      if (!filePath.startsWith(publicDir)) continue; // path traversal protection
       await unlink(filePath);
     } catch { /* already gone */ }
     freedBytes += rec.fileSize;
@@ -188,7 +192,11 @@ export async function DELETE(req: Request) {
     const file = await prisma.agentFile.findUnique({ where: { id: fileId } });
     if (!file) return NextResponse.json({ error: "Not found" }, { status: 404 });
     try {
-      await unlink(path.join(process.cwd(), "public", file.fileUrl));
+      const safePublicDir = path.resolve(process.cwd(), "public");
+      const safePath = path.resolve(process.cwd(), "public", file.fileUrl);
+      if (safePath.startsWith(safePublicDir)) {
+        await unlink(safePath);
+      }
     } catch { /* file may not exist */ }
     await prisma.agentFile.delete({ where: { id: fileId } });
   }

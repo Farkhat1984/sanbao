@@ -18,6 +18,7 @@ export async function GET() {
 
   const templates = await prisma.emailTemplate.findMany({
     orderBy: { type: "asc" },
+    take: 500,
   });
 
   // Return all types, filling in defaults for missing ones

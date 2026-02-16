@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRequestDurationMetrics } from "@/lib/request-metrics";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
+import { timingSafeEqual } from "crypto";
+
+function isTokenValid(header: string | null, token: string): boolean {
+  const expected = `Bearer ${token}`;
+  if (!header || header.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
 
 export async function GET(req: Request) {
   // Allow Prometheus scraping with a bearer token, or require admin auth
   const authHeader = req.headers.get("authorization");
   const metricsToken = process.env.METRICS_TOKEN;
-  if (metricsToken && authHeader === `Bearer ${metricsToken}`) {
+  if (metricsToken && isTokenValid(authHeader, metricsToken)) {
     // Token auth for Prometheus — proceed
   } else {
     // Fallback: require admin session

@@ -62,16 +62,16 @@ export async function POST(req: Request) {
     return NextResponse.json(notification, { status: 201 });
   }
 
-  // Mass notification to all users
-  const users = await prisma.user.findMany({ select: { id: true } });
-  const data = users.map((u) => ({
-    title,
-    message,
-    type: (type as NotificationType) || "INFO",
-    userId: u.id,
-    isGlobal: false,
-  }));
-
-  const count = await prisma.notification.createMany({ data });
-  return NextResponse.json({ created: count.count }, { status: 201 });
+  // Mass notification — use global notification instead of per-user rows
+  // This avoids OOM with 100k+ users
+  const notification = await prisma.notification.create({
+    data: {
+      title,
+      message,
+      type: (type as NotificationType) || "INFO",
+      isGlobal: true,
+      userId: null,
+    },
+  });
+  return NextResponse.json(notification, { status: 201 });
 }

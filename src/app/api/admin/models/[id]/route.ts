@@ -55,19 +55,20 @@ export async function PUT(
     }
   }
 
-  // If setting as default, unset other defaults in same category
-  if (data.isDefault === true) {
-    const category = (data.category as ModelCategory) || model.category;
-    await prisma.aiModel.updateMany({
-      where: { category, isDefault: true, id: { not: id } },
-      data: { isDefault: false },
+  // Atomic default swap + update in transaction
+  const updated = await prisma.$transaction(async (tx) => {
+    if (data.isDefault === true) {
+      const category = (data.category as ModelCategory) || model.category;
+      await tx.aiModel.updateMany({
+        where: { category, isDefault: true, id: { not: id } },
+        data: { isDefault: false },
+      });
+    }
+    return tx.aiModel.update({
+      where: { id },
+      data,
+      include: { provider: { select: { id: true, name: true, slug: true } } },
     });
-  }
-
-  const updated = await prisma.aiModel.update({
-    where: { id },
-    data,
-    include: { provider: { select: { id: true, name: true, slug: true } } },
   });
 
   invalidateModelCache();

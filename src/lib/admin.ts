@@ -39,10 +39,15 @@ export async function requireAdmin() {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { role: true },
+    select: { role: true, twoFactorEnabled: true },
   });
   if (user?.role !== "ADMIN") {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  // Enforce 2FA: if admin has 2FA enabled, session must have passed verification
+  if (user.twoFactorEnabled && !session.user.twoFactorVerified) {
+    return { error: NextResponse.json({ error: "2FA verification required" }, { status: 403 }) };
   }
 
   // Admin rate limit: 60 requests/minute per admin user

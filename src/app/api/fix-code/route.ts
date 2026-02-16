@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL, DEFAULT_MAX_TOKENS_FIX, DEFAULT_TEMPERATURE_CODE_FIX } from "@/lib/constants";
 
 const FIX_PROMPT = `You are a code fixer. You receive code that has a runtime error and must return ONLY the fixed code.
@@ -20,10 +21,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit: 20 requests/minute per user
+  if (!(await checkMinuteRateLimit(`fix-code:${session.user.id}`, 20))) {
+    return NextResponse.json({ error: "Слишком много запросов" }, { status: 429 });
+  }
+
   const { code, error } = await req.json();
 
   if (!code || !error) {
     return NextResponse.json({ error: "Missing code or error" }, { status: 400 });
+  }
+
+  // Body size limits
+  const MAX_CODE_LENGTH = 500 * 1024; // 500KB
+  const MAX_ERROR_LENGTH = 10 * 1024; // 10KB
+  if (typeof code !== "string" || code.length > MAX_CODE_LENGTH) {
+    return NextResponse.json({ error: "Code too large (max 500KB)" }, { status: 413 });
+  }
+  if (typeof error !== "string" || error.length > MAX_ERROR_LENGTH) {
+    return NextResponse.json({ error: "Error message too large (max 10KB)" }, { status: 413 });
   }
 
   try {

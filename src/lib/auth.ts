@@ -5,11 +5,33 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
+import { decrypt } from "./crypto";
 import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
 
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sanbao.local";
+
+// ─── Session TTL cache (avoid DB query on every JWT validation) ───
+let sessionTtlCache: { value: number; expiresAt: number } | null = null;
+const SESSION_TTL_CACHE_MS = 5 * 60_000; // 5 minutes
+
+async function getSessionTtlHours(): Promise<number> {
+  if (sessionTtlCache && sessionTtlCache.expiresAt > Date.now()) {
+    return sessionTtlCache.value;
+  }
+  try {
+    const ttlSetting = await prisma.systemSetting.findUnique({
+      where: { key: "session_ttl_hours" },
+    });
+    const parsed = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
+    const ttlHours = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 8760) : DEFAULT_SESSION_TTL_HOURS;
+    sessionTtlCache = { value: ttlHours, expiresAt: Date.now() + SESSION_TTL_CACHE_MS };
+    return ttlHours;
+  } catch {
+    return DEFAULT_SESSION_TTL_HOURS;
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -55,6 +77,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 role: "ADMIN",
               },
             });
+
+            // Enforce 2FA for admin if enabled
+            if (admin.twoFactorEnabled && admin.twoFactorSecret) {
+              const totpCode = credentials.totpCode as string | undefined;
+              if (!totpCode) {
+                throw new Error("2FA_REQUIRED");
+              }
+              const { OTP } = await import("otplib");
+              const otpInstance = new OTP();
+              const decryptedSecret = decrypt(admin.twoFactorSecret);
+              const result2fa = await otpInstance.verify({
+                token: totpCode,
+                secret: decryptedSecret,
+              });
+              if (!result2fa.valid) {
+                throw new Error("2FA_INVALID");
+              }
+            }
+
             return {
               id: admin.id,
               email: admin.email,
@@ -81,7 +122,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             const { OTP } = await import("otplib");
             const otpInstance = new OTP();
-            const result2fa = await otpInstance.verify({ token: totpCode, secret: user.twoFactorSecret });
+            const decryptedSecret = decrypt(user.twoFactorSecret);
+            const result2fa = await otpInstance.verify({ token: totpCode, secret: decryptedSecret });
             if (!result2fa.valid) {
               throw new Error("2FA_INVALID");
             }
@@ -94,6 +136,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             image: user.image,
           };
         } catch (error) {
+          // Re-throw 2FA errors so the client can handle them
+          if (error instanceof Error && (error.message === "2FA_REQUIRED" || error.message === "2FA_INVALID")) {
+            throw error;
+          }
           console.error("[AUTH] authorize error:", error);
           return null;
         }
@@ -122,26 +168,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.iat = Math.floor(Date.now() / 1000);
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id as string },
-          select: { role: true },
+          select: { role: true, twoFactorEnabled: true },
         });
-        if (dbUser) token.role = dbUser.role;
+        if (dbUser) {
+          token.role = dbUser.role;
+          // If user has 2FA enabled and reached this point, they passed verification
+          token.twoFactorVerified = dbUser.twoFactorEnabled || false;
+        }
       }
 
-      // Session TTL enforcement from SystemSettings
+      // Session TTL enforcement from SystemSettings (cached)
       if (token.iat) {
-        try {
-          const ttlSetting = await prisma.systemSetting.findUnique({
-            where: { key: "session_ttl_hours" },
-          });
-          const parsed = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
-          const ttlHours = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 8760) : DEFAULT_SESSION_TTL_HOURS;
-          const maxAge = ttlHours * 3600;
-          const now = Math.floor(Date.now() / 1000);
-          if (now - (token.iat as number) > maxAge) {
-            return { ...token, expired: true };
-          }
-        } catch {
-          // DB not available — allow session
+        const ttlHours = await getSessionTtlHours();
+        const maxAge = ttlHours * 3600;
+        const now = Math.floor(Date.now() / 1000);
+        if (now - (token.iat as number) > maxAge) {
+          return { ...token, expired: true };
         }
       }
 
@@ -155,6 +197,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user && token.id) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) || "USER";
+        session.user.twoFactorVerified = (token.twoFactorVerified as boolean) || false;
       }
       return session;
     },

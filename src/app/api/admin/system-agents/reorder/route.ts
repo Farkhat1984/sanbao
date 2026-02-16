@@ -8,12 +8,12 @@ export async function POST(req: Request) {
 
   const { order } = await req.json();
 
-  if (!Array.isArray(order)) {
-    return NextResponse.json({ error: "order must be an array of IDs" }, { status: 400 });
+  if (!Array.isArray(order) || order.length === 0 || order.length > 200) {
+    return NextResponse.json({ error: "order must be an array of IDs (max 200)" }, { status: 400 });
   }
 
-  // Update sortOrder for each agent
-  await Promise.all(
+  // Update sortOrder in a single transaction to avoid N+1
+  await prisma.$transaction(
     order.map((id: string, index: number) =>
       prisma.agent.update({
         where: { id },

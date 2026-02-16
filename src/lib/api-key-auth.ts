@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { fireAndForget } from "@/lib/logger";
+import { createHash } from "crypto";
 
 interface ApiKeyAuthResult {
   userId: string;
@@ -21,10 +22,19 @@ export async function authenticateApiKey(
   }
 
   const key = authHeader.slice(7);
-  const apiKey = await prisma.apiKey.findUnique({
-    where: { key },
+  const keyHash = createHash("sha256").update(key).digest("hex");
+
+  // Try hash-based lookup first (new keys), fall back to plaintext (legacy keys)
+  let apiKey = await prisma.apiKey.findUnique({
+    where: { keyHash },
     include: { user: { select: { id: true, isBanned: true } } },
   });
+  if (!apiKey) {
+    apiKey = await prisma.apiKey.findUnique({
+      where: { key },
+      include: { user: { select: { id: true, isBanned: true } } },
+    });
+  }
 
   if (!apiKey || !apiKey.isActive) {
     return { error: NextResponse.json({ error: "Invalid API key" }, { status: 401 }) };

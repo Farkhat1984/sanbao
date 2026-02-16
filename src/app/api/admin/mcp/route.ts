@@ -9,6 +9,7 @@ export async function GET() {
   const servers = await prisma.mcpServer.findMany({
     where: { isGlobal: true },
     orderBy: { createdAt: "desc" },
+    take: 500,
   });
 
   return NextResponse.json(servers);

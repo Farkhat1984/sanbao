@@ -34,19 +34,24 @@ export async function POST(
   if (messages.length > 50) {
     return NextResponse.json({ error: "Too many messages in batch" }, { status: 400 });
   }
+  const ALLOWED_ROLES = new Set(["USER", "ASSISTANT"]);
   const MAX_MSG_SIZE = 200_000; // 200KB per message
   for (const m of messages) {
     if (typeof m.content === "string" && m.content.length > MAX_MSG_SIZE) {
       return NextResponse.json({ error: "Message too large" }, { status: 400 });
+    }
+    // Prevent role injection — clients can only submit USER and ASSISTANT messages
+    if (!ALLOWED_ROLES.has(m.role)) {
+      return NextResponse.json({ error: "Invalid message role" }, { status: 400 });
     }
   }
 
   const created = await prisma.message.createMany({
     data: messages.map((m: { role: string; content: string; planContent?: string }) => ({
       conversationId,
-      role: m.role as "USER" | "ASSISTANT" | "SYSTEM" | "TOOL",
+      role: m.role as "USER" | "ASSISTANT",
       content: m.content,
-      planContent: m.planContent || null,
+      planContent: m.role === "ASSISTANT" ? (m.planContent || null) : null,
     })),
   });
 

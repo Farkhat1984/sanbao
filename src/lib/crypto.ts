@@ -5,8 +5,16 @@ const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
 function getKey(): Buffer {
-  const secret = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
-  if (!secret) throw new Error("ENCRYPTION_KEY, NEXTAUTH_SECRET, or AUTH_SECRET must be set");
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret) {
+    // Fallback for dev/migration only — log warning
+    const fallback = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+    if (!fallback) throw new Error("ENCRYPTION_KEY must be set (NEXTAUTH_SECRET/AUTH_SECRET accepted as temporary fallback)");
+    if (process.env.NODE_ENV === "production") {
+      console.warn("[CRYPTO] Using NEXTAUTH_SECRET/AUTH_SECRET as encryption key fallback — set ENCRYPTION_KEY for production!");
+    }
+    return crypto.createHash("sha256").update(fallback).digest();
+  }
   return crypto.createHash("sha256").update(secret).digest();
 }
 

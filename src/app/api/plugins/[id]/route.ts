@@ -1,5 +1,6 @@
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { pluginUpdateSchema } from "@/lib/validation";
 
 export async function GET(
   _req: Request,
@@ -40,6 +41,10 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
+  const parsed = pluginUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+  }
 
   const plugin = await prisma.plugin.findFirst({
     where: { id, userId },
@@ -49,16 +54,14 @@ export async function PUT(
     return jsonError("Not found", 404);
   }
 
+  const data: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parsed.data)) {
+    if (value !== undefined) data[key] = value;
+  }
+
   const updated = await prisma.plugin.update({
     where: { id },
-    data: {
-      ...(body.name !== undefined && { name: body.name.trim() }),
-      ...(body.description !== undefined && { description: body.description?.trim() || null }),
-      ...(body.icon !== undefined && { icon: body.icon }),
-      ...(body.iconColor !== undefined && { iconColor: body.iconColor }),
-      ...(body.version !== undefined && { version: body.version }),
-      ...(body.isActive !== undefined && { isActive: body.isActive }),
-    },
+    data,
   });
 
   return jsonOk(serializeDates(updated));
