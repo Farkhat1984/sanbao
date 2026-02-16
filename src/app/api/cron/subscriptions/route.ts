@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSubscriptionMaintenance } from "@/lib/subscription-manager";
+import { timingSafeEqual } from "crypto";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
+  const authHeader = req.headers.get("authorization") || "";
   const expected = process.env.CRON_SECRET;
 
   if (!expected) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
   }
-  if (authHeader !== `Bearer ${expected}`) {
+  const expectedFull = `Bearer ${expected}`;
+  if (
+    authHeader.length !== expectedFull.length ||
+    !timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedFull))
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

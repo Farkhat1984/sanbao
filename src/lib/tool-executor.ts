@@ -5,6 +5,19 @@
 
 import { TOOL_TIMEOUT_MS, TOOL_RESPONSE_CAP } from "@/lib/constants";
 
+const BLOCKED_HOSTS = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|\[::1?\]|metadata\.google|169\.254\.\d+\.\d+)/i;
+
+function isUrlSafe(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    if (BLOCKED_HOSTS.test(parsed.hostname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Interpolate {{key}} placeholders in a string */
 function interpolate(template: string, vars: Record<string, unknown>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
@@ -25,6 +38,9 @@ export async function executeWebhookTool(
 ): Promise<ToolExecutionResult> {
   try {
     const url = interpolate(config.url, input);
+    if (!isUrlSafe(url)) {
+      return { success: false, error: "URL blocked by SSRF protection" };
+    }
     const method = (config.method || "POST").toUpperCase();
     const headers: Record<string, string> = { "Content-Type": "application/json", ...config.headers };
 
@@ -69,6 +85,9 @@ export async function executeUrlTool(
 ): Promise<ToolExecutionResult> {
   try {
     const url = interpolate(config.url, input);
+    if (!isUrlSafe(url)) {
+      return { success: false, error: "URL blocked by SSRF protection" };
+    }
     const method = (config.method || "GET").toUpperCase();
     const headers: Record<string, string> = { ...config.headers };
 

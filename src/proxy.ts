@@ -51,6 +51,8 @@ export default auth((req) => {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/billing") ||
     pathname.startsWith("/agents") ||
+    pathname.startsWith("/skills") ||
+    pathname.startsWith("/mcp") ||
     pathname.startsWith("/admin");
 
   if (isAppRoute && !isLoggedIn) {
@@ -96,6 +98,8 @@ export const config = {
     "/settings",
     "/billing",
     "/agents/:path*",
+    "/skills/:path*",
+    "/mcp/:path*",
     "/admin/:path*",
   ],
 };

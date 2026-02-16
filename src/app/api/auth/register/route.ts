@@ -37,6 +37,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // Prevent bcrypt DoS — bcrypt truncates at 72 bytes anyway
+    if (password.length > 128) {
+      return NextResponse.json(
+        { error: "Пароль не должен превышать 128 символов" },
+        { status: 400 }
+      );
+    }
+
     // Sanitize name (strip HTML tags)
     const sanitizedName = name
       ? String(name).replace(/<[^>]*>/g, "").trim().slice(0, 100)

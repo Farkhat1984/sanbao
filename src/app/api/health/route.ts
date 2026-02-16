@@ -3,7 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 import { isShutdown } from "@/lib/shutdown";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Check if caller is authenticated admin (for detailed response)
+  let isAdmin = false;
+  const authHeader = req.headers.get("authorization");
+  const metricsToken = process.env.METRICS_TOKEN;
+  if (metricsToken && authHeader === `Bearer ${metricsToken}`) {
+    isAdmin = true;
+  }
   // If shutting down, immediately return 503 so LB drains this instance
   if (isShutdown()) {
     return NextResponse.json(
@@ -37,38 +44,39 @@ export async function GET() {
     checks.redis = { status: "error", latency: Date.now() - redisStart };
   }
 
-  // AI Providers
-  try {
-    const providers = await prisma.aiProvider.findMany({
-      where: { isActive: true },
-      select: { slug: true, baseUrl: true },
-    });
-    for (const p of providers) {
-      const start = Date.now();
-      try {
-        const res = await fetch(`${p.baseUrl}/models`, {
-          signal: AbortSignal.timeout(5000),
-        });
-        checks[`ai_${p.slug}`] = { status: res.ok ? "ok" : "degraded", latency: Date.now() - start };
-      } catch {
-        checks[`ai_${p.slug}`] = { status: "error", latency: Date.now() - start };
+  // AI Providers & MCP — only for authenticated callers (prevents info disclosure)
+  if (isAdmin) {
+    try {
+      const providers = await prisma.aiProvider.findMany({
+        where: { isActive: true },
+        select: { slug: true, baseUrl: true },
+      });
+      for (const p of providers) {
+        const start = Date.now();
+        try {
+          const res = await fetch(`${p.baseUrl}/models`, {
+            signal: AbortSignal.timeout(5000),
+          });
+          checks[`ai_${p.slug}`] = { status: res.ok ? "ok" : "degraded", latency: Date.now() - start };
+        } catch {
+          checks[`ai_${p.slug}`] = { status: "error", latency: Date.now() - start };
+        }
       }
+    } catch {
+      checks.ai_providers = { status: "error", error: "Failed to query providers" };
     }
-  } catch {
-    checks.ai_providers = { status: "error", error: "Failed to query providers" };
-  }
 
-  // Global MCP servers
-  try {
-    const mcpServers = await prisma.mcpServer.findMany({
-      where: { isGlobal: true },
-      select: { name: true, url: true, status: true },
-    });
-    for (const s of mcpServers) {
-      checks[`mcp_${s.name}`] = { status: s.status === "CONNECTED" ? "ok" : "disconnected" };
+    try {
+      const mcpServers = await prisma.mcpServer.findMany({
+        where: { isGlobal: true },
+        select: { name: true, url: true, status: true },
+      });
+      for (const s of mcpServers) {
+        checks[`mcp_${s.name}`] = { status: s.status === "CONNECTED" ? "ok" : "disconnected" };
+      }
+    } catch {
+      checks.mcp = { status: "error" };
     }
-  } catch {
-    checks.mcp = { status: "error" };
   }
 
   const overallOk = Object.values(checks).every((c) => c.status === "ok" || c.status === "disconnected" || c.status === "unavailable");
