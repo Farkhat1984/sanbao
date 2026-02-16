@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
 
@@ -40,7 +41,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (
             ADMIN_PASSWORD &&
             (login === ADMIN_LOGIN || login === ADMIN_EMAIL) &&
-            password === ADMIN_PASSWORD
+            password.length === ADMIN_PASSWORD.length &&
+            timingSafeEqual(Buffer.from(password), Buffer.from(ADMIN_PASSWORD))
           ) {
             // Upsert admin user in DB
             const admin = await prisma.user.upsert({

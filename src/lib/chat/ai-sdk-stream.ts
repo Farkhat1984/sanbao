@@ -79,6 +79,16 @@ function createPlanDetectorStream(
 
           planBuffer += chunk;
 
+          // Prevent unbounded buffer growth (max 1MB)
+          if (planBuffer.length > 1_000_000) {
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ t: insidePlan ? "p" : "c", v: planBuffer }) + "\n"
+              )
+            );
+            planBuffer = "";
+          }
+
           if (!insidePlan && planBuffer.includes("<sanbao-plan>")) {
             const idx = planBuffer.indexOf("<sanbao-plan>");
             const before = planBuffer.slice(0, idx);

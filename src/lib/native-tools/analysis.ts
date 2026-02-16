@@ -6,7 +6,9 @@ import {
 
 // ─── Safe math evaluator ───────────────────────────────
 
-const ALLOWED_MATH_PATTERN = /^[\d\s+\-*/%().,:eE]+$/;
+const ALLOWED_MATH_PATTERN = /^[\d\s+\-*/%().,eE]+$/;
+const MAX_EXPRESSION_LENGTH = 500;
+const MAX_PAREN_DEPTH = 20;
 
 const MATH_FUNCTIONS: Record<string, (...args: number[]) => number> = {
   abs: Math.abs,
@@ -28,10 +30,26 @@ const MATH_FUNCTIONS: Record<string, (...args: number[]) => number> = {
 };
 
 function safeEvaluate(expression: string): number {
-  // Remove whitespace
   let expr = expression.trim();
 
-  // Replace known function calls: sqrt(x) → Math.sqrt(x)
+  if (expr.length > MAX_EXPRESSION_LENGTH) {
+    throw new Error(`Выражение слишком длинное (макс. ${MAX_EXPRESSION_LENGTH} символов)`);
+  }
+
+  // Check parentheses depth to prevent stack overflow
+  let depth = 0;
+  for (const ch of expr) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (depth > MAX_PAREN_DEPTH) {
+      throw new Error("Слишком глубокая вложенность скобок");
+    }
+  }
+  if (depth !== 0) {
+    throw new Error("Несбалансированные скобки");
+  }
+
+  // Replace known function calls: sqrt(x) → __fn_sqrt(x)
   for (const fn of Object.keys(MATH_FUNCTIONS)) {
     const regex = new RegExp(`\\b${fn}\\b`, "g");
     expr = expr.replace(regex, `__fn_${fn}`);
@@ -40,6 +58,11 @@ function safeEvaluate(expression: string): number {
   // Check only safe characters remain (after function substitution)
   const cleaned = expr.replace(/__fn_\w+/g, "0");
   if (!ALLOWED_MATH_PATTERN.test(cleaned)) {
+    throw new Error("Выражение содержит недопустимые символы");
+  }
+
+  // Reject any remaining letter sequences (not part of known functions)
+  if (/[a-df-zA-DF-Z]/.test(cleaned)) {
     throw new Error("Выражение содержит недопустимые символы");
   }
 

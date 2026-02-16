@@ -5,7 +5,10 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
 
-  if (!expected || authHeader !== `Bearer ${expected}`) {
+  if (!expected) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  if (authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

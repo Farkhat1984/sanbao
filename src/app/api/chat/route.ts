@@ -288,6 +288,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await req.json();
   const {
     messages,
     provider = DEFAULT_PROVIDER,
@@ -298,7 +299,24 @@ export async function POST(req: Request) {
     planningEnabled = false,
     attachments = [],
     conversationId: reqConvId,
-  } = await req.json();
+  } = body;
+
+  // ─── Input validation ─────────────────────────────────────
+
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 200) {
+    return NextResponse.json({ error: "Некорректный массив сообщений" }, { status: 400 });
+  }
+
+  for (const msg of messages) {
+    const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+    if (content.length > 100_000) {
+      return NextResponse.json({ error: "Сообщение превышает допустимый размер (100KB)" }, { status: 400 });
+    }
+  }
+
+  if (attachments.length > 20) {
+    return NextResponse.json({ error: "Слишком много вложений (макс. 20)" }, { status: 400 });
+  }
 
   // ─── Plan & usage checks ────────────────────────────────
 
@@ -322,7 +340,7 @@ export async function POST(req: Request) {
         { status: 429 }
       );
     }
-    if (!checkMinuteRateLimit(session.user.id, plan.requestsPerMinute)) {
+    if (!(await checkMinuteRateLimit(session.user.id, plan.requestsPerMinute))) {
       return NextResponse.json({ error: "Слишком много запросов. Подождите минуту." }, { status: 429 });
     }
     if (thinkingEnabled && !plan.canUseReasoning) {
@@ -417,6 +435,12 @@ export async function POST(req: Request) {
         });
       }
     }
+  }
+
+  // Cap MCP tools to prevent unbounded growth
+  const MAX_MCP_TOOLS = 100;
+  if (agentMcpTools.length > MAX_MCP_TOOLS) {
+    agentMcpTools.length = MAX_MCP_TOOLS;
   }
 
   // ─── Load skill ─────────────────────────────────────────

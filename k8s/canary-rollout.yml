@@ -1,0 +1,102 @@
+# Argo Rollouts canary deployment
+# Requires: kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+#
+# Replace the standard Deployment (app-deployment.yml) with this Rollout.
+# Usage: kubectl argo rollouts set image sanbao-app app=NEW_IMAGE -n sanbao
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: sanbao-app
+  namespace: sanbao
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: sanbao-app
+  template:
+    metadata:
+      labels:
+        app: sanbao-app
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: app
+          image: sanbao:latest
+          ports:
+            - containerPort: 3004
+          envFrom:
+            - configMapRef:
+                name: sanbao-config
+            - secretRef:
+                name: sanbao-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: sanbao-app
+  strategy:
+    canary:
+      steps:
+        # 10% traffic → canary, pause 2 min for observation
+        - setWeight: 10
+        - pause: { duration: 2m }
+        # 30% traffic → canary, pause 3 min
+        - setWeight: 30
+        - pause: { duration: 3m }
+        # 60% traffic → canary, pause 3 min
+        - setWeight: 60
+        - pause: { duration: 3m }
+        # Full rollout
+        - setWeight: 100
+      canaryService: sanbao-app-canary
+      stableService: sanbao-app
+      trafficRouting:
+        nginx:
+          stableIngress: sanbao-ingress
+---
+# Canary service (used by Argo Rollouts)
+apiVersion: v1
+kind: Service
+metadata:
+  name: sanbao-app-canary
+  namespace: sanbao
+spec:
+  selector:
+    app: sanbao-app
+  ports:
+    - name: http
+      port: 3004
+      targetPort: 3004

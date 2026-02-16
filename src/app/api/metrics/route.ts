@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getRequestDurationMetrics } from "@/lib/request-metrics";
+import { isRedisAvailable, getRedis } from "@/lib/redis";
 
 export async function GET() {
   const now = new Date();
@@ -39,6 +40,7 @@ export async function GET() {
   ]);
 
   const lines: string[] = [
+    // ─── Business metrics ───────────────────────────
     "# HELP sanbao_users_total Total number of registered users",
     "# TYPE sanbao_users_total gauge",
     `sanbao_users_total ${totalUsers}`,
@@ -88,7 +90,63 @@ export async function GET() {
     lines.push(`sanbao_provider_cost_total{provider="${p.provider}"} ${p._sum.cost || 0}`);
   }
 
-  // Request duration histogram
+  // ─── Process metrics ────────────────────────────────
+  const mem = process.memoryUsage();
+  lines.push("");
+  lines.push("# HELP process_heap_bytes Node.js heap usage in bytes");
+  lines.push("# TYPE process_heap_bytes gauge");
+  lines.push(`process_heap_bytes{type="used"} ${mem.heapUsed}`);
+  lines.push(`process_heap_bytes{type="total"} ${mem.heapTotal}`);
+  lines.push(`process_heap_bytes{type="rss"} ${mem.rss}`);
+  lines.push(`process_heap_bytes{type="external"} ${mem.external}`);
+
+  lines.push("");
+  lines.push("# HELP process_uptime_seconds Process uptime in seconds");
+  lines.push("# TYPE process_uptime_seconds gauge");
+  lines.push(`process_uptime_seconds ${Math.floor(process.uptime())}`);
+
+  if (typeof process.cpuUsage === "function") {
+    const cpu = process.cpuUsage();
+    lines.push("");
+    lines.push("# HELP process_cpu_microseconds CPU time in microseconds");
+    lines.push("# TYPE process_cpu_microseconds counter");
+    lines.push(`process_cpu_microseconds{type="user"} ${cpu.user}`);
+    lines.push(`process_cpu_microseconds{type="system"} ${cpu.system}`);
+  }
+
+  // ─── Redis metrics ──────────────────────────────────
+  lines.push("");
+  lines.push("# HELP sanbao_redis_connected Whether Redis is connected");
+  lines.push("# TYPE sanbao_redis_connected gauge");
+  lines.push(`sanbao_redis_connected ${isRedisAvailable() ? 1 : 0}`);
+
+  if (isRedisAvailable()) {
+    try {
+      const client = getRedis();
+      if (client) {
+        const info = await client.info("memory");
+        const usedMatch = info.match(/used_memory:(\d+)/);
+        if (usedMatch) {
+          lines.push("");
+          lines.push("# HELP sanbao_redis_memory_bytes Redis memory usage");
+          lines.push("# TYPE sanbao_redis_memory_bytes gauge");
+          lines.push(`sanbao_redis_memory_bytes ${usedMatch[1]}`);
+        }
+        const keysInfo = await client.info("keyspace");
+        const keysMatch = keysInfo.match(/db0:keys=(\d+)/);
+        if (keysMatch) {
+          lines.push("");
+          lines.push("# HELP sanbao_redis_keys Total keys in Redis");
+          lines.push("# TYPE sanbao_redis_keys gauge");
+          lines.push(`sanbao_redis_keys ${keysMatch[1]}`);
+        }
+      }
+    } catch {
+      // Redis metrics unavailable, skip
+    }
+  }
+
+  // ─── Request duration histogram ─────────────────────
   const durationMetrics = getRequestDurationMetrics();
   if (durationMetrics) {
     lines.push("");

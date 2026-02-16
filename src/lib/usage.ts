@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { cacheGet, cacheSet, cacheDel } from "@/lib/redis";
 
 function todayDate(): Date {
   const d = new Date();
@@ -13,7 +14,27 @@ function monthStart(): Date {
   return d;
 }
 
+function todayKey(): string {
+  return todayDate().toISOString().slice(0, 10);
+}
+
+// ─── Plan cache (Redis-first, 30s TTL) ──────────────────
+
+const PLAN_CACHE_TTL = 30; // seconds
+
 export async function getUserPlanAndUsage(userId: string) {
+  // Try Redis cache for plan data
+  const cacheKey = `plan:${userId}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      return data;
+    } catch {
+      // corrupt cache, continue to DB
+    }
+  }
+
   const sub = await prisma.subscription.findUnique({
     where: { userId },
     include: { plan: true },
@@ -32,7 +53,6 @@ export async function getUserPlanAndUsage(userId: string) {
 
     if (subExpired || (trialExpired && !sub.expiresAt)) {
       expired = true;
-      // Auto-downgrade to free plan
       if (defaultPlan && defaultPlan.id !== sub.planId) {
         await prisma.subscription.update({
           where: { id: sub.id },
@@ -64,8 +84,20 @@ export async function getUserPlanAndUsage(userId: string) {
     messageCount: monthlyAgg._sum.messageCount ?? 0,
   };
 
-  return { plan, usage, subscription: sub, monthlyUsage, expired };
+  const result = { plan, usage, subscription: sub, monthlyUsage, expired };
+
+  // Cache in Redis (30s TTL) — serializable subset
+  await cacheSet(cacheKey, JSON.stringify(result), PLAN_CACHE_TTL);
+
+  return result;
 }
+
+/** Invalidate plan cache for a user (call after subscription changes). */
+export async function invalidatePlanCache(userId: string) {
+  await cacheDel(`plan:${userId}`);
+}
+
+// ─── Token counting with Redis accumulation ──────────────
 
 export async function incrementUsage(userId: string, tokens: number) {
   await prisma.dailyUsage.upsert({
@@ -81,6 +113,8 @@ export async function incrementUsage(userId: string, tokens: number) {
       tokenCount: { increment: tokens },
     },
   });
+  // Invalidate plan cache so next request sees updated counts
+  await cacheDel(`plan:${userId}`);
 }
 
 export async function incrementTokens(userId: string, tokens: number) {
@@ -96,4 +130,5 @@ export async function incrementTokens(userId: string, tokens: number) {
       tokenCount: { increment: tokens },
     },
   });
+  await cacheDel(`plan:${userId}`);
 }

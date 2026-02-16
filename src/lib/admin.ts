@@ -46,7 +46,7 @@ export async function requireAdmin() {
   }
 
   // Admin rate limit: 60 requests/minute per admin user
-  const allowed = checkRateLimit(`admin:${session.user.id}`, 60, 60_000);
+  const allowed = await checkRateLimit(`admin:${session.user.id}`, 60, 60_000);
   if (!allowed) {
     return { error: NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 }) };
   }

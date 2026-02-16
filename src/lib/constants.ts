@@ -32,7 +32,7 @@ export const DEFAULT_PLUGIN_ICON = "Puzzle";
 // ─── Pagination ───
 export const DEFAULT_PAGINATION_LIMIT = 50;
 export const MAX_PAGINATION_LIMIT = 100;
-export const CSV_EXPORT_MAX_ROWS = 50_000;
+export const CSV_EXPORT_MAX_ROWS = 10_000;
 
 // ─── Conversation ───
 export const CONVERSATION_TITLE_MAX_LENGTH = 60;

@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   // CSV export
   if (format === "csv") {
-    const csvLimit = Math.min(parseInt(searchParams.get("limit") || "10000", 10), 50000);
+    const csvLimit = Math.min(parseInt(searchParams.get("limit") || "10000", 10), 10000);
     const allErrors = await prisma.errorLog.findMany({
       where,
       orderBy: { createdAt: "desc" },

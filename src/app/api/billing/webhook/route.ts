@@ -26,12 +26,13 @@ export async function POST(req: Request) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       return NextResponse.json({ error: `Webhook signature verification failed: ${msg}` }, { status: 400 });
     }
+  } else if (!endpointSecret) {
+    // Reject unsigned webhooks in production — STRIPE_WEBHOOK_SECRET must be configured
+    console.warn("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   } else {
-    try {
-      event = JSON.parse(body);
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    // endpointSecret set but no signature header
+    return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
   if (!event?.data?.object) {

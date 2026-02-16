@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // CDN: set CDN_URL env to serve static assets from CDN (e.g. https://cdn.example.com)
+  assetPrefix: process.env.CDN_URL || undefined,
   serverExternalPackages: [
     "@napi-rs/canvas",
     "otplib",
@@ -15,6 +18,9 @@ const nextConfig: NextConfig = {
     "pdf-parse",
     "xlsx",
     "officeparser",
+    "ioredis",
+    "bullmq",
+    "@sentry/nextjs",
   ],
   reactCompiler: true,
   headers: async () => [
@@ -39,4 +45,16 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+// Wrap with Sentry only when DSN is configured
+const finalConfig = process.env.SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: true,
+      widenClientFileUpload: true,
+      disableLogger: true,
+      sourcemaps: { deleteSourcemapsAfterUpload: true },
+    })
+  : nextConfig;
+
+export default finalConfig;

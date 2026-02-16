@@ -257,7 +257,7 @@ _plt.close("all")
     } catch(e) {
       loading.textContent = '';
       var msg = e.message || e.toString();
-      output.innerHTML += '<span class="error">' + msg.replace(/</g,'&lt;') + '</span>';
+      output.innerHTML += '<span class="error">' + msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') + '</span>';
       window.parent.postMessage({type:'preview-error', message: msg}, '*');
     }
   })();

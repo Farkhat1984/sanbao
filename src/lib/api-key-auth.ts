@@ -39,7 +39,7 @@ export async function authenticateApiKey(
   }
 
   // Per-key rate limiting
-  const allowed = checkRateLimit(`apikey:${apiKey.id}`, apiKey.rateLimit, 60_000);
+  const allowed = await checkRateLimit(`apikey:${apiKey.id}`, apiKey.rateLimit, 60_000);
   if (!allowed) {
     return {
       error: NextResponse.json(

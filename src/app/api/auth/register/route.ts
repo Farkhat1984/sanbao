@@ -21,9 +21,9 @@ export async function POST(req: Request) {
 
     const { name, email, password } = await req.json();
 
-    // Validate email format
+    // Validate email format + length (RFC 5321: max 254 chars)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
+    if (!email || typeof email !== "string" || email.length > 254 || !emailRegex.test(email)) {
       return NextResponse.json(
         { error: "Некорректный email" },
         { status: 400 }

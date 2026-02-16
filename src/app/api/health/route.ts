@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isRedisAvailable, getRedis } from "@/lib/redis";
+import { isShutdown } from "@/lib/shutdown";
 
 export async function GET() {
+  // If shutting down, immediately return 503 so LB drains this instance
+  if (isShutdown()) {
+    return NextResponse.json(
+      { status: "shutting_down", timestamp: new Date().toISOString() },
+      { status: 503 }
+    );
+  }
+
   const checks: Record<string, { status: string; latency?: number; error?: string }> = {};
 
   // Database
@@ -11,6 +21,20 @@ export async function GET() {
     checks.database = { status: "ok", latency: Date.now() - dbStart };
   } catch (err) {
     checks.database = { status: "error", latency: Date.now() - dbStart, error: err instanceof Error ? err.message : "Unknown" };
+  }
+
+  // Redis
+  const redisStart = Date.now();
+  try {
+    const client = getRedis();
+    if (client && isRedisAvailable()) {
+      await client.ping();
+      checks.redis = { status: "ok", latency: Date.now() - redisStart };
+    } else {
+      checks.redis = { status: "unavailable" };
+    }
+  } catch {
+    checks.redis = { status: "error", latency: Date.now() - redisStart };
   }
 
   // AI Providers
@@ -47,7 +71,7 @@ export async function GET() {
     checks.mcp = { status: "error" };
   }
 
-  const overallOk = Object.values(checks).every((c) => c.status === "ok" || c.status === "disconnected");
+  const overallOk = Object.values(checks).every((c) => c.status === "ok" || c.status === "disconnected" || c.status === "unavailable");
 
   return NextResponse.json(
     { status: overallOk ? "healthy" : "degraded", checks, timestamp: new Date().toISOString() },

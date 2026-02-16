@@ -76,8 +76,19 @@ export async function POST(
   );
   await mkdir(uploadDir, { recursive: true });
 
-  const uniqueName = `${Date.now()}-${file.name}`;
+  // Sanitize filename: strip path separators and dangerous sequences
+  const safeName = file.name
+    .replace(/[/\\]/g, "_")
+    .replace(/\.\./g, "_")
+    .replace(/[^\w.\-() ]/g, "_")
+    .slice(0, 200);
+  const uniqueName = `${Date.now()}-${safeName}`;
   const filePath = path.join(uploadDir, uniqueName);
+
+  // Verify resolved path stays within upload directory
+  if (!filePath.startsWith(uploadDir)) {
+    return NextResponse.json({ error: "Недопустимое имя файла" }, { status: 400 });
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(filePath, buffer);
 
@@ -177,10 +188,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Файл не найден" }, { status: 404 });
   }
 
-  // Delete from filesystem
+  // Delete from filesystem — verify path stays within public/uploads
   try {
-    const filePath = path.join(process.cwd(), "public", file.fileUrl);
-    await unlink(filePath);
+    const publicDir = path.join(process.cwd(), "public", "uploads");
+    const filePath = path.resolve(process.cwd(), "public", file.fileUrl);
+    if (filePath.startsWith(publicDir)) {
+      await unlink(filePath);
+    }
   } catch {
     // File may not exist on disk
   }

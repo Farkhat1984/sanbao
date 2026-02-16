@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
+import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+  }
+
+  if (!(await checkMinuteRateLimit(`img-gen:${session.user.id}`, 5))) {
+    return NextResponse.json({ error: "Слишком много запросов. Подождите минуту." }, { status: 429 });
   }
 
   try {

@@ -33,8 +33,9 @@ export async function PUT(req: Request) {
   const { ids } = await req.json();
 
   if (ids && Array.isArray(ids)) {
+    const safeIds = ids.slice(0, 500);
     await prisma.notification.updateMany({
-      where: { id: { in: ids }, userId: session.user.id },
+      where: { id: { in: safeIds }, userId: session.user.id },
       data: { isRead: true },
     });
   } else {

@@ -1,0 +1,54 @@
+# Run before deploying the app: kubectl apply -f k8s/migration-job.yml
+# Uses the same entrypoint as the app (handles migrate deploy vs db push automatically)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sanbao-migrate
+  namespace: sanbao
+  labels:
+    app: sanbao-migrate
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: sanbao-migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: sanbao:latest  # Same image as the app
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              MIGRATE_URL="postgresql://postgres:${DB_PASSWORD}@postgres:5432/sanbao?schema=public"
+              if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+                echo "Running prisma migrate deploy..."
+                DATABASE_URL="$MIGRATE_URL" \
+                  NODE_PATH=/app/prisma-cli/node_modules:/app/node_modules \
+                  node /app/prisma-cli/node_modules/prisma/build/index.js migrate deploy \
+                    --schema=prisma/schema.prisma
+              else
+                echo "Running prisma db push..."
+                DATABASE_URL="$MIGRATE_URL" \
+                  NODE_PATH=/app/prisma-cli/node_modules:/app/node_modules \
+                  node /app/prisma-cli/node_modules/prisma/build/index.js db push \
+                    --schema=prisma/schema.prisma --skip-generate
+              fi
+              echo "Running seed..."
+              DATABASE_URL="$MIGRATE_URL" node prisma/seed.js
+              echo "Migration complete."
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sanbao-secrets
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
