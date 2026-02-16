@@ -14,20 +14,16 @@ function pushVersion(artifact: ArtifactData): ArtifactVersion[] {
 }
 
 interface ArtifactState {
-  isOpen: boolean;
   activeArtifact: ArtifactData | null;
   activeTab: ArtifactTab;
   artifacts: ArtifactData[];
   downloadFormat: ExportFormat;
-  panelWidthPercent: number;
 
   openArtifact: (artifact: ArtifactData) => void;
-  closePanel: () => void;
   setTab: (tab: ArtifactTab) => void;
   updateContent: (id: string, content: string) => void;
   setArtifacts: (artifacts: ArtifactData[]) => void;
   setDownloadFormat: (format: ExportFormat) => void;
-  setPanelWidthPercent: (percent: number) => void;
 
   /** Register or update an artifact in the tracked list. Returns the stored artifact. */
   trackArtifact: (artifact: ArtifactData) => ArtifactData;
@@ -40,25 +36,19 @@ interface ArtifactState {
 }
 
 export const useArtifactStore = create<ArtifactState>((set, get) => ({
-  isOpen: false,
   activeArtifact: null,
   activeTab: "preview",
   artifacts: [],
   downloadFormat: "docx",
-  panelWidthPercent: 50,
 
   openArtifact: (artifact) => {
-    // Also track it
+    // Track + set activeArtifact (data-only, no panel UI)
     const tracked = get().trackArtifact(artifact);
     set({
-      isOpen: true,
       activeArtifact: tracked,
       activeTab: tracked.type === "CODE" ? "source" : "preview",
     });
   },
-
-  closePanel: () =>
-    set({ isOpen: false, activeArtifact: null }),
 
   setTab: (activeTab) => set({ activeTab }),
 
@@ -86,8 +76,6 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
   setArtifacts: (artifacts) => set({ artifacts }),
 
   setDownloadFormat: (downloadFormat) => set({ downloadFormat }),
-
-  setPanelWidthPercent: (panelWidthPercent) => set({ panelWidthPercent }),
 
   trackArtifact: (artifact) => {
     const state = get();

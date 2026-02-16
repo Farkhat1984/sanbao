@@ -1,14 +1,12 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { ArtifactPanel } from "@/components/artifacts/ArtifactPanel";
-import { ArticlePanel } from "@/components/chat/ArticlePanel";
+import { UnifiedPanel } from "@/components/panel/UnifiedPanel";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
-import { useArtifactStore } from "@/stores/artifactStore";
-import { useArticleStore } from "@/stores/articleStore";
+import { usePanelStore } from "@/stores/panelStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -17,13 +15,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { isOpen: artifactOpen, panelWidthPercent, setPanelWidthPercent } =
-    useArtifactStore();
-  const { isOpen: articleOpen } = useArticleStore();
+  const { isOpen: panelOpen } = usePanelStore();
   const { isOpen: sidebarOpen, close: closeSidebar } = useSidebarStore();
   const isMobile = useIsMobile();
-  const mainRef = useRef<HTMLElement>(null);
-  const isDragging = useRef(false);
 
   // Auto-close sidebar on mobile on initial render
   useEffect(() => {
@@ -32,37 +26,6 @@ export function AppShell({ children }: AppShellProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (isMobile) return;
-      e.preventDefault();
-      isDragging.current = true;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (!isDragging.current || !mainRef.current) return;
-        const rect = mainRef.current.getBoundingClientRect();
-        const totalWidth = rect.width;
-        const offsetFromRight = rect.right - ev.clientX;
-        const pct = Math.min(80, Math.max(20, (offsetFromRight / totalWidth) * 100));
-        setPanelWidthPercent(pct);
-      };
-
-      const handleMouseUp = () => {
-        isDragging.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [setPanelWidthPercent, isMobile]
-  );
 
   return (
     <div className="h-screen flex overflow-hidden bg-bg">
@@ -116,57 +79,14 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <Header />
-        <main ref={mainRef} className="flex-1 min-h-0 overflow-hidden flex">
+        <main className="flex-1 min-h-0 overflow-hidden flex">
           {/* Chat Area */}
           <div className="flex-1 min-w-0 min-h-0 overflow-y-auto">
             {children}
           </div>
 
-          {/* Artifact Panel — desktop: side-by-side, mobile: fullscreen overlay */}
-          {isMobile ? (
-            <AnimatePresence>
-              {artifactOpen && (
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="fixed inset-0 z-50 bg-surface"
-                >
-                  <ArtifactPanel />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          ) : (
-            <AnimatePresence>
-              {artifactOpen && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: `${panelWidthPercent}%`, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="overflow-hidden shrink-0 relative"
-                  style={{ width: `${panelWidthPercent}%` }}
-                >
-                  {/* Resize handle */}
-                  <div
-                    onMouseDown={handleMouseDown}
-                    className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-accent/40 active:bg-accent/60 transition-colors"
-                  />
-                  <div className="h-full border-l border-border">
-                    <ArtifactPanel />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-
-          {/* Article Panel — desktop: inline in flex, mobile: fixed overlay (handled inside) */}
-          {isMobile ? (
-            <ArticlePanel />
-          ) : (
-            articleOpen && <ArticlePanel />
-          )}
+          {/* Unified Panel — desktop: side-by-side, mobile: fullscreen (handled inside) */}
+          <UnifiedPanel />
         </main>
       </div>
     </div>

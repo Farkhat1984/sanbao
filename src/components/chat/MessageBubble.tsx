@@ -21,6 +21,7 @@ import { LegalReference } from "./LegalReference";
 import { ArticleLink } from "./ArticleLink";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { openArtifactInPanel } from "@/lib/panel-actions";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
@@ -191,7 +192,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
-  const { openArtifact, trackArtifact, findByTitle, applyEdits } = useArtifactStore();
+  const { trackArtifact, findByTitle, applyEdits } = useArtifactStore();
   const isMobile = useIsMobile();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
@@ -251,7 +252,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     // Reuse existing artifact if already tracked (prevents version increment on re-click)
     const existing = findByTitle(part.title || "");
     if (existing) {
-      openArtifact(existing);
+      openArtifactInPanel(existing);
       return;
     }
 
@@ -262,13 +263,13 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
       content: part.content,
       version: 1,
     };
-    openArtifact(artifact);
+    openArtifactInPanel(artifact);
   };
 
   const handleOpenEditedArtifact = (title: string) => {
     const target = findByTitle(title);
     if (target) {
-      openArtifact(target);
+      openArtifactInPanel(target);
     }
   };
 
@@ -356,8 +357,8 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             isUser
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
-            isAssistant && !isExpanded && "max-h-[500px] overflow-auto relative",
-            isAssistant && isExpanded && "max-h-[80vh] overflow-auto"
+            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative",
+            isAssistant && isExpanded && "overflow-visible"
           )}
         >
           {isAssistant ? (
@@ -445,21 +446,31 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
 
-          {/* Shadow hint for collapsed scrollable messages */}
+          {/* Gradient overlay + expand button for collapsed messages */}
           {isAssistant && !isExpanded && isOverflowing && (
-            <div className="sticky bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-surface-alt to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent flex items-end justify-center pb-2">
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
+              >
+                <ChevronDown className="h-3 w-3" />
+                Показать полностью
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Expand / Collapse */}
-        {isAssistant && isOverflowing && (
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 mt-1.5 text-xs text-text-muted hover:text-accent transition-colors cursor-pointer"
-          >
-            <ChevronDown className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-180")} />
-            {isExpanded ? "Свернуть" : "Развернуть"}
-          </button>
+        {/* Collapse button when expanded */}
+        {isAssistant && isExpanded && isOverflowing && (
+          <div className="flex justify-center mt-2">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
+            >
+              <ChevronDown className="h-3 w-3 rotate-180" />
+              Свернуть
+            </button>
+          </div>
         )}
 
         {/* Legal References */}

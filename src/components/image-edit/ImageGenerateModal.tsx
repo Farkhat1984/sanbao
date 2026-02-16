@@ -10,7 +10,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useArtifactStore } from "@/stores/artifactStore";
+import { openArtifactInPanel } from "@/lib/panel-actions";
 
 interface ImageGenerateModalProps {
   isOpen: boolean;
@@ -22,8 +22,6 @@ export function ImageGenerateModal({ isOpen, onClose }: ImageGenerateModalProps)
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { openArtifact } = useArtifactStore();
-
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
     setIsProcessing(true);
@@ -67,7 +65,7 @@ export function ImageGenerateModal({ isOpen, onClose }: ImageGenerateModalProps)
 
   const handleOpenInArtifact = () => {
     if (!resultImage) return;
-    openArtifact({
+    openArtifactInPanel({
       id: crypto.randomUUID(),
       type: "IMAGE",
       title: prompt.trim().slice(0, 60) || "Сгенерированное изображение",

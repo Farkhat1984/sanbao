@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
-import { useArtifactStore } from "@/stores/artifactStore";
 import { useTaskStore } from "@/stores/taskStore";
 import dynamic from "next/dynamic";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { AlertModal } from "@/components/ui/AlertModal";
+import { openArtifactInPanel } from "@/lib/panel-actions";
 
 const ImageGenerateModal = dynamic(
   () => import("@/components/image-edit/ImageGenerateModal").then((m) => m.ImageGenerateModal),
@@ -536,8 +536,7 @@ export function MessageInput() {
       // Auto-open first artifact
       const docMatch = /<sanbao-doc\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/sanbao-doc>/.exec(fullContent);
       if (docMatch) {
-        const { openArtifact } = useArtifactStore.getState();
-        openArtifact({
+        openArtifactInPanel({
           id: crypto.randomUUID(),
           type: docMatch[1] as import("@/types/chat").ArtifactType,
           title: docMatch[2],

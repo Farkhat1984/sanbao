@@ -1,6 +1,6 @@
 "use client";
 
-import { useArticleStore } from "@/stores/articleStore";
+import { openArticleInPanel } from "@/lib/panel-actions";
 
 const CODE_LABELS: Record<string, string> = {
   criminal_code: "УК РК",
@@ -22,17 +22,15 @@ interface ArticleLinkProps {
 }
 
 export function ArticleLink({ code, article, children }: ArticleLinkProps) {
-  const openArticle = useArticleStore((s) => s.openArticle);
-
   const label = children || `ст. ${article} ${CODE_LABELS[code] || code}`;
 
   return (
     <button
       type="button"
-      onClick={() => openArticle(code, article)}
+      onClick={() => openArticleInPanel(code, article)}
       className="text-legal-ref hover:text-legal-ref-hover underline decoration-legal-ref/40 hover:decoration-legal-ref cursor-pointer inline-flex items-center gap-0.5 transition-colors"
     >
-      <span className="text-[0.85em] leading-none">§</span>
+      <span className="text-[0.85em] leading-none">&sect;</span>
       {label}
     </button>
   );

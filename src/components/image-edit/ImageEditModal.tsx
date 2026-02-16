@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useArtifactStore } from "@/stores/artifactStore";
+import { openArtifactInPanel } from "@/lib/panel-actions";
 import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
 
 interface ImageEditModalProps {
@@ -29,7 +29,6 @@ export function ImageEditModal({ isOpen, onClose }: ImageEditModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { openArtifact } = useArtifactStore();
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -103,7 +102,7 @@ export function ImageEditModal({ isOpen, onClose }: ImageEditModalProps) {
 
   const handleOpenInArtifact = () => {
     if (!resultImage) return;
-    openArtifact({
+    openArtifactInPanel({
       id: crypto.randomUUID(),
       type: "IMAGE",
       title: prompt.trim().slice(0, 60) || "Редактированное изображение",

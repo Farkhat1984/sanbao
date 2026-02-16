@@ -1,14 +1,14 @@
 "use client";
 
-import { X, Download, Copy, Printer, Check, Loader2, ChevronDown, ArrowLeft } from "lucide-react";
+import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useChatStore } from "@/stores/chatStore";
-import { ArtifactTabs } from "./ArtifactTabs";
-import { DocumentPreview } from "./DocumentPreview";
-import { DocumentEditor } from "./DocumentEditor";
-import { CodePreview, isPythonCode } from "./CodePreview";
+import { ArtifactTabs } from "@/components/artifacts/ArtifactTabs";
+import { DocumentPreview } from "@/components/artifacts/DocumentPreview";
+import { DocumentEditor } from "@/components/artifacts/DocumentEditor";
+import { CodePreview, isPythonCode } from "@/components/artifacts/CodePreview";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
@@ -29,12 +29,11 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   md: "MD",
 };
 
-export function ArtifactPanel() {
+export function ArtifactContent() {
   const {
     activeArtifact,
     activeTab,
     setTab,
-    closePanel,
     updateContent,
     downloadFormat,
     setDownloadFormat,
@@ -90,14 +89,12 @@ export function ArtifactPanel() {
           // Switch to preview tab so the DOM element is rendered
           if (activeTab !== "preview") {
             setTab("preview");
-            // Wait for React to render DocumentPreview and ref to attach
             await new Promise<void>((resolve) => {
               const check = () => {
                 if (previewRef.current) resolve();
                 else requestAnimationFrame(check);
               };
               requestAnimationFrame(check);
-              // Safety timeout
               setTimeout(resolve, 1000);
             });
           }
@@ -137,19 +134,9 @@ export function ArtifactPanel() {
   const iconSize = isMobile ? "h-4 w-4" : "h-3.5 w-3.5";
 
   return (
-    <div className="h-full flex flex-col bg-surface">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="h-14 flex items-center gap-2 px-4 border-b border-border shrink-0">
-        {/* Mobile back button */}
-        {isMobile && (
-          <button
-            onClick={closePanel}
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0 -ml-1"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        )}
-
+      <div className="h-12 flex items-center gap-2 px-4 border-b border-border shrink-0">
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {activeArtifact.title}
@@ -296,18 +283,6 @@ export function ArtifactPanel() {
           >
             <Printer className={iconSize} />
           </button>
-          {/* Close button — hidden on mobile (use back arrow instead) */}
-          {!isMobile && (
-            <>
-              <div className="w-px h-5 bg-border mx-1" />
-              <button
-                onClick={closePanel}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </>
-          )}
         </div>
       </div>
 

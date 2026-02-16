@@ -9,8 +9,6 @@ export interface ArticleData {
 }
 
 interface ArticleState {
-  isOpen: boolean;
-  isExpanded: boolean;
   activeArticle: ArticleData | null;
   loading: boolean;
   error: string | null;
@@ -19,14 +17,10 @@ interface ArticleState {
   _lastRequest: { code: string; article: string } | null;
 
   openArticle: (code: string, article: string) => Promise<void>;
-  closePanel: () => void;
-  toggleExpanded: () => void;
   retry: () => void;
 }
 
 export const useArticleStore = create<ArticleState>((set, get) => ({
-  isOpen: false,
-  isExpanded: false,
   activeArticle: null,
   loading: false,
   error: null,
@@ -38,11 +32,11 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
     const cached = get().cache.get(key);
 
     if (cached) {
-      set({ isOpen: true, activeArticle: cached, error: null, loading: false, _lastRequest: { code, article } });
+      set({ activeArticle: cached, error: null, loading: false, _lastRequest: { code, article } });
       return;
     }
 
-    set({ isOpen: true, loading: true, error: null, activeArticle: null, _lastRequest: { code, article } });
+    set({ loading: true, error: null, activeArticle: null, _lastRequest: { code, article } });
 
     try {
       const res = await fetch(
@@ -66,12 +60,6 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
       });
     }
   },
-
-  closePanel: () =>
-    set({ isOpen: false, activeArticle: null, isExpanded: false, error: null }),
-
-  toggleExpanded: () =>
-    set((s) => ({ isExpanded: !s.isExpanded })),
 
   retry: () => {
     const { _lastRequest } = get();

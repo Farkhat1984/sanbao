@@ -17,24 +17,21 @@ describe("artifactStore", () => {
   beforeEach(() => {
     // Reset store to initial state
     useArtifactStore.setState({
-      isOpen: false,
       activeArtifact: null,
       activeTab: "preview",
       artifacts: [],
       downloadFormat: "docx",
-      panelWidthPercent: 50,
     });
   });
 
   // ═══ openArtifact ═════════════════════════════════════
 
   describe("openArtifact", () => {
-    it("should open panel and set active artifact", () => {
+    it("should set active artifact", () => {
       const art = makeArtifact();
       useArtifactStore.getState().openArtifact(art);
 
       const state = useArtifactStore.getState();
-      expect(state.isOpen).toBe(true);
       expect(state.activeArtifact).not.toBeNull();
       expect(state.activeArtifact!.title).toBe("Test Document");
     });
@@ -60,26 +57,6 @@ describe("artifactStore", () => {
       expect(stored.versions).toHaveLength(1);
       expect(stored.versions![0].version).toBe(1);
       expect(stored.versions![0].content).toBe("Original content");
-    });
-  });
-
-  // ═══ closePanel ═══════════════════════════════════════
-
-  describe("closePanel", () => {
-    it("should close panel and clear active artifact", () => {
-      useArtifactStore.getState().openArtifact(makeArtifact());
-      expect(useArtifactStore.getState().isOpen).toBe(true);
-
-      useArtifactStore.getState().closePanel();
-      const state = useArtifactStore.getState();
-      expect(state.isOpen).toBe(false);
-      expect(state.activeArtifact).toBeNull();
-    });
-
-    it("should preserve artifacts list after closing", () => {
-      useArtifactStore.getState().openArtifact(makeArtifact());
-      useArtifactStore.getState().closePanel();
-      expect(useArtifactStore.getState().artifacts).toHaveLength(1);
     });
   });
 
@@ -329,15 +306,6 @@ describe("artifactStore", () => {
         useArtifactStore.getState().setTab(tab);
         expect(useArtifactStore.getState().activeTab).toBe(tab);
       }
-    });
-  });
-
-  // ═══ setPanelWidthPercent ═════════════════════════════
-
-  describe("setPanelWidthPercent", () => {
-    it("should update panel width", () => {
-      useArtifactStore.getState().setPanelWidthPercent(70);
-      expect(useArtifactStore.getState().panelWidthPercent).toBe(70);
     });
   });
 
