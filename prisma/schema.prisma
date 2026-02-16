@@ -111,6 +111,7 @@ model Conversation {
   updatedAt DateTime @updatedAt
 
   @@index([userId, updatedAt])
+  @@index([userId, archived, updatedAt])
   @@index([agentId])
 }
 
@@ -145,7 +146,7 @@ model Artifact {
   metadata       Json?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  message      Message?     @relation(fields: [messageId], references: [id])
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -210,7 +211,7 @@ model ConversationPlan {
   isActive       Boolean @default(true)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  message      Message?     @relation(fields: [messageId], references: [id])
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -308,7 +309,7 @@ model Subscription {
   planId    String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan Plan @relation(fields: [planId], references: [id])
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   grantedBy    String?
   expiresAt    DateTime?

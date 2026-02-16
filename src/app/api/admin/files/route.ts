@@ -9,8 +9,9 @@ export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  // Attachments stats
+  // Attachments stats (bounded to prevent OOM on large datasets)
   const attachments = await prisma.attachment.findMany({
+    take: 5000,
     include: {
       conversation: {
         select: {
@@ -24,6 +25,7 @@ export async function GET() {
 
   // Agent files stats
   const agentFiles = await prisma.agentFile.findMany({
+    take: 5000,
     include: {
       agent: {
         select: {
@@ -149,16 +151,20 @@ export async function POST() {
     where: { agentId: { notIn: allAgentIds.length > 0 ? allAgentIds : ["_none_"] } },
   });
 
-  let deletedRecords = 0;
+  // Delete orphaned files from disk
   for (const rec of orphanedRecords) {
     try {
       const filePath = path.join(process.cwd(), "public", rec.fileUrl);
       await unlink(filePath);
     } catch { /* already gone */ }
-    await prisma.agentFile.delete({ where: { id: rec.id } });
-    deletedRecords++;
     freedBytes += rec.fileSize;
   }
+
+  // Batch delete all orphaned DB records
+  const orphanedIds = orphanedRecords.map((r) => r.id);
+  const deletedRecords = orphanedIds.length > 0
+    ? (await prisma.agentFile.deleteMany({ where: { id: { in: orphanedIds } } })).count
+    : 0;
 
   return NextResponse.json({
     deletedFiles,

@@ -85,31 +85,34 @@ export async function cacheDel(key: string): Promise<void> {
   }
 }
 
-/** Increment a key by 1, with TTL on first set. Returns new value or null. */
+/** Increment a key by 1, with TTL on first set. Returns new value or null.
+ *  Uses pipeline to atomically INCR+EXPIRE, preventing orphaned keys if
+ *  the process crashes between the two commands. */
 export async function cacheIncr(key: string, ttlSeconds: number): Promise<number | null> {
   try {
     const client = getClient();
     if (!client) return null;
-    const val = await client.incr(key);
-    if (val === 1) {
-      await client.expire(key, ttlSeconds);
-    }
-    return val;
+    const results = await client.multi().incr(key).expire(key, ttlSeconds).exec();
+    if (!results) return null;
+    const [incrErr, incrVal] = results[0];
+    if (incrErr) return null;
+    return incrVal as number;
   } catch {
     return null;
   }
 }
 
-/** Rate limit check via Redis INCR + EXPIRE. Returns true if allowed. */
+/** Rate limit check via Redis INCR + EXPIRE. Returns true if allowed.
+ *  Uses pipeline to atomically INCR+EXPIRE. */
 export async function redisRateLimit(key: string, max: number, windowSeconds: number): Promise<boolean | null> {
   try {
     const client = getClient();
     if (!client) return null; // null = Redis unavailable, fallback to in-memory
-    const count = await client.incr(key);
-    if (count === 1) {
-      await client.expire(key, windowSeconds);
-    }
-    return count <= max;
+    const results = await client.multi().incr(key).expire(key, windowSeconds).exec();
+    if (!results) return null;
+    const [incrErr, incrVal] = results[0];
+    if (incrErr) return null;
+    return (incrVal as number) <= max;
   } catch {
     return null;
   }

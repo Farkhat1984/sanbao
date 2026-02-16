@@ -75,44 +75,43 @@ export async function PUT(
     include: AGENT_INCLUDE,
   });
 
-  // Update skill associations
-  if (Array.isArray(skillIds)) {
-    await prisma.agentSkill.deleteMany({ where: { agentId: id } });
-    if (skillIds.length > 0) {
-      await prisma.agentSkill.createMany({
-        data: skillIds.map((skillId: string) => ({ agentId: id, skillId })),
-      });
-    }
-  }
-
-  // Update MCP server associations
-  if (Array.isArray(mcpServerIds)) {
-    await prisma.agentMcpServer.deleteMany({ where: { agentId: id } });
-    if (mcpServerIds.length > 0) {
-      await prisma.agentMcpServer.createMany({
-        data: mcpServerIds.map((mcpServerId: string) => ({ agentId: id, mcpServerId })),
-      });
-    }
-  }
-
-  // Update tool associations
-  if (Array.isArray(toolIds)) {
-    await prisma.agentTool.deleteMany({ where: { agentId: id } });
-    if (toolIds.length > 0) {
-      await prisma.agentTool.createMany({
-        data: toolIds.map((toolId: string) => ({ agentId: id, toolId })),
-      });
-    }
-  }
-
-  // Update plugin associations
-  if (Array.isArray(pluginIds)) {
-    await prisma.agentPlugin.deleteMany({ where: { agentId: id } });
-    if (pluginIds.length > 0) {
-      await prisma.agentPlugin.createMany({
-        data: pluginIds.map((pluginId: string) => ({ agentId: id, pluginId })),
-      });
-    }
+  // Update associations atomically to prevent partial state on failure
+  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(pluginIds);
+  if (hasAssociationUpdates) {
+    await prisma.$transaction(async (tx) => {
+      if (Array.isArray(skillIds)) {
+        await tx.agentSkill.deleteMany({ where: { agentId: id } });
+        if (skillIds.length > 0) {
+          await tx.agentSkill.createMany({
+            data: skillIds.map((skillId: string) => ({ agentId: id, skillId })),
+          });
+        }
+      }
+      if (Array.isArray(mcpServerIds)) {
+        await tx.agentMcpServer.deleteMany({ where: { agentId: id } });
+        if (mcpServerIds.length > 0) {
+          await tx.agentMcpServer.createMany({
+            data: mcpServerIds.map((mcpServerId: string) => ({ agentId: id, mcpServerId })),
+          });
+        }
+      }
+      if (Array.isArray(toolIds)) {
+        await tx.agentTool.deleteMany({ where: { agentId: id } });
+        if (toolIds.length > 0) {
+          await tx.agentTool.createMany({
+            data: toolIds.map((toolId: string) => ({ agentId: id, toolId })),
+          });
+        }
+      }
+      if (Array.isArray(pluginIds)) {
+        await tx.agentPlugin.deleteMany({ where: { agentId: id } });
+        if (pluginIds.length > 0) {
+          await tx.agentPlugin.createMany({
+            data: pluginIds.map((pluginId: string) => ({ agentId: id, pluginId })),
+          });
+        }
+      }
+    });
   }
 
   // Refetch with relations if associations were updated

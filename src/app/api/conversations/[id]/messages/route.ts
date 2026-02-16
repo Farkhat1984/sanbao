@@ -83,22 +83,22 @@ export async function POST(
         ? `${existing.memory}\n\n--- Обновление ---\n${decisions}`
         : decisions || existing?.memory || null;
 
-      // Deactivate previous plans
-      if (existing) {
-        await prisma.conversationPlan.update({
-          where: { id: existing.id },
-          data: { isActive: false },
+      // Atomically deactivate previous plans and create new one
+      await prisma.$transaction(async (tx) => {
+        if (existing) {
+          await tx.conversationPlan.update({
+            where: { id: existing.id },
+            data: { isActive: false },
+          });
+        }
+        await tx.conversationPlan.create({
+          data: {
+            conversationId,
+            content: planContent,
+            memory: newMemory,
+            isActive: true,
+          },
         });
-      }
-
-      // Create new active plan
-      await prisma.conversationPlan.create({
-        data: {
-          conversationId,
-          content: planContent,
-          memory: newMemory,
-          isActive: true,
-        },
       });
     } catch {
       // Plan persistence is best-effort
