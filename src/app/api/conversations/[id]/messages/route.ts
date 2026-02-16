@@ -30,6 +30,17 @@ export async function POST(
     return NextResponse.json({ error: "No messages" }, { status: 400 });
   }
 
+  // Limit batch size and individual message size
+  if (messages.length > 50) {
+    return NextResponse.json({ error: "Too many messages in batch" }, { status: 400 });
+  }
+  const MAX_MSG_SIZE = 200_000; // 200KB per message
+  for (const m of messages) {
+    if (typeof m.content === "string" && m.content.length > MAX_MSG_SIZE) {
+      return NextResponse.json({ error: "Message too large" }, { status: 400 });
+    }
+  }
+
   const created = await prisma.message.createMany({
     data: messages.map((m: { role: string; content: string; planContent?: string }) => ({
       conversationId,

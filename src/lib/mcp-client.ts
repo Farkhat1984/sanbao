@@ -5,6 +5,19 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { fireAndForget } from "@/lib/logger";
 
+const MCP_CONNECT_TIMEOUT = 15_000; // 15s
+const MCP_TOOL_CALL_TIMEOUT = 30_000; // 30s
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 export interface McpToolInfo {
   name: string;
   description: string;
@@ -32,9 +45,9 @@ export async function connectAndDiscoverTools(
           });
 
     const client = new Client({ name: "sanbao", version: "1.0.0" });
-    await client.connect(transportInstance);
+    await withTimeout(client.connect(transportInstance), MCP_CONNECT_TIMEOUT, "MCP connect");
 
-    const { tools } = await client.listTools();
+    const { tools } = await withTimeout(client.listTools(), MCP_TOOL_CALL_TIMEOUT, "MCP listTools");
 
     const result: McpToolInfo[] = tools.map((t) => ({
       name: t.name,
@@ -42,7 +55,7 @@ export async function connectAndDiscoverTools(
       inputSchema: (t.inputSchema as Record<string, unknown>) || {},
     }));
 
-    await client.close();
+    await client.close().catch(() => {});
     return { tools: result };
   } catch (e) {
     return {
@@ -77,11 +90,15 @@ export async function callMcpTool(
           });
 
     const client = new Client({ name: "sanbao", version: "1.0.0" });
-    await client.connect(transportInstance);
+    await withTimeout(client.connect(transportInstance), MCP_CONNECT_TIMEOUT, "MCP connect");
 
-    const response = await client.callTool({ name: toolName, arguments: args });
+    const response = await withTimeout(
+      client.callTool({ name: toolName, arguments: args }),
+      MCP_TOOL_CALL_TIMEOUT,
+      `MCP callTool(${toolName})`
+    );
 
-    await client.close();
+    await client.close().catch(() => {});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contentArr = Array.isArray(response.content) ? response.content : [];

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { OTP } from "otplib";
 import QRCode from "qrcode";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const otp = new OTP();
 
@@ -43,6 +44,15 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: 5 attempts per minute per user to prevent TOTP brute-force
+  const allowed = await checkRateLimit(`2fa:${session.user.id}`, 5, 60_000);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Слишком много попыток. Подождите минуту." },
+      { status: 429 }
+    );
   }
 
   const body = await req.json();

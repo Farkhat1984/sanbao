@@ -191,7 +191,7 @@ export async function DELETE(
   // Delete from filesystem — verify path stays within public/uploads
   try {
     const publicDir = path.join(process.cwd(), "public", "uploads");
-    const filePath = path.resolve(process.cwd(), "public", file.fileUrl);
+    const filePath = path.join(process.cwd(), "public", file.fileUrl);
     if (filePath.startsWith(publicDir)) {
       await unlink(filePath);
     }

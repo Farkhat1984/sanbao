@@ -34,6 +34,7 @@ export default function RegisterPage() {
         return;
       }
 
+      setLoading(false);
       router.push("/login");
     } catch {
       setError("Ошибка сети");

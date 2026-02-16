@@ -19,10 +19,10 @@ registerNativeTool({
         items: {
           type: "object",
           properties: {
-            label: { type: "string", description: "Описание шага" },
+            text: { type: "string", description: "Описание шага" },
             done: { type: "boolean", description: "Выполнен ли шаг" },
           },
-          required: ["label"],
+          required: ["text"],
         },
         description: "Список шагов чек-листа",
       },
@@ -31,8 +31,8 @@ registerNativeTool({
   },
   async execute(args, ctx) {
     const title = args.title as string;
-    const steps = (args.steps as Array<{ label: string; done?: boolean }>).map((s) => ({
-      label: s.label,
+    const steps = (args.steps as Array<{ text: string; done?: boolean }>).map((s) => ({
+      text: s.text,
       done: s.done ?? false,
     }));
 
