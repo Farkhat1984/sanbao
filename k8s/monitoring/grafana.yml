@@ -162,7 +162,10 @@ spec:
             - containerPort: 3000
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
-              value: "admin"  # Change in production via secret
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: admin-password
             - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
               value: /var/lib/grafana/dashboards/sanbao.json
           volumeMounts:

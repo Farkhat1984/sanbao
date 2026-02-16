@@ -33,9 +33,8 @@ data:
             target_label: __address__
             replacement: "$1:3004"
 
-      - job_name: "redis"
-        static_configs:
-          - targets: ["redis.sanbao:6379"]
+      # Redis metrics are exposed via app's /api/metrics endpoint
+      # Deploy redis-exporter sidecar if direct Redis scraping is needed
 
       - job_name: "kubernetes-pods"
         kubernetes_sd_configs:
@@ -107,6 +106,7 @@ data:
                 rate(sanbao_request_duration_ms_sum[5m])
                 / rate(sanbao_request_duration_ms_count[5m])
               ) > 2000
+              and rate(sanbao_request_duration_ms_count[5m]) > 0
             for: 10m
             labels:
               severity: warning
@@ -170,7 +170,8 @@ spec:
           configMap:
             name: prometheus-rules
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: prometheus-data
 ---
 apiVersion: v1
 kind: Service
@@ -214,3 +215,15 @@ subjects:
   - kind: ServiceAccount
     name: prometheus
     namespace: monitoring
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

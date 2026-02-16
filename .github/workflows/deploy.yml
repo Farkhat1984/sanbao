@@ -1,12 +1,10 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [main]
-    paths-ignore:
-      - "*.md"
-      - "docs/**"
-      - "tests/**"
+    types: [completed]
 
 env:
   REGISTRY: ${{ vars.REGISTRY_URL || 'ghcr.io' }}
@@ -16,6 +14,8 @@ jobs:
   build-and-push:
     name: Build & Push Image
     runs-on: ubuntu-latest
+    # Only deploy if CI passed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       packages: write
@@ -68,6 +68,7 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Run migrations
         run: |
@@ -80,7 +81,11 @@ jobs:
 
           # Run migration
           kubectl apply -f k8s/migration-job.yml
-          kubectl wait --for=condition=complete job/sanbao-migrate -n sanbao --timeout=120s
+          kubectl wait --for=condition=complete job/sanbao-migrate -n sanbao --timeout=120s || {
+            echo "Migration failed or timed out!"
+            kubectl logs job/sanbao-migrate -n sanbao --tail=50 || true
+            exit 1
+          }
 
       - name: Deploy app
         run: |
@@ -102,3 +107,10 @@ jobs:
           kubectl exec -n sanbao \
             $(kubectl get pod -n sanbao -l app=sanbao-app -o jsonpath='{.items[0].metadata.name}') \
             -- wget -q --spider http://localhost:3004/api/health
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          kubectl rollout undo deployment/sanbao-app -n sanbao
+          kubectl rollout status deployment/sanbao-app -n sanbao --timeout=120s

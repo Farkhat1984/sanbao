@@ -34,10 +34,22 @@ spec:
       labels:
         app: sanbao-app
     spec:
+      serviceAccountName: sanbao-app
+      automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
       containers:
         - name: app
           image: sanbao:latest  # Replace with your registry image
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # Next.js needs writable .next/cache
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3004
           envFrom:
@@ -45,6 +57,24 @@ spec:
                 name: sanbao-config
             - secretRef:
                 name: sanbao-secrets
+          env:
+            # Construct DATABASE_URL at runtime from secret (not in ConfigMap)
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sanbao-secrets
+                  key: DB_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(DB_PASSWORD)@pgbouncer:5432/sanbao?schema=public&pgbouncer=true"
+            - name: DIRECT_DATABASE_URL
+              value: "postgresql://postgres:$(DB_PASSWORD)@postgres:5432/sanbao?schema=public"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sanbao-secrets
+                  key: REDIS_PASSWORD
+            - name: REDIS_URL
+              value: "redis://:$(REDIS_PASSWORD)@redis:6379"
           resources:
             requests:
               memory: "512Mi"
@@ -76,9 +106,17 @@ spec:
             periodSeconds: 5
             failureThreshold: 12  # 60s max startup time
       topologySpreadConstraints:
-        - maxSkew: 1
+        - maxSkew: 2
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app: sanbao-app
+---
+# Dedicated service account with no special permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sanbao-app
+  namespace: sanbao
+automountServiceAccountToken: false

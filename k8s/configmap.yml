@@ -8,9 +8,6 @@ data:
   LOG_FORMAT: "json"
   LOG_LEVEL: "info"
   SHUTDOWN_DRAIN_MS: "15000"
-  # PgBouncer connection (for app)
-  DATABASE_URL: "postgresql://postgres:postgres@pgbouncer:5432/sanbao?schema=public&pgbouncer=true"
-  # Direct connection (for migrations only)
-  DIRECT_DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/sanbao?schema=public"
-  REDIS_URL: "redis://redis:6379"
   NEXTAUTH_URL: "https://sanbao.example.com"
+  # DATABASE_URL and REDIS_URL are constructed in app-deployment.yml env section
+  # using secretKeyRef interpolation (not in ConfigMap to avoid plaintext credentials)

@@ -16,10 +16,11 @@ Sentry.init({
   ],
 
   beforeSend(event) {
-    // Don't send 4xx client errors to Sentry
+    // Filter noisy client errors but keep security-relevant ones (401, 403)
     if (event.contexts?.response) {
       const status = (event.contexts.response as Record<string, unknown>).status_code as number;
-      if (status >= 400 && status < 500) return null;
+      // Drop 404 (not found) and 429 (rate limited) — expected in normal operation
+      if (status === 404 || status === 429) return null;
     }
     return event;
   },

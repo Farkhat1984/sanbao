@@ -61,7 +61,7 @@ jobs:
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest
-    needs: [lint-and-type-check]
+    needs: [lint-and-type-check, test]
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4

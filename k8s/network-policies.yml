@@ -72,6 +72,10 @@ spec:
         - podSelector:
             matchLabels:
               app: sanbao-migrate
+        # Allow backup CronJob direct access for pg_dump
+        - podSelector:
+            matchLabels:
+              app: sanbao-backup
       ports:
         - port: 5432
           protocol: TCP

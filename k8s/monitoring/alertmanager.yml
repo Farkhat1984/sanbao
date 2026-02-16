@@ -22,12 +22,19 @@ data:
 
     receivers:
       - name: "default"
-        # Configure webhook, email, or Telegram
+        # TODO(PRODUCTION): Configure at least one notification channel before go-live!
+        # Alerts are silently dropped without a configured receiver.
+        # Options: webhook_configs, email_configs, telegram_configs
+        webhook_configs: []
+        # Example:
         # webhook_configs:
         #   - url: "https://your-webhook-url.example.com/alerts"
         #     send_resolved: true
 
       - name: "critical"
+        # TODO(PRODUCTION): Critical alerts MUST have a notification channel!
+        webhook_configs: []
+        # Example:
         # webhook_configs:
         #   - url: "https://your-webhook-url.example.com/critical-alerts"
         #     send_resolved: true

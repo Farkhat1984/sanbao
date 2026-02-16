@@ -26,9 +26,9 @@ echo "[backup] Dump complete: ${FILENAME} (${SIZE})"
 S3_URI="s3://${S3_BUCKET}/backups/postgres/${FILENAME}"
 
 if [ -n "$S3_ENDPOINT" ]; then
-  aws s3 cp "$LOCAL_PATH" "$S3_URI" --endpoint-url "$S3_ENDPOINT"
+  aws s3 cp "$LOCAL_PATH" "$S3_URI" --endpoint-url "$S3_ENDPOINT" || { echo "[backup] ERROR: S3 upload failed"; exit 1; }
 else
-  aws s3 cp "$LOCAL_PATH" "$S3_URI"
+  aws s3 cp "$LOCAL_PATH" "$S3_URI" || { echo "[backup] ERROR: S3 upload failed"; exit 1; }
 fi
 
 echo "[backup] Uploaded to ${S3_URI}"
@@ -38,13 +38,24 @@ rm -f "$LOCAL_PATH"
 
 # Delete backups older than 30 days
 echo "[backup] Cleaning old backups (>30 days)..."
-CUTOFF=$(date -d "-30 days" +%Y%m%d 2>/dev/null || date -v-30d +%Y%m%d)
+
+# POSIX-compatible date calculation (works on Alpine BusyBox)
+# Calculate cutoff as seconds since epoch minus 30 days, then format
+CUTOFF_EPOCH=$(( $(date +%s) - 2592000 ))
+# BusyBox date supports @epoch format
+CUTOFF=$(date -d "@${CUTOFF_EPOCH}" +%Y%m%d 2>/dev/null || date -r "${CUTOFF_EPOCH}" +%Y%m%d 2>/dev/null || echo "")
+
+if [ -z "$CUTOFF" ]; then
+  echo "[backup] WARNING: Could not compute cutoff date, skipping cleanup"
+  echo "[backup] Done."
+  exit 0
+fi
 
 if [ -n "$S3_ENDPOINT" ]; then
   aws s3 ls "s3://${S3_BUCKET}/backups/postgres/" --endpoint-url "$S3_ENDPOINT" \
     | while read -r line; do
         FILE=$(echo "$line" | awk '{print $4}')
-        FILE_DATE=$(echo "$FILE" | grep -oP '\d{8}' | head -1)
+        FILE_DATE=$(echo "$FILE" | grep -oE '[0-9]{8}' | head -1)
         if [ -n "$FILE_DATE" ] && [ "$FILE_DATE" -lt "$CUTOFF" ]; then
           echo "[backup] Deleting old backup: $FILE"
           aws s3 rm "s3://${S3_BUCKET}/backups/postgres/${FILE}" --endpoint-url "$S3_ENDPOINT"
@@ -54,7 +65,7 @@ else
   aws s3 ls "s3://${S3_BUCKET}/backups/postgres/" \
     | while read -r line; do
         FILE=$(echo "$line" | awk '{print $4}')
-        FILE_DATE=$(echo "$FILE" | grep -oP '\d{8}' | head -1)
+        FILE_DATE=$(echo "$FILE" | grep -oE '[0-9]{8}' | head -1)
         if [ -n "$FILE_DATE" ] && [ "$FILE_DATE" -lt "$CUTOFF" ]; then
           echo "[backup] Deleting old backup: $FILE"
           aws s3 rm "s3://${S3_BUCKET}/backups/postgres/${FILE}"

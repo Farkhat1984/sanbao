@@ -72,4 +72,8 @@ COPY sentry.*.config.ts ./  2>/dev/null || true
 
 EXPOSE 3004
 
+# Switch to non-root user for the entrypoint
+# Migrations run before USER switch via docker-entrypoint.sh (when SKIP_MIGRATIONS is not set)
+USER nextjs
+
 ENTRYPOINT ["./docker-entrypoint.sh"]
