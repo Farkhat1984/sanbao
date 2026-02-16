@@ -25,12 +25,19 @@ export function invalidateAgentContextCache(agentId?: string) {
     cacheDel(`${REDIS_PREFIX}${agentId}`).catch(() => {});
   } else {
     agentContextCache.clear();
-    // Flush all agent_ctx:* keys from Redis
+    // Flush all agent_ctx:* keys from Redis using SCAN (non-blocking)
     const client = getRedis();
     if (client) {
-      client.keys(`${REDIS_PREFIX}*`).then((keys) => {
-        if (keys.length > 0) client.del(...keys).catch(() => {});
-      }).catch(() => {});
+      (async () => {
+        try {
+          let cursor = "0";
+          do {
+            const [next, keys] = await client.scan(cursor, "MATCH", `${REDIS_PREFIX}*`, "COUNT", 100);
+            cursor = next;
+            if (keys.length > 0) await client.del(...keys);
+          } while (cursor !== "0");
+        } catch { /* Redis unavailable */ }
+      })();
     }
   }
 }

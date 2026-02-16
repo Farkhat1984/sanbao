@@ -2,7 +2,9 @@ import { create } from "zustand";
 
 interface OnboardingState {
   hasSeenTour: boolean;
+  _hydrated: boolean;
   currentStep: number | null;
+  hydrate: () => void;
   startTour: () => void;
   nextStep: () => void;
   completeTour: () => void;
@@ -12,11 +14,16 @@ const TOUR_STEPS = 4;
 const STORAGE_KEY = "sanbao-onboarding-seen";
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
-  hasSeenTour:
-    typeof window !== "undefined"
-      ? localStorage.getItem(STORAGE_KEY) === "true"
-      : false,
+  // Initialize with false to avoid SSR/hydration mismatch; hydrate on mount
+  hasSeenTour: false,
+  _hydrated: false,
   currentStep: null,
+
+  hydrate: () => set((s) => {
+    if (s._hydrated) return {};
+    const seen = typeof window !== "undefined" && localStorage.getItem(STORAGE_KEY) === "true";
+    return { hasSeenTour: seen, _hydrated: true };
+  }),
 
   startTour: () => set({ currentStep: 0 }),
 

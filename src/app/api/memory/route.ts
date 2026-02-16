@@ -9,6 +9,7 @@ export async function GET() {
   const memories = await prisma.userMemory.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
+    take: 200,
   });
 
   return jsonOk(memories.map(serializeDates));

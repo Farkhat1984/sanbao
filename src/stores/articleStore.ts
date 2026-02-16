@@ -52,6 +52,12 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
       const newCache = new Map(get().cache);
       newCache.set(key, data);
 
+      // Cap cache to 50 entries to prevent unbounded memory growth
+      if (newCache.size > 50) {
+        const oldest = newCache.keys().next().value;
+        if (oldest) newCache.delete(oldest);
+      }
+
       set({ activeArticle: data, loading: false, cache: newCache });
     } catch (e) {
       set({

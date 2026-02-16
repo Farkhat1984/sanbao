@@ -53,6 +53,13 @@ export function OnboardingTour() {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const isMobile = useIsMobile();
 
+  const { hydrate } = useOnboardingStore();
+
+  // Hydrate from localStorage on mount (SSR-safe)
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   // Auto-start tour for first-time users
   useEffect(() => {
     if (!hasSeenTour) {

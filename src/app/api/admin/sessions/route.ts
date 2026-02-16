@@ -11,6 +11,7 @@ export async function GET() {
       user: { select: { name: true, email: true } },
     },
     orderBy: { expires: "desc" },
+    take: 500,
   });
 
   return NextResponse.json(

@@ -5,8 +5,11 @@ import { NextResponse } from "next/server";
 
 const CORRELATION_HEADER = "x-request-id";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function getOrCreateRequestId(req: Request): string {
-  return req.headers.get(CORRELATION_HEADER) || crypto.randomUUID();
+  const provided = req.headers.get(CORRELATION_HEADER);
+  return provided && UUID_PATTERN.test(provided) ? provided : crypto.randomUUID();
 }
 
 // ─── Security headers ───

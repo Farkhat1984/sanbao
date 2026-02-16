@@ -59,6 +59,22 @@ export async function PUT(
     return jsonError("Нет доступа", 403);
   }
 
+  // SSRF protection: validate URL if being updated
+  if (body.url !== undefined) {
+    try {
+      const parsed = new URL(body.url.trim());
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return jsonError("URL должен использовать http или https", 400);
+      }
+      const BLOCKED_HOSTS = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|\[::1?\]|metadata\.google|169\.254\.\d+\.\d+)/i;
+      if (BLOCKED_HOSTS.test(parsed.hostname)) {
+        return jsonError("URL указывает на внутреннюю сеть", 400);
+      }
+    } catch {
+      return jsonError("Некорректный URL", 400);
+    }
+  }
+
   const server = await prisma.mcpServer.update({
     where: { id },
     data: {

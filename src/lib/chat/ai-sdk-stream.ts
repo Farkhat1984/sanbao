@@ -17,6 +17,8 @@ export interface AiSdkStreamOptions {
   messages: any[];
   thinkingEnabled: boolean;
   maxTokens: number;
+  /** Resolved model from admin config — used instead of hardcoded defaults when provided */
+  resolvedModelId?: string;
   contextInfo?: {
     usagePercent: number;
     totalTokens: number;
@@ -192,15 +194,16 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     messages,
     thinkingEnabled,
     maxTokens,
+    resolvedModelId,
     contextInfo,
   } = options;
 
   const isAnthropic = canUseProvider && provider === "anthropic";
   let model;
   if (isAnthropic) {
-    model = anthropic("claude-sonnet-4-5-20250929");
+    model = anthropic(resolvedModelId || "claude-sonnet-4-5-20250929");
   } else {
-    model = openai("gpt-4o");
+    model = openai(resolvedModelId || "gpt-4o");
   }
 
   const result = streamText({

@@ -18,6 +18,7 @@ export async function GET(req: Request) {
       conversation: { select: { title: true } },
     },
     orderBy: { updatedAt: "desc" },
+    take: 200,
   });
 
   return jsonOk(tasks.map((t) => ({

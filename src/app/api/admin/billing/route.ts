@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
+import { invalidatePlanCache } from "@/lib/usage";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -14,6 +15,7 @@ export async function GET() {
         plan: { select: { name: true, price: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: 500,
     }),
     prisma.plan.findMany({ select: { id: true, name: true, price: true } }),
     prisma.payment.findMany({
@@ -110,6 +112,7 @@ export async function POST(req: Request) {
       },
     });
 
+    await invalidatePlanCache(userId);
     return NextResponse.json({ success: true });
   }
 
@@ -121,6 +124,7 @@ export async function POST(req: Request) {
         data: { planId: freePlan.id },
       });
     }
+    await invalidatePlanCache(userId);
     return NextResponse.json({ success: true });
   }
 
@@ -144,6 +148,7 @@ export async function POST(req: Request) {
         data: { planId: freePlan.id },
       });
     }
+    await invalidatePlanCache(userId);
     return NextResponse.json({ success: true });
   }
 

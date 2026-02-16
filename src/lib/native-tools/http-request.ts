@@ -131,8 +131,27 @@ registerNativeTool({
         headers,
         body: ["POST", "PUT", "PATCH"].includes(method) ? body : undefined,
         signal: controller.signal,
-        redirect: "follow",
+        redirect: "manual",
       });
+
+      // Handle redirects manually to prevent SSRF via redirect to internal IPs
+      if ([301, 302, 303, 307, 308].includes(res.status)) {
+        const location = res.headers.get("location");
+        if (location) {
+          const redirectBlocked = isBlockedUrl(location);
+          if (redirectBlocked) {
+            return JSON.stringify({
+              error: `Редирект заблокирован: ${redirectBlocked}`,
+              redirectUrl: location,
+            });
+          }
+          return JSON.stringify({
+            status: res.status,
+            redirect: location,
+            message: "Получен редирект. Повтори запрос с новым URL.",
+          });
+        }
+      }
 
       const contentType = res.headers.get("content-type") || "";
       let responseBody: string;

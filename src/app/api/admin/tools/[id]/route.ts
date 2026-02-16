@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { invalidateAgentContextCache } from "@/lib/tool-resolver";
 
 export async function GET(
   _req: Request,
@@ -53,6 +54,9 @@ export async function PUT(
     },
   });
 
+  // Invalidate agent context cache since tool config changed
+  invalidateAgentContextCache();
+
   return NextResponse.json({
     ...updated,
     createdAt: updated.createdAt.toISOString(),
@@ -73,5 +77,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   await prisma.tool.delete({ where: { id } });
+  invalidateAgentContextCache();
   return NextResponse.json({ ok: true });
 }

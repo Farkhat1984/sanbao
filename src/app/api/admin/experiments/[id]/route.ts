@@ -13,9 +13,16 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json();
 
+  // Whitelist allowed fields to prevent mass assignment
+  const ALLOWED_FIELDS = ["name", "description", "promptA", "promptB", "splitPercent", "isActive", "targetKey"] as const;
+  const data: Record<string, unknown> = {};
+  for (const key of ALLOWED_FIELDS) {
+    if (key in body) data[key] = body[key];
+  }
+
   const experiment = await prisma.promptExperiment.update({
     where: { id },
-    data: body,
+    data,
   });
 
   invalidateExperimentCache();

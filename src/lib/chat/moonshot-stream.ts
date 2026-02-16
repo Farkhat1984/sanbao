@@ -58,6 +58,8 @@ export interface MoonshotStreamOptions {
 
 // ─── SSE Parser ──────────────────────────────────────────
 
+const SSE_MAX_BUFFER = 1024 * 1024; // 1MB max buffer for a single SSE line
+
 async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -68,6 +70,10 @@ async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
+
+      if (buffer.length > SSE_MAX_BUFFER) {
+        throw new Error("SSE buffer overflow");
+      }
 
       const lines = buffer.split("\n");
       buffer = lines.pop()!;
@@ -399,7 +405,7 @@ export function streamMoonshot(
             for (const tc of collectedCalls) {
               const mcpDef = mcpToolMap.get(tc.function.name);
               if (mcpDef) {
-                // MCP tool call — execute via MCP client
+                // MCP tool call — execute via MCP client with timeout
                 let args: Record<string, unknown> = {};
                 try {
                   args = JSON.parse(
@@ -408,13 +414,24 @@ export function streamMoonshot(
                 } catch {
                   // fallback empty
                 }
-                const mcpResult = await callMcpTool(
-                  mcpDef.url,
-                  mcpDef.transport,
-                  mcpDef.apiKey,
-                  tc.function.name,
-                  args
-                );
+                const MCP_TOOL_TIMEOUT_MS = 30_000;
+                let mcpResult: { result?: string; error?: string };
+                try {
+                  mcpResult = await Promise.race([
+                    callMcpTool(
+                      mcpDef.url,
+                      mcpDef.transport,
+                      mcpDef.apiKey,
+                      tc.function.name,
+                      args
+                    ),
+                    new Promise<{ error: string }>((_, reject) =>
+                      setTimeout(() => reject(new Error("MCP tool timeout")), MCP_TOOL_TIMEOUT_MS)
+                    ),
+                  ]);
+                } catch {
+                  mcpResult = { error: `MCP tool ${tc.function.name} timed out after ${MCP_TOOL_TIMEOUT_MS / 1000}s` };
+                }
                 currentMessages.push({
                   role: "tool",
                   tool_call_id: tc.id,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { resolveAgentContext } from "@/lib/tool-resolver";
 
 export async function GET(
@@ -12,6 +13,23 @@ export async function GET(
   }
 
   const { id } = await params;
+
+  // Ownership check: user can only access their own agents or system/public agents
+  const agent = await prisma.agent.findFirst({
+    where: {
+      id,
+      OR: [
+        { userId: session.user.id },
+        { isSystem: true },
+        { isPublic: true, status: "APPROVED" },
+      ],
+    },
+    select: { id: true },
+  });
+  if (!agent) {
+    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+  }
+
   const url = new URL(req.url);
   const typeFilter = url.searchParams.get("type");
 

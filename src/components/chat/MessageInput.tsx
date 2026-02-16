@@ -412,7 +412,11 @@ export function MessageInput() {
       });
 
       // Parse NDJSON stream
-      const reader = response.body!.getReader();
+      if (!response.body) {
+        setStreaming(false);
+        return;
+      }
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullReasoning = "";
       let buffer = "";

@@ -4,6 +4,7 @@ import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
 import { fireAndForget } from "@/lib/logger";
+import { invalidatePlanCache } from "@/lib/usage";
 
 /**
  * Stripe webhook handler.
@@ -17,9 +18,10 @@ export async function POST(req: Request) {
   let event: { type: string; data: { object: Record<string, unknown> } };
 
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: STRIPE_API_VERSION });
+
   if (endpointSecret && sig) {
     try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: STRIPE_API_VERSION });
       const verified = stripe.webhooks.constructEvent(body, sig, endpointSecret) as unknown as typeof event;
       event = verified;
     } catch (err) {
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Webhook signature verification failed: ${msg}` }, { status: 400 });
     }
   } else if (!endpointSecret) {
-    // Reject unsigned webhooks in production — STRIPE_WEBHOOK_SECRET must be configured
+    // Reject unsigned webhooks — STRIPE_WEBHOOK_SECRET must be configured
     console.warn("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured");
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   } else {
@@ -54,6 +56,9 @@ export async function POST(req: Request) {
             update: { planId: plan.id },
             create: { userId, planId: plan.id },
           });
+
+          // Invalidate plan cache so the user sees their new plan immediately
+          await invalidatePlanCache(userId);
 
           await prisma.payment.create({
             data: {
@@ -87,27 +92,43 @@ export async function POST(req: Request) {
     }
 
     case "invoice.payment_failed": {
-      const customerId = obj.customer as string;
-      // Log the failure
-      await prisma.payment.create({
-        data: {
-          userId: customerId || "unknown",
-          amount: (obj.amount_due as number) || 0,
-          status: "FAILED",
-          provider: "stripe",
-          externalId: obj.id as string,
-        },
-      });
+      // Resolve user by Stripe customer email (customerId is Stripe's cus_xxx, NOT our userId)
+      const stripeCustomerId = obj.customer as string;
+      const customerEmail = obj.customer_email as string | undefined;
+      let failedUserId: string | null = null;
 
-      // Send payment failed email (fire-and-forget)
-      if (customerId) {
+      if (customerEmail) {
+        const user = await prisma.user.findUnique({ where: { email: customerEmail }, select: { id: true } });
+        failedUserId = user?.id ?? null;
+      }
+      if (!failedUserId && stripeCustomerId) {
+        try {
+          const customer = await stripe.customers.retrieve(stripeCustomerId);
+          if (!("deleted" in customer && customer.deleted) && customer.email) {
+            const user = await prisma.user.findUnique({ where: { email: customer.email }, select: { id: true } });
+            failedUserId = user?.id ?? null;
+          }
+        } catch { /* Stripe API lookup failed — skip */ }
+      }
+
+      if (failedUserId) {
+        await prisma.payment.create({
+          data: {
+            userId: failedUserId,
+            amount: (obj.amount_due as number) || 0,
+            status: "FAILED",
+            provider: "stripe",
+            externalId: obj.id as string,
+          },
+        });
+
         const sub = await prisma.subscription.findUnique({
-          where: { userId: customerId },
+          where: { userId: failedUserId },
           include: { plan: { select: { name: true } } },
         });
         if (sub) {
           const failedNotifPromise = sendPaymentFailedNotification({
-            userId: customerId,
+            userId: failedUserId,
             planName: sub.plan.name,
           });
           fireAndForget(failedNotifPromise, "billing:sendPaymentFailedNotification");
@@ -117,15 +138,27 @@ export async function POST(req: Request) {
     }
 
     case "customer.subscription.deleted": {
-      const customerId = obj.customer as string;
-      if (customerId) {
-        // Downgrade to free plan
+      // Resolve user by Stripe customer (customerId is Stripe's cus_xxx, NOT our userId)
+      const stripeCustomerId = obj.customer as string;
+      if (!stripeCustomerId) break;
+
+      let deletedUserId: string | null = null;
+      try {
+        const customer = await stripe.customers.retrieve(stripeCustomerId);
+        if (!("deleted" in customer && customer.deleted) && customer.email) {
+          const user = await prisma.user.findUnique({ where: { email: customer.email }, select: { id: true } });
+          deletedUserId = user?.id ?? null;
+        }
+      } catch { /* Stripe API lookup failed — skip */ }
+
+      if (deletedUserId) {
         const freePlan = await prisma.plan.findFirst({ where: { isDefault: true } });
         if (freePlan) {
           await prisma.subscription.updateMany({
-            where: { userId: customerId },
+            where: { userId: deletedUserId },
             data: { planId: freePlan.id },
           });
+          await invalidatePlanCache(deletedUserId);
         }
       }
       break;

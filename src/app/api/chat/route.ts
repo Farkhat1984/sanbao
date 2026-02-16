@@ -292,7 +292,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    recordRequestDuration("/api/chat", Date.now() - _requestStart);
+    return NextResponse.json({ error: "Некорректный JSON в теле запроса" }, { status: 400 });
+  }
   const {
     messages,
     provider = DEFAULT_PROVIDER,
@@ -633,6 +639,7 @@ export async function POST(req: Request) {
     messages: effectiveMessages,
     thinkingEnabled,
     maxTokens: plan.tokensPerMessage,
+    resolvedModelId: textModel?.modelId,
     contextInfo,
   });
 

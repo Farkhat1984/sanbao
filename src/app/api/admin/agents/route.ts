@@ -36,6 +36,12 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "agentId and status required" }, { status: 400 });
   }
 
+  // Validate status against allowed SkillStatus enum values
+  const ALLOWED_STATUSES = ["PENDING", "APPROVED", "REJECTED"];
+  if (!ALLOWED_STATUSES.includes(status)) {
+    return NextResponse.json({ error: `Invalid status. Allowed: ${ALLOWED_STATUSES.join(", ")}` }, { status: 400 });
+  }
+
   const agent = await prisma.agent.update({
     where: { id: agentId },
     data: { status },
