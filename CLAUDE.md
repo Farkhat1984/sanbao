@@ -9,13 +9,17 @@ npm run dev          # Dev server (port from env or 3000)
 npm run build        # Production build (standalone output)
 npm run start        # Start production server
 npm run lint         # ESLint (next core-web-vitals + typescript)
-npm run test         # Vitest unit tests
+npm run test         # Vitest unit tests (all)
+npm run test:watch   # Vitest in watch mode
+npx vitest run src/__tests__/lib/parse-file.test.ts  # Run single test file
 npx prisma db push   # Sync schema to DB (no migrations)
 npx prisma migrate deploy  # Apply migrations (production)
 npx prisma generate  # Regenerate Prisma client after schema changes
 npx prisma db seed   # Seed plans, admin user, system agent, default models/skills
 npx prisma studio    # Visual DB browser
 ```
+
+Tests live in `src/__tests__/` (not colocated). Vitest config: jsdom environment, 15s timeout, setup file at `src/__tests__/setup.ts`.
 
 Docker: `docker compose up --build` — runs PostgreSQL 16 + PgBouncer + Redis + app on port 3004.
 Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB + 3 app replicas.
