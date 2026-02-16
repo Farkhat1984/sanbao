@@ -8,7 +8,6 @@ on:
 env:
   SERVER2_HOST: 46.225.122.142
   SERVER2_USER: faragj
-  DEPLOY_PATH: /home/faragj/faragj/deploy
 
 jobs:
   deploy:
@@ -31,10 +30,9 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== Building and deploying ==="
-            cd ${{ env.DEPLOY_PATH }}
-            docker compose -f docker-compose.failover.yml build sanbao --no-cache
-            docker compose -f docker-compose.failover.yml up -d sanbao
+            echo "=== Rebuilding sanbao container ==="
+            docker compose build --no-cache app
+            docker compose up -d app
 
             echo "=== Waiting for health check ==="
             for i in $(seq 1 30); do
@@ -46,7 +44,7 @@ jobs:
               sleep 5
             done
             echo "Health check failed!"
-            docker compose -f docker-compose.failover.yml logs --tail=50 sanbao
+            docker compose logs --tail=50 app
             exit 1
 
       - name: Notify Telegram
