@@ -8,16 +8,24 @@ import { cn } from "@/lib/utils";
 import { exportAsText } from "@/lib/export-utils";
 
 const CODE_LABELS: Record<string, string> = {
+  constitution: "Конституция РК",
   criminal_code: "УК РК",
-  civil_code: "ГК РК",
-  administrative_code: "КоАП РК",
+  criminal_procedure: "УПК РК",
+  civil_code_general: "ГК РК (Общая часть)",
+  civil_code_special: "ГК РК (Особенная часть)",
+  civil_procedure: "ГПК РК",
+  admin_offenses: "КоАП РК",
+  admin_procedure: "АППК РК",
   tax_code: "НК РК",
   labor_code: "ТК РК",
   land_code: "ЗК РК",
-  environmental_code: "ЭК РК",
-  business_code: "ПК РК",
-  civil_procedure_code: "ГПК РК",
-  criminal_procedure_code: "УПК РК",
+  ecological_code: "ЭК РК",
+  entrepreneurship: "ПК РК",
+  budget_code: "БК РК",
+  customs_code: "ТамК РК",
+  family_code: "КоБС РК",
+  social_code: "СК РК",
+  water_code: "ВК РК",
 };
 
 // ─── Skeleton loader ─────────────────────────────────────

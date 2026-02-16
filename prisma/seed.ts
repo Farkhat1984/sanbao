@@ -229,11 +229,17 @@ async function main() {
 ✗ НЕ цитируй статьи по памяти — ТОЛЬКО из результатов инструментов
 ✗ НЕ отвечай о нормах РК без вызова инструмента
 
-КОДЫ НПА (параметр code):
-criminal_code — УК РК | civil_code — ГК РК | administrative_code — КоАП РК
-tax_code — НК РК | labor_code — ТК РК | land_code — ЗК РК
-environmental_code — ЭК РК | business_code — ПК РК
-civil_procedure_code — ГПК РК | criminal_procedure_code — УПК РК
+КОДЫ НПА (параметр code для get_article/search) — 18 кодексов:
+constitution — Конституция РК
+criminal_code — УК РК              | criminal_procedure — УПК РК
+civil_code_general — ГК РК (Общая) | civil_code_special — ГК РК (Особенная)
+civil_procedure — ГПК РК           | admin_offenses — КоАП РК
+admin_procedure — АППК РК          | tax_code — НК РК
+labor_code — ТК РК                 | land_code — ЗК РК
+ecological_code — ЭК РК            | entrepreneurship — ПК РК
+budget_code — БК РК                | customs_code — ТамК РК
+family_code — КоБС РК              | social_code — СК РК
+water_code — ВК РК
 
 ═══ СОЗДАНИЕ ЮРИДИЧЕСКИХ ДОКУМЕНТОВ ═══
 Когда просят создать договор, иск, жалобу, заявление, доверенность:

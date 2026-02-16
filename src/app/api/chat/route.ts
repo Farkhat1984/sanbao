@@ -223,14 +223,19 @@ const SYSTEM_PROMPT = `Ты — Sanbao, AI ERP-платформа нового �
 При ссылке на статью закона РК используй кликабельный формат:
 [ст. {номер} {код}](article://{code_name}/{номер})
 
-Коды НПА:
-- criminal_code — УК РК        | civil_code — ГК РК
-- administrative_code — КоАП РК | tax_code — НК РК
-- labor_code — ТК РК           | land_code — ЗК РК
-- environmental_code — ЭК РК   | business_code — ПК РК
-- civil_procedure_code — ГПК РК | criminal_procedure_code — УПК РК
+Коды НПА (18 кодексов):
+- constitution — Конституция РК
+- criminal_code — УК РК              | criminal_procedure — УПК РК
+- civil_code_general — ГК РК (Общая) | civil_code_special — ГК РК (Особенная)
+- civil_procedure — ГПК РК           | admin_offenses — КоАП РК
+- admin_procedure — АППК РК          | tax_code — НК РК
+- labor_code — ТК РК                 | land_code — ЗК РК
+- ecological_code — ЭК РК            | entrepreneurship — ПК РК
+- budget_code — БК РК                | customs_code — ТамК РК
+- family_code — КоБС РК              | social_code — СК РК
+- water_code — ВК РК
 
-Примеры: [ст. 188 УК РК](article://criminal_code/188), [ст. 15 ГК РК](article://civil_code/15)
+Примеры: [ст. 188 УК РК](article://criminal_code/188), [ст. 15 ГК РК](article://civil_code_general/15)
 
 ═══════════════════════════════════════════════════════
 РАЗДЕЛ 7. ОБЩИЕ ПРАВИЛА
@@ -294,34 +299,37 @@ async function compactInBackground(
       }),
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      const summaryText = data.choices?.[0]?.message?.content;
-
-      if (summaryText) {
-        await prisma.conversationSummary.upsert({
-          where: { conversationId },
-          create: {
-            conversationId,
-            content: summaryText,
-            tokenEstimate: estimateTokens(summaryText),
-            messagesCovered: messagesToSummarize.length,
-            version: 1,
-          },
-          update: {
-            content: summaryText,
-            tokenEstimate: estimateTokens(summaryText),
-            messagesCovered: { increment: messagesToSummarize.length },
-            version: { increment: 1 },
-          },
-        });
-
-        const compactionTokens = estimateTokens(compactionPrompt) + estimateTokens(summaryText);
-        await incrementTokens(userId, compactionTokens);
-      }
+    if (!response.ok) {
+      console.error(`[compaction] API error ${response.status} for conversation ${conversationId}`);
+      return;
     }
-  } catch {
-    console.error("Compaction failed silently");
+
+    const data = await response.json();
+    const summaryText = data.choices?.[0]?.message?.content;
+
+    if (summaryText) {
+      await prisma.conversationSummary.upsert({
+        where: { conversationId },
+        create: {
+          conversationId,
+          content: summaryText,
+          tokenEstimate: estimateTokens(summaryText),
+          messagesCovered: messagesToSummarize.length,
+          version: 1,
+        },
+        update: {
+          content: summaryText,
+          tokenEstimate: estimateTokens(summaryText),
+          messagesCovered: { increment: messagesToSummarize.length },
+          version: { increment: 1 },
+        },
+      });
+
+      const compactionTokens = estimateTokens(compactionPrompt) + estimateTokens(summaryText);
+      await incrementTokens(userId, compactionTokens);
+    }
+  } catch (err) {
+    console.error("[compaction] Failed for conversation", conversationId, err instanceof Error ? err.message : err);
   }
 }
 
