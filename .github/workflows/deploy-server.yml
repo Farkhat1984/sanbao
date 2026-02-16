@@ -1,0 +1,65 @@
+name: Deploy to Servers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SERVER2_HOST: 46.225.122.142
+  SERVER2_USER: faragj
+  DEPLOY_PATH: /home/faragj/faragj/deploy
+
+jobs:
+  deploy:
+    name: Deploy Sanbao
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.SERVER2_HOST }}
+          username: ${{ env.SERVER2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          timeout: 600s
+          script: |
+            set -e
+            echo "=== Pulling latest code ==="
+            cd ~/faragj/sanbao
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Building and deploying ==="
+            cd ${{ env.DEPLOY_PATH }}
+            docker compose -f docker-compose.failover.yml build sanbao --no-cache
+            docker compose -f docker-compose.failover.yml up -d sanbao
+
+            echo "=== Waiting for health check ==="
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3004/api/health >/dev/null 2>&1; then
+                echo "Sanbao is healthy!"
+                exit 0
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 5
+            done
+            echo "Health check failed!"
+            docker compose -f docker-compose.failover.yml logs --tail=50 sanbao
+            exit 1
+
+      - name: Notify Telegram
+        if: always()
+        uses: appleboy/telegram-action@v1.0.0
+        with:
+          to: ${{ secrets.TG_CHAT_ID }}
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          format: html
+          message: |
+            ${{ job.status == 'success' && '✅' || '❌' }} <b>Sanbao Deploy</b>
+
+            Commit: <code>${{ github.sha }}</code>
+            Branch: ${{ github.ref_name }}
+            By: ${{ github.actor }}
+            Status: ${{ job.status }}
