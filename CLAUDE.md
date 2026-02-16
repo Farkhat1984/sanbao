@@ -9,17 +9,20 @@ npm run dev          # Dev server (port from env or 3000)
 npm run build        # Production build (standalone output)
 npm run start        # Start production server
 npm run lint         # ESLint (next core-web-vitals + typescript)
+npm run test         # Vitest unit tests
 npx prisma db push   # Sync schema to DB (no migrations)
+npx prisma migrate deploy  # Apply migrations (production)
 npx prisma generate  # Regenerate Prisma client after schema changes
 npx prisma db seed   # Seed plans, admin user, system agent, default models/skills
 npx prisma studio    # Visual DB browser
 ```
 
-Docker: `docker compose up --build` — runs PostgreSQL 16 + app on port 3004.
+Docker: `docker compose up --build` — runs PostgreSQL 16 + PgBouncer + Redis + app on port 3004.
+Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB + 3 app replicas.
 
 ## Architecture
 
-**Sanbao** — универсальный AI-ассистент (Next.js 16 App Router, React 19 with React Compiler, TypeScript, Tailwind CSS v4, PostgreSQL).
+**Sanbao** — универсальный AI-ассистент (Next.js 16 App Router, React 19 with React Compiler, TypeScript, Tailwind CSS v4, PostgreSQL, Redis, BullMQ).
 
 ### Routing
 
@@ -61,25 +64,43 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 
 ### State Management
 
-Zustand stores in `src/stores/`: chatStore, artifactStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore.
+Zustand stores in `src/stores/`: chatStore, artifactStore, panelStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore.
 
 ### Security
 
 - **Auth:** NextAuth v5, JWT, Credentials + Google OAuth, 2FA TOTP (`otplib` OTP class)
 - **Middleware:** `src/proxy.ts` (Edge Runtime) — auth wrapper, admin IP whitelist, maintenance mode, suspicious path blocking
 - **Admin guard:** `src/lib/admin.ts` → `requireAdmin()` — role + 2FA + IP whitelist
-- **Rate-limit:** `src/lib/rate-limit.ts` — per-user, auto-block on abuse (10 violations in 5 min → 30 min block)
+- **Rate-limit:** `src/lib/rate-limit.ts` — Redis-first with in-memory fallback, auto-block on abuse (10 violations → 30 min block)
 - **API keys:** `src/lib/crypto.ts` AES-256-GCM; `src/lib/api-key-auth.ts` — per-key rate limit
 - **Content filter:** `src/lib/content-filter.ts` — SystemSetting-based with in-memory cache
+- **SSRF protection:** `src/lib/webhook-dispatcher.ts`, `src/app/api/mcp/route.ts` — blocked private IP ranges
+- **Input validation:** messages (max 200, 100KB/msg), MCP tools (max 100), email (254 chars), stream buffer (1MB cap)
 
 ### Data Layer
 
 - **Prisma + PostgreSQL** — `prisma/schema.prisma`, ~52 models, 14 enums
+- **PgBouncer** — connection pooling (transaction mode, pool 50)
+- **Read replicas** — `src/lib/prisma.ts` uses `@prisma/extension-read-replicas` when `DATABASE_REPLICA_URL` is set
 - Seed script (`prisma/seed.ts`): creates Free/Pro/Business plans, admin user, Femida+Sanbao system agents, 11 tools with templates, Moonshot/DeepInfra providers, default AI models, 4 built-in skills
 - **Audit:** `src/lib/audit.ts` — `logAudit()`, `logError()`, `logTokenUsage()`
 - **Billing:** Plan → Subscription (trialEndsAt) → DailyUsage; `Plan.maxStorageMb` for file quota
 - **Email:** `src/lib/email.ts` (Nodemailer), templates with `{{varName}}` interpolation
-- **Webhooks:** `src/lib/webhook-dispatcher.ts` — dispatch + retry + WebhookLog
+- **Webhooks:** `src/lib/webhook-dispatcher.ts` — dispatch + retry + WebhookLog + SSRF protection
+
+### Redis & Caching
+
+- `src/lib/redis.ts` — Redis client (ioredis) with graceful degradation (no-op if `REDIS_URL` not set)
+- `cacheGet()`, `cacheSet()`, `cacheDel()`, `cacheIncr()`, `redisRateLimit()` — all return null/no-op when unavailable
+- `src/lib/usage.ts` — plan+usage cache in Redis (30s TTL, key `plan:${userId}`)
+- Rate limiting: distributed via Redis, fallback to in-memory BoundedMap
+
+### Job Queues
+
+- `src/lib/queue.ts` — BullMQ queues with inline fallback when Redis unavailable
+- `src/lib/workers.ts` — processors for `webhook` and `email` queues
+- `src/lib/shutdown.ts` — graceful shutdown: drain connections → close queues → close Redis
+- `src/instrumentation.ts` — Next.js instrumentation hook, bootstraps workers + shutdown on server start
 
 ### Agent → Tool → Plugin Hierarchy
 
@@ -113,18 +134,51 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
 - `route.ts` loads user-enabled global MCPs + user's own connected MCPs
 - User pages: `/mcp` for managing personal MCP connections
+- **SSRF protection** on MCP server URL registration
+
+### Logging
+
+- `src/lib/logger.ts` — structured JSON logger in production, readable console in dev
+- `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()` — all with metadata
+- `LOG_FORMAT=json` (default in prod), `LOG_LEVEL=info` (configurable)
+- Legacy helpers: `logWarn()`, `logError()`, `fireAndForget()` — backward-compatible wrappers
+
+### Monitoring
+
+- `GET /api/health` — health check (DB, Redis, AI providers, MCP). Returns 503 during shutdown
+- `GET /api/metrics` — Prometheus-compatible metrics (business, process, Redis, request duration histogram)
+- `src/lib/request-metrics.ts` — in-memory request duration tracking with histogram buckets
+- Grafana dashboard auto-provisioned via `k8s/monitoring/grafana.yml`
+- 7 Prometheus alert rules in `k8s/monitoring/prometheus.yml`
+
+### Infrastructure
+
+- **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner)
+- **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas)
+- **Nginx:** `nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching
+- **Kubernetes:** full manifests in `k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies
+- **Canary:** Argo Rollouts manifest (`k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
+- **CI/CD:** `.github/workflows/` — CI (lint + test + build) and Deploy (image → registry → k8s)
+- **Backups:** CronJob (`k8s/backup-cronjob.yml`) — daily pg_dump → S3, 30-day retention
+- **CDN:** `assetPrefix` in `next.config.ts`, upload script `scripts/upload-static.sh`
+- **Sentry:** `sentry.{client,server,edge}.config.ts` — active only when `SENTRY_DSN` is set
 
 ### Key Patterns
 
 - **Admin API routes:** `const result = await requireAdmin(); if (result.error) return result.error;`
 - **Async params (Next.js 16):** `{ params }: { params: Promise<{ id: string }> }`
-- **Fire-and-forget:** `.catch((err) => console.error(...))` for email/webhook side-effects
+- **Fire-and-forget:** `fireAndForget(promise, context)` from `src/lib/logger.ts`
+- **Graceful degradation:** Redis/BullMQ operations return null/no-op when unavailable (dev works without Redis)
 - **In-memory cache with TTL:** content-filter, IP whitelist, model resolution, A/B experiments
 - **SystemSetting key-value:** global config table with cache invalidation
-- **serverExternalPackages** in `next.config.ts`: native/Node packages that can't be bundled (canvas, otplib, bcryptjs, stripe, S3, nodemailer, pdf-parse, xlsx, mammoth)
+- **serverExternalPackages** in `next.config.ts`: native/Node packages that can't be bundled (canvas, otplib, bcryptjs, stripe, S3, nodemailer, pdf-parse, xlsx, mammoth, ioredis, bullmq, @sentry/nextjs)
 
 ### Key Libraries
 
+- **ioredis** — Redis client with reconnect, graceful degradation
+- **bullmq** — job queues (webhook dispatch, email sending)
+- **@sentry/nextjs** — error tracking + performance (client/server/edge)
+- **@prisma/extension-read-replicas** — read query routing to replica DB
 - **otplib** (v13) — `OTP` class: `generateSecret()`, `verify({token, secret})`, `generateURI({issuer, label, secret})`
 - **stripe** — Checkout Session, webhook `constructEvent`
 - **@aws-sdk/client-s3** — S3/MinIO upload/delete/presigned URL (`src/lib/storage.ts`)
