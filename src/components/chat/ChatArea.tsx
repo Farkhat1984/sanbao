@@ -14,7 +14,7 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
+  const { messages, isStreaming, streamingPhase, streamingToolName, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
   const { setActiveAgent, setAgentTools } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -117,6 +117,7 @@ export function ChatArea() {
               <ThinkingIndicator
                 phase={streamingPhase}
                 agentName={agentName}
+                toolName={streamingToolName}
               />
             )}
 

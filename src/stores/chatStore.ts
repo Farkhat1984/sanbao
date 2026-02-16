@@ -4,6 +4,31 @@ import { DEFAULT_PROVIDER } from "@/lib/constants";
 
 export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | null;
 
+/** Tool categories for granular status icons */
+export type ToolCategory = "web_search" | "knowledge" | "calculation" | "memory" | "task" | "notification" | "scratchpad" | "chart" | "http" | "mcp" | "generic";
+
+const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
+  read_knowledge: "knowledge",
+  search_knowledge: "knowledge",
+  calculate: "calculation",
+  analyze_csv: "calculation",
+  generate_chart_data: "chart",
+  save_memory: "memory",
+  create_task: "task",
+  send_notification: "notification",
+  write_scratchpad: "scratchpad",
+  read_scratchpad: "scratchpad",
+  http_request: "http",
+  get_current_time: "generic",
+  get_user_info: "generic",
+  get_conversation_context: "generic",
+};
+
+export function getToolCategory(toolName: string | null): ToolCategory {
+  if (!toolName) return "generic";
+  return TOOL_CATEGORY_MAP[toolName] || "mcp";
+}
+
 const PHASE_PRIORITY: Record<string, number> = {
   thinking: 1,
   searching: 2,
@@ -34,6 +59,7 @@ interface ChatState {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingPhase: StreamingPhase;
+  streamingToolName: string | null;
 
   // AI feature toggles
   provider: AIProvider;
@@ -56,7 +82,7 @@ interface ChatState {
   addMessage: (message: ChatMessage) => void;
   updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   setStreaming: (isStreaming: boolean) => void;
-  setStreamingPhase: (phase: StreamingPhase) => void;
+  setStreamingPhase: (phase: StreamingPhase, toolName?: string | null) => void;
 
   setProvider: (provider: AIProvider) => void;
   toggleThinking: () => void;
@@ -86,6 +112,7 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isStreaming: false,
   streamingPhase: null,
+  streamingToolName: null,
   provider: DEFAULT_PROVIDER as AIProvider,
   thinkingEnabled: false,
   webSearchEnabled: false,
@@ -138,15 +165,15 @@ export const useChatStore = create<ChatState>((set) => ({
     }),
 
   setStreaming: (isStreaming) =>
-    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null }) }),
+    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null, streamingToolName: null }) }),
 
-  setStreamingPhase: (phase) => set((s) => {
-    if (!phase) return { streamingPhase: null };
+  setStreamingPhase: (phase, toolName) => set((s) => {
+    if (!phase) return { streamingPhase: null, streamingToolName: null };
     // searching is an overlay — always allowed
-    if (phase === "searching") return { streamingPhase: phase };
+    if (phase === "searching") return { streamingPhase: phase, streamingToolName: toolName ?? null };
     const curr = s.streamingPhase ? PHASE_PRIORITY[s.streamingPhase] || 0 : 0;
     const next = PHASE_PRIORITY[phase] || 0;
-    return next > curr ? { streamingPhase: phase } : {};
+    return next > curr ? { streamingPhase: phase, streamingToolName: toolName ?? null } : {};
   }),
 
   setProvider: (provider) => set({ provider }),

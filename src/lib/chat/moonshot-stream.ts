@@ -407,7 +407,16 @@ export function streamMoonshot(
             for (const tc of collectedCalls) {
               const mcpDef = mcpToolMap.get(tc.function.name);
               if (mcpDef) {
-                // MCP tool call — execute via MCP client with timeout
+                // MCP tool call — notify client with tool name
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({
+                      t: "s",
+                      v: "using_tool",
+                      n: tc.function.name,
+                    }) + "\n"
+                  )
+                );
                 let args: Record<string, unknown> = {};
                 try {
                   args = JSON.parse(
@@ -445,12 +454,13 @@ export function streamMoonshot(
                 isNativeTool(tc.function.name) &&
                 nativeToolCtx
               ) {
-                // Native tool call — execute server-side
+                // Native tool call — notify client with tool name
                 controller.enqueue(
                   encoder.encode(
                     JSON.stringify({
                       t: "s",
                       v: "using_tool",
+                      n: tc.function.name,
                     }) + "\n"
                   )
                 );

@@ -440,7 +440,10 @@ export function MessageInput() {
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
               case "s": // status (searching / using_tool)
-                setStreamingPhase(data.v === "using_tool" ? "using_tool" : "searching");
+                setStreamingPhase(
+                  data.v === "using_tool" ? "using_tool" : "searching",
+                  data.n || null
+                );
                 break;
               case "c": // content
                 setStreamingPhase("answering");
