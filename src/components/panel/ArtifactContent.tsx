@@ -65,6 +65,41 @@ export function ArtifactContent() {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  const handlePrint = async () => {
+    // Ensure preview tab is active so previewRef has content
+    if (activeTab !== "preview") {
+      setTab("preview");
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (previewRef.current?.querySelector(".prose-legal")) resolve();
+          else requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+        setTimeout(resolve, 1000);
+      });
+    }
+
+    const proseLegal = previewRef.current?.querySelector(".prose-legal");
+    if (!proseLegal) {
+      window.print();
+      return;
+    }
+
+    // Clone prose-legal content to a direct child of <body> to avoid overflow clipping
+    const container = document.createElement("div");
+    container.id = "print-container";
+    container.className = "prose-legal";
+    container.innerHTML = proseLegal.innerHTML;
+    document.body.appendChild(container);
+
+    const cleanup = () => {
+      if (container.parentNode) container.remove();
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  };
+
   if (!activeArtifact) return null;
 
   const handleCopy = async () => {
@@ -296,7 +331,7 @@ export function ArtifactContent() {
           )}
 
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
             <Printer className={iconSize} />

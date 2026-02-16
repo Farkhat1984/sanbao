@@ -86,10 +86,13 @@ export async function GET(req: Request) {
     }
   }
 
+  // Only DB is critical for app health — Redis/AI/MCP are non-critical (graceful degradation)
+  const dbOk = checks.database?.status === "ok";
   const overallOk = Object.values(checks).every((c) => c.status === "ok" || c.status === "disconnected" || c.status === "unavailable");
+  const status = dbOk ? (overallOk ? "healthy" : "degraded") : "unhealthy";
 
   return NextResponse.json(
-    { status: overallOk ? "healthy" : "degraded", checks, timestamp: new Date().toISOString() },
-    { status: overallOk ? 200 : 503 }
+    { status, checks, timestamp: new Date().toISOString() },
+    { status: dbOk ? 200 : 503 }
   );
 }

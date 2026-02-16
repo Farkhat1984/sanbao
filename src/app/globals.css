@@ -564,6 +564,12 @@ body {
   padding: 0 2px;
 }
 
+/* ─── Print Container (hidden normally, shown only in @media print) ── */
+
+#print-container {
+  display: none;
+}
+
 /* ─── Print Styles ───────────────────────────────────── */
 
 @media print {
@@ -578,75 +584,58 @@ body {
     background: white !important;
   }
 
-  /* Hide all UI chrome */
-  body * {
-    visibility: hidden;
+  /* Hide all app UI — #print-container is a direct body child */
+  body > *:not(#print-container) {
+    display: none !important;
   }
 
-  /* Show only the legal document content */
-  .prose-legal,
-  .prose-legal * {
-    visibility: visible !important;
-  }
-
-  .prose-legal {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+  /* Show the cloned document content */
+  #print-container {
+    display: block !important;
+    width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
     font-size: 12pt;
     color: #000 !important;
-    overflow: visible !important;
-    max-height: none !important;
+    background: white !important;
   }
 
-  /* Remove overflow clipping from all ancestors during print */
-  .prose-legal,
-  .prose-legal ~ *,
-  [class*="overflow"] {
-    overflow: visible !important;
-    max-height: none !important;
-    height: auto !important;
-  }
-
-  .prose-legal h1 {
+  #print-container h1 {
     font-size: 14pt;
     page-break-after: avoid;
   }
 
-  .prose-legal h2 {
+  #print-container h2 {
     font-size: 13pt;
     page-break-after: avoid;
   }
 
-  .prose-legal h3,
-  .prose-legal h4 {
+  #print-container h3,
+  #print-container h4 {
     page-break-after: avoid;
   }
 
-  .prose-legal p,
-  .prose-legal li {
+  #print-container p,
+  #print-container li {
     orphans: 3;
     widows: 3;
   }
 
-  .prose-legal table {
+  #print-container table {
     page-break-inside: avoid;
   }
 
-  .prose-legal th,
-  .prose-legal td {
+  #print-container th,
+  #print-container td {
     border-color: #000 !important;
   }
 
-  .prose-legal pre,
-  .prose-legal blockquote {
+  #print-container pre,
+  #print-container blockquote {
     page-break-inside: avoid;
   }
 
-  /* Hide shadows and decorative elements */
+  /* Remove shadows and decorative elements */
   .shadow-lg,
   .shadow-md {
     box-shadow: none !important;
