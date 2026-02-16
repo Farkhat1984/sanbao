@@ -391,9 +391,11 @@ export function streamMoonshot(
             currentMessages.push({
               role: "assistant",
               tool_calls: collectedCalls,
-              // When thinking is enabled, the API requires reasoning_content on assistant messages
+              // Kimi API requires reasoning_content on assistant messages when thinking is enabled.
+              // It rejects empty string "", so provide a minimal placeholder when model
+              // jumped straight to tool calls without producing reasoning content.
               ...(thinkingEnabled
-                ? { reasoning_content: turnReasoningContent || "" }
+                ? { reasoning_content: turnReasoningContent || "." }
                 : {}),
             });
 
