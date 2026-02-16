@@ -40,15 +40,45 @@ export async function PUT(req: Request) {
     "app_description",
   ]);
 
+  // Validate numeric settings to prevent NaN/Infinity/overflow
+  const NUMERIC_RANGES: Record<string, [number, number]> = {
+    smtp_port: [1, 65535],
+    max_file_upload_mb: [1, 500],
+  };
+  const BOOLEAN_KEYS = new Set([
+    "content_filter_enabled",
+    "maintenance_mode",
+    "registration_enabled",
+  ]);
+
   // body is { key: value, key2: value2, ... }
   for (const [key, value] of Object.entries(body)) {
     if (!ALLOWED_KEYS.has(key)) {
       return NextResponse.json({ error: `Недопустимый ключ настройки: ${key}` }, { status: 400 });
     }
+
+    let sanitized = String(value);
+
+    if (NUMERIC_RANGES[key]) {
+      const num = Number(sanitized);
+      const [min, max] = NUMERIC_RANGES[key];
+      if (!Number.isFinite(num) || num < min || num > max) {
+        return NextResponse.json(
+          { error: `Значение "${key}" должно быть числом от ${min} до ${max}` },
+          { status: 400 }
+        );
+      }
+      sanitized = String(Math.floor(num));
+    }
+
+    if (BOOLEAN_KEYS.has(key)) {
+      sanitized = sanitized === "true" || sanitized === "1" ? "true" : "false";
+    }
+
     await prisma.systemSetting.upsert({
       where: { key },
-      update: { value: String(value) },
-      create: { key, value: String(value) },
+      update: { value: sanitized },
+      create: { key, value: sanitized },
     });
   }
 

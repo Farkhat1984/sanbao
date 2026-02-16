@@ -133,7 +133,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const ttlSetting = await prisma.systemSetting.findUnique({
             where: { key: "session_ttl_hours" },
           });
-          const ttlHours = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
+          const parsed = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
+          const ttlHours = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 8760) : DEFAULT_SESSION_TTL_HOURS;
           const maxAge = ttlHours * 3600;
           const now = Math.floor(Date.now() / 1000);
           if (now - (token.iat as number) > maxAge) {

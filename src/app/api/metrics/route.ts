@@ -3,7 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { getRequestDurationMetrics } from "@/lib/request-metrics";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Allow Prometheus scraping with a bearer token, or require admin auth
+  const authHeader = req.headers.get("authorization");
+  const metricsToken = process.env.METRICS_TOKEN;
+  if (metricsToken && authHeader === `Bearer ${metricsToken}`) {
+    // Token auth for Prometheus — proceed
+  } else {
+    // Fallback: require admin session
+    const { requireAdmin } = await import("@/lib/admin");
+    const result = await requireAdmin();
+    if (result.error) return result.error;
+  }
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const hour = new Date(now.getTime() - 3600_000);
