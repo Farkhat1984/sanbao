@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, RotateCcw, Copy, Download, Check } from "lucide-react";
 import { useArticleStore } from "@/stores/articleStore";
+import { usePanelStore } from "@/stores/panelStore";
 import { cn } from "@/lib/utils";
 import { exportAsText } from "@/lib/export-utils";
 
@@ -65,7 +66,27 @@ function ArticleError({ error, onRetry }: { error: string; onRetry: () => void }
 
 export function ArticleContentView() {
   const { activeArticle, loading, error, retry } = useArticleStore();
+  const activeTabId = usePanelStore((s) => s.activeTabId);
+  const tabs = usePanelStore((s) => s.tabs);
   const [copied, setCopied] = useState(false);
+
+  // Sync activeArticle when panel tab switches
+  useEffect(() => {
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab || tab.kind !== "article" || !tab.articleKey) return;
+    const { activeArticle: current, cache } = useArticleStore.getState();
+    const currentKey = current ? `${current.code}/${current.article}` : null;
+    if (currentKey === tab.articleKey) return;
+    const cached = cache.get(tab.articleKey);
+    if (cached) {
+      useArticleStore.setState({ activeArticle: cached, loading: false, error: null });
+    } else {
+      const [code, article] = tab.articleKey.split("/");
+      if (code && article) {
+        useArticleStore.getState().openArticle(code, article);
+      }
+    }
+  }, [activeTabId, tabs]);
 
   if (loading) return <ArticleSkeleton />;
   if (error) return <ArticleError error={error} onRetry={retry} />;

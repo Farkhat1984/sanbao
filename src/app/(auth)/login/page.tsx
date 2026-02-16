@@ -20,18 +20,22 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Неверный email или пароль");
-    } else {
-      router.push("/chat");
+      if (result?.error) {
+        setError("Неверный email или пароль");
+      } else {
+        router.push("/chat");
+      }
+    } catch {
+      setError("Ошибка сети. Попробуйте позже.");
+    } finally {
+      setLoading(false);
     }
   };
 

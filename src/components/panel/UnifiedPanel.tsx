@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowLeft } from "lucide-react";
 import { usePanelStore } from "@/stores/panelStore";
@@ -21,7 +21,8 @@ export function UnifiedPanel() {
     closePanel,
   } = usePanelStore();
   const isMobile = useIsMobile();
-  const isDragging = useRef(false);
+  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Escape key to close
@@ -38,12 +39,13 @@ export function UnifiedPanel() {
     (e: React.MouseEvent) => {
       if (isMobile) return;
       e.preventDefault();
-      isDragging.current = true;
+      isDraggingRef.current = true;
+      setIsDragging(true);
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
 
       const handleMouseMove = (ev: MouseEvent) => {
-        if (!isDragging.current) return;
+        if (!isDraggingRef.current) return;
         // Find the parent main element (the flex container)
         const mainEl = panelRef.current?.parentElement;
         if (!mainEl) return;
@@ -55,7 +57,8 @@ export function UnifiedPanel() {
       };
 
       const handleMouseUp = () => {
-        isDragging.current = false;
+        isDraggingRef.current = false;
+        setIsDragging(false);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         document.removeEventListener("mousemove", handleMouseMove);
@@ -122,9 +125,8 @@ export function UnifiedPanel() {
           initial={{ width: 0, opacity: 0 }}
           animate={{ width: `${panelWidthPercent}%`, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          transition={springTransition}
+          transition={isDragging ? { duration: 0 } : springTransition}
           className="overflow-hidden shrink-0 relative"
-          style={{ width: `${panelWidthPercent}%` }}
         >
           {/* Resize handle */}
           <div

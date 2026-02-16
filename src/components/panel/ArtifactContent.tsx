@@ -1,9 +1,10 @@
 "use client";
 
 import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { usePanelStore } from "@/stores/panelStore";
 import { useChatStore } from "@/stores/chatStore";
 import { ArtifactTabs } from "@/components/artifacts/ArtifactTabs";
 import { DocumentPreview } from "@/components/artifacts/DocumentPreview";
@@ -40,8 +41,25 @@ export function ArtifactContent() {
     restoreVersion,
   } = useArtifactStore();
   const { setPendingInput } = useChatStore();
+  const activeTabId = usePanelStore((s) => s.activeTabId);
+  const tabs = usePanelStore((s) => s.tabs);
   const isMobile = useIsMobile();
   const [copied, setCopied] = useState(false);
+
+  // Sync activeArtifact when panel tab switches
+  useEffect(() => {
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab || tab.kind !== "artifact" || !tab.artifactId) return;
+    const { activeArtifact: current, artifacts } = useArtifactStore.getState();
+    if (current?.id === tab.artifactId) return;
+    const target = artifacts.find((a) => a.id === tab.artifactId);
+    if (target) {
+      useArtifactStore.setState({
+        activeArtifact: target,
+        activeTab: target.type === "CODE" ? "source" : "preview",
+      });
+    }
+  }, [activeTabId, tabs]);
   const [isExporting, setIsExporting] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);

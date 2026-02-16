@@ -12,13 +12,17 @@ export function openArtifactInPanel(artifact: ArtifactData) {
   const { openArtifact } = useArtifactStore.getState();
   openArtifact(artifact);
 
-  // Open a tab in the unified panel
+  // Use the tracked artifact (may differ from input if matched by title)
+  const tracked = useArtifactStore.getState().activeArtifact;
+  if (!tracked) return;
+
+  // Open a tab in the unified panel using tracked ID to avoid duplicates
   const { openTab } = usePanelStore.getState();
   openTab({
-    id: `artifact-${artifact.id}`,
+    id: `artifact-${tracked.id}`,
     kind: "artifact",
-    label: artifact.title,
-    artifactId: artifact.id,
+    label: tracked.title,
+    artifactId: tracked.id,
   });
 }
 
