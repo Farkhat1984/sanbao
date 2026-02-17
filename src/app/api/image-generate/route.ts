@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
-import { DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
+import { DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -25,11 +25,12 @@ export async function POST(req: Request) {
     }
 
     const imageModel = await resolveModel("IMAGE");
-    const apiUrl = imageModel
-      ? `${imageModel.provider.baseUrl}/images/generations`
-      : `${DEEPINFRA_BASE_URL}/images/generations`;
-    const apiKey = imageModel?.provider.apiKey || process.env.DEEPINFRA_API_KEY || "";
-    const modelId = imageModel?.modelId || DEFAULT_IMAGE_MODEL;
+    if (!imageModel) {
+      return NextResponse.json({ error: "Модель генерации изображений не настроена" }, { status: 503 });
+    }
+    const apiUrl = `${imageModel.provider.baseUrl}/images/generations`;
+    const apiKey = imageModel.provider.apiKey;
+    const modelId = imageModel.modelId;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("DeepInfra generation error:", err);
+      console.error("Image generation API error:", err);
       return NextResponse.json(
         { error: "Ошибка при генерации изображения" },
         { status: 502 }

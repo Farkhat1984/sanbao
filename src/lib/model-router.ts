@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { ModelCategory } from "@prisma/client";
 import { decrypt } from "@/lib/crypto";
-import { CACHE_TTL as CONSTANTS_CACHE_TTL, MOONSHOT_BASE_URL, DEFAULT_TEXT_MODEL, DEEPINFRA_BASE_URL, DEFAULT_IMAGE_MODEL } from "@/lib/constants";
+import { CACHE_TTL as CONSTANTS_CACHE_TTL } from "@/lib/constants";
 import { BoundedMap } from "@/lib/bounded-map";
 
 export interface ResolvedModel {
@@ -81,11 +81,6 @@ export async function resolveModel(
     if (pick) resolved = toResolvedModel(pick);
   }
 
-  // Fallback to env vars
-  if (!resolved) {
-    resolved = getEnvFallback(category);
-  }
-
   if (resolved) {
     cache.set(key, { model: resolved, expiresAt: Date.now() + CACHE_TTL });
   }
@@ -119,13 +114,7 @@ export async function getModelsForCategory(
     orderBy: [{ isDefault: "desc" }, { provider: { priority: "desc" } }],
   });
 
-  if (models.length > 0) {
-    return models.map(toResolvedModel);
-  }
-
-  // Fallback
-  const fallback = getEnvFallback(category);
-  return fallback ? [fallback] : [];
+  return models.map(toResolvedModel);
 }
 
 /** Invalidate cache (call after admin changes providers/models). */
@@ -171,50 +160,3 @@ function toResolvedModel(model: ModelWithProvider): ResolvedModel {
   };
 }
 
-function getEnvFallback(category: ModelCategory): ResolvedModel | null {
-  switch (category) {
-    case "TEXT":
-    case "CODE": {
-      const apiKey = process.env.MOONSHOT_API_KEY;
-      if (!apiKey) return null;
-      return {
-        provider: {
-          slug: "moonshot",
-          baseUrl: MOONSHOT_BASE_URL,
-          apiKey,
-        },
-        modelId: DEFAULT_TEXT_MODEL,
-        displayName: "Kimi K2.5",
-        category,
-        temperature: null,
-        topP: null,
-        maxTokens: null,
-        contextWindow: null,
-        supportsThinking: false,
-        maxThinkingTokens: null,
-      };
-    }
-    case "IMAGE": {
-      const apiKey = process.env.DEEPINFRA_API_KEY;
-      if (!apiKey) return null;
-      return {
-        provider: {
-          slug: "deepinfra",
-          baseUrl: DEEPINFRA_BASE_URL,
-          apiKey,
-        },
-        modelId: DEFAULT_IMAGE_MODEL,
-        displayName: "Flux Schnell",
-        category,
-        temperature: null,
-        topP: null,
-        maxTokens: null,
-        contextWindow: null,
-        supportsThinking: false,
-        maxThinkingTokens: null,
-      };
-    }
-    default:
-      return null;
-  }
-}

@@ -174,7 +174,7 @@ export default function AdminModelsPage() {
               ))}
             </select>
             <input
-              placeholder="Model ID (gpt-4o)"
+              placeholder="ID модели у провайдера"
               value={newModel.modelId}
               onChange={(e) => setNewModel({ ...newModel, modelId: e.target.value })}
               className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"

@@ -198,13 +198,14 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     contextInfo,
   } = options;
 
-  const isAnthropic = canUseProvider && provider === "anthropic";
-  let model;
-  if (isAnthropic) {
-    model = anthropic(resolvedModelId || "claude-sonnet-4-5-20250929");
-  } else {
-    model = openai(resolvedModelId || "gpt-4o");
+  if (!resolvedModelId) {
+    throw new Error("No model resolved from DB — configure models via /admin/models");
   }
+
+  const isAnthropic = canUseProvider && provider === "anthropic";
+  const model = isAnthropic
+    ? anthropic(resolvedModelId)
+    : openai(resolvedModelId);
 
   const result = streamText({
     model,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
-import { DEEPINFRA_BASE_URL, DEFAULT_IMAGE_EDIT_MODEL, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
+import { DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -48,19 +48,19 @@ export async function POST(req: Request) {
     const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
     const ext = mimeType.split("/")[1] || "png";
 
-    // Resolve image model for editing (fallback to Qwen Image Edit)
     const imageModel = await resolveModel("IMAGE");
-    const apiUrl = imageModel
-      ? `${imageModel.provider.baseUrl}/images/edits`
-      : `${DEEPINFRA_BASE_URL}/images/edits`;
-    const apiKey = imageModel?.provider.apiKey || process.env.DEEPINFRA_API_KEY || "";
+    if (!imageModel) {
+      return NextResponse.json({ error: "Модель редактирования изображений не настроена" }, { status: 503 });
+    }
+    const apiUrl = `${imageModel.provider.baseUrl}/images/edits`;
+    const apiKey = imageModel.provider.apiKey;
 
     // Build FormData for API
     const formData = new FormData();
     const blob = new Blob([imageBuffer], { type: mimeType });
     formData.append("image", blob, `image.${ext}`);
     formData.append("prompt", prompt);
-    formData.append("model", DEFAULT_IMAGE_EDIT_MODEL);
+    formData.append("model", imageModel.modelId);
     formData.append("n", String(DEFAULT_IMAGE_COUNT));
     formData.append("size", DEFAULT_IMAGE_SIZE);
 
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("DeepInfra error:", err);
+      console.error("Image edit API error:", err);
       return NextResponse.json(
         { error: "Ошибка при обработке изображения" },
         { status: 502 }

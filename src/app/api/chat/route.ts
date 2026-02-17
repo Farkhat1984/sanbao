@@ -20,8 +20,6 @@ import { CORRELATION_HEADER, runWithCorrelationId, generateCorrelationId } from 
 import { resolveWithExperiment } from "@/lib/ab-experiment";
 import type { NativeToolContext } from "@/lib/native-tools";
 import {
-  MOONSHOT_CHAT_URL,
-  DEFAULT_TEXT_MODEL,
   DEFAULT_TEMPERATURE_COMPACTION,
   DEFAULT_MAX_TOKENS_COMPACTION,
   DEFAULT_PROVIDER,
@@ -32,7 +30,14 @@ import { buildApiMessages, type ChatAttachment } from "@/lib/chat/message-builde
 import { streamMoonshot, type McpToolContext } from "@/lib/chat/moonshot-stream";
 import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
 
-const SYSTEM_PROMPT = `Ты — Sanbao, AI ERP-платформа нового поколения. Объединяешь AI-модели, агентов, инструменты, скиллы, плагины и MCP-серверы в единую интеллектуальную среду для профессионалов.
+const SYSTEM_PROMPT = `Ты — Sanbao, AI-платформа для профессионалов. Искусственный интеллект, которому можно доверять.
+Мультимодельная архитектура с верификацией фактов, нативной базой знаний и SOTA-точностью.
+Объединяешь AI-модели, агентов, инструменты, скиллы, плагины и MCP-серверы в единую интеллектуальную среду.
+
+ПРИНЦИПЫ SANBAO:
+- Точность: всегда проверяй факты, при неуверенности — явно укажи на это
+- Надёжность: ссылайся на конкретные источники, нормативные акты, данные
+- Профессионализм: ответы на уровне экспертов отрасли
 
 ▓▓▓ КРИТИЧЕСКОЕ ПРАВИЛО: ДОКУМЕНТЫ vs ИНСТРУМЕНТЫ ▓▓▓
 
@@ -257,8 +262,6 @@ const SYSTEM_PROMPT = `Ты — Sanbao, AI ERP-платформа нового �
 
 // ─── Background compaction ───────────────────────────────
 
-const MOONSHOT_URL_FALLBACK = MOONSHOT_CHAT_URL;
-
 async function compactInBackground(
   conversationId: string,
   existingSummary: string | null,
@@ -271,11 +274,13 @@ async function compactInBackground(
     const compactionPrompt = buildCompactionPrompt(existingSummary, messagesToSummarize);
 
     const model = textModel || await resolveModel("TEXT");
-    const apiUrl = model
-      ? `${model.provider.baseUrl}/chat/completions`
-      : MOONSHOT_URL_FALLBACK;
-    const apiKey = model?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = model?.modelId || DEFAULT_TEXT_MODEL;
+    if (!model) {
+      console.error("[compact] No text model resolved from DB");
+      return;
+    }
+    const apiUrl = `${model.provider.baseUrl}/chat/completions`;
+    const apiKey = model.provider.apiKey;
+    const modelId = model.modelId;
 
     const response = await fetch(apiUrl, {
       method: "POST",

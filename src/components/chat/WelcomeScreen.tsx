@@ -80,10 +80,10 @@ export function WelcomeScreen() {
               <Triangle className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">
-              Добро пожаловать в Sanbao
+              Sanbao AI
             </h2>
             <p className="text-sm text-text-secondary max-w-md">
-              Ваш универсальный AI-помощник. Создавайте контент, пишите код, ищите информацию и решайте любые задачи.
+              AI-платформа для профессионалов. Создавайте документы, анализируйте данные, автоматизируйте задачи с точностью, которой можно доверять.
             </p>
           </>
         )}

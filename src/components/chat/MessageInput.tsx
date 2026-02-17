@@ -1043,7 +1043,7 @@ export function MessageInput() {
             </span>
           )}
           <span className={cn("text-[10px] text-text-muted", isMobile && "ml-auto")}>
-            Kimi K2.5 · Sanbao может ошибаться
+            Sanbao AI
           </span>
         </div>
       </div>

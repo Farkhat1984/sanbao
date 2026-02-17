@@ -1,6 +1,6 @@
-// ─── Moonshot/Kimi K2.5 streaming handler ────────────────
-// Extracted from route.ts — handles SSE streaming with tool calling
-// (web search via $web_search, MCP tools, native tools).
+// ─── OpenAI-compatible SSE streaming handler ──────────────
+// Handles SSE streaming with tool calling for providers using
+// OpenAI-compatible API (web search via $web_search, MCP tools, native tools).
 
 import { callMcpTool } from "@/lib/mcp-client";
 import {
@@ -11,15 +11,10 @@ import {
 } from "@/lib/native-tools";
 import type { ResolvedModel } from "@/lib/model-router";
 import {
-  MOONSHOT_CHAT_URL,
-  DEFAULT_TEXT_MODEL,
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
   NATIVE_TOOL_MAX_TURNS,
 } from "@/lib/constants";
-
-// Resolved dynamically via model-router; kept as fallback constant
-const MOONSHOT_URL_FALLBACK = MOONSHOT_CHAT_URL;
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -112,12 +107,12 @@ export function streamMoonshot(
   } = options;
   const nativeToolDefs = getNativeToolDefinitions();
 
-  const apiUrl = textModel
-    ? `${textModel.provider.baseUrl}/chat/completions`
-    : MOONSHOT_URL_FALLBACK;
-  const apiKey =
-    textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-  const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
+  if (!textModel) {
+    throw new Error("No text model resolved from DB — configure models via /admin/models");
+  }
+  const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
+  const apiKey = textModel.provider.apiKey;
+  const modelId = textModel.modelId;
 
   const stream = new ReadableStream({
     async start(controller) {

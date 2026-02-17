@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
-import { MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL, DEFAULT_MAX_TOKENS_FIX, DEFAULT_TEMPERATURE_CODE_FIX } from "@/lib/constants";
+import { DEFAULT_MAX_TOKENS_FIX, DEFAULT_TEMPERATURE_CODE_FIX } from "@/lib/constants";
 
 const FIX_PROMPT = `You are a code fixer. You receive code that has a runtime error and must return ONLY the fixed code.
 
@@ -44,11 +44,12 @@ export async function POST(req: Request) {
 
   try {
     const textModel = await resolveModel("CODE");
-    const apiUrl = textModel
-      ? `${textModel.provider.baseUrl}/chat/completions`
-      : MOONSHOT_CHAT_URL;
-    const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
+    if (!textModel) {
+      return NextResponse.json({ error: "No code model configured" }, { status: 503 });
+    }
+    const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
+    const apiKey = textModel.provider.apiKey;
+    const modelId = textModel.modelId;
 
     const response = await fetch(apiUrl, {
       method: "POST",

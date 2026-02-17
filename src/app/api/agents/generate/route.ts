@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import {
-  VALID_ICONS, VALID_COLORS, MOONSHOT_CHAT_URL, DEFAULT_TEXT_MODEL,
+  VALID_ICONS, VALID_COLORS,
   DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
 } from "@/lib/constants";
 
@@ -47,11 +47,12 @@ export async function POST(req: Request) {
 
   try {
     const textModel = await resolveModel("TEXT");
-    const apiUrl = textModel
-      ? `${textModel.provider.baseUrl}/chat/completions`
-      : MOONSHOT_CHAT_URL;
-    const apiKey = textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
-    const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
+    if (!textModel) {
+      return NextResponse.json({ error: "Модель не настроена" }, { status: 503 });
+    }
+    const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
+    const apiKey = textModel.provider.apiKey;
+    const modelId = textModel.modelId;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => "");
-      console.error("Moonshot API error:", response.status, errText);
+      console.error("AI API error:", response.status, errText);
       throw new Error(`API error: ${response.status}`);
     }
 

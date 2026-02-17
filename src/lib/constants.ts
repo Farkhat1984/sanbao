@@ -1,5 +1,5 @@
 export const APP_NAME = "Sanbao";
-export const APP_DESCRIPTION = "универсальный AI-ассистент";
+export const APP_DESCRIPTION = "AI-платформа для профессионалов";
 
 export const LEGAL_TOOL_NAMES = {
   createContract: "createContract",
@@ -72,15 +72,8 @@ export const DEFAULT_MAX_TOKENS_COMPACTION = 2048;
 export const DEFAULT_TOP_P = 0.95;
 export const DEFAULT_CONTEXT_WINDOW = 128000;
 
-// ─── Fallback API URLs ───
-export const MOONSHOT_BASE_URL = "https://api.moonshot.ai/v1";
-export const MOONSHOT_CHAT_URL = `${MOONSHOT_BASE_URL}/chat/completions`;
-export const DEEPINFRA_BASE_URL = "https://api.deepinfra.com/v1/openai";
-
-// ─── Fallback Model IDs ───
-export const DEFAULT_TEXT_MODEL = "kimi-k2.5";
-export const DEFAULT_IMAGE_MODEL = "black-forest-labs/FLUX-1-schnell";
-export const DEFAULT_IMAGE_EDIT_MODEL = "Qwen/Qwen-Image-Edit";
+// ─── Fallback provider (used only when no model resolved from DB) ───
+export const FALLBACK_PROVIDER_SLUG = "deepinfra";
 
 // ─── File limits ───
 export const MAX_FILE_SIZE_PARSE = 20 * 1024 * 1024; // 20MB
