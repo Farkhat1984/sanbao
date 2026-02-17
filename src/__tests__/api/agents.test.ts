@@ -99,49 +99,40 @@ function makeFakeAgent(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// All 12 system agent IDs
+// All 9 system agent IDs (matches seed.ts)
 const SYSTEM_AGENT_IDS = [
   "system-sanbao-agent",
   "system-femida-agent",
+  "system-broker-agent",
+  "system-accountant-agent",
   "system-github-agent",
   "system-sql-agent",
   "system-researcher-agent",
   "system-filemanager-agent",
   "system-qa-agent",
-  "system-devops-agent",
-  "system-notion-agent",
-  "system-automation-agent",
-  "system-marketer-agent",
-  "system-dataarch-agent",
 ];
 
 const SYSTEM_AGENTS_DATA = [
   { id: "system-sanbao-agent", name: "Sanbao", icon: "Bot", iconColor: "#4F6EF7", description: "универсальный AI-ассистент" },
-  { id: "system-femida-agent", name: "Фемида", icon: "Scale", iconColor: "#7C3AED", description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК" },
+  { id: "system-femida-agent", name: "Нормативно правовые акты", icon: "Scale", iconColor: "#7C3AED", description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан" },
+  { id: "system-broker-agent", name: "Таможенный брокер", icon: "Package", iconColor: "#0EA5E9", description: "AI-ассистент по таможенному оформлению, классификации товаров и расчёту пошлин ЕАЭС" },
+  { id: "system-accountant-agent", name: "Бухгалтер", icon: "Calculator", iconColor: "#059669", description: "AI-ассистент по бухгалтерскому и налоговому учёту для Республики Казахстан" },
   { id: "system-github-agent", name: "GitHub Разработчик", icon: "Code", iconColor: "#4F6EF7", description: "code review, управление PR, issues и репозиториями через GitHub MCP" },
   { id: "system-sql-agent", name: "SQL Аналитик", icon: "FileSearch", iconColor: "#10B981", description: "SQL запросы, анализ данных, оптимизация и отчёты через PostgreSQL MCP" },
   { id: "system-researcher-agent", name: "Веб-Исследователь", icon: "Globe", iconColor: "#06B6D4", description: "глубокое исследование тем, fact-checking и аналитика через Brave Search MCP" },
   { id: "system-filemanager-agent", name: "Файловый Ассистент", icon: "FileText", iconColor: "#F59E0B", description: "работа с файлами и директориями через Filesystem MCP" },
   { id: "system-qa-agent", name: "QA Инженер", icon: "ShieldCheck", iconColor: "#EF4444", description: "тестирование веб-приложений и автоматизация через Playwright MCP" },
-  { id: "system-devops-agent", name: "DevOps Мастер", icon: "Building", iconColor: "#7C3AED", description: "Docker контейнеры, деплой и мониторинг через Docker MCP" },
-  { id: "system-notion-agent", name: "Менеджер знаний", icon: "BookOpen", iconColor: "#EC4899", description: "организация знаний, проекты и документация через Notion MCP" },
-  { id: "system-automation-agent", name: "Автоматизатор", icon: "Lightbulb", iconColor: "#6366F1", description: "workflow-автоматизации и интеграции через n8n MCP" },
-  { id: "system-marketer-agent", name: "Контент-маркетолог", icon: "Brain", iconColor: "#F59E0B", description: "SEO-анализ, исследование рынка и контент-стратегия через Exa MCP" },
-  { id: "system-dataarch-agent", name: "Архитектор данных", icon: "Shield", iconColor: "#06B6D4", description: "проектирование БД, RLS, auth и real-time через Supabase MCP" },
 ];
 
 const MCP_SERVER_IDS = [
-  "mcp-fragmentdb",
+  "mcp-lawyer",
+  "mcp-broker",
+  "mcp-accountingdb",
   "mcp-github",
   "mcp-postgres",
   "mcp-brave-search",
   "mcp-filesystem",
   "mcp-playwright",
-  "mcp-docker",
-  "mcp-notion",
-  "mcp-n8n",
-  "mcp-exa",
-  "mcp-supabase",
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -180,7 +171,7 @@ describe("GET /api/agents", () => {
     expect(data.userAgents).toHaveLength(1);
   });
 
-  it("should return all 12 system agents when seeded", async () => {
+  it("should return all 9 system agents when seeded", async () => {
     const agents = SYSTEM_AGENTS_DATA.map((a) =>
       makeFakeAgent({ ...a, isSystem: true, status: "APPROVED" })
     );
@@ -192,7 +183,7 @@ describe("GET /api/agents", () => {
     const res = await listAgents();
     const data = await res.json();
 
-    expect(data.systemAgents).toHaveLength(12);
+    expect(data.systemAgents).toHaveLength(9);
     const ids = data.systemAgents.map((a: { id: string }) => a.id);
     for (const expectedId of SYSTEM_AGENT_IDS) {
       expect(ids).toContain(expectedId);
@@ -253,7 +244,7 @@ describe("POST /api/agents", () => {
       iconColor: "#4F6EF7",
     });
     const res = await createAgent(req);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.id).toBe("new-agent");
   });
@@ -584,8 +575,8 @@ describe("DELETE /api/agents/[id]", () => {
 // ═══════════════════════════════════════════════════════════
 
 describe("System Agents integrity", () => {
-  it("should have exactly 12 system agent IDs defined", () => {
-    expect(SYSTEM_AGENT_IDS).toHaveLength(12);
+  it("should have exactly 9 system agent IDs defined", () => {
+    expect(SYSTEM_AGENT_IDS).toHaveLength(9);
   });
 
   it("all system agents should have system- prefix", () => {
@@ -601,10 +592,8 @@ describe("System Agents integrity", () => {
 
   it("all system agents should have valid icon values", () => {
     const VALID_ICONS = [
-      "Bot", "Scale", "Briefcase", "Shield", "BookOpen", "Gavel", "FileText",
-      "Building", "User", "HeartPulse", "GraduationCap", "Landmark",
-      "Code", "MessageSquare", "Globe", "Lightbulb", "FileSearch",
-      "ShieldCheck", "ClipboardCheck", "Brain", "Triangle", "Sparkles",
+      "Bot", "Scale", "Package", "Calculator", "FileText",
+      "Code", "Globe", "FileSearch", "ShieldCheck",
     ];
     for (const agent of SYSTEM_AGENTS_DATA) {
       expect(VALID_ICONS).toContain(agent.icon);
@@ -613,8 +602,8 @@ describe("System Agents integrity", () => {
 
   it("all system agents should have valid color values", () => {
     const VALID_COLORS = [
-      "#4F6EF7", "#7C3AED", "#10B981", "#F59E0B",
-      "#EF4444", "#EC4899", "#06B6D4", "#6366F1",
+      "#4F6EF7", "#7C3AED", "#0EA5E9", "#059669",
+      "#10B981", "#F59E0B", "#EF4444", "#06B6D4",
     ];
     for (const agent of SYSTEM_AGENTS_DATA) {
       expect(VALID_COLORS).toContain(agent.iconColor);
@@ -632,24 +621,21 @@ describe("System Agents integrity", () => {
     expect(unique.size).toBe(MCP_SERVER_IDS.length);
   });
 
-  it("should have 11 MCP servers (1 FragmentDB + 10 new)", () => {
-    expect(MCP_SERVER_IDS).toHaveLength(11);
+  it("should have 8 MCP servers (lawyer, broker, accountingdb + 5 specialized)", () => {
+    expect(MCP_SERVER_IDS).toHaveLength(8);
   });
 
-  it("each new agent (not Sanbao) should have a matching MCP server", () => {
-    // Sanbao doesn't have MCP, Femida has FragmentDB, 10 new have their own
+  it("each agent (not Sanbao) should have a matching MCP server", () => {
+    // Sanbao doesn't have MCP; НПА→lawyer, Broker→broker, Бухгалтер→accountingdb, 5 specialized
     const agentMcpMap: Record<string, string> = {
-      "system-femida-agent": "mcp-fragmentdb",
+      "system-femida-agent": "mcp-lawyer",
+      "system-broker-agent": "mcp-broker",
+      "system-accountant-agent": "mcp-accountingdb",
       "system-github-agent": "mcp-github",
       "system-sql-agent": "mcp-postgres",
       "system-researcher-agent": "mcp-brave-search",
       "system-filemanager-agent": "mcp-filesystem",
       "system-qa-agent": "mcp-playwright",
-      "system-devops-agent": "mcp-docker",
-      "system-notion-agent": "mcp-notion",
-      "system-automation-agent": "mcp-n8n",
-      "system-marketer-agent": "mcp-exa",
-      "system-dataarch-agent": "mcp-supabase",
     };
     for (const [agentId, mcpId] of Object.entries(agentMcpMap)) {
       expect(SYSTEM_AGENT_IDS).toContain(agentId);
@@ -705,11 +691,13 @@ describe("Seed data quality", () => {
     }
   });
 
-  it("new agents (non-Sanbao/Femida) should mention MCP in description", () => {
-    const newAgents = SYSTEM_AGENTS_DATA.filter(
-      (a) => a.id !== "system-sanbao-agent" && a.id !== "system-femida-agent"
-    );
-    for (const agent of newAgents) {
+  it("specialized agents should mention MCP in description", () => {
+    const specializedIds = [
+      "system-github-agent", "system-sql-agent", "system-researcher-agent",
+      "system-filemanager-agent", "system-qa-agent",
+    ];
+    const specialized = SYSTEM_AGENTS_DATA.filter((a) => specializedIds.includes(a.id));
+    for (const agent of specialized) {
       expect(agent.description.toLowerCase()).toContain("mcp");
     }
   });

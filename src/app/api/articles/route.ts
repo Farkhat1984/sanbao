@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { callMcpTool } from "@/lib/mcp-client";
 
-const FRAGMENTDB_URL =
-  process.env.FRAGMENTDB_MCP_URL || "http://localhost:8120/mcp";
-const FRAGMENTDB_TOKEN = process.env.FRAGMENTDB_MCP_TOKEN || null;
+const LAWYER_URL =
+  process.env.LAWYER_MCP_URL || "http://localhost:8120/lawyer";
+const LAWYER_TOKEN = process.env.AI_CORTEX_AUTH_TOKEN || null;
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { result, error } = await callMcpTool(
-    FRAGMENTDB_URL,
+    LAWYER_URL,
     "STREAMABLE_HTTP",
-    FRAGMENTDB_TOKEN,
+    LAWYER_TOKEN,
     "get_article",
     { code, article },
     { userId: session.user.id }
