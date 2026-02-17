@@ -502,6 +502,20 @@ export async function POST(req: Request) {
     }
   }
 
+  // Deduplicate MCP tools by name (API rejects duplicate function names)
+  {
+    const seen = new Set<string>();
+    const deduped: McpToolContext[] = [];
+    for (const tool of agentMcpTools) {
+      if (!seen.has(tool.name)) {
+        seen.add(tool.name);
+        deduped.push(tool);
+      }
+    }
+    agentMcpTools.length = 0;
+    agentMcpTools.push(...deduped);
+  }
+
   // Cap MCP tools to prevent unbounded growth
   const MAX_MCP_TOOLS = 100;
   if (agentMcpTools.length > MAX_MCP_TOOLS) {
