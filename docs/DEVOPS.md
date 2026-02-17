@@ -203,9 +203,30 @@ curl -s "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records" \
 
 ---
 
-## Запуск / Рестарт
+## Деплой и рестарт
 
-### Server 1 — полный рестарт
+### Скрипт `scripts/deploy.sh`
+
+**Основной способ деплоя** — через скрипт, который обеспечивает zero-downtime:
+
+```bash
+./scripts/deploy.sh              # Full rebuild (build + restart all + healthcheck)
+./scripts/deploy.sh app          # Rebuild only app (rolling restart) ← рекомендуется
+./scripts/deploy.sh restart      # Restart without rebuild
+./scripts/deploy.sh status       # Show container status
+./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
+```
+
+**Что делает скрипт автоматически:**
+1. **Проверяет Server 2 cloudflared** — если запущен, останавливает (предотвращает 503 от Cloudflare LB split)
+2. **Rolling restart** (команда `app`): оставляет 1 старый контейнер, запускает новые, ждёт healthy, потом убирает старый
+3. **Healthcheck** — ждёт до 3 минут пока N контейнеров станут healthy
+4. **Nginx soft reload** — `nginx -s reload` вместо restart (без прерывания соединений)
+5. **Cloudflare cache purge** — автоматически очищает CDN кеш
+
+> **ВАЖНО:** НЕ деплоить вручную через `docker compose up -d app` — это убивает все 3 реплики одновременно и вызывает даунтайм 60+ секунд! Всегда использовать `./scripts/deploy.sh app`.
+
+### Server 1 — полный рестарт (ручной, если скрипт недоступен)
 
 ```bash
 ssh metadmin@128.127.102.170 -p 22222
@@ -213,11 +234,12 @@ cd ~/faragj/sanbao
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-### Server 1 — рестарт только приложения
+### Server 1 — рестарт только приложения (ручной)
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d app
-docker compose -f docker-compose.prod.yml restart nginx
+docker compose -f docker-compose.prod.yml build app
+docker compose -f docker-compose.prod.yml up -d app
+docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
 ```
 
 ### Server 2 — полный рестарт
@@ -343,6 +365,7 @@ sanbao/
 │   ├── deploy.yml                  # K8s deploy (GHCR + rollout)
 │   └── deploy-server.yml           # SSH deploy Server 1 + Server 2 + TG
 ├── scripts/
+│   ├── deploy.sh                   # Zero-downtime deploy (rolling restart)
 │   ├── pg-backup.sh                # PostgreSQL → S3 бекап
 │   ├── start-mcp-servers.sh        # Запуск 5 MCP серверов (dev)
 │   └── upload-static.sh            # Static → S3/CDN
@@ -435,6 +458,34 @@ curl -s http://localhost:3004/api/ready
 **Проверка тоннеля (метрики):**
 ```bash
 curl -s http://localhost:20241/metrics | grep -E 'total_requests|request_errors|ha_connections'
+```
+
+### Сайт упал после деплоя (502/503)
+
+**Симптомы:** после `docker compose up -d app` или `deploy.sh` сайт возвращает 502 или 503.
+
+**Причина:** старый способ деплоя (`docker compose up -d app`) убивает ВСЕ 3 реплики одновременно и создаёт новые. Новые контейнеры имеют `start_period: 60s` — пока они не прошли healthcheck, Nginx получает 502, а если cloudflared на Server 2 ещё и запущен, Cloudflare балансирует часть трафика туда → 503.
+
+**Решение:**
+1. Всегда деплоить через `./scripts/deploy.sh app` — он делает rolling restart
+2. Скрипт автоматически останавливает cloudflared на Server 2 перед деплоем
+3. Если контейнеры уже упали:
+```bash
+# Проверить состояние
+docker compose -f docker-compose.prod.yml ps
+# Поднять контейнеры
+docker compose -f docker-compose.prod.yml up -d app
+# Подождать ~60с и проверить
+curl -s http://localhost:3004/api/ready
+# Перезагрузить nginx
+docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
+```
+
+**Проверить Server 2 cloudflared:**
+```bash
+ssh faragj@46.225.122.142 "docker ps --format '{{.Names}}' | grep cloudflared"
+# Если запущен — остановить:
+ssh faragj@46.225.122.142 "cd ~/faragj/deploy && docker compose -f docker-compose.failover.yml stop cloudflared"
 ```
 
 ### SSL "unrecognized name" на origin:443

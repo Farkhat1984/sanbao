@@ -2,12 +2,12 @@
 set -e
 
 # ─── Sanbao Deploy Script ───────────────────────────────────────────────────
-# Builds and deploys to production Docker on the current server.
-# Reads DEVOPS.md for full infrastructure docs.
+# Zero-downtime deploy for production Docker environment.
+# See docs/DEVOPS.md for full infrastructure docs.
 #
 # Usage:
 #   ./scripts/deploy.sh              # Full rebuild (build + restart all)
-#   ./scripts/deploy.sh app          # Rebuild only app containers
+#   ./scripts/deploy.sh app          # Rebuild only app (rolling restart)
 #   ./scripts/deploy.sh restart      # Restart without rebuild
 #   ./scripts/deploy.sh status       # Show container status
 #   ./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
@@ -16,9 +16,12 @@ set -e
 cd "$(dirname "$0")/.."
 COMPOSE="docker compose -f docker-compose.prod.yml"
 
-# Cloudflare cache purge (credentials from Server 2 deploy env)
+# Cloudflare cache purge
 CF_API_TOKEN="${CF_API_TOKEN:-ympF_5OJdcmeFAZCrb3As2ArTQhg_5lYQ4nCCxDS}"
 CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
+
+# Server 2 SSH (for cloudflared check)
+SERVER2_SSH="faragj@46.225.122.142"
 
 purge_cf_cache() {
   echo "=== Purging Cloudflare cache ==="
@@ -33,58 +36,116 @@ purge_cf_cache() {
   fi
 }
 
+# Check and stop cloudflared on Server 2 if running (prevents 503 from LB split)
+check_server2_cloudflared() {
+  echo "=== Checking Server 2 cloudflared ==="
+  S2_CF=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$SERVER2_SSH" \
+    "docker ps --format '{{.Names}}' 2>/dev/null | grep cloudflared" 2>/dev/null || true)
+  if [ -n "$S2_CF" ]; then
+    echo "  WARNING: cloudflared running on Server 2 ($S2_CF)"
+    echo "  Stopping to prevent Cloudflare load-balancing split..."
+    ssh -o ConnectTimeout=5 "$SERVER2_SSH" \
+      "cd ~/faragj/deploy && docker compose -f docker-compose.failover.yml stop cloudflared" 2>/dev/null || true
+    echo "  Server 2 cloudflared stopped"
+    sleep 3
+  else
+    echo "  OK — Server 2 cloudflared not running"
+  fi
+}
+
+# Wait for N healthy app containers (max wait ~3 min)
+wait_for_app_healthy() {
+  local NEED=${1:-3}
+  local MAX_WAIT=${2:-36}  # 36 * 5s = 180s = 3 min
+  echo "=== Waiting for $NEED healthy app container(s) ==="
+  for i in $(seq 1 "$MAX_WAIT"); do
+    HEALTHY=$($COMPOSE ps app --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
+    TOTAL=$($COMPOSE ps app -q 2>/dev/null | wc -l)
+    if [ "$HEALTHY" -ge "$NEED" ]; then
+      echo "  App healthy! ($HEALTHY/$TOTAL containers)"
+      return 0
+    fi
+    echo "  [$i/$MAX_WAIT] healthy: $HEALTHY/$TOTAL, waiting..."
+    sleep 5
+  done
+  echo "  WARNING: only $HEALTHY/$TOTAL app containers healthy after timeout"
+  return 1
+}
+
 case "${1:-full}" in
 
   full)
     echo "=== Full rebuild & deploy ==="
+    check_server2_cloudflared
     npm run build
-    $COMPOSE up --build -d
-    echo ""
-    echo "=== Waiting for health checks ==="
-    for i in $(seq 1 30); do
-      HEALTHY=$($COMPOSE ps --format json 2>/dev/null | grep -c '"healthy"' || true)
-      TOTAL=$($COMPOSE ps -q 2>/dev/null | wc -l)
-      echo "  [$i/30] healthy: $HEALTHY / $TOTAL"
-      if [ "$HEALTHY" -ge "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
-        echo ""
-        echo "=== All containers healthy ==="
-        purge_cf_cache
-        $COMPOSE ps
-        exit 0
-      fi
-      sleep 5
-    done
-    echo ""
-    echo "=== WARNING: Not all containers healthy ==="
+    $COMPOSE build app
+    $COMPOSE up -d
+    wait_for_app_healthy 3 36
+    purge_cf_cache
     $COMPOSE ps
-    exit 1
     ;;
 
   app)
-    echo "=== Rebuild app only ==="
+    echo "=== Rebuild app (rolling restart) ==="
+    check_server2_cloudflared
     npm run build
-    $COMPOSE up --build -d app
-    sleep 5
-    $COMPOSE restart nginx
+
+    # 1. Build new Docker image (no container changes yet)
+    echo "--- Building Docker image ---"
+    $COMPOSE build app
+
+    # 2. Get current container IDs before recreating
+    OLD_IDS=$($COMPOSE ps app -q 2>/dev/null || true)
+    OLD_COUNT=$(echo "$OLD_IDS" | grep -c . || echo 0)
+
+    if [ "$OLD_COUNT" -gt 1 ]; then
+      # Rolling restart: scale down to 1, then scale back up
+      # This keeps at least 1 container alive during the transition
+      echo "--- Rolling restart: keeping service alive ---"
+
+      # Scale to 1 old container (keep serving while we rebuild)
+      KEEP=$(echo "$OLD_IDS" | head -1)
+      REMOVE=$(echo "$OLD_IDS" | tail -n +2)
+      for CID in $REMOVE; do
+        docker stop "$CID" --time 15 >/dev/null 2>&1 || true
+        docker rm "$CID" >/dev/null 2>&1 || true
+      done
+      echo "  Scaled down to 1 old container ($KEEP)"
+
+      # Start 2 new containers with new image
+      $COMPOSE up -d --no-deps --no-build --scale app=3 app 2>/dev/null
+      echo "  Starting 2 new containers..."
+      wait_for_app_healthy 2 24  # Wait for 2 new to be healthy
+
+      # Now stop the last old container (new ones are healthy)
+      docker stop "$KEEP" --time 15 >/dev/null 2>&1 || true
+      docker rm "$KEEP" >/dev/null 2>&1 || true
+
+      # Ensure we have 3 replicas running
+      $COMPOSE up -d --no-deps --no-build --scale app=3 app 2>/dev/null
+      wait_for_app_healthy 3 24
+    else
+      # Fresh start or single container — just bring up
+      echo "--- Starting app containers ---"
+      $COMPOSE up -d --no-deps --no-build app
+      wait_for_app_healthy 1 24
+    fi
+
+    # 3. Reload nginx to pick up new upstreams (soft reload, no restart)
+    echo "--- Reloading nginx ---"
+    $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || $COMPOSE restart nginx
+
+    purge_cf_cache
     echo ""
-    echo "=== Waiting for app health ==="
-    for i in $(seq 1 20); do
-      if $COMPOSE ps app --format json 2>/dev/null | grep -q '"healthy"'; then
-        echo "  App healthy!"
-        purge_cf_cache
-        $COMPOSE ps
-        exit 0
-      fi
-      echo "  [$i/20] waiting..."
-      sleep 5
-    done
-    echo "  WARNING: app not healthy yet"
     $COMPOSE ps
     ;;
 
   restart)
     echo "=== Restart (no rebuild) ==="
-    $COMPOSE restart
+    check_server2_cloudflared
+    $COMPOSE restart app
+    wait_for_app_healthy 3 24
+    $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
     $COMPOSE ps
     ;;
 
