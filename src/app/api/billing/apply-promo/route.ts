@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { code } = await req.json();
+  const { code, planId } = await req.json();
   if (!code || typeof code !== "string") {
     return NextResponse.json({ error: "Промокод обязателен" }, { status: 400 });
   }
@@ -56,6 +56,17 @@ export async function POST(req: Request) {
   const promo = await prisma.promoCode.findUnique({
     where: { code: upperCode },
   });
+
+  // Validate plan restriction: if promo is tied to a specific plan, reject mismatches
+  if (promo?.planId && planId && promo.planId !== planId) {
+    // Rollback the usedCount increment since the promo doesn't apply
+    await prisma.$executeRaw`
+      UPDATE "PromoCode"
+      SET "usedCount" = GREATEST("usedCount" - 1, 0)
+      WHERE code = ${upperCode}
+    `;
+    return NextResponse.json({ error: "Промокод не применим к выбранному тарифу" }, { status: 400 });
+  }
 
   return NextResponse.json({
     discount: promo?.discount ?? 0,

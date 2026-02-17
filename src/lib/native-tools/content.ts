@@ -6,7 +6,7 @@ import { prisma } from "../prisma";
 registerNativeTool({
   name: "read_knowledge",
   description:
-    "Ищет информацию в файлах знаний текущего агента. Используй когда нужно найти данные из загруженных документов (API-схемы, инструкции, справочники).",
+    "Ищет информацию в файлах знаний агента и в пользовательских файлах. Используй когда нужно найти данные из загруженных документов (API-схемы, инструкции, справочники, заметки пользователя).",
   parameters: {
     type: "object",
     properties: {
@@ -18,29 +18,36 @@ registerNativeTool({
     required: ["query"],
   },
   async execute(args, ctx) {
-    if (!ctx.agentId) {
-      return JSON.stringify({ error: "Инструмент доступен только в контексте агента" });
-    }
-
     const query = (args.query as string).toLowerCase();
     const MAX_FILES = 20;
     const MAX_RESPONSE_SIZE = 30_000; // ~30KB total response cap
 
-    const files = await prisma.agentFile.findMany({
-      where: { agentId: ctx.agentId, extractedText: { not: null } },
-      select: { id: true, fileName: true, extractedText: true },
+    // Search agent files (if in agent context)
+    const agentFiles = ctx.agentId
+      ? await prisma.agentFile.findMany({
+          where: { agentId: ctx.agentId, extractedText: { not: null } },
+          select: { id: true, fileName: true, extractedText: true },
+          take: MAX_FILES,
+        })
+      : [];
+
+    // Search user files (always available)
+    const userFiles = await prisma.userFile.findMany({
+      where: { userId: ctx.userId },
+      select: { id: true, name: true, content: true },
       take: MAX_FILES,
     });
 
-    if (files.length === 0) {
-      return JSON.stringify({ results: [], message: "У агента нет файлов знаний" });
+    if (agentFiles.length === 0 && userFiles.length === 0) {
+      return JSON.stringify({ results: [], message: "Нет доступных файлов знаний" });
     }
 
     // Substring search with context window
-    const results: Array<{ fileName: string; snippets: string[] }> = [];
+    const results: Array<{ fileName: string; source: string; snippets: string[] }> = [];
     let totalSize = 0;
 
-    for (const file of files) {
+    // Search agent files
+    for (const file of agentFiles) {
       if (totalSize >= MAX_RESPONSE_SIZE) break;
 
       const text = file.extractedText || "";
@@ -52,7 +59,6 @@ registerNativeTool({
         const idx = lower.indexOf(query, pos);
         if (idx === -1) break;
 
-        // Extract ~300 chars around the match
         const start = Math.max(0, idx - 150);
         const end = Math.min(text.length, idx + query.length + 150);
         const snippet =
@@ -65,13 +71,42 @@ registerNativeTool({
       }
 
       if (snippets.length > 0) {
-        results.push({ fileName: file.fileName, snippets });
+        results.push({ fileName: file.fileName, source: "agent", snippets });
+      }
+    }
+
+    // Search user files
+    for (const file of userFiles) {
+      if (totalSize >= MAX_RESPONSE_SIZE) break;
+
+      const text = file.content || "";
+      const lower = text.toLowerCase();
+      const snippets: string[] = [];
+      let pos = 0;
+
+      while (snippets.length < 5 && totalSize < MAX_RESPONSE_SIZE) {
+        const idx = lower.indexOf(query, pos);
+        if (idx === -1) break;
+
+        const start = Math.max(0, idx - 150);
+        const end = Math.min(text.length, idx + query.length + 150);
+        const snippet =
+          (start > 0 ? "..." : "") +
+          text.slice(start, end) +
+          (end < text.length ? "..." : "");
+        snippets.push(snippet);
+        totalSize += snippet.length;
+        pos = idx + query.length;
+      }
+
+      if (snippets.length > 0) {
+        results.push({ fileName: file.name, source: "user", snippets });
       }
     }
 
     return JSON.stringify({
       query,
-      filesSearched: files.length,
+      filesSearched: agentFiles.length + userFiles.length,
       results,
     });
   },

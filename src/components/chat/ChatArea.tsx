@@ -12,6 +12,7 @@ import { ThinkingIndicator } from "./ThinkingIndicator";
 import { ContextIndicator } from "./ContextIndicator";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
+import { SanbaoFact } from "./SanbaoFact";
 
 export function ChatArea() {
   const { messages, isStreaming, streamingPhase, streamingToolName, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
@@ -151,6 +152,12 @@ export function ChatArea() {
       </div>
 
       <ClarifyModal />
+
+      {/* Historical facts about Zheng He during loading */}
+      <SanbaoFact
+        isVisible={isStreaming && !!streamingPhase}
+        messageCount={messages.length}
+      />
     </div>
   );
 }

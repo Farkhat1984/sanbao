@@ -126,7 +126,7 @@ describe("Conversations API", () => {
       } as never);
 
       const res = await POST(makeRequest({ title: "My Chat" }));
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
       const body = await res.json();
       expect(body.id).toBe("new-conv");
       expect(body.title).toBe("My Chat");
@@ -182,10 +182,13 @@ describe("Conversations API", () => {
       const res = await POST(makeRequest({ title: "Admin chat" }));
       // count should NOT be called for admin
       expect(prisma.conversation.count).not.toHaveBeenCalled();
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
     });
 
     it("should associate agent if agentId provided", async () => {
+      vi.mocked(prisma.agent.findFirst).mockResolvedValueOnce({
+        id: "agent-1",
+      } as never);
       vi.mocked(prisma.conversation.create).mockResolvedValueOnce({
         id: "agent-conv",
         title: "Agent Chat",

@@ -6,6 +6,7 @@ import { DEFAULT_SMTP_PORT, DEFAULT_EMAIL_FROM } from "@/lib/constants";
 // ─── SMTP Transport ─────────────────────────────────────
 
 let transporter: nodemailer.Transporter | null = null;
+let cachedFrom: string | null = null;
 
 async function getTransporter() {
   if (transporter) return transporter;
@@ -15,16 +16,18 @@ async function getTransporter() {
   let port = parseInt(process.env.SMTP_PORT || String(DEFAULT_SMTP_PORT), 10);
   let user = process.env.SMTP_USER;
   let pass = process.env.SMTP_PASS;
+  let from = process.env.SMTP_FROM;
 
   try {
     const settings = await prisma.systemSetting.findMany({
-      where: { key: { in: ["smtp_host", "smtp_port", "smtp_user", "smtp_pass"] } },
+      where: { key: { in: ["smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from"] } },
     });
     const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
     if (map.smtp_host) host = map.smtp_host;
     if (map.smtp_port) port = parseInt(map.smtp_port, 10);
     if (map.smtp_user) user = map.smtp_user;
-    if (map.smtp_pass) pass = map.smtp_pass;
+    if (map.smtp_password) pass = map.smtp_password;
+    if (map.smtp_from) from = map.smtp_from;
   } catch {
     // DB not available, use env vars
   }
@@ -32,6 +35,8 @@ async function getTransporter() {
   if (!host || !user || !pass) {
     return null;
   }
+
+  cachedFrom = from || user || DEFAULT_EMAIL_FROM;
 
   transporter = nodemailer.createTransport({
     host,
@@ -46,6 +51,7 @@ async function getTransporter() {
 /** Reset transporter (after config changes from admin). */
 export function resetTransporter() {
   transporter = null;
+  cachedFrom = null;
 }
 
 // ─── Email sending ──────────────────────────────────────
@@ -62,7 +68,7 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   const { to, subject, html, text, type, userId, metadata } = options;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || DEFAULT_EMAIL_FROM;
+  const from = cachedFrom || process.env.SMTP_FROM || process.env.SMTP_USER || DEFAULT_EMAIL_FROM;
 
   // Log the attempt
   const log = await prisma.emailLog.create({

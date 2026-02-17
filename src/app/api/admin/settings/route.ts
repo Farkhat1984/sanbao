@@ -38,6 +38,7 @@ export async function PUT(req: Request) {
     "max_file_upload_mb",
     "app_name",
     "app_description",
+    "system_prompt_global",
   ]);
 
   // Validate numeric settings to prevent NaN/Infinity/overflow

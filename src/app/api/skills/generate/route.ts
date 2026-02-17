@@ -32,7 +32,11 @@ const SYSTEM_GEN_PROMPT = `Ты — мета-промпт-инженер, спе
 2. Приоритет источников
 3. Как обозначать актуальность нормы
 
-ВАЖНО: Ответ ТОЛЬКО в формате JSON, без markdown-обёртки.`;
+ВАЖНО:
+- Ответ ТОЛЬКО в формате JSON, без markdown-обёртки
+- systemPrompt должен быть СТРОГО по указанной теме — НЕ смешивай разные области знаний
+- Генерируй промпт ТОЛЬКО для одной конкретной специализации из описания пользователя
+- Максимум 600 слов в systemPrompt`;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -101,14 +105,33 @@ export async function POST(req: Request) {
     const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
       jsonStr = jsonMatch[1].trim();
+    } else {
+      // Fallback: find first { to last } when no markdown code block
+      const start = jsonStr.indexOf("{");
+      const end = jsonStr.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        jsonStr = jsonStr.slice(start, end + 1);
+      }
     }
 
-    const parsed = JSON.parse(jsonStr);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      console.error("Skill generation: failed to parse JSON from response:", content.slice(0, 500));
+      return NextResponse.json(
+        { error: "Модель вернула некорректный JSON. Попробуйте переформулировать описание скилла." },
+        { status: 422 }
+      );
+    }
+
+    // Validate systemPrompt is focused and not too long
+    const systemPrompt = (parsed.systemPrompt || "").slice(0, 4000);
 
     const result = {
       name: parsed.name || "Новый скилл",
       description: parsed.description || "",
-      systemPrompt: parsed.systemPrompt || "",
+      systemPrompt,
       citationRules: parsed.citationRules || "",
       jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction) ? parsed.jurisdiction : "RU",
       icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : "Scale",
@@ -119,7 +142,7 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("Skill generation error:", e);
     return NextResponse.json(
-      { error: "Ошибка генерации скилла" },
+      { error: "Ошибка генерации скилла. Попробуйте ещё раз." },
       { status: 500 }
     );
   }

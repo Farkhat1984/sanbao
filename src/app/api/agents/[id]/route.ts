@@ -26,7 +26,7 @@ export async function GET(
       id,
       OR: [
         { userId },
-        { isSystem: true },
+        { isSystem: true, status: "APPROVED" },
       ],
     },
     include: AGENT_INCLUDE,

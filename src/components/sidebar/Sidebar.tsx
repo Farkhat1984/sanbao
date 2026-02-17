@@ -7,8 +7,8 @@ import {
   PanelLeftClose,
   Settings,
   ShieldCheck,
-  Triangle,
 } from "lucide-react";
+import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { ConversationList } from "./ConversationList";
@@ -22,7 +22,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 
 export function Sidebar() {
   const { close, searchQuery, setSearchQuery } = useSidebarStore();
-  const { setActiveConversation, setActiveAgentId, setMessages, setConversations } = useChatStore();
+  const { setActiveConversation, setActiveAgentId, setMessages, setConversations, isStreaming } = useChatStore();
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -75,8 +75,8 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0">
-            <Triangle className="h-4 w-4 text-white" />
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0 text-white">
+            <SanbaoCompass size={20} state={isStreaming ? "loading" : "idle"} />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight">
             Sanbao

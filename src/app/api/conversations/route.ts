@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     const agentAccess = await prisma.agent.findFirst({
       where: {
         id: resolvedId,
-        OR: [{ userId }, { isSystem: true }],
+        OR: [{ userId }, { isSystem: true, status: "APPROVED" }],
       },
       select: { id: true },
     });

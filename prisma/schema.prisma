@@ -62,6 +62,7 @@ model User {
   isBanned      Boolean   @default(false)
   bannedAt      DateTime?
   bannedReason       String?
+  locale             String   @default("ru")
   twoFactorSecret    String?
   twoFactorEnabled   Boolean  @default(false)
 
@@ -83,6 +84,7 @@ model User {
   fileUploads   FileUpload[]
   tools         Tool[]
   plugins       Plugin[]
+  userFiles     UserFile[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -532,6 +534,25 @@ model UserMemory {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, key])
+  @@index([userId])
+}
+
+// ─── User Knowledge Files ─────────────────────────────
+
+model UserFile {
+  id          String  @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  content     String  @db.Text
+  fileType    String  @default("md")
+  sizeBytes   Int     @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
 }
 
