@@ -21,19 +21,53 @@ const COLOR_STYLE_PROPS = [
 ] as const;
 
 /**
- * Strip oklab()/oklch() from all <style> tags in the cloned document.
+ * Regex that matches oklab()/oklch() including nested parentheses
+ * (e.g. color-mix(in oklch, oklch(0.5 0.1 200), oklch(0.7 0.1 200))).
+ */
+const OKLAB_RE = /okl(?:ab|ch)\([^()]*(?:\([^)]*\)[^()]*)*\)/gi;
+
+/**
+ * Strip oklab()/oklch() from all stylesheets in the cloned document.
  * html2canvas parses raw CSS and crashes on unsupported color functions.
  * Inline styles (set by resolveColorsToRgb) have higher specificity and
  * will override these neutralized values.
  */
 function sanitizeStylesheets(doc: Document): void {
-  const colorFnRegex = /okl(?:ab|ch)\([^)]*\)/gi;
+  // 1. Inline <style> tags
   doc.querySelectorAll("style").forEach((style) => {
-    if (style.textContent && colorFnRegex.test(style.textContent)) {
-      colorFnRegex.lastIndex = 0;
-      style.textContent = style.textContent.replace(colorFnRegex, "transparent");
+    if (style.textContent && OKLAB_RE.test(style.textContent)) {
+      OKLAB_RE.lastIndex = 0;
+      style.textContent = style.textContent.replace(OKLAB_RE, "transparent");
     }
+    OKLAB_RE.lastIndex = 0;
   });
+
+  // 2. Linked stylesheets — convert to inline <style> so we can sanitize
+  try {
+    for (const sheet of Array.from(doc.styleSheets)) {
+      // Skip inline styles (already handled above)
+      if (sheet.ownerNode?.nodeName === "STYLE") continue;
+      let cssText = "";
+      try {
+        for (const rule of Array.from(sheet.cssRules)) {
+          cssText += rule.cssText + "\n";
+        }
+      } catch {
+        // Cross-origin stylesheet — cannot access rules, skip
+        continue;
+      }
+      if (!OKLAB_RE.test(cssText)) { OKLAB_RE.lastIndex = 0; continue; }
+      OKLAB_RE.lastIndex = 0;
+      const sanitized = cssText.replace(OKLAB_RE, "transparent");
+      OKLAB_RE.lastIndex = 0;
+      const newStyle = doc.createElement("style");
+      newStyle.textContent = sanitized;
+      sheet.ownerNode?.parentNode?.insertBefore(newStyle, sheet.ownerNode);
+      sheet.ownerNode?.parentNode?.removeChild(sheet.ownerNode);
+    }
+  } catch {
+    // Ignore errors accessing styleSheets in sandboxed iframes
+  }
 }
 
 function resolveColorsToRgb(

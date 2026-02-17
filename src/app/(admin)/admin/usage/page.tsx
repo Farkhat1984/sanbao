@@ -13,13 +13,15 @@ interface TokenLogEntry {
   inputTokens: number;
   outputTokens: number;
   cost: number;
+  revenue: number;
+  profit: number;
   createdAt: string;
 }
 
 export default function AdminUsagePage() {
   const [logs, setLogs] = useState<TokenLogEntry[]>([]);
   const [total, setTotal] = useState(0);
-  const [totals, setTotals] = useState({ inputTokens: 0, outputTokens: 0, cost: 0 });
+  const [totals, setTotals] = useState({ inputTokens: 0, outputTokens: 0, cost: 0, revenue: 0, profit: 0 });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
@@ -32,7 +34,7 @@ export default function AdminUsagePage() {
     const data = await res.json();
     setLogs(data.logs || []);
     setTotal(data.total || 0);
-    setTotals(data.totals || { inputTokens: 0, outputTokens: 0, cost: 0 });
+    setTotals(data.totals || { inputTokens: 0, outputTokens: 0, cost: 0, revenue: 0, profit: 0 });
     setLoading(false);
   };
 
@@ -57,7 +59,7 @@ export default function AdminUsagePage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
           <p className="text-xs text-text-muted">Input токенов</p>
           <p className="text-xl font-bold text-text-primary mt-1">{totals.inputTokens.toLocaleString()}</p>
@@ -67,8 +69,18 @@ export default function AdminUsagePage() {
           <p className="text-xl font-bold text-text-primary mt-1">{totals.outputTokens.toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Стоимость</p>
+          <p className="text-xs text-text-muted">Себестоимость</p>
           <p className="text-xl font-bold text-accent mt-1">${totals.cost.toFixed(4)}</p>
+        </div>
+        <div className="bg-surface border border-border rounded-2xl p-5">
+          <p className="text-xs text-text-muted">Выручка</p>
+          <p className="text-xl font-bold text-success mt-1">${totals.revenue.toFixed(4)}</p>
+        </div>
+        <div className="bg-surface border border-border rounded-2xl p-5">
+          <p className="text-xs text-text-muted">Прибыль</p>
+          <p className={`text-xl font-bold mt-1 ${totals.profit >= 0 ? "text-success" : "text-error"}`}>
+            ${totals.profit.toFixed(4)}
+          </p>
         </div>
       </div>
 
@@ -92,7 +104,9 @@ export default function AdminUsagePage() {
                   <th className="text-left px-4 py-3 text-xs text-text-muted font-medium">Модель</th>
                   <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Input</th>
                   <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Output</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Цена</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Себест.</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Выручка</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Прибыль</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,6 +118,8 @@ export default function AdminUsagePage() {
                     <td className="px-4 py-3 text-right text-text-primary">{l.inputTokens.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-text-primary">{l.outputTokens.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-accent font-medium">${l.cost.toFixed(4)}</td>
+                    <td className="px-4 py-3 text-right text-success font-medium">${l.revenue.toFixed(4)}</td>
+                    <td className={`px-4 py-3 text-right font-medium ${l.profit >= 0 ? "text-success" : "text-error"}`}>${l.profit.toFixed(4)}</td>
                   </tr>
                 ))}
               </tbody>

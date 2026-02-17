@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { callMcpTool } from "@/lib/mcp-client";
 
 const LAWYER_URL =
-  process.env.LAWYER_MCP_URL || "http://localhost:8120/lawyer";
+  process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer";
 const LAWYER_TOKEN = process.env.AI_CORTEX_AUTH_TOKEN || null;
 
 export async function GET(request: NextRequest) {

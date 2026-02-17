@@ -94,30 +94,6 @@ async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
   }
 }
 
-// ─── Sanitize messages for Moonshot (no vision support) ──
-
-function sanitizeMessagesForMoonshot(
-  messages: Array<Record<string, unknown>>
-): Array<Record<string, unknown>> {
-  return messages.map((msg) => {
-    if (!Array.isArray(msg.content)) return msg;
-    // Convert multimodal content array → text-only
-    const textParts: string[] = [];
-    let hasImages = false;
-    for (const part of msg.content as Array<Record<string, unknown>>) {
-      if (part.type === "text") {
-        textParts.push(part.text as string);
-      } else if (part.type === "image_url") {
-        hasImages = true;
-      }
-    }
-    if (hasImages) {
-      textParts.unshift("[Пользователь прикрепил изображение. Данная модель не поддерживает анализ изображений.]");
-    }
-    return { ...msg, content: textParts.join("\n") };
-  });
-}
-
 // ─── Main Moonshot streaming function ────────────────────
 
 export function streamMoonshot(
@@ -143,9 +119,6 @@ export function streamMoonshot(
     textModel?.provider.apiKey || process.env.MOONSHOT_API_KEY || "";
   const modelId = textModel?.modelId || DEFAULT_TEXT_MODEL;
 
-  // Moonshot/Kimi K2.5 does not support vision — strip image_url parts
-  const sanitizedMessages = sanitizeMessagesForMoonshot(apiMessages);
-
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -164,7 +137,7 @@ export function streamMoonshot(
           );
         }
 
-        const currentMessages = [...sanitizedMessages];
+        const currentMessages = [...apiMessages];
         let searchNotified = false;
 
         // Plan detection state

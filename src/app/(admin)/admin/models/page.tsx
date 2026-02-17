@@ -18,6 +18,8 @@ interface Model {
   contextWindow: number | null;
   costPer1kInput: number;
   costPer1kOutput: number;
+  pricePer1kInput: number;
+  pricePer1kOutput: number;
   supportsThinking: boolean;
   maxThinkingTokens: number | null;
   isActive: boolean;
@@ -61,6 +63,8 @@ export default function AdminModelsPage() {
     contextWindow: DEFAULT_CONTEXT_WINDOW,
     costPer1kInput: 0,
     costPer1kOutput: 0,
+    pricePer1kInput: 0,
+    pricePer1kOutput: 0,
     supportsThinking: false,
     maxThinkingTokens: 0,
   });
@@ -87,7 +91,7 @@ export default function AdminModelsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: DEFAULT_TEMPERATURE_PREVIEW, topP: 1, maxTokens: DEFAULT_MAX_TOKENS, contextWindow: DEFAULT_CONTEXT_WINDOW, costPer1kInput: 0, costPer1kOutput: 0, supportsThinking: false, maxThinkingTokens: 0 });
+      setNewModel({ providerId: "", modelId: "", displayName: "", category: "TEXT", temperature: DEFAULT_TEMPERATURE_PREVIEW, topP: 1, maxTokens: DEFAULT_MAX_TOKENS, contextWindow: DEFAULT_CONTEXT_WINDOW, costPer1kInput: 0, costPer1kOutput: 0, pricePer1kInput: 0, pricePer1kOutput: 0, supportsThinking: false, maxThinkingTokens: 0 });
       fetchData();
     }
   };
@@ -220,6 +224,38 @@ export default function AdminModelsPage() {
               onChange={(e) => setNewModel({ ...newModel, contextWindow: parseInt(e.target.value) || 0 })}
               className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
             />
+            <input
+              placeholder="Себест./1k вх"
+              type="number"
+              step="0.001"
+              value={newModel.costPer1kInput}
+              onChange={(e) => setNewModel({ ...newModel, costPer1kInput: parseFloat(e.target.value) || 0 })}
+              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            />
+            <input
+              placeholder="Себест./1k вых"
+              type="number"
+              step="0.001"
+              value={newModel.costPer1kOutput}
+              onChange={(e) => setNewModel({ ...newModel, costPer1kOutput: parseFloat(e.target.value) || 0 })}
+              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            />
+            <input
+              placeholder="Продажа/1k вх"
+              type="number"
+              step="0.001"
+              value={newModel.pricePer1kInput}
+              onChange={(e) => setNewModel({ ...newModel, pricePer1kInput: parseFloat(e.target.value) || 0 })}
+              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            />
+            <input
+              placeholder="Продажа/1k вых"
+              type="number"
+              step="0.001"
+              value={newModel.pricePer1kOutput}
+              onChange={(e) => setNewModel({ ...newModel, pricePer1kOutput: parseFloat(e.target.value) || 0 })}
+              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            />
           </div>
           <div className="flex items-center gap-4 mt-3">
             <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
@@ -321,6 +357,26 @@ export default function AdminModelsPage() {
                       step="0.001"
                       value={editForm.costPer1kOutput ?? m.costPer1kOutput}
                       onChange={(e) => setEditForm({ ...editForm, costPer1kOutput: parseFloat(e.target.value) || 0 })}
+                      className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted block mb-1">Продажа/1k вх</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={editForm.pricePer1kInput ?? m.pricePer1kInput}
+                      onChange={(e) => setEditForm({ ...editForm, pricePer1kInput: parseFloat(e.target.value) || 0 })}
+                      className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-text-muted block mb-1">Продажа/1k вых</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={editForm.pricePer1kOutput ?? m.pricePer1kOutput}
+                      onChange={(e) => setEditForm({ ...editForm, pricePer1kOutput: parseFloat(e.target.value) || 0 })}
                       className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
                     />
                   </div>

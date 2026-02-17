@@ -45,6 +45,7 @@ export async function PUT(
   const allowedFields = [
     "modelId", "displayName", "category", "temperature", "topP",
     "maxTokens", "contextWindow", "costPer1kInput", "costPer1kOutput",
+    "pricePer1kInput", "pricePer1kOutput",
     "supportsThinking", "maxThinkingTokens", "isActive", "isDefault",
   ];
 

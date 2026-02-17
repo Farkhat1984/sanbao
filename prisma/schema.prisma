@@ -659,6 +659,9 @@ model AiModel {
   costPer1kInput  Float @default(0)
   costPer1kOutput Float @default(0)
 
+  pricePer1kInput  Float @default(0)
+  pricePer1kOutput Float @default(0)
+
   supportsThinking  Boolean @default(false)
   maxThinkingTokens Int?
 

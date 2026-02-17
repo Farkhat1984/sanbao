@@ -9,7 +9,7 @@ const cspExtraSrc = [cdnHost, sentryHost].filter(Boolean).join(" ");
 
 const cspValue = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${cspExtraSrc}`.trim(),
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com ${cspExtraSrc}`.trim(),
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https: ${cdnHost}`.trim(),
   `font-src 'self' data: ${cdnHost}`.trim(),

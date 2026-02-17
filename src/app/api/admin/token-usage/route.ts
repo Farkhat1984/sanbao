@@ -4,6 +4,38 @@ import { prisma } from "@/lib/prisma";
 import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
 import { parsePagination } from "@/lib/validation";
 
+// Build a price lookup map from AiModel records: "providerSlug:modelId" → prices
+async function buildPriceMap() {
+  const models = await prisma.aiModel.findMany({
+    select: {
+      modelId: true,
+      pricePer1kInput: true,
+      pricePer1kOutput: true,
+      provider: { select: { slug: true } },
+    },
+  });
+  const map = new Map<string, { pricePer1kInput: number; pricePer1kOutput: number }>();
+  for (const m of models) {
+    map.set(`${m.provider.slug}:${m.modelId}`, {
+      pricePer1kInput: m.pricePer1kInput,
+      pricePer1kOutput: m.pricePer1kOutput,
+    });
+  }
+  return map;
+}
+
+function calcRevenue(
+  priceMap: Map<string, { pricePer1kInput: number; pricePer1kOutput: number }>,
+  provider: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number
+) {
+  const prices = priceMap.get(`${provider}:${model}`);
+  if (!prices) return 0;
+  return (inputTokens / 1000) * prices.pricePer1kInput + (outputTokens / 1000) * prices.pricePer1kOutput;
+}
+
 export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
@@ -23,6 +55,7 @@ export async function GET(req: Request) {
   }
 
   const format = searchParams.get("format");
+  const priceMap = await buildPriceMap();
 
   // CSV export
   if (format === "csv") {
@@ -34,8 +67,11 @@ export async function GET(req: Request) {
     });
 
     const csv = buildCsvDocument(
-      ["Date", "UserId", "Provider", "Model", "InputTokens", "OutputTokens", "Cost"],
-      allLogs.map((l) => [l.createdAt.toISOString(), l.userId, l.provider, l.model, l.inputTokens, l.outputTokens, l.cost])
+      ["Date", "UserId", "Provider", "Model", "InputTokens", "OutputTokens", "Cost", "Revenue", "Profit"],
+      allLogs.map((l) => {
+        const revenue = calcRevenue(priceMap, l.provider, l.model, l.inputTokens, l.outputTokens);
+        return [l.createdAt.toISOString(), l.userId, l.provider, l.model, l.inputTokens, l.outputTokens, l.cost, revenue.toFixed(6), (revenue - l.cost).toFixed(6)];
+      })
     );
     return csvResponse(csv, `token-usage-${new Date().toISOString().slice(0, 10)}.csv`);
   }
@@ -50,14 +86,32 @@ export async function GET(req: Request) {
     prisma.tokenLog.count({ where }),
   ]);
 
+  // Enrich logs with revenue & profit
+  const enrichedLogs = logs.map((l) => {
+    const revenue = calcRevenue(priceMap, l.provider, l.model, l.inputTokens, l.outputTokens);
+    return { ...l, revenue, profit: revenue - l.cost };
+  });
+
   // Aggregates
   const agg = await prisma.tokenLog.aggregate({
     where,
     _sum: { inputTokens: true, outputTokens: true, cost: true },
   });
 
+  // Compute total revenue from all matching logs
+  const allForRevenue = await prisma.tokenLog.findMany({
+    where,
+    select: { provider: true, model: true, inputTokens: true, outputTokens: true, cost: true },
+  });
+  let totalRevenue = 0;
+  let totalCost = 0;
+  for (const l of allForRevenue) {
+    totalRevenue += calcRevenue(priceMap, l.provider, l.model, l.inputTokens, l.outputTokens);
+    totalCost += l.cost;
+  }
+
   return NextResponse.json({
-    logs,
+    logs: enrichedLogs,
     total,
     page,
     limit,
@@ -65,6 +119,8 @@ export async function GET(req: Request) {
       inputTokens: agg._sum.inputTokens || 0,
       outputTokens: agg._sum.outputTokens || 0,
       cost: agg._sum.cost || 0,
+      revenue: totalRevenue,
+      profit: totalRevenue - totalCost,
     },
   });
 }

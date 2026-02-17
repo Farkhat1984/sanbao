@@ -16,13 +16,16 @@ export function PanelTabBar() {
   const { tabs, activeTabId, switchTab, closeTab } = usePanelStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to active tab
+  // Auto-scroll to active tab (defer to next frame so DOM is up-to-date)
   useEffect(() => {
     if (!scrollRef.current || !activeTabId) return;
-    const activeEl = scrollRef.current.querySelector(`[data-tab-id="${activeTabId}"]`);
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-    }
+    const raf = requestAnimationFrame(() => {
+      const activeEl = scrollRef.current?.querySelector(`[data-tab-id="${activeTabId}"]`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [activeTabId]);
 
   if (tabs.length <= 1) return null;
