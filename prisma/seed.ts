@@ -317,8 +317,8 @@ water_code — ВК РК
   const femidaAgent = await prisma.agent.upsert({
     where: { id: "system-femida-agent" },
     update: {
-      name: "Фемида",
-      description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК",
+      name: "Нормативно правовые акты",
+      description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан",
       instructions: FEMIDA_SYSTEM_PROMPT,
       icon: "Scale",
       iconColor: "#7C3AED",
@@ -328,8 +328,8 @@ water_code — ВК РК
     },
     create: {
       id: "system-femida-agent",
-      name: "Фемида",
-      description: "универсальный AI-ассистент для работы с договорами, исками и НПА РК",
+      name: "Нормативно правовые акты",
+      description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан",
       instructions: FEMIDA_SYSTEM_PROMPT,
       icon: "Scale",
       iconColor: "#7C3AED",
@@ -339,7 +339,85 @@ water_code — ВК РК
     },
   });
 
-  console.log("System agents seeded: Sanbao, Фемида");
+  // ─── System Agent: Таможенный брокер ────────────────────
+
+  const BROKER_SYSTEM_PROMPT = `Ты — Таможенный брокер, профессиональный AI-ассистент по таможенному оформлению для ЕАЭС и Республики Казахстан.
+
+═══ ЮРИСДИКЦИЯ ═══
+ЕАЭС (Евразийский экономический союз) и Республика Казахстан.
+Валюта: тенге (₸), доллар ($), евро (€). ТН ВЭД ЕАЭС — единая товарная номенклатура.
+
+═══ АЛГОРИТМ РАБОТЫ С ИНСТРУМЕНТАМИ ═══
+Тебе доступны MCP-инструменты для классификации товаров, расчёта пошлин и создания таможенных документов. Вызываются АВТОМАТИЧЕСКИ через function calling.
+
+ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
+1. Классификация товара → classify_goods(описание) → получи код ТН ВЭД и ставки
+2. Расчёт пошлин → calculate_duties(код, стоимость, страна) → точный расчёт платежей
+3. Необходимые документы → get_required_docs(код) → список обязательных документов
+4. Правила ввоза → get_import_rules(код) → ограничения, лицензии, сертификаты
+5. Ставки для кода → get_rate(код) → детальная ставка для конкретного кода ТН ВЭД
+6. Поиск по базе → search(запрос) → поиск по базе ТН ВЭД
+7. Создание ДТ → generate_declaration(данные) → PDF таможенной декларации ЕАЭС
+
+ЗАПРЕТЫ:
+✗ НЕ полагайся на внутренние знания о ставках — они могут быть устаревшими
+✗ НЕ указывай коды ТН ВЭД по памяти — ТОЛЬКО из результатов classify_goods/get_rate
+✗ НЕ рассчитывай пошлины без вызова calculate_duties
+
+Тебе также доступны инструменты для работы с НПА РК (Таможенный кодекс, Налоговый кодекс и др.) через MCP-сервер Юрист.
+
+═══ СОЗДАНИЕ ДОКУМЕНТОВ ═══
+Когда просят создать таможенную декларацию:
+- Используй инструмент generate_declaration для создания ДТ в формате PDF (Решение Комиссии ТС №257)
+- Предварительно собери все необходимые данные от пользователя
+
+Когда просят расчёт или анализ:
+- Используй <sanbao-doc type="ANALYSIS"> для таможенных расчётов
+- Используй <sanbao-doc type="DOCUMENT"> для справок и писем
+
+═══ НАВЫКИ ═══
+- Классификация товаров по ТН ВЭД ЕАЭС
+- Расчёт таможенных пошлин, НДС и акцизов
+- Определение необходимых документов для ввоза/вывоза
+- Создание таможенных деклараций (ДТ) в формате PDF
+- Консультации по таможенному законодательству ЕАЭС и РК
+- Определение правил ввоза (лицензии, сертификаты, ограничения)
+- Оптимизация таможенных платежей в рамках закона
+
+═══ ПРАВИЛА ОТВЕТА ═══
+- Указывай коды ТН ВЭД с точностью до 10 знаков
+- Ставки указывай в процентах и абсолютных суммах
+- Все расчёты — с детальной разбивкой платежей
+- Предупреждай о рисках неправильной классификации
+- ВСЕГДА: финальное решение — за квалифицированным таможенным брокером
+- Если спрашивают о не-таможенной задаче — помоги как универсальный ассистент`;
+
+  const brokerAgent = await prisma.agent.upsert({
+    where: { id: "system-broker-agent" },
+    update: {
+      name: "Таможенный брокер",
+      description: "AI-ассистент по таможенному оформлению, классификации товаров и расчёту пошлин ЕАЭС",
+      instructions: BROKER_SYSTEM_PROMPT,
+      icon: "Package",
+      iconColor: "#0EA5E9",
+      isSystem: true,
+      sortOrder: 8,
+      status: "APPROVED",
+    },
+    create: {
+      id: "system-broker-agent",
+      name: "Таможенный брокер",
+      description: "AI-ассистент по таможенному оформлению, классификации товаров и расчёту пошлин ЕАЭС",
+      instructions: BROKER_SYSTEM_PROMPT,
+      icon: "Package",
+      iconColor: "#0EA5E9",
+      isSystem: true,
+      sortOrder: 8,
+      status: "APPROVED",
+    },
+  });
+
+  console.log("System agents seeded: Sanbao, Нормативно правовые акты, Таможенный брокер");
 
   // ─── Tools: Legal (Фемида) ────────────────────────────────
 
@@ -655,64 +733,448 @@ water_code — ВК РК
 
   console.log("Agent-tool links created");
 
-  // ─── MCP Server: FragmentDB (Фемида) ────────────────────
+  // ─── MCP Server: Юрист (НПА РК) ────────────────────────
 
-  const fragmentDbServer = await prisma.mcpServer.upsert({
-    where: { id: "mcp-fragmentdb" },
+  const lawyerServer = await prisma.mcpServer.upsert({
+    where: { id: "mcp-lawyer" },
     update: {
-      name: "FragmentDB",
-      url: process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp",
+      name: "Юрист",
+      url: process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer",
       transport: "STREAMABLE_HTTP",
-      apiKey: process.env.FRAGMENTDB_MCP_TOKEN || null,
+      apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
       status: "CONNECTED",
     },
     create: {
-      id: "mcp-fragmentdb",
-      name: "FragmentDB",
-      url: process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp",
+      id: "mcp-lawyer",
+      name: "Юрист",
+      url: process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer",
       transport: "STREAMABLE_HTTP",
-      apiKey: process.env.FRAGMENTDB_MCP_TOKEN || null,
+      apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
       status: "CONNECTED",
     },
   });
 
-  // Auto-discover tools from FragmentDB MCP server
-  const mcpUrl = process.env.FRAGMENTDB_MCP_URL || "https://mcp.sanbao.ai/mcp";
-  const mcpToken = process.env.FRAGMENTDB_MCP_TOKEN || null;
+  // Auto-discover tools from Lawyer MCP server
+  const lawyerMcpUrl = process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer";
+  const lawyerMcpToken = process.env.AI_CORTEX_AUTH_TOKEN || null;
   try {
-    console.log(`Connecting to FragmentDB MCP at ${mcpUrl}...`);
-    const { tools: discoveredTools, error: discoverError } = await discoverMcpTools(mcpUrl, mcpToken);
-    if (discoverError) {
-      console.warn(`FragmentDB discovery failed: ${discoverError} — tools will need manual discovery via admin panel`);
+    console.log(`Connecting to Lawyer MCP at ${lawyerMcpUrl}...`);
+    const { tools: discoveredLawyerTools, error: lawyerDiscoverError } = await discoverMcpTools(lawyerMcpUrl, lawyerMcpToken);
+    if (lawyerDiscoverError) {
+      console.warn(`Lawyer discovery failed: ${lawyerDiscoverError} — tools will need manual discovery via admin panel`);
     } else {
       await prisma.mcpServer.update({
-        where: { id: fragmentDbServer.id },
+        where: { id: lawyerServer.id },
         data: {
-          discoveredTools: discoveredTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          discoveredTools: discoveredLawyerTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
           status: "CONNECTED",
         },
       });
-      console.log(`FragmentDB: discovered ${discoveredTools.length} tools: ${discoveredTools.map(t => t.name).join(", ")}`);
+      console.log(`Lawyer: discovered ${discoveredLawyerTools.length} tools: ${discoveredLawyerTools.map(t => t.name).join(", ")}`);
     }
   } catch (e) {
-    console.warn(`FragmentDB discovery error: ${e instanceof Error ? e.message : e} — skipping`);
+    console.warn(`Lawyer discovery error: ${e instanceof Error ? e.message : e} — skipping`);
   }
 
-  // Link FragmentDB → Фемида
+  // ─── MCP Server: Брокер (ТН ВЭД ЕАЭС) ────────────────
+
+  const brokerServer = await prisma.mcpServer.upsert({
+    where: { id: "mcp-broker" },
+    update: {
+      name: "Брокер",
+      url: process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+    create: {
+      id: "mcp-broker",
+      name: "Брокер",
+      url: process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+  });
+
+  // Auto-discover tools from Broker MCP server
+  const brokerMcpUrl = process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker";
+  const brokerMcpToken = process.env.AI_CORTEX_AUTH_TOKEN || null;
+  try {
+    console.log(`Connecting to Broker MCP at ${brokerMcpUrl}...`);
+    const { tools: discoveredBrokerTools, error: brokerDiscoverError } = await discoverMcpTools(brokerMcpUrl, brokerMcpToken);
+    if (brokerDiscoverError) {
+      console.warn(`Broker discovery failed: ${brokerDiscoverError} — tools will need manual discovery via admin panel`);
+    } else {
+      await prisma.mcpServer.update({
+        where: { id: brokerServer.id },
+        data: {
+          discoveredTools: discoveredBrokerTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          status: "CONNECTED",
+        },
+      });
+      console.log(`Broker: discovered ${discoveredBrokerTools.length} tools: ${discoveredBrokerTools.map(t => t.name).join(", ")}`);
+    }
+  } catch (e) {
+    console.warn(`Broker discovery error: ${e instanceof Error ? e.message : e} — skipping`);
+  }
+
+  // Link Юрист → НПА agent
   await prisma.agentMcpServer.upsert({
     where: {
       agentId_mcpServerId: {
         agentId: femidaAgent.id,
-        mcpServerId: fragmentDbServer.id,
+        mcpServerId: lawyerServer.id,
       },
     },
     update: {},
-    create: { agentId: femidaAgent.id, mcpServerId: fragmentDbServer.id },
+    create: { agentId: femidaAgent.id, mcpServerId: lawyerServer.id },
   });
 
-  console.log("MCP server seeded: FragmentDB → Фемида");
+  // Link Брокер → Брокер agent
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: brokerAgent.id,
+        mcpServerId: brokerServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: brokerAgent.id, mcpServerId: brokerServer.id },
+  });
+
+  // Link Юрист → Брокер agent (for customs/tax code access)
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: brokerAgent.id,
+        mcpServerId: lawyerServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: brokerAgent.id, mcpServerId: lawyerServer.id },
+  });
+
+  console.log("MCP servers seeded: Юрист → НПА, Брокер → Таможенный брокер, Юрист → Таможенный брокер");
+
+  // Clean up old mcp-fragmentdb if it exists
+  try {
+    await prisma.agentMcpServer.deleteMany({ where: { mcpServerId: "mcp-fragmentdb" } });
+    await prisma.mcpServer.delete({ where: { id: "mcp-fragmentdb" } });
+    console.log("Cleaned up old mcp-fragmentdb");
+  } catch {
+    // Already deleted or doesn't exist
+  }
+
+  // ─── System Agent: Бухгалтер ──────────────────────────────────
+
+  const ACCOUNTANT_SYSTEM_PROMPT = `Ты — Бухгалтер, профессиональный AI-ассистент по бухгалтерскому и налоговому учёту для Республики Казахстан.
+
+═══ ЮРИСДИКЦИЯ ═══
+Республика Казахстан. Валюта: тенге (₸). Новый Налоговый кодекс РК (Закон №214-VIII от 18.07.2025, в действии с 01.01.2026).
+МРП 2026: 4 325 ₸ | МЗП: 85 000 ₸ | ПМ: 50 851 ₸
+
+═══ АЛГОРИТМ РАБОТЫ С ИНСТРУМЕНТАМИ ═══
+Тебе доступны MCP-инструменты AccountingDB (бухгалтерская база) и FragmentDB (НПА РК). Вызываются АВТОМАТИЧЕСКИ через function calling.
+
+ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
+1. Вопрос о проводках/счетах → get_account(код) или get_entry(операция)
+2. Вопрос о стандартах МСФО/НСФО → get_standard(код, номер) или search(запрос, domain="accounting_kz")
+3. Вопрос о ставках/МРП/сроках → sql_query(вопрос)
+4. Как сделать в 1С → get_1c_guide(операция) — вернёт пошаговую инструкцию со скриншотами
+5. Вопрос о нормах НК/ТК/ГК → используй инструменты FragmentDB (search, get_article)
+6. Связанные нормы/стандарты → graph_traverse
+
+ПРАВИЛА РАБОТЫ:
+✓ ВСЕГДА указывай номера счетов (4-значные коды по ТПС РК)
+✓ Проводки в формате: Дт ХХХХ «Название» — Кт ХХХХ «Название»
+✓ При расчётах налогов — показывай формулу и подставляй актуальные ставки 2026
+✓ При инструкциях по 1С — давай путь навигации и скриншоты если есть
+✓ Ссылки на статьи НК: [ст. {номер} НК РК](article://tax_code/{номер})
+✓ Ссылки на стандарты: [МСФО (IAS) {номер}](standard://msfo/{номер})
+
+ЗАПРЕТЫ:
+✗ НЕ полагайся на внутренние знания о ставках — они могут быть устаревшими
+✗ НЕ цитируй стандарты по памяти — ТОЛЬКО из результатов инструментов
+✗ НЕ рассчитывай налоги без проверки актуальных ставок через sql_query
+
+═══ КЛЮЧЕВЫЕ ИЗМЕНЕНИЯ 2026 (Новый НК РК) ═══
+• НДС: 16% (было 12%), медицина 5%, издания 10%
+• ИПН: прогрессивная шкала 10%/15% (порог 8500 МРП/год)
+• СН: 6% (было 9.5%), СО: 5% (было 3.5%)
+• ОПВР: 3.5% (было 2.5%)
+• Базовый вычет ИПН: 30 МРП (было 14 МРП)
+• Порог НДС: 10 000 МРП (было 20 000 МРП)
+• Упрощёнка: 4%, оборот до 600 000 МРП/год
+
+═══ СОЗДАНИЕ ДОКУМЕНТОВ ═══
+Когда просят создать бухгалтерский документ, справку, расчёт:
+- Используй <sanbao-doc type="DOCUMENT"> с Markdown-содержимым
+- Включай все реквизиты по законодательству РК
+- Суммы в тенге (₸), даты по казахстанскому формату
+
+Когда просят финансовый анализ, аудиторское заключение:
+- Используй <sanbao-doc type="ANALYSIS">
+- Структура: нормативная база → расчёты → выводы → рекомендации
+
+═══ НАВЫКИ ═══
+- Расчёт всех налогов и соц. платежей по актуальным ставкам 2026
+- Типовые проводки по ТПС РК (4-значные коды)
+- Пошаговые инструкции по 1С:Бухгалтерия для Казахстана (ред. 3.0)
+- МСФО/НСФО: интерпретация и применение стандартов
+- Заполнение налоговых форм (100, 200, 300, 910 и др.)
+- Расчёт зарплаты с учётом всех удержаний и начислений
+- Учётная политика: настройка и рекомендации
+
+═══ ДИСКЛЕЙМЕР ═══
+- ВСЕГДА: финальная ответственность — за квалифицированным бухгалтером/аудитором
+- Если спрашивают о не-бухгалтерской задаче — помоги как универсальный ассистент`;
+
+  const accountantAgent = await prisma.agent.upsert({
+    where: { id: "system-accountant-agent" },
+    update: {
+      name: "Бухгалтер",
+      description: "AI-ассистент по бухгалтерскому и налоговому учёту для Республики Казахстан",
+      instructions: ACCOUNTANT_SYSTEM_PROMPT,
+      icon: "Calculator",
+      iconColor: "#059669",
+      isSystem: true,
+      sortOrder: 2,
+      status: "APPROVED",
+    },
+    create: {
+      id: "system-accountant-agent",
+      name: "Бухгалтер",
+      description: "AI-ассистент по бухгалтерскому и налоговому учёту для Республики Казахстан",
+      instructions: ACCOUNTANT_SYSTEM_PROMPT,
+      icon: "Calculator",
+      iconColor: "#059669",
+      isSystem: true,
+      sortOrder: 2,
+      status: "APPROVED",
+    },
+  });
+
+  console.log("System agent seeded: Бухгалтер");
+
+  // ─── Tools: Accounting (Бухгалтер) ────────────────────────────
+
+  const accountingTools = [
+    {
+      id: "tool-salary-calc",
+      name: "Расчёт зарплаты",
+      description: "Расчёт заработной платы с налогами и соц. платежами",
+      icon: "Calculator",
+      iconColor: "#059669",
+      config: {
+        prompt: "Помогу рассчитать зарплату сотрудника с учётом всех налогов и социальных платежей по актуальным ставкам 2026 года.",
+        templates: [
+          {
+            id: "salary-calc",
+            name: "Расчёт зарплаты",
+            description: "Полный расчёт ЗП с ИПН, ОПВ, ВОСМС, СО, СН, ОПВР",
+            fields: [
+              { id: "employeeName", label: "Сотрудник", placeholder: "Асанов Алмас Бериккызы", type: "text", required: true },
+              { id: "salary", label: "Оклад (₸)", placeholder: "350000", type: "number", required: true },
+              { id: "period", label: "Период", placeholder: "Январь 2026", type: "text", required: true },
+              { id: "taxMode", label: "Режим налогообложения", placeholder: "Общий / Упрощённый", type: "text", required: true },
+            ],
+            promptTemplate: "Рассчитай заработную плату сотрудника по законодательству Республики Казахстан (Новый НК РК 2026). Сотрудник: {{employeeName}}. Оклад: {{salary}} тенге. Период: {{period}}. Режим: {{taxMode}}. Покажи полную расшифровку: ОПВ (10%), ВОСМС (2%), ИПН (10%/15% прогрессивная шкала, базовый вычет 30 МРП), СО (5%), СН (6%), ОПВР (3.5%). Итого: к выплате, за счёт работодателя, всего ФОТ. Используй актуальные ставки через sql_query.",
+          },
+        ],
+      },
+      sortOrder: 0,
+    },
+    {
+      id: "tool-tax-declaration",
+      name: "Налоговая декларация",
+      description: "Помощь в заполнении налоговых форм РК",
+      icon: "FileText",
+      iconColor: "#059669",
+      config: {
+        prompt: "Помогу с заполнением налоговой декларации по законодательству РК. Укажи тип формы и период.",
+        templates: [
+          {
+            id: "tax-form",
+            name: "Налоговая декларация",
+            description: "Заполнение форм 100, 200, 300, 910 и других",
+            fields: [
+              { id: "formType", label: "Тип формы", placeholder: "100 / 200 / 300 / 910", type: "text", required: true },
+              { id: "period", label: "Налоговый период", placeholder: "1 квартал 2026", type: "text", required: true },
+              { id: "orgName", label: "Организация", placeholder: 'ТОО "Компания"', type: "text", required: true },
+            ],
+            promptTemplate: "Помоги заполнить налоговую декларацию формы {{formType}} за {{period}} для {{orgName}} по законодательству Республики Казахстан (Новый НК РК 2026). Покажи: 1) Какие строки нужно заполнить, 2) Формулы расчёта по каждой строке, 3) Актуальные ставки и коэффициенты, 4) Сроки сдачи, 5) Пошаговую инструкцию заполнения в 1С:Бухгалтерия. Используй инструменты для проверки актуальных ставок.",
+          },
+        ],
+      },
+      sortOrder: 1,
+    },
+    {
+      id: "tool-accounting-memo",
+      name: "Бухгалтерская справка",
+      description: "Составить бухгалтерскую справку-расчёт",
+      icon: "ClipboardCheck",
+      iconColor: "#059669",
+      config: {
+        prompt: "Составлю бухгалтерскую справку-расчёт по операции. Укажи детали.",
+        templates: [
+          {
+            id: "accounting-memo",
+            name: "Бухгалтерская справка",
+            description: "Справка-расчёт с проводками и обоснованием",
+            fields: [
+              { id: "operation", label: "Операция", placeholder: "Начисление амортизации ОС / Списание ТМЗ / Курсовая разница", type: "text", required: true },
+              { id: "amount", label: "Сумма (₸)", placeholder: "1500000", type: "number", required: true },
+              { id: "basis", label: "Основание", placeholder: "Приказ №15 от 01.01.2026, Акт инвентаризации", type: "text", required: true },
+              { id: "date", label: "Дата операции", placeholder: "15.01.2026", type: "text", required: true },
+            ],
+            promptTemplate: "Составь бухгалтерскую справку-расчёт по операции: {{operation}}. Сумма: {{amount}} тенге. Основание: {{basis}}. Дата: {{date}}. Включи: 1) Реквизиты организации, 2) Описание операции, 3) Бухгалтерские проводки (Дт/Кт с 4-значными кодами ТПС РК), 4) Расчёт суммы, 5) Ссылки на МСФО/НСФО и НК РК, 6) Подписи (главный бухгалтер, директор). Используй инструменты для проверки счетов и стандартов.",
+          },
+        ],
+      },
+      sortOrder: 2,
+    },
+    {
+      id: "tool-accounting-policy",
+      name: "Учётная политика",
+      description: "Разработать или обновить учётную политику",
+      icon: "BookOpen",
+      iconColor: "#059669",
+      config: {
+        prompt: "Помогу разработать учётную политику организации по законодательству РК.",
+        templates: [
+          {
+            id: "accounting-policy",
+            name: "Учётная политика",
+            description: "Учётная политика для ТОО, АО или ИП",
+            fields: [
+              { id: "orgType", label: "Тип организации", placeholder: "ТОО / АО / ИП", type: "text", required: true },
+              { id: "taxMode", label: "Режим налогообложения", placeholder: "Общеустановленный / Упрощённый / Специальный", type: "text", required: true },
+            ],
+            promptTemplate: "Разработай учётную политику для {{orgType}} на {{taxMode}} режиме налогообложения по законодательству Республики Казахстан (2026 год). Включи: 1) Общие положения и нормативная база (МСФО/НСФО, НК РК 2026), 2) Организация бухучёта, 3) Методы оценки активов и обязательств, 4) Учёт ОС и амортизация, 5) Учёт ТМЗ, 6) Учёт доходов и расходов, 7) Налоговый учёт (актуальные ставки 2026), 8) Порядок инвентаризации, 9) Документооборот. Используй инструменты для ссылок на стандарты и нормы.",
+          },
+        ],
+      },
+      sortOrder: 3,
+    },
+  ];
+
+  for (const t of accountingTools) {
+    await prisma.tool.upsert({
+      where: { id: t.id },
+      update: {
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+      create: {
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+    });
+  }
+
+  console.log(`Accounting tools seeded: ${accountingTools.length} tools`);
+
+  // Accounting tools → Бухгалтер
+  for (const t of accountingTools) {
+    await prisma.agentTool.upsert({
+      where: { agentId_toolId: { agentId: accountantAgent.id, toolId: t.id } },
+      update: {},
+      create: { agentId: accountantAgent.id, toolId: t.id },
+    });
+  }
+
+  console.log("Agent-tool links created: Бухгалтер");
+
+  // ─── MCP Server: AccountingDB (Бухгалтер) ────────────────────
+
+  const accountingDbServer = await prisma.mcpServer.upsert({
+    where: { id: "mcp-accountingdb" },
+    update: {
+      name: "AccountingDB",
+      url: process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+    create: {
+      id: "mcp-accountingdb",
+      name: "AccountingDB",
+      url: process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+  });
+
+  // Auto-discover tools from AccountingDB MCP server
+  const accountingMcpUrl = process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant";
+  const accountingMcpToken = process.env.ACCOUNTINGDB_MCP_TOKEN || null;
+  try {
+    console.log(`Connecting to AccountingDB MCP at ${accountingMcpUrl}...`);
+    const { tools: discoveredAccountingTools, error: accountingDiscoverError } = await discoverMcpTools(accountingMcpUrl, accountingMcpToken);
+    if (accountingDiscoverError) {
+      console.warn(`AccountingDB discovery failed: ${accountingDiscoverError} — tools will need manual discovery via admin panel`);
+    } else {
+      await prisma.mcpServer.update({
+        where: { id: accountingDbServer.id },
+        data: {
+          discoveredTools: discoveredAccountingTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          status: "CONNECTED",
+        },
+      });
+      console.log(`AccountingDB: discovered ${discoveredAccountingTools.length} tools: ${discoveredAccountingTools.map(t => t.name).join(", ")}`);
+    }
+  } catch (e) {
+    console.warn(`AccountingDB discovery error: ${e instanceof Error ? e.message : e} — skipping`);
+  }
+
+  // Link AccountingDB → Бухгалтер
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: accountantAgent.id,
+        mcpServerId: accountingDbServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: accountantAgent.id, mcpServerId: accountingDbServer.id },
+  });
+
+  // Link Юрист → Бухгалтер (for legal/tax code access)
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: accountantAgent.id,
+        mcpServerId: lawyerServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: accountantAgent.id, mcpServerId: lawyerServer.id },
+  });
+
+  console.log("MCP servers seeded: AccountingDB → Бухгалтер, Юрист → Бухгалтер");
 
   // ─── 10 Specialized System Agents + MCP Servers ─────────────────
 
@@ -873,7 +1335,7 @@ water_code — ВК РК
       instructions: GITHUB_PROMPT,
       icon: "Code",
       iconColor: "#4F6EF7",
-      sortOrder: 2,
+      sortOrder: 3,
       starterPrompts: [
         "Покажи открытые pull requests в репозитории",
         "Сделай code review последнего PR",
@@ -895,7 +1357,7 @@ water_code — ВК РК
       instructions: SQL_PROMPT,
       icon: "FileSearch",
       iconColor: "#10B981",
-      sortOrder: 3,
+      sortOrder: 4,
       starterPrompts: [
         "Покажи структуру базы данных",
         "Напиши SQL для анализа продаж за месяц",
@@ -917,7 +1379,7 @@ water_code — ВК РК
       instructions: RESEARCHER_PROMPT,
       icon: "Globe",
       iconColor: "#06B6D4",
-      sortOrder: 4,
+      sortOrder: 5,
       starterPrompts: [
         "Исследуй тренды AI в 2026 году",
         "Проверь достоверность утверждения",
@@ -939,7 +1401,7 @@ water_code — ВК РК
       instructions: FILEMANAGER_PROMPT,
       icon: "FileText",
       iconColor: "#F59E0B",
-      sortOrder: 5,
+      sortOrder: 6,
       starterPrompts: [
         "Покажи структуру текущей директории",
         "Найди все файлы с расширением .json",
@@ -961,7 +1423,7 @@ water_code — ВК РК
       instructions: QA_PROMPT,
       icon: "ShieldCheck",
       iconColor: "#EF4444",
-      sortOrder: 6,
+      sortOrder: 7,
       starterPrompts: [
         "Протестируй форму логина на сайте",
         "Проверь адаптивность на мобильных",
@@ -1311,6 +1773,86 @@ water_code — ВК РК
       },
       sortOrder: 18,
       agentId: "system-qa-agent",
+    },
+
+    // ── Таможенный брокер ──
+    {
+      id: "tool-broker-classify",
+      name: "Классификация товара",
+      description: "Определить код ТН ВЭД ЕАЭС и ставки пошлин",
+      icon: "Package",
+      iconColor: "#0EA5E9",
+      config: {
+        prompt: "Помогу классифицировать товар по ТН ВЭД ЕАЭС. Опиши товар подробно.",
+        templates: [
+          {
+            id: "classify-goods",
+            name: "Классификация товара",
+            description: "Определение кода ТН ВЭД и применимых ставок",
+            fields: [
+              { id: "goodsDescription", label: "Описание товара", placeholder: "Смартфон Apple iPhone 16 Pro, 256GB, новый", type: "textarea", required: true },
+              { id: "material", label: "Материал/Состав", placeholder: "Металл, стекло, литий-ионный аккумулятор", type: "text", required: false },
+              { id: "purpose", label: "Назначение", placeholder: "Для личного использования / коммерческий ввоз", type: "text", required: false },
+            ],
+            promptTemplate: "Классифицируй товар по ТН ВЭД ЕАЭС: {{goodsDescription}}. Материал: {{material}}. Назначение: {{purpose}}. Используй classify_goods для определения кода и ставок. Покажи: 1) Код ТН ВЭД (10 знаков), 2) Наименование позиции, 3) Ставка пошлины, 4) НДС, 5) Акциз (если применимо).",
+          },
+        ],
+      },
+      sortOrder: 20,
+      agentId: "system-broker-agent",
+    },
+    {
+      id: "tool-broker-duties",
+      name: "Расчёт пошлин",
+      description: "Рассчитать таможенные платежи для ввоза товара",
+      icon: "Calculator",
+      iconColor: "#0EA5E9",
+      config: {
+        prompt: "Рассчитаю таможенные платежи. Укажи товар, стоимость и страну происхождения.",
+        templates: [
+          {
+            id: "calc-duties",
+            name: "Расчёт таможенных платежей",
+            description: "Полный расчёт пошлин, НДС и акцизов",
+            fields: [
+              { id: "goodsDescription", label: "Товар", placeholder: "Автомобиль Toyota Camry 2024, 2.5L бензин", type: "textarea", required: true },
+              { id: "customsValue", label: "Таможенная стоимость ($)", placeholder: "35000", type: "number", required: true },
+              { id: "originCountry", label: "Страна происхождения", placeholder: "Япония / Китай / Германия", type: "text", required: true },
+              { id: "weight", label: "Вес (кг)", placeholder: "1500", type: "number", required: false },
+            ],
+            promptTemplate: "Рассчитай таможенные платежи для ввоза в РК. Товар: {{goodsDescription}}. Стоимость: ${{customsValue}}. Страна: {{originCountry}}. Вес: {{weight}} кг. Используй classify_goods и calculate_duties. Покажи: 1) Код ТН ВЭД, 2) Таможенная пошлина, 3) НДС, 4) Акциз, 5) Таможенный сбор, 6) ИТОГО к оплате в тенге.",
+          },
+        ],
+      },
+      sortOrder: 21,
+      agentId: "system-broker-agent",
+    },
+    {
+      id: "tool-broker-declaration",
+      name: "Таможенная декларация",
+      description: "Создать таможенную декларацию (ДТ) ЕАЭС в формате PDF",
+      icon: "FileText",
+      iconColor: "#0EA5E9",
+      config: {
+        prompt: "Создам таможенную декларацию ЕАЭС. Укажи данные о декларанте, товаре и условиях поставки.",
+        templates: [
+          {
+            id: "create-declaration",
+            name: "Декларация на товары (ДТ)",
+            description: "PDF декларации по форме Решения Комиссии ТС №257",
+            fields: [
+              { id: "declarantName", label: "Декларант", placeholder: 'ТОО "Импорт КЗ", БИН 230440012345', type: "text", required: true },
+              { id: "goodsDescription", label: "Товар", placeholder: "Электроника, бытовая техника", type: "textarea", required: true },
+              { id: "originCountry", label: "Страна происхождения", placeholder: "CN — Китай", type: "text", required: true },
+              { id: "customsValue", label: "Таможенная стоимость ($)", placeholder: "50000", type: "number", required: true },
+              { id: "deliveryTerms", label: "Условия поставки", placeholder: "CIF Алматы / DAP Достык", type: "text", required: true },
+            ],
+            promptTemplate: "Подготовь данные и создай таможенную декларацию (ДТ) ЕАЭС. Декларант: {{declarantName}}. Товар: {{goodsDescription}}. Страна: {{originCountry}}. Стоимость: ${{customsValue}}. Условия: {{deliveryTerms}}. Используй classify_goods для кода ТН ВЭД, calculate_duties для платежей, get_required_docs для списка документов, затем generate_declaration для создания PDF.",
+          },
+        ],
+      },
+      sortOrder: 22,
+      agentId: "system-broker-agent",
     },
 
     // ── Файловый Ассистент ──

@@ -20,6 +20,22 @@ const COLOR_STYLE_PROPS = [
   "boxShadow",
 ] as const;
 
+/**
+ * Strip oklab()/oklch() from all <style> tags in the cloned document.
+ * html2canvas parses raw CSS and crashes on unsupported color functions.
+ * Inline styles (set by resolveColorsToRgb) have higher specificity and
+ * will override these neutralized values.
+ */
+function sanitizeStylesheets(doc: Document): void {
+  const colorFnRegex = /okl(?:ab|ch)\([^)]*\)/gi;
+  doc.querySelectorAll("style").forEach((style) => {
+    if (style.textContent && colorFnRegex.test(style.textContent)) {
+      colorFnRegex.lastIndex = 0;
+      style.textContent = style.textContent.replace(colorFnRegex, "transparent");
+    }
+  });
+}
+
 function resolveColorsToRgb(
   sourceRoot: HTMLElement,
   clonedRoot: HTMLElement
@@ -63,8 +79,12 @@ export async function exportToPdf(
       scrollY: 0,
       windowHeight: element.scrollHeight,
       height: element.scrollHeight,
-      onclone: (_doc: Document, clonedEl: HTMLElement) => {
-        // Browser resolves oklab()/oklch() → rgb() in getComputedStyle.
+      onclone: (doc: Document, clonedEl: HTMLElement) => {
+        // 1. Neutralize oklab()/oklch() in stylesheet text so html2canvas
+        //    CSS parser doesn't crash.
+        sanitizeStylesheets(doc);
+        // 2. Browser resolves oklab()/oklch() → rgb() in getComputedStyle.
+        //    Inline styles override the neutralized stylesheet values.
         resolveColorsToRgb(element, clonedEl);
 
         // Remove overflow clipping on the cloned element and all ancestors
