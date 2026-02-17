@@ -131,6 +131,10 @@ BOT_PASSWORD=Ckdshfh231161!
 
 **Ручные команды `/failover` и `/failback` продолжают работать** и корректно синхронизируют состояние с автоматикой.
 
+**Docker CLI в контейнере бота:** бот выполняет `docker compose` команды для запуска/остановки cloudflared. Dockerfile устанавливает Docker CLI (static binary) + Docker Compose plugin. При ребилде убедиться что `docker.io` в Dockerfile заменён на static binary (Debian Trixie не включает docker CLI в пакет `docker.io`).
+
+**Протестировано (2026-02-17):** failover (Server 1 → Server 2) и failback (Server 2 → Server 1) — оба работают. Cloudflared на Server 2 использует config-file с ingress rules (не token-режим).
+
 ---
 
 ## MCP серверы
@@ -186,6 +190,9 @@ DNS все домены (`sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai`, `api.san
 
 **Server 2** — Docker контейнер `deploy-cloudflared-1` (profile `failover`):
 - Запускается ТОЛЬКО при failover: `docker compose --profile failover up -d`
+- Конфиг: `~/faragj/deploy/cloudflared/config.yml` (ingress rules: `sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai` → `localhost:3004`/`:8120`)
+- Credentials: `~/faragj/deploy/cloudflared/credentials.json` (тот же tunnel ID, тот же аккаунт)
+- Контейнер запускается с `network_mode: host` + `user: root` (для доступа к credentials)
 - **ВАЖНО:** НЕ запускать cloudflared на Server 2 если sanbao там не запущен! Иначе Cloudflare будет балансировать между серверами и часть запросов уйдёт в пустоту → 503.
 
 ### CF API доступ
@@ -398,8 +405,11 @@ deploy/
 ├── docker-compose.failover.yml     # FragmentDB + Sanbao standby + bot
 ├── .env                            # TG, CF, primary/standby IPs
 ├── .env.sanbao                     # Sanbao env для standby
+├── cloudflared/
+│   ├── config.yml                  # Ingress rules (sanbao.ai → :3004)
+│   └── credentials.json            # Tunnel credentials (tunnel ID + secret)
 ├── bot/
-│   ├── Dockerfile
+│   ├── Dockerfile                  # Python 3.12 + Docker CLI + Compose
 │   ├── monitor_bot.py              # Telegram бот мониторинга
 │   └── requirements.txt
 ├── sync.sh                         # Синхронизация Server 1 → 2
@@ -497,3 +507,32 @@ Server 1 за NAT (192.168.31.79 → 128.127.102.170). Прямое подклю
 ```bash
 ssh faragj@46.225.122.142 "docker logs deploy-monitor-bot-1 --tail 20"
 ```
+
+### Бот: `docker: not found` (auto-failover не работает)
+
+**Симптомы:** в логах бота `Auto-failover failed: /bin/sh: 1: docker: not found`.
+
+**Причина:** образ бота собран без Docker CLI. Пакет `docker.io` в Debian Trixie НЕ включает docker CLI.
+
+**Решение:** пересобрать бота — Dockerfile должен устанавливать Docker CLI static binary:
+```bash
+ssh faragj@46.225.122.142
+cd ~/faragj/deploy
+docker compose -f docker-compose.failover.yml build --no-cache monitor-bot
+docker compose -f docker-compose.failover.yml up -d monitor-bot
+# Проверить:
+docker exec deploy-monitor-bot-1 docker --version
+docker exec deploy-monitor-bot-1 docker compose version
+```
+
+### Cloudflared Server 2: `No ingress rules` (503)
+
+**Симптомы:** cloudflared на Server 2 запущен, но сайт отдаёт 503. В логах: `No ingress rules were defined`.
+
+**Причина:** cloudflared запущен в token-режиме (без конфига). Token не содержит ingress rules — они должны быть в Cloudflare Dashboard ИЛИ в локальном config.yml.
+
+**Решение:** cloudflared на Server 2 использует config-file подход (не token):
+- Config: `~/faragj/deploy/cloudflared/config.yml`
+- Credentials: `~/faragj/deploy/cloudflared/credentials.json`
+- Docker compose: `command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run`
+- **user: root** (иначе permission denied на credentials)
