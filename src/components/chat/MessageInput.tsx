@@ -284,11 +284,17 @@ export function MessageInput() {
 
   // ─── Auto-submit from tools/templates ────────────────────
 
+  const pendingSubmitRef = useRef(false);
   useEffect(() => {
-    if (pendingInput && !isStreaming) {
+    if (pendingInput && !isStreaming && !pendingSubmitRef.current) {
+      pendingSubmitRef.current = true;
       const input = pendingInput;
       setPendingInput(null);
-      doSubmit(input);
+      // Defer to next tick so setPendingInput(null) settles first
+      queueMicrotask(() => {
+        doSubmit(input);
+        pendingSubmitRef.current = false;
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingInput]);
@@ -683,7 +689,7 @@ export function MessageInput() {
           <button
             onClick={toggleThinking}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 font-medium hover:bg-violet-200 transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
@@ -696,7 +702,7 @@ export function MessageInput() {
           <button
             onClick={toggleWebSearch}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium hover:bg-emerald-200 transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
@@ -709,7 +715,7 @@ export function MessageInput() {
           <button
             onClick={togglePlanning}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 font-medium hover:bg-amber-200 transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
@@ -812,7 +818,7 @@ export function MessageInput() {
                         onClick={handleAttachClick}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-500 flex items-center justify-center">
+                        <div className="h-7 w-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
                           <Paperclip className="h-3.5 w-3.5" />
                         </div>
                         <div className="flex-1 text-left">
@@ -828,7 +834,7 @@ export function MessageInput() {
                         onClick={handleCameraClick}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-green-50 dark:bg-green-950 text-green-500 flex items-center justify-center">
+                        <div className="h-7 w-7 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
                           <Camera className="h-3.5 w-3.5" />
                         </div>
                         <span>Сделать фото</span>
@@ -840,7 +846,7 @@ export function MessageInput() {
                           onClick={handleOpenTools}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                         >
-                          <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-500 flex items-center justify-center">
+                          <div className="h-7 w-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
                             <Wrench className="h-3.5 w-3.5" />
                           </div>
                           <span>Инструменты</span>
@@ -855,7 +861,7 @@ export function MessageInput() {
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-rose-50 dark:bg-rose-950 text-rose-500 flex items-center justify-center">
+                        <div className="h-7 w-7 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
                           <ImageIcon className="h-3.5 w-3.5" />
                         </div>
                         <span>Генерация картинок</span>
@@ -876,7 +882,7 @@ export function MessageInput() {
                             "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
                             webSearchEnabled
                               ? "bg-emerald-500 text-white"
-                              : "bg-emerald-50 dark:bg-emerald-950 text-emerald-500"
+                              : "bg-emerald-50 text-emerald-500"
                           )}
                         >
                           <Globe className="h-3.5 w-3.5" />
@@ -912,7 +918,7 @@ export function MessageInput() {
                             "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
                             planningEnabled
                               ? "bg-amber-500 text-white"
-                              : "bg-amber-50 dark:bg-amber-950 text-amber-500"
+                              : "bg-amber-50 text-amber-500"
                           )}
                         >
                           <ListChecks className="h-3.5 w-3.5" />
@@ -948,7 +954,7 @@ export function MessageInput() {
                             "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
                             thinkingEnabled
                               ? "bg-violet-500 text-white"
-                              : "bg-violet-50 dark:bg-violet-950 text-violet-500"
+                              : "bg-violet-50 text-violet-500"
                           )}
                         >
                           <Brain className="h-3.5 w-3.5" />

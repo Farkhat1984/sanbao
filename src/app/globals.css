@@ -82,45 +82,7 @@
   --duration-slow: 400ms;
 }
 
-.dark {
-  --bg: #0F1219;
-  --bg-surface: #181D27;
-  --bg-surface-alt: #1E2433;
-  --bg-surface-hover: #252C3D;
-  --bg-overlay: rgba(15, 18, 25, 0.85);
-
-  --border: #2A3144;
-  --border-hover: #3A4560;
-  --border-focus: #6B8AFF;
-
-  --text-primary: #E8ECF2;
-  --text-secondary: #8E99AB;
-  --text-muted: #5C6B82;
-  --text-inverse: #0F1219;
-
-  --accent: #6B8AFF;
-  --accent-hover: #8BA3FF;
-  --accent-light: #1A2444;
-  --accent-gradient: linear-gradient(135deg, #6B8AFF 0%, #A78BFA 100%);
-
-  --legal-ref: #A78BFA;
-  --legal-ref-bg: #1E1533;
-  --legal-ref-hover: #C4B5FD;
-
-  --success-light: #052E16;
-  --warning-light: #1C1301;
-  --error-light: #2D0808;
-  --info-light: #0C1929;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.35);
-  --shadow-input: 0 4px 24px rgba(107, 138, 255, 0.1);
-  --shadow-input-focus: 0 4px 32px rgba(107, 138, 255, 0.2);
-
-  --sidebar-bg: rgba(30, 36, 51, 0.75);
-}
+/* Dark theme disabled — light only */
 
 /* ─── Tailwind Theme Tokens ───────────────────────────── */
 
@@ -219,9 +181,6 @@ body {
   background: var(--text-muted);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: var(--border);
-}
 
 /* ─── Selection ───────────────────────────────────────── */
 

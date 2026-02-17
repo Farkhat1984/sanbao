@@ -59,7 +59,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
             </button>
             <button
               onClick={() => onDelete?.(skill.id)}
-              className="h-7 px-3 rounded-lg text-text-muted text-xs hover:text-error hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer flex items-center gap-1"
+              className="h-7 px-3 rounded-lg text-text-muted text-xs hover:text-error hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1"
             >
               <Trash2 className="h-3 w-3" />
             </button>

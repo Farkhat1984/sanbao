@@ -85,7 +85,7 @@ export function MemoryManager() {
           </div>
           <button
             onClick={() => handleDelete(m.id)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-red-50 dark:hover:bg-red-950 transition-all cursor-pointer"
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-red-50 transition-all cursor-pointer"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

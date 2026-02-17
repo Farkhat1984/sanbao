@@ -185,25 +185,25 @@ export default function AdminPluginsPage() {
                   {/* Attached items */}
                   <div className="flex flex-wrap gap-2">
                     {plugin.tools?.map((t) => (
-                      <span key={t.tool.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 text-[10px]">
+                      <span key={t.tool.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px]">
                         <Wrench className="h-2.5 w-2.5" />
                         {t.tool.name}
                       </span>
                     ))}
                     {plugin.skills?.map((s) => (
-                      <span key={s.skill.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 text-[10px]">
+                      <span key={s.skill.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 text-[10px]">
                         <FileText className="h-2.5 w-2.5" />
                         {s.skill.name}
                       </span>
                     ))}
                     {plugin.mcpServers?.map((m) => (
-                      <span key={m.mcpServer.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                      <span key={m.mcpServer.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px]">
                         <Globe className="h-2.5 w-2.5" />
                         {m.mcpServer.name}
                       </span>
                     ))}
                     {plugin.agents?.map((a) => (
-                      <span key={a.agent.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 text-[10px]">
+                      <span key={a.agent.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px]">
                         {a.agent.name}
                       </span>
                     ))}

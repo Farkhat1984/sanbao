@@ -170,7 +170,7 @@ const markdownComponents = {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-[13px] font-mono">
+        <code className="bg-black/10 rounded px-1 py-0.5 text-[13px] font-mono">
           {children}
         </code>
       );
@@ -339,7 +339,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-3 py-2 text-xs text-violet-700 dark:text-violet-300 leading-relaxed max-h-[300px] overflow-y-auto"
+                className="rounded-xl bg-violet-50 border border-violet-200 px-3 py-2 text-xs text-violet-700 leading-relaxed max-h-[300px] overflow-y-auto"
               >
                 <pre className="whitespace-pre-wrap font-sans">
                   {message.reasoning}
@@ -415,16 +415,16 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
                       <button
                         key={i}
                         onClick={() => handleOpenEditedArtifact(part.title || "")}
-                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
+                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 hover:border-emerald-400 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
                       >
-                        <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
-                          <Pencil className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                          <Pencil className="h-5 w-5 text-emerald-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-text-primary truncate">
                             {part.title}
                           </p>
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                          <p className="text-xs text-emerald-600">
                             {part.edits?.length} {part.edits?.length === 1 ? "изменение" : "изменений"}
                             {target ? ` · v${target.version}` : ""}
                             {" "}&middot; Нажмите чтобы открыть

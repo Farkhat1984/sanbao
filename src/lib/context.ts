@@ -68,7 +68,16 @@ export function buildSystemPromptWithContext(
   userMemory: string | null = null,
   tasksContext: string | null = null
 ): string {
-  let result = base;
+  // Always inject current date/time so the model knows "now"
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: "Asia/Almaty",
+  }).format(now);
+  const isoStr = now.toISOString();
+
+  let result = `Текущая дата и время: ${dateStr} (${isoStr}, Asia/Almaty)\n\n${base}`;
 
   if (userMemory) {
     result += `\n\n--- ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ (предпочтения и стандарты) ---\n${userMemory}\n--- КОНЕЦ ПАМЯТИ ПОЛЬЗОВАТЕЛЯ ---`;

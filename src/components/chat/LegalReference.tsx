@@ -62,12 +62,12 @@ export function LegalReference({ reference }: LegalReferenceProps) {
                   </div>
                   <div className="flex items-center gap-1">
                     {reference.isActual ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-success bg-green-50 dark:bg-green-950 px-2 py-0.5 rounded-md">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-success bg-green-50 px-2 py-0.5 rounded-md">
                         <CheckCircle className="h-3 w-3" />
                         Актуальна
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-warning bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded-md">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-warning bg-amber-50 px-2 py-0.5 rounded-md">
                         <AlertTriangle className="h-3 w-3" />
                         Не актуальна
                       </span>

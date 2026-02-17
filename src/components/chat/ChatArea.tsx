@@ -20,9 +20,20 @@ export function ChatArea() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [tasksExpanded, setTasksExpanded] = useState(false);
 
+  // Auto-scroll: use instant scroll during streaming (smooth can't keep up
+  // with rapid chunk updates and animations cancel each other), smooth otherwise.
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isStreaming]);
+    if (isStreaming) {
+      // During streaming, scroll the container directly for reliable tracking
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isStreaming, streamingPhase]);
 
   // Load full agent data when activeAgentId changes
   useEffect(() => {
@@ -95,7 +106,7 @@ export function ChatArea() {
       )}
 
       {/* Messages or Welcome */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
         {!hasMessages ? (
           <WelcomeScreen />
         ) : (

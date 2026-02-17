@@ -110,6 +110,20 @@ export async function POST(req: Request) {
   // Resolve legacy IDs and use agentId for all agents
   const resolvedId = agentId ? resolveAgentId(agentId) : null;
 
+  // Validate agent access: only own agents or system agents
+  if (resolvedId) {
+    const agentAccess = await prisma.agent.findFirst({
+      where: {
+        id: resolvedId,
+        OR: [{ userId }, { isSystem: true }],
+      },
+      select: { id: true },
+    });
+    if (!agentAccess) {
+      return jsonError("Агент не найден или недоступен", 404);
+    }
+  }
+
   const conversation = await prisma.conversation.create({
     data: {
       title: title || "Новый чат",

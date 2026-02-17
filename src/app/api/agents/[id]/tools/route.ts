@@ -14,14 +14,13 @@ export async function GET(
 
   const { id } = await params;
 
-  // Ownership check: user can only access their own agents or system/public agents
+  // Ownership check: user can only access their own agents or system agents
   const agent = await prisma.agent.findFirst({
     where: {
       id,
       OR: [
         { userId: session.user.id },
         { isSystem: true },
-        { isPublic: true, status: "APPROVED" },
       ],
     },
     select: { id: true },

@@ -15,7 +15,6 @@ import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -143,7 +142,6 @@ export function Sidebar() {
               {session?.user?.email || "Войдите в аккаунт"}
             </p>
           </div>
-          <ThemeToggle />
           {session?.user?.role === "ADMIN" && (
             <Tooltip content="Админ" side="top">
               <button

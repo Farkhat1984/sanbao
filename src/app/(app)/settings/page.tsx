@@ -2,16 +2,12 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTheme } from "next-themes";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { UsageBar } from "@/components/billing/UsageBar";
 import { PlanCard } from "@/components/billing/PlanCard";
 import {
-  Sun,
-  Moon,
-  Monitor,
   LogOut,
   Sparkles,
   User,
@@ -148,7 +144,6 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
 }
 
 function SettingsContent() {
-  const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const setup2fa = searchParams.get("setup2fa") === "1";
@@ -173,12 +168,6 @@ function SettingsContent() {
       .catch(() => setLoadingBilling(false));
   }, []);
 
-  const themes = [
-    { key: "light", label: "Светлая", icon: Sun },
-    { key: "dark", label: "Тёмная", icon: Moon },
-    { key: "system", label: "Системная", icon: Monitor },
-  ] as const;
-
   const currentPlan = billing?.plan;
   const usage = billing?.usage;
   const monthlyUsage = billing?.monthlyUsage;
@@ -189,11 +178,11 @@ function SettingsContent() {
         <h1 className="text-xl font-bold text-text-primary">Настройки</h1>
 
         {setup2fa && !mounted ? null : setup2fa && (
-          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-sm font-medium text-amber-800">
               Для доступа к админ-панели необходимо включить двухфакторную аутентификацию (2FA).
             </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            <p className="text-xs text-amber-600 mt-1">
               Настройте 2FA ниже, затем вернитесь в админ-панель.
             </p>
           </div>
@@ -298,31 +287,6 @@ function SettingsContent() {
           )}
         </section>
 
-        {/* Theme */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Sun className="h-4 w-4 text-text-muted" />
-            <h2 className="text-sm font-semibold text-text-primary">Тема</h2>
-          </div>
-          <div className="flex gap-2">
-            {themes.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setTheme(key)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer",
-                  mounted && theme === key
-                    ? "bg-accent-light text-accent border border-accent/20"
-                    : "bg-surface-alt text-text-secondary border border-border hover:border-border-hover"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </section>
-
         {/* Memory */}
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -345,7 +309,7 @@ function SettingsContent() {
           <Button
             variant="ghost"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-error hover:text-error hover:bg-red-50 dark:hover:bg-red-950"
+            className="text-error hover:text-error hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
             Выйти из аккаунта

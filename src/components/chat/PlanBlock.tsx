@@ -135,7 +135,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
         <ListChecks className="h-3 w-3" />
         <span>План</span>
         {round > 1 && (
-          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 px-1.5 rounded-full">
+          <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 rounded-full">
             раунд {round}
           </span>
         )}
@@ -159,7 +159,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs leading-relaxed overflow-hidden"
+            className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs leading-relaxed overflow-hidden"
           >
             {/* Steps list */}
             {hasSteps ? (
@@ -173,8 +173,8 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                       disabled={!isActive || isStreaming}
                       className={cn(
                         "flex items-start gap-2 w-full text-left px-2 py-1.5 rounded-lg transition-all",
-                        isActive && !isStreaming && "hover:bg-amber-100 dark:hover:bg-amber-900/30 cursor-pointer",
-                        isChecked && "bg-amber-100 dark:bg-amber-900/40",
+                        isActive && !isStreaming && "hover:bg-amber-100 cursor-pointer",
+                        isChecked && "bg-amber-100",
                         (!isActive || isStreaming) && "opacity-70 cursor-default"
                       )}
                     >
@@ -182,7 +182,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                         "mt-0.5 h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
                         isChecked
                           ? "bg-amber-500 border-amber-500"
-                          : "border-amber-300 dark:border-amber-600"
+                          : "border-amber-300"
                       )}>
                         {isChecked && (
                           <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -191,7 +191,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                         )}
                       </div>
                       <span className={cn(
-                        "text-amber-700 dark:text-amber-300",
+                        "text-amber-700",
                         isChecked && "font-medium"
                       )}>
                         {step.text}
@@ -201,14 +201,14 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                 })}
               </div>
             ) : (
-              <div className="text-amber-700 dark:text-amber-300 whitespace-pre-wrap">
+              <div className="text-amber-700 whitespace-pre-wrap">
                 {content}
               </div>
             )}
 
             {/* Action buttons */}
             {hasSteps && !isStreaming && isActive && (
-              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-amber-200">
                 <button
                   onClick={handleExecute}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors cursor-pointer"
@@ -223,8 +223,8 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                     showFeedback
-                      ? "bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300"
-                      : "text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                      ? "bg-amber-200 text-amber-700"
+                      : "text-amber-600 hover:bg-amber-100"
                   )}
                 >
                   <MessageSquare className="h-3 w-3" />
@@ -233,7 +233,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                 {round > 1 && (
                   <button
                     onClick={handleReset}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] text-amber-400 hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] text-amber-400 hover:text-amber-600 hover:bg-amber-100 transition-colors cursor-pointer"
                     title="Сбросить выбор"
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -259,7 +259,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                       onChange={(e) => setFeedback(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendFeedback()}
                       placeholder="Изменить, добавить, убрать..."
-                      className="flex-1 rounded-lg border border-amber-200 dark:border-amber-700 bg-white dark:bg-amber-950/50 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200 placeholder:text-amber-400 focus:outline-none focus:border-amber-400"
+                      className="flex-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs text-amber-800 placeholder:text-amber-400 focus:outline-none focus:border-amber-400"
                     />
                     <button
                       onClick={handleSendFeedback}
@@ -268,7 +268,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                         "px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer",
                         feedback.trim()
                           ? "bg-amber-500 text-white hover:bg-amber-600"
-                          : "bg-amber-100 dark:bg-amber-900/30 text-amber-400"
+                          : "bg-amber-100 text-amber-400"
                       )}
                     >
                       <Send className="h-3 w-3" />
@@ -283,13 +283,13 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
 
             {/* Status indicators */}
             {phase === "sent" && (
-              <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800 text-[10px] text-amber-500 flex items-center gap-1.5">
+              <div className="mt-2 pt-2 border-t border-amber-200 text-[10px] text-amber-500 flex items-center gap-1.5">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Выполняется...
               </div>
             )}
             {phase === "refining" && (
-              <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800 text-[10px] text-amber-500 flex items-center gap-1.5">
+              <div className="mt-2 pt-2 border-t border-amber-200 text-[10px] text-amber-500 flex items-center gap-1.5">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Обновление плана...
               </div>

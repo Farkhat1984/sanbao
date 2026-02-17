@@ -18,7 +18,7 @@ export default function McpPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-500 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
             <Cable className="h-5 w-5" />
           </div>
           <div>

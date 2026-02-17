@@ -53,10 +53,10 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative p-5 rounded-2xl border-2 border-violet-200 dark:border-violet-800/50 bg-gradient-to-br from-violet-50/50 to-surface dark:from-violet-950/20 dark:to-surface transition-all duration-200"
+      className="relative p-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50/50 to-surface transition-all duration-200"
     >
       {/* System badge */}
-      <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">
+      <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">
         <Shield className="h-2.5 w-2.5" />
         <span className="text-[9px] font-semibold uppercase tracking-wider">Системный</span>
       </div>
@@ -72,7 +72,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {agent.name}
           </h3>
-          <p className="text-xs text-violet-500 dark:text-violet-400 mt-0.5">
+          <p className="text-xs text-violet-500 mt-0.5">
             Системный агент
           </p>
         </div>
@@ -82,7 +82,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
         {agent.description}
       </p>
 
-      <div className="flex items-center justify-between pt-3 border-t border-violet-200/50 dark:border-violet-800/30">
+      <div className="flex items-center justify-between pt-3 border-t border-violet-200/50">
         <div className="flex items-center gap-1 text-[10px] text-text-muted">
           <Shield className="h-3 w-3" />
           Доступен всем

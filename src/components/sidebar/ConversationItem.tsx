@@ -136,7 +136,7 @@ export function ConversationItem({
             </button>
             <button
               onClick={handleDeleteClick}
-              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2 cursor-pointer"
+              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 flex items-center gap-2 cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
               Удалить
