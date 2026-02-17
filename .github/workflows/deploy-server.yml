@@ -69,7 +69,23 @@ jobs:
             cd ~/faragj/deploy
             docker compose -f docker-compose.failover.yml build sanbao
 
-            echo "=== Server 2 image updated ==="
+            echo "=== Starting sanbao as warm standby ==="
+            docker compose -f docker-compose.failover.yml up -d sanbao
+
+            echo "=== Waiting for warm standby health check ==="
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3004/api/ready >/dev/null 2>&1; then
+                echo "Warm standby is healthy!"
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 5
+            done
+
+            echo "=== Restarting monitor-bot (pick up new code) ==="
+            docker compose -f docker-compose.failover.yml up -d --build monitor-bot
+
+            echo "=== Server 2 warm standby ready ==="
 
   notify:
     name: Notify

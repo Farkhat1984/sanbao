@@ -189,6 +189,13 @@ body {
   color: white;
 }
 
+/* Selection on accent (user message) backgrounds */
+.bg-accent ::selection,
+.bg-accent::selection {
+  background: rgba(255, 255, 255, 0.35);
+  color: white;
+}
+
 /* ─── Focus Ring ──────────────────────────────────────── */
 
 .focus-ring {

@@ -67,6 +67,7 @@ export interface ResolvedAgentContext {
   promptTools: PromptTool[];
   mcpTools: McpToolContext[];
   skillPrompts: string[];
+  isSystem: boolean;
 }
 
 export async function resolveAgentContext(
@@ -112,7 +113,7 @@ export async function resolveAgentContext(
   });
 
   if (!agent) {
-    return { systemPrompt: "", promptTools: [], mcpTools: [], skillPrompts: [] };
+    return { systemPrompt: "", promptTools: [], mcpTools: [], skillPrompts: [], isSystem: false };
   }
 
   // Build system prompt
@@ -283,6 +284,7 @@ export async function resolveAgentContext(
     promptTools,
     mcpTools,
     skillPrompts,
+    isSystem: agent.isSystem,
   };
 
   // L1: in-memory

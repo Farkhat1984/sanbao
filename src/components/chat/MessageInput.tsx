@@ -9,7 +9,6 @@ import {
   Wrench,
   Globe,
   Brain,
-  ListChecks,
   Mic,
   X,
   FileText,
@@ -117,7 +116,6 @@ export function MessageInput() {
     setStreamingPhase,
     toggleThinking,
     toggleWebSearch,
-    togglePlanning,
     updateCurrentPlan,
     setCurrentPlan,
     setContextUsage,
@@ -711,19 +709,6 @@ export function MessageInput() {
             <X className="h-2.5 w-2.5 ml-0.5" />
           </button>
         )}
-        {planningEnabled && (
-          <button
-            onClick={togglePlanning}
-            className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 font-medium hover:bg-amber-200 transition-colors cursor-pointer",
-              isMobile ? "text-xs py-1" : "text-[10px]"
-            )}
-          >
-            <ListChecks className="h-3 w-3" />
-            Планирование
-            <X className="h-2.5 w-2.5 ml-0.5" />
-          </button>
-        )}
       </div>
 
       {/* Main input */}
@@ -900,42 +885,6 @@ export function MessageInput() {
                             className={cn(
                               "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
                               webSearchEnabled ? "left-[18px]" : "left-0.5"
-                            )}
-                          />
-                        </div>
-                      </button>
-
-                      {/* Planning toggle */}
-                      <button
-                        onClick={() => {
-                          togglePlanning();
-                          setMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div
-                          className={cn(
-                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
-                            planningEnabled
-                              ? "bg-amber-500 text-white"
-                              : "bg-amber-50 text-amber-500"
-                          )}
-                        >
-                          <ListChecks className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <span>Планирование</span>
-                        </div>
-                        <div
-                          className={cn(
-                            "w-8 h-4.5 rounded-full transition-colors relative",
-                            planningEnabled ? "bg-amber-500" : "bg-border"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
-                              planningEnabled ? "left-[18px]" : "left-0.5"
                             )}
                           />
                         </div>

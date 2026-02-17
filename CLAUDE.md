@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT:** Before any infrastructure or deploy work, read `docs/DEVOPS.md` — it has full docs on servers, ports, services, env vars, CI/CD, Telegram bot, and troubleshooting.
+
 ## Commands
 
 ```bash
@@ -18,6 +20,18 @@ npx prisma generate  # Regenerate Prisma client after schema changes
 npx prisma db seed   # Seed plans, admin user, system agent, default models/skills
 npx prisma studio    # Visual DB browser
 ```
+
+### Deploy (production)
+
+```bash
+./scripts/deploy.sh              # Full rebuild (build + restart all + healthcheck)
+./scripts/deploy.sh app          # Rebuild only app containers + restart nginx
+./scripts/deploy.sh restart      # Restart without rebuild
+./scripts/deploy.sh status       # Show container status
+./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
+```
+
+After code changes, use `./scripts/deploy.sh app` for fastest production update.
 
 Tests live in `src/__tests__/` (not colocated). Vitest config: jsdom environment, 15s timeout, setup file at `src/__tests__/setup.ts`.
 
@@ -202,7 +216,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 
 ## Style Guide
 
-Design system **Soft Corporate Minimalism** — details in `STYLEGUIDE.md`. Key rules:
+Design system **Soft Corporate Minimalism** — details in `docs/STYLEGUIDE.md`. Key rules:
 - Backgrounds never pure white/black — always with a slight blue tint
 - Color tokens via CSS variables (`--bg`, `--accent`, `--text-primary`, etc.)
 - Border radius: 12px buttons, 16px cards/modals, 32px chat input

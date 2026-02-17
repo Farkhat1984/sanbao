@@ -294,7 +294,7 @@ GitHub Variables:
 - API-ключи: AES-256-GCM шифрование
 
 ### Админ-панель (`/admin`)
-27+ страниц управления. Подробности в [ADMINGUIDE.md](ADMINGUIDE.md).
+27+ страниц управления. Подробности в [ADMINGUIDE.md](docs/ADMINGUIDE.md).
 
 ---
 
@@ -348,6 +348,7 @@ k6 run tests/load/stress.js
 ```
 sanbao/
 ├── .github/workflows/     CI/CD (ci.yml, deploy.yml)
+├── docs/                  Документация (ADMINGUIDE, DEVOPS, STYLEGUIDE, USERGUIDE)
 ├── k8s/                   Kubernetes manifests
 │   ├── monitoring/        Prometheus + Grafana + Alertmanager
 │   ├── app-deployment.yml Deployment + Service (3 replicas)
@@ -382,7 +383,9 @@ sanbao/
 │   │   └── chat/          Обработка chat-стримов
 │   ├── stores/            Zustand stores
 │   └── instrumentation.ts Worker bootstrap
-├── tests/load/            k6 нагрузочные тесты
+├── tests/
+│   ├── e2e/               E2E-тесты API
+│   └── load/              k6 нагрузочные тесты
 ├── docker-compose.yml     Dev (DB + PgBouncer + Redis + App)
 ├── docker-compose.prod.yml Prod (+ Nginx + 3 replicas)
 ├── Dockerfile             Multi-stage production build
@@ -411,7 +414,7 @@ npx prisma studio        # Visual DB browser
 
 ## Документация
 
-- [STYLEGUIDE.md](STYLEGUIDE.md) — дизайн-система (Soft Corporate Minimalism)
-- [USERGUIDE.md](USERGUIDE.md) — руководство пользователя
-- [ADMINGUIDE.md](ADMINGUIDE.md) — руководство администратора
+- [STYLEGUIDE.md](docs/STYLEGUIDE.md) — дизайн-система (Soft Corporate Minimalism)
+- [USERGUIDE.md](docs/USERGUIDE.md) — руководство пользователя
+- [ADMINGUIDE.md](docs/ADMINGUIDE.md) — руководство администратора
 - [CLAUDE.md](CLAUDE.md) — контекст для Claude Code

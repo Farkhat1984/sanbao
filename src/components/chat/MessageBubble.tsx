@@ -210,14 +210,10 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
   const bubbleRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
-  useEffect(() => {
-    if (!isAssistant || isExpanded) return;
-    const el = bubbleRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      setIsOverflowing(el.scrollHeight > 500);
-    });
-  }, [message.content, isAssistant, isExpanded]);
+  // Collapse long user messages (~20 lines ≈ 400px)
+  const [isUserExpanded, setIsUserExpanded] = useState(false);
+  const userBubbleRef = useRef<HTMLDivElement>(null);
+  const [isUserOverflowing, setIsUserOverflowing] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -234,6 +230,26 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
     [parts]
   );
+
+  // Detect overflow for assistant messages (skip when artifacts present)
+  useEffect(() => {
+    if (!isAssistant || isExpanded || hasSpecialParts) return;
+    const el = bubbleRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      setIsOverflowing(el.scrollHeight > 500);
+    });
+  }, [message.content, isAssistant, isExpanded, hasSpecialParts]);
+
+  // Detect overflow for user messages
+  useEffect(() => {
+    if (!isUser || isUserExpanded) return;
+    const el = userBubbleRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      setIsUserOverflowing(el.scrollHeight > 400);
+    });
+  }, [message.content, isUser, isUserExpanded]);
 
   // Auto-apply edits to existing artifacts (run once per message)
   useEffect(() => {
@@ -356,14 +372,15 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
 
         {/* Message bubble */}
         <div
-          ref={isAssistant ? bubbleRef : undefined}
+          ref={isAssistant ? bubbleRef : isUser ? userBubbleRef : undefined}
           className={cn(
             "rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isUser
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
-            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative",
-            isAssistant && isExpanded && "overflow-x-auto"
+            isAssistant && !isExpanded && !hasSpecialParts && "max-h-[500px] overflow-hidden relative",
+            isAssistant && isExpanded && "overflow-x-auto",
+            isUser && !isUserExpanded && isUserOverflowing && "max-h-[400px] overflow-hidden relative",
           )}
         >
           {isAssistant ? (
@@ -451,8 +468,21 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
 
+          {/* Gradient overlay + expand button for collapsed user messages */}
+          {isUser && !isUserExpanded && isUserOverflowing && (
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-accent via-accent/90 to-transparent flex items-end justify-center pb-2">
+              <button
+                onClick={() => setIsUserExpanded(true)}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-white/20 border border-white/30 shadow-sm text-white hover:bg-white/30 transition-colors cursor-pointer"
+              >
+                <ChevronDown className="h-3 w-3" />
+                Показать полностью
+              </button>
+            </div>
+          )}
+
           {/* Gradient overlay + expand button for collapsed messages */}
-          {isAssistant && !isExpanded && isOverflowing && (
+          {isAssistant && !isExpanded && isOverflowing && !hasSpecialParts && (
             <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent flex items-end justify-center pb-2">
               <button
                 onClick={() => setIsExpanded(true)}
@@ -465,11 +495,24 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           )}
         </div>
 
-        {/* Collapse button when expanded */}
-        {isAssistant && isExpanded && isOverflowing && (
+        {/* Collapse button when expanded — assistant */}
+        {isAssistant && isExpanded && isOverflowing && !hasSpecialParts && (
           <div className="flex justify-center mt-2">
             <button
               onClick={() => setIsExpanded(false)}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
+            >
+              <ChevronDown className="h-3 w-3 rotate-180" />
+              Свернуть
+            </button>
+          </div>
+        )}
+
+        {/* Collapse button when expanded — user */}
+        {isUser && isUserExpanded && isUserOverflowing && (
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={() => setIsUserExpanded(false)}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
             >
               <ChevronDown className="h-3 w-3 rotate-180" />
@@ -487,7 +530,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           </div>
         )}
 
-        {/* Actions */}
+        {/* Actions — assistant */}
         {isAssistant && (
           <div className={cn(
             "flex items-center gap-1 mt-1.5 transition-opacity",
@@ -519,6 +562,29 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
                 Повторить
               </button>
             )}
+          </div>
+        )}
+
+        {/* Actions — user (copy) */}
+        {isUser && (
+          <div className={cn(
+            "flex items-center gap-1 mt-1.5 transition-opacity justify-end",
+            isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
+            <button
+              onClick={handleCopy}
+              className={cn(
+                "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
+              )}
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-success" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copied ? "Скопировано" : "Копировать"}
+            </button>
           </div>
         )}
       </div>

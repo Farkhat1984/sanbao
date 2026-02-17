@@ -38,7 +38,7 @@ services:
         -c log_min_duration_statement=500
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-sanbao}
@@ -93,6 +93,7 @@ services:
       DIRECT_DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-sanbao}?schema=public
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
       SHUTDOWN_DRAIN_MS: "15000"
     depends_on:
       pgbouncer:
@@ -100,11 +101,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3004/api/ready || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -q --spider http://0.0.0.0:3004/api/ready || exit 1"]
+      interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -125,7 +126,7 @@ services:
       app:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
