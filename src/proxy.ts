@@ -46,6 +46,7 @@ export default auth((req) => {
   const role = req.auth?.user?.role;
 
   const isAppRoute =
+    pathname === "/" ||
     pathname.startsWith("/chat") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/settings") ||
@@ -57,6 +58,11 @@ export default auth((req) => {
 
   if (isAppRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // Logged-in user on root → go to chat
+  if (pathname === "/" && isLoggedIn) {
+    return NextResponse.redirect(new URL("/chat", req.url));
   }
 
   if (pathname.startsWith("/admin") && role !== "ADMIN") {
@@ -93,6 +99,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
+    "/",
     "/chat/:path*",
     "/profile",
     "/settings",
