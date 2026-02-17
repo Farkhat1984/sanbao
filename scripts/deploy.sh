@@ -29,7 +29,7 @@ purge_cf_cache() {
     -H "Authorization: Bearer ${CF_API_TOKEN}" \
     -H "Content-Type: application/json" \
     --data '{"purge_everything":true}' 2>&1)
-  if echo "$RESP" | grep -q '"success":true'; then
+  if echo "$RESP" | grep -q '"success":\s*true'; then
     echo "  Cloudflare cache purged"
   else
     echo "  WARNING: CF cache purge failed: $RESP"
@@ -60,7 +60,8 @@ wait_for_app_healthy() {
   echo "=== Waiting for $NEED healthy app container(s) ==="
   for i in $(seq 1 "$MAX_WAIT"); do
     HEALTHY=$($COMPOSE ps app --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
-    TOTAL=$($COMPOSE ps app -q 2>/dev/null | wc -l)
+    HEALTHY=$(echo "$HEALTHY" | tr -d '[:space:]')
+    TOTAL=$($COMPOSE ps app -q 2>/dev/null | wc -l | tr -d '[:space:]')
     if [ "$HEALTHY" -ge "$NEED" ]; then
       echo "  App healthy! ($HEALTHY/$TOTAL containers)"
       return 0
