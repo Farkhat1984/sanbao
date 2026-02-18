@@ -17,7 +17,7 @@ npx vitest run src/__tests__/lib/parse-file.test.ts  # Run single test file
 npx prisma db push   # Sync schema to DB (no migrations)
 npx prisma migrate deploy  # Apply migrations (production)
 npx prisma generate  # Regenerate Prisma client after schema changes
-npx prisma db seed   # Seed plans, admin user, system agent, default models/skills
+npx prisma db seed   # Seed plans, admin user, system agents, default models/skills
 npx prisma studio    # Visual DB browser
 ```
 
@@ -40,23 +40,26 @@ Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB 
 
 ## Architecture
 
-**Sanbao** — универсальный AI-ассистент (Next.js 16 App Router, React 19 with React Compiler, TypeScript, Tailwind CSS v4, PostgreSQL, Redis, BullMQ).
+**Sanbao** — универсальный AI-ассистент (Next.js 16.1, App Router, React 19 with React Compiler, TypeScript, Tailwind CSS v4, PostgreSQL 16, Redis 7, BullMQ).
 
 ### Routing
 
-- `src/app/(app)/` — основное приложение: `/chat`, `/chat/[id]`, `/profile`, `/settings`, `/skills`, `/billing`, `/mcp`
+- `src/app/(app)/` — основное приложение (13 страниц): `/chat`, `/chat/[id]`, `/profile`, `/settings`, `/skills`, `/skills/new`, `/skills/[id]/edit`, `/skills/marketplace`, `/agents`, `/agents/new`, `/agents/[id]/edit`, `/billing`, `/mcp`
 - `src/app/(auth)/` — аутентификация: `/login`, `/register`
-- `src/app/(admin)/admin/` — админ-панель (25+ страниц)
-- `src/app/api/` — API-роуты: chat, conversations, agents, tools, plugins, skills, tasks, memory, billing, admin/*, auth (2fa), health, metrics, notifications, reports
+- `src/app/(admin)/admin/` — админ-панель (29 страниц): dashboard, users, agents, tools, plugins, skills, mcp, models, models/matrix, providers, plans, billing, usage, analytics, experiments, settings, notifications, webhooks, promo-codes, templates, email, api-keys, sessions, logs, errors, files, moderation, agent-moderation, health
+- `src/app/(legal)/` — юридические страницы: `/terms`, `/privacy`, `/offer`
+- `src/app/api/` — 105 route-файлов: chat, conversations, agents, tools, plugins, skills, tasks, memory, billing (stripe + freedom), admin/*, auth (2fa, nextauth, register), health, ready, metrics, notifications, reports, user, user-files, files, mcp, image-generate, image-edit, fix-code
 
 ### Streaming Protocol
 
 `POST /api/chat` → NDJSON stream of `{t, v}` objects:
-- `c` content, `r` reasoning, `p` plan, `s` search status, `x` context info, `e` error
+- `c` content, `r` reasoning, `p` plan, `s` status (search/tool), `x` context info, `e` error
 
-Two code paths in route.ts (~1100 lines):
-- **Moonshot (Kimi K2.5):** Custom SSE handler with tool calling (web search via `$web_search`, MCP tools)
-- **OpenAI / Anthropic:** Vercel AI SDK (`streamText`)
+Chat logic split across 4 files (~1600 lines total):
+- `src/app/api/chat/route.ts` (~780 lines) — main handler, system prompt, tool dispatch
+- `src/lib/chat/moonshot-stream.ts` (~510 lines) — Moonshot/Kimi SSE with tool calling
+- `src/lib/chat/ai-sdk-stream.ts` (~240 lines) — OpenAI/Anthropic via Vercel AI SDK
+- `src/lib/chat/message-builder.ts` (~66 lines) — message/attachment formatting
 
 ### Custom Tag System
 
@@ -75,37 +78,39 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 - Resolution priority: plan default → plan-model mapping → global default → env fallback
 - Categories: TEXT, IMAGE, VOICE, VIDEO, CODE, EMBEDDING
 - `PlanModel` — ties plans to specific models; A/B experiments via `src/lib/ab-experiment.ts`
+- `DEFAULT_PROVIDER = "deepinfra"` fallback when no model resolved from DB
 
 ### Context Management
 
-`src/lib/context.ts`: `estimateTokens()`, `checkContextWindow()`, `splitMessagesForCompaction()`. Automatic background compaction → `ConversationSummary` in DB. `buildSystemPromptWithContext()` enriches system prompt with summary + plan memory + user memory.
+`src/lib/context.ts`: `estimateTokens()`, `checkContextWindow()`, `splitMessagesForCompaction()`. Automatic background compaction → `ConversationSummary` in DB. `buildSystemPromptWithContext()` enriches system prompt with summary + plan memory + user memory. Compaction threshold: 70%, keeps last 12 messages.
 
 ### State Management
 
-Zustand stores in `src/stores/`: chatStore, artifactStore, panelStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore.
+11 Zustand stores in `src/stores/`: chatStore, artifactStore, articleStore, panelStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore.
 
 ### Security
 
 - **Auth:** NextAuth v5, JWT, Credentials + Google OAuth, 2FA TOTP (`otplib` OTP class)
-- **Middleware:** `src/proxy.ts` (Edge Runtime) — auth wrapper, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
-- **CSP:** Content-Security-Policy header via `next.config.ts` (dynamic CDN/Sentry domains)
+- **Middleware:** `src/proxy.ts` (113 lines, Edge Runtime) — auth wrapper, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
+- **CSP:** Content-Security-Policy header via `next.config.ts` (dynamic CDN/Sentry/Cloudflare domains)
 - **Admin guard:** `src/lib/admin.ts` → `requireAdmin()` — role + 2FA + IP whitelist
 - **Rate-limit:** `src/lib/rate-limit.ts` — Redis-first with in-memory fallback, auto-block on abuse (10 violations → 30 min block)
 - **API keys:** `src/lib/crypto.ts` AES-256-GCM; `src/lib/api-key-auth.ts` — per-key rate limit
 - **Content filter:** `src/lib/content-filter.ts` — SystemSetting-based with in-memory cache
-- **SSRF protection:** `src/lib/webhook-dispatcher.ts`, `src/app/api/mcp/route.ts` — blocked private IP ranges
-- **Input validation:** messages (max 200, 100KB/msg), MCP tools (max 100), email (254 chars), stream buffer (1MB cap)
+- **SSRF protection:** `src/lib/ssrf.ts`, `src/lib/webhook-dispatcher.ts`, `src/lib/tool-executor.ts`, `src/app/api/mcp/route.ts` — blocked private IP ranges
+- **Input validation:** `src/lib/validation.ts`; messages (max 200, 100KB/msg), MCP tools (max 100), email (254 chars), stream buffer (1MB cap)
 
 ### Data Layer
 
-- **Prisma + PostgreSQL** — `prisma/schema.prisma`, ~52 models, 14 enums
+- **Prisma + PostgreSQL** — `prisma/schema.prisma`, 55 models, 14 enums
 - **PgBouncer** — connection pooling (transaction mode, pool 50)
 - **Read replicas** — `src/lib/prisma.ts` uses `@prisma/extension-read-replicas` when `DATABASE_REPLICA_URL` is set
-- Seed script (`prisma/seed.ts`): creates Free/Pro/Business plans, admin user, Femida+Sanbao system agents, 11 tools with templates, Moonshot/DeepInfra providers, default AI models, 4 built-in skills
+- Seed script (`prisma/seed.ts`): creates Free/Pro/Business plans, admin user, 4+ system agents (Sanbao, Legal, Customs, Accounting + specialized), 40+ tools with templates, Moonshot/DeepInfra providers, 3 AI models (Kimi K2.5, Flux Schnell, Qwen Image Edit), 4 built-in skills
 - **Audit:** `src/lib/audit.ts` — `logAudit()`, `logError()`, `logTokenUsage()`
-- **Billing:** Plan → Subscription (trialEndsAt) → DailyUsage; `Plan.maxStorageMb` for file quota
+- **Billing:** Plan → Subscription (trialEndsAt) → DailyUsage; `Plan.maxStorageMb` for file quota; Stripe + Freedom Pay (`src/lib/freedom-pay.ts`)
 - **Email:** `src/lib/email.ts` (Nodemailer), templates with `{{varName}}` interpolation
 - **Webhooks:** `src/lib/webhook-dispatcher.ts` — dispatch + retry + WebhookLog + SSRF protection
+- **Invoices:** `src/lib/invoice.ts` — PDF invoice generation with QR codes
 
 ### Redis & Caching
 
@@ -113,7 +118,7 @@ Zustand stores in `src/stores/`: chatStore, artifactStore, panelStore, sidebarSt
 - `cacheGet()`, `cacheSet()`, `cacheDel()`, `cacheIncr()`, `redisRateLimit()` — all return null/no-op when unavailable
 - `src/lib/usage.ts` — plan+usage cache in Redis (30s TTL, key `plan:${userId}`)
 - **Two-level agent context cache:** L1 in-memory BoundedMap (30s) + L2 Redis (60s, key `agent_ctx:{id}`), shared across replicas
-- Rate limiting: distributed via Redis, fallback to in-memory BoundedMap
+- Rate limiting: distributed via Redis, fallback to in-memory BoundedMap (`src/lib/bounded-map.ts`)
 
 ### Job Queues
 
@@ -156,6 +161,13 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - User pages: `/mcp` for managing personal MCP connections
 - **SSRF protection** on MCP server URL registration
 
+### Export System
+
+- `src/lib/export-docx.ts` — DOCX export (rich formatting, tables, headers)
+- `src/lib/export-xlsx.ts` — XLSX spreadsheet export
+- `src/lib/export-pdf.ts` — PDF export via html2canvas + jsPDF
+- `src/lib/export-utils.ts` — format detection, TXT/HTML export, common utilities
+
 ### Logging
 
 - `src/lib/logger.ts` — structured JSON logger in production, readable console in dev
@@ -176,15 +188,16 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 
 ### Infrastructure
 
-- **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner)
+- **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner), port 3004
 - **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas)
 - **Nginx:** `infra/nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching
-- **Kubernetes:** full manifests in `infra/k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies
+- **Kubernetes:** full manifests in `infra/k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies (6 rules)
 - **Canary:** Argo Rollouts manifest (`infra/k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
-- **CI/CD:** `.github/workflows/` — CI (lint + test + build) and Deploy (image → registry → k8s)
+- **CI/CD:** `.github/workflows/` — CI (lint + test + build), Deploy (image → registry → k8s), Deploy-Server (SSH to prod servers + Telegram notify)
 - **Backups:** CronJob (`infra/k8s/backup-cronjob.yml`) — daily pg_dump → S3, 30-day retention
 - **CDN:** `assetPrefix` in `next.config.ts`, upload script `scripts/upload-static.sh`
 - **Sentry:** `sentry.{client,server,edge}.config.ts` — active only when `SENTRY_DSN` is set
+- **MCP servers:** `scripts/start-mcp-servers.sh` — orchestrates 5 MCP servers via supergateway (GitHub, PostgreSQL, Brave Search, Filesystem, Playwright)
 
 ### Key Patterns
 
@@ -194,7 +207,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **Graceful degradation:** Redis/BullMQ operations return null/no-op when unavailable (dev works without Redis)
 - **In-memory cache with TTL:** content-filter, IP whitelist, model resolution, A/B experiments
 - **SystemSetting key-value:** global config table with cache invalidation
-- **serverExternalPackages** in `next.config.ts`: native/Node packages that can't be bundled (canvas, otplib, bcryptjs, stripe, S3, nodemailer, pdf-parse, xlsx, mammoth, ioredis, bullmq, @sentry/nextjs)
+- **serverExternalPackages** in `next.config.ts`: @napi-rs/canvas, otplib, qrcode, bcryptjs, stripe, nodemailer, @aws-sdk/*, mammoth, pdf-parse, xlsx, officeparser, ioredis, bullmq, @sentry/nextjs
 
 ### Key Libraries
 
@@ -205,10 +218,19 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **otplib** (v13) — `OTP` class: `generateSecret()`, `verify({token, secret})`, `generateURI({issuer, label, secret})`
 - **stripe** — Checkout Session, webhook `constructEvent`
 - **@aws-sdk/client-s3** — S3/MinIO upload/delete/presigned URL (`src/lib/storage.ts`)
-- **Tiptap** — rich text editor (with table, highlight, text-align extensions)
+- **Tiptap** (v3) — rich text editor (starter-kit, react, table, highlight, text-align)
 - **react-markdown + remark-gfm + rehype-highlight + rehype-raw** — markdown rendering
-- **docx / html2pdf.js** — export; **mammoth / pdf-parse / xlsx** — file parsing
+- **docx / jspdf / html2canvas-pro** — document export; **mammoth / pdf-parse / xlsx / officeparser** — file parsing
 - **@modelcontextprotocol/sdk** — MCP server connections (`src/lib/mcp-client.ts`)
+- **@napi-rs/canvas + qrcode** — server-side image generation (invoices, QR)
+- **framer-motion** — spring-based animations
+
+### Frontend Structure
+
+- **17 component directories** in `src/components/`: admin, agents, artifacts, billing, chat, image-edit, layout, legal-tools, memory, onboarding, panel, providers, settings, sidebar, skills, tasks, ui
+- **69 component files** (.tsx)
+- **2 hooks** in `src/hooks/`: `useIsMobile.ts` (responsive breakpoint), `useTranslation.ts` (i18n hook)
+- **Error boundaries:** `error.tsx` in (app) and (admin) route groups; no loading.tsx or not-found.tsx
 
 ### Path Alias
 
@@ -223,8 +245,22 @@ Design system **Soft Corporate Minimalism** — details in `docs/STYLEGUIDE.md`.
 - Spring-based animations (Framer Motion): damping 25, stiffness 300
 - Gradients only for 1–2 CTAs per screen
 
-All UI text is in Russian.
+UI text primarily in Russian; Kazakh (kk) locale also supported.
 
 ## Localization
 
-Dates: `formatDate()` in `src/lib/utils.ts` (Сегодня, Вчера, X дн. назад).
+- `src/lib/i18n.ts` — lightweight i18n with `t("key")` function; locales: `ru` (Russian), `kk` (Kazakh)
+- Messages in `src/messages/ru.json` and `src/messages/kk.json`
+- `useTranslation` hook in `src/hooks/useTranslation.ts`
+- Dates: `formatDate()` in `src/lib/utils.ts` (Сегодня, Вчера, X дн. назад)
+- Default currency: KZT (Kazakhstani Tenge)
+
+## Documentation
+
+- `docs/DEVOPS.md` — servers, ports, CI/CD, Telegram bot, troubleshooting
+- `docs/STYLEGUIDE.md` — design system (Soft Corporate Minimalism)
+- `docs/ADMINGUIDE.md` — admin panel guide
+- `docs/USERGUIDE.md` — user guide
+- `docs/ADVERTISING.md` — advertising system
+- `docs/FRAGMENTDB_PIPELINE.md` — FragmentDB integration pipeline
+- `docs/HOTFIX.md`, `docs/HOTFIX2.md` — historical fixes

@@ -4,16 +4,17 @@
 
 ## Стек
 
-- **Frontend:** Next.js 16 (App Router), React 19 (React Compiler), Tailwind CSS v4, Zustand, Framer Motion, Tiptap
-- **Backend:** Next.js API Routes, Prisma ORM, BullMQ (job queues)
-- **AI:** Vercel AI SDK (OpenAI, Anthropic), Moonshot API (Kimi K2.5), MCP Protocol
+- **Frontend:** Next.js 16.1 (App Router), React 19 (React Compiler), Tailwind CSS v4, Zustand, Framer Motion, Tiptap v3
+- **Backend:** Next.js API Routes (105 route-файлов), Prisma ORM (55 моделей), BullMQ (job queues)
+- **AI:** Vercel AI SDK (OpenAI, Anthropic), Moonshot API (Kimi K2.5), MCP Protocol, 14 нативных инструментов
 - **Database:** PostgreSQL 16 + PgBouncer (connection pooling) + Prisma read replicas
 - **Cache / Queue:** Redis 7 (ioredis) + BullMQ
 - **Auth:** NextAuth v5 (JWT, Credentials + Google OAuth, 2FA TOTP)
-- **Billing:** Stripe (Checkout, Webhooks, промокоды)
+- **Billing:** Stripe + Freedom Pay (Checkout, Webhooks, промокоды)
 - **Storage:** S3/MinIO (файлы, аватары)
 - **Monitoring:** Prometheus + Grafana + Alertmanager + Sentry
 - **Infra:** Docker, Kubernetes (HPA, PDB, canary), Nginx, GitHub Actions CI/CD
+- **i18n:** Русский (основной), Қазақша (Kazakh)
 
 ---
 
@@ -45,7 +46,9 @@ docker compose up --build    # http://localhost:3004
 
 ---
 
-## Развертывание в облаке
+## Развертывание
+
+Подробное руководство по развертыванию — см. [`DEPLOY.md`](DEPLOY.md).
 
 ### Вариант 1: Docker Compose (один сервер, до ~10K пользователей)
 
@@ -70,104 +73,17 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### Вариант 3: Kubernetes (100K+ пользователей)
 
-Полное cloud-native развертывание с автоскейлингом.
-
-#### Предварительные требования
-
-- Kubernetes кластер 1.28+ (Yandex Cloud / VK Cloud / AWS EKS / GKE)
-- kubectl настроен
-- Docker registry (GHCR / DockerHub / Yandex CR)
-- Домен + DNS
-- cert-manager (для автоматического TLS)
-
-#### Развертывание
-
-```bash
-# 1. Namespace
-kubectl apply -f infra/k8s/namespace.yml
-
-# 2. Секреты
-kubectl create secret generic sanbao-secrets \
-  --from-literal=DB_PASSWORD=<password> \
-  --from-literal=NEXTAUTH_SECRET=<secret> \
-  --from-literal=ADMIN_PASSWORD=<password> \
-  --from-literal=S3_ACCESS_KEY=<key> \
-  --from-literal=S3_SECRET_KEY=<key> \
-  --from-literal=STRIPE_SECRET_KEY=<key> \
-  --from-literal=STRIPE_WEBHOOK_SECRET=<key> \
-  --from-literal=CRON_SECRET=<secret> \
-  -n sanbao
-
-# 3. ConfigMap (отредактировать домен и URLs в configmap.yml)
-kubectl apply -f infra/k8s/configmap.yml
-
-# 4. Инфраструктура
-kubectl apply -f infra/k8s/postgres.yml
-kubectl apply -f infra/k8s/redis.yml
-kubectl apply -f infra/k8s/pgbouncer.yml
-
-# 5. Дождаться БД
-kubectl wait --for=condition=ready pod -l app=postgres -n sanbao --timeout=120s
-
-# 6. Миграции (обновить image в migration-job.yml)
-kubectl apply -f infra/k8s/migration-job.yml
-kubectl wait --for=condition=complete job/sanbao-migrate -n sanbao --timeout=120s
-
-# 7. Приложение + автоскейлинг
-kubectl apply -f infra/k8s/app-deployment.yml
-kubectl apply -f infra/k8s/hpa.yml
-kubectl apply -f infra/k8s/pdb.yml
-
-# 8. Ingress (отредактировать домен в ingress.yml)
-kubectl apply -f infra/k8s/ingress.yml
-
-# 9. Network Policies (опционально)
-kubectl apply -f infra/k8s/network-policies.yml
-```
-
-#### Мониторинг
-
-```bash
-kubectl apply -f infra/k8s/monitoring/namespace.yml
-kubectl apply -f infra/k8s/monitoring/prometheus.yml
-kubectl apply -f infra/k8s/monitoring/grafana.yml
-kubectl apply -f infra/k8s/monitoring/alertmanager.yml
-
-# Grafana: http://<grafana-ip>:3000 (admin/admin)
-# Дашборд "Sanbao Overview" загружается автоматически
-```
-
-#### Бэкапы PostgreSQL
-
-```bash
-# Ежедневный pg_dump → S3 в 03:00 UTC (хранение 30 дней)
-# Добавить S3_BACKUP_BUCKET в sanbao-secrets
-kubectl apply -f infra/k8s/backup-cronjob.yml
-```
-
-#### Canary Deployments (Argo Rollouts)
-
-```bash
-# Установить Argo Rollouts
-kubectl create namespace argo-rollouts
-kubectl apply -n argo-rollouts \
-  -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
-
-# Заменить Deployment на Rollout
-kubectl delete deployment sanbao-app -n sanbao
-kubectl apply -f infra/k8s/canary-rollout.yml
-
-# Обновление: 10% → 30% → 60% → 100% с паузами
-kubectl argo rollouts set image sanbao-app app=NEW_IMAGE -n sanbao
-```
+Полное cloud-native развертывание с автоскейлингом. См. [`DEPLOY.md`](DEPLOY.md) для подробностей.
 
 ---
 
 ## CI/CD (GitHub Actions)
 
-Автоматически:
-- **На PR:** lint, type-check, unit tests, Docker build test
-- **На push в main:** build image → push в registry → миграции → rolling deploy
+3 workflow-файла:
+
+- **CI** (`ci.yml`): lint, type-check, unit tests, Docker build test — на каждый PR
+- **Deploy K8s** (`deploy.yml`): build image → push → миграции → rolling deploy — на push в main
+- **Deploy Server** (`deploy-server.yml`): SSH деплой на 2 сервера → healthcheck → Telegram уведомление
 
 ### Настройка
 
@@ -205,6 +121,7 @@ GitHub Variables:
 | `MOONSHOT_API_KEY` | Kimi K2.5 (дефолтный TEXT-провайдер) |
 | `OPENAI_API_KEY` | OpenAI |
 | `ANTHROPIC_API_KEY` | Anthropic Claude |
+| `DEEPINFRA_API_KEY` | DeepInfra (IMAGE-провайдер: Flux Schnell, Qwen Image Edit) |
 
 ### Инфраструктура
 
@@ -263,7 +180,7 @@ GitHub Variables:
 ## Функционал
 
 ### Чат и AI
-- Мультипровайдер: Kimi K2.5, OpenAI, Anthropic — динамическая маршрутизация из БД
+- Мультипровайдер: Kimi K2.5, OpenAI, Anthropic, DeepInfra — динамическая маршрутизация из БД
 - NDJSON-стриминг, markdown, подсветка кода, reasoning mode
 - Веб-поиск, автокомпакция контекста, пользовательская память
 - MCP-серверы (глобальные и пользовательские)
@@ -274,17 +191,18 @@ GitHub Variables:
 - **Инструменты**: типы PROMPT_TEMPLATE, WEBHOOK, URL, FUNCTION + шаблоны форм
 - **Навыки**: промпт + правила цитирования + юрисдикция, маркетплейс
 - **Плагины**: пакеты из tools + skills + MCP-серверов
-- **14 нативных инструментов**: HTTP, задачи, память, уведомления, калькулятор, CSV, графики
+- **14 нативных инструментов**: HTTP, задачи, память, уведомления, калькулятор, CSV, графики, знания
 
 ### Панель артефактов
-- Табовая система: артефакты + документы в одной панели
+- Табовая система: артефакты + документы в одной панели (UnifiedPanel)
 - Просмотр / редактирование (Tiptap) / исходник
-- Экспорт в DOCX, PDF, TXT
+- Экспорт в DOCX, XLSX, PDF, TXT, HTML
 
 ### Биллинг
-- Stripe Checkout с промокодами и пробным периодом
+- Stripe Checkout + Freedom Pay с промокодами и пробным периодом
 - Webhook: автоназначение подписки, invoice-email, downgrade
-- Тарифные планы с гранулярными лимитами
+- Тарифные планы с гранулярными лимитами (сообщения/день, токены, инструменты)
+- PDF-инвойсы с QR-кодами
 
 ### Безопасность
 - 2FA TOTP, IP whitelist для админки
@@ -294,7 +212,7 @@ GitHub Variables:
 - API-ключи: AES-256-GCM шифрование
 
 ### Админ-панель (`/admin`)
-27+ страниц управления. Подробности в [ADMINGUIDE.md](docs/ADMINGUIDE.md).
+29 страниц управления. Подробности в [ADMINGUIDE.md](docs/ADMINGUIDE.md).
 
 ---
 
@@ -303,6 +221,7 @@ GitHub Variables:
 | Endpoint | Назначение |
 |----------|-----------|
 | `GET /api/health` | Health check: DB, Redis, AI providers, MCP. 503 при shutdown |
+| `GET /api/ready` | Readiness probe: DB SELECT 1 + Redis ping |
 | `GET /api/metrics` | Prometheus-совместимые метрики |
 
 ### Метрики Prometheus
@@ -321,8 +240,8 @@ GitHub Variables:
 | HighErrorRate | > 50 ошибок/час | critical |
 | RedisDown | Redis disconnected 2+ мин | critical |
 | HighMemory | RSS > 1.5GB 5+ мин | warning |
+| HighCPU | CPU > 800k μs/5мин | warning |
 | PodRestarts | > 3 рестарта/час | warning |
-| SlowRequests | avg > 2s за 10 мин | warning |
 
 ---
 
@@ -347,50 +266,68 @@ k6 run tests/load/stress.js
 
 ```
 sanbao/
-├── .github/workflows/     CI/CD (ci.yml, deploy.yml)
-├── docs/                  Документация (ADMINGUIDE, DEVOPS, STYLEGUIDE, USERGUIDE, HOTFIX*)
-├── infra/                 Инфраструктура (k8s, nginx, monitoring)
-│   ├── k8s/               Kubernetes manifests
+├── .github/workflows/     CI/CD (ci.yml, deploy.yml, deploy-server.yml)
+├── docs/                  Документация (8 файлов)
+│   ├── DEVOPS.md          Серверы, порты, CI/CD, troubleshooting
+│   ├── STYLEGUIDE.md      Дизайн-система
+│   ├── ADMINGUIDE.md      Руководство администратора
+│   ├── USERGUIDE.md       Руководство пользователя
+│   ├── ADVERTISING.md     Система рекламы
+│   ├── FRAGMENTDB_PIPELINE.md  Интеграция FragmentDB
+│   └── HOTFIX*.md         Исторические фиксы
+├── infra/                 Инфраструктура
+│   ├── k8s/               Kubernetes manifests (14 файлов)
 │   │   ├── monitoring/    Prometheus + Grafana + Alertmanager
-│   │   ├── app-deployment.yml Deployment + Service (3 replicas)
-│   │   ├── hpa.yml        HPA (3-20 pods, CPU 70% / mem 80%)
-│   │   ├── pdb.yml        PodDisruptionBudget (minAvailable: 2)
+│   │   ├── app-deployment.yml
+│   │   ├── hpa.yml        HPA (3-20 pods, CPU/mem 70%)
+│   │   ├── pdb.yml        PodDisruptionBudget
 │   │   ├── ingress.yml    Nginx Ingress + TLS
-│   │   ├── canary-rollout.yml Argo Rollouts (10→30→60→100%)
-│   │   ├── network-policies.yml  Default deny + allow rules
-│   │   ├── backup-cronjob.yml pg_dump → S3 (ежедневно)
-│   │   └── ...            postgres, redis, pgbouncer, configmap, secrets
+│   │   ├── canary-rollout.yml  Argo Rollouts
+│   │   ├── network-policies.yml  6 правил
+│   │   ├── backup-cronjob.yml   pg_dump → S3
+│   │   └── ...
 │   ├── nginx/             Nginx LB config
-│   └── docker-compose.monitoring.yml  Prometheus + Grafana (Docker)
-├── prisma/                Schema + seed
+│   └── docker-compose.monitoring.yml
+├── prisma/                Schema (55 models, 14 enums) + seed
 ├── scripts/
-│   ├── pg-backup.sh       Скрипт бэкапа PostgreSQL
-│   └── upload-static.sh   Загрузка статики в S3/CDN
+│   ├── deploy.sh          Zero-downtime deploy (168 строк)
+│   ├── pg-backup.sh       PostgreSQL backup → S3
+│   ├── upload-static.sh   CDN upload
+│   ├── start-mcp-servers.sh  5 MCP серверов
+│   └── gen-1c-catalog.ts  Генератор каталога 1C
 ├── src/
 │   ├── app/               Next.js App Router
-│   │   ├── (app)/         Основное приложение
-│   │   ├── (auth)/        Аутентификация
-│   │   ├── (admin)/admin/ Админ-панель (25+ страниц)
-│   │   └── api/           API-роуты
-│   ├── components/        React-компоненты
-│   ├── hooks/             Хуки (useIsMobile, и т.д.)
+│   │   ├── (app)/         Основное приложение (13 страниц)
+│   │   ├── (auth)/        Аутентификация (login, register)
+│   │   ├── (admin)/admin/ Админ-панель (29 страниц)
+│   │   ├── (legal)/       Юридические страницы (terms, privacy, offer)
+│   │   └── api/           API-роуты (105 файлов)
+│   ├── components/        React-компоненты (17 директорий, 69 файлов)
+│   ├── hooks/             useIsMobile, useTranslation
 │   ├── lib/               Бизнес-логика
+│   │   ├── chat/          Стриминг (moonshot-stream, ai-sdk-stream, message-builder)
+│   │   ├── native-tools/  14 встроенных AI-инструментов
 │   │   ├── redis.ts       Redis client (graceful degradation)
 │   │   ├── queue.ts       BullMQ queues (inline fallback)
 │   │   ├── workers.ts     Job processors (webhook, email)
-│   │   ├── shutdown.ts    Graceful shutdown (SIGTERM/SIGINT)
+│   │   ├── shutdown.ts    Graceful shutdown
 │   │   ├── logger.ts      Structured JSON logger
 │   │   ├── rate-limit.ts  Redis-first rate limiting
-│   │   ├── native-tools/  14 встроенных AI-инструментов
-│   │   └── chat/          Обработка chat-стримов
-│   ├── stores/            Zustand stores
+│   │   ├── freedom-pay.ts Freedom Pay integration
+│   │   ├── invoice.ts     PDF invoices с QR
+│   │   ├── i18n.ts        Локализация (ru/kk)
+│   │   ├── export-*.ts    Экспорт (DOCX, XLSX, PDF)
+│   │   └── ...            ~50 модулей
+│   ├── messages/          Локализация (ru.json, kk.json)
+│   ├── stores/            11 Zustand stores
 │   └── instrumentation.ts Worker bootstrap
 ├── tests/
-│   ├── e2e/               E2E-тесты API
-│   └── load/              k6 нагрузочные тесты
+│   ├── e2e/               E2E-тесты API (3 файла)
+│   └── load/              k6 нагрузочные тесты (3 файла)
 ├── docker-compose.yml     Dev (DB + PgBouncer + Redis + App)
 ├── docker-compose.prod.yml  Prod (+ Nginx + 3 replicas)
 ├── Dockerfile             Multi-stage production build
+├── DEPLOY.md              Руководство по деплою
 └── sentry.*.config.ts     Sentry error tracking
 ```
 
@@ -416,7 +353,9 @@ npx prisma studio        # Visual DB browser
 
 ## Документация
 
-- [STYLEGUIDE.md](docs/STYLEGUIDE.md) — дизайн-система (Soft Corporate Minimalism)
-- [USERGUIDE.md](docs/USERGUIDE.md) — руководство пользователя
-- [ADMINGUIDE.md](docs/ADMINGUIDE.md) — руководство администратора
+- [DEPLOY.md](DEPLOY.md) — руководство по деплою
 - [CLAUDE.md](CLAUDE.md) — контекст для Claude Code
+- [docs/DEVOPS.md](docs/DEVOPS.md) — DevOps: серверы, порты, CI/CD
+- [docs/STYLEGUIDE.md](docs/STYLEGUIDE.md) — дизайн-система (Soft Corporate Minimalism)
+- [docs/USERGUIDE.md](docs/USERGUIDE.md) — руководство пользователя
+- [docs/ADMINGUIDE.md](docs/ADMINGUIDE.md) — руководство администратора
