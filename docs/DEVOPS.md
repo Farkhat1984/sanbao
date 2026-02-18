@@ -76,7 +76,8 @@
 
 ## Telegram Bot (мониторинг)
 
-**Расположение:** `Server 2 → ~/faragj/deploy/bot/monitor_bot.py`
+**Исходный код:** `infra/bot/` (в репо sanbao)
+**Деплой:** `Server 2 → ~/faragj/deploy/bot/monitor_bot.py`
 
 **Команды:**
 | Команда | Описание |
@@ -365,6 +366,10 @@ sanbao/
 ├── docker-compose.yml              # Dev (db + pgbouncer + redis + app)
 ├── docker-compose.prod.yml         # Prod (+ nginx LB, 3 реплики)
 ├── infra/
+│   ├── bot/
+│   │   ├── monitor_bot.py          # Telegram бот мониторинга + auto-failover
+│   │   ├── Dockerfile              # Python 3.12 + Docker CLI + Compose
+│   │   └── requirements.txt
 │   ├── docker-compose.monitoring.yml  # Prometheus + Grafana
 │   ├── nginx/
 │   │   └── nginx.conf              # LB, rate-limit, SSE, security headers
