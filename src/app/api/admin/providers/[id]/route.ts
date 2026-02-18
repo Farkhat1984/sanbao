@@ -51,7 +51,7 @@ export async function PUT(
     );
   }
 
-  const allowedFields = ["name", "slug", "baseUrl", "apiKey", "isActive", "priority"];
+  const allowedFields = ["name", "slug", "baseUrl", "apiKey", "isActive", "priority", "apiFormat"];
   const data: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) {

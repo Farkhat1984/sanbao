@@ -13,6 +13,7 @@ interface Provider {
   apiKey: string;
   isActive: boolean;
   priority: number;
+  apiFormat: string;
   _count?: { models: number };
 }
 
@@ -26,6 +27,7 @@ export default function AdminProvidersPage() {
     baseUrl: "",
     apiKey: "",
     priority: 0,
+    apiFormat: "OPENAI_COMPAT",
   });
 
   const fetchProviders = async () => {
@@ -46,7 +48,7 @@ export default function AdminProvidersPage() {
       body: JSON.stringify(newProvider),
     });
     if (res.ok) {
-      setNewProvider({ name: "", slug: "", baseUrl: "", apiKey: "", priority: 0 });
+      setNewProvider({ name: "", slug: "", baseUrl: "", apiKey: "", priority: 0, apiFormat: "OPENAI_COMPAT" });
       setAdding(false);
       fetchProviders();
     }
@@ -145,6 +147,15 @@ export default function AdminProvidersPage() {
               onChange={(e) => setNewProvider({ ...newProvider, priority: parseInt(e.target.value) || 0 })}
               className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
+            <select
+              value={newProvider.apiFormat}
+              onChange={(e) => setNewProvider({ ...newProvider, apiFormat: e.target.value })}
+              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            >
+              <option value="OPENAI_COMPAT">OpenAI Compatible</option>
+              <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
+              <option value="AI_SDK_ANTHROPIC">AI SDK — Anthropic</option>
+            </select>
             <Button variant="gradient" size="sm" onClick={handleCreate}>
               <Save className="h-3.5 w-3.5" />
               Создать
@@ -192,10 +203,21 @@ export default function AdminProvidersPage() {
                 </button>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-              <p className="text-xs text-text-muted">
-                <span className="text-text-secondary">Base URL:</span> {p.baseUrl}
-              </p>
+            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-text-muted">
+                  <span className="text-text-secondary">Base URL:</span> {p.baseUrl}
+                </p>
+                <select
+                  value={p.apiFormat}
+                  onChange={(e) => handleUpdate(p.id, { apiFormat: e.target.value } as Partial<Provider>)}
+                  className="h-7 px-2 rounded-md bg-surface-alt border border-border text-xs text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="OPENAI_COMPAT">OpenAI Compatible</option>
+                  <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
+                  <option value="AI_SDK_ANTHROPIC">AI SDK — Anthropic</option>
+                </select>
+              </div>
               {testResult[p.id] && (
                 <div className="flex items-center gap-2">
                   {testResult[p.id].success ? (

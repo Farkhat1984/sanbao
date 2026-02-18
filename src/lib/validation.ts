@@ -22,7 +22,7 @@ export const agentCreateSchema = z.object({
   name: z.string().min(1).max(200).transform((s) => s.trim()),
   description: z.string().max(2000).optional().nullable().transform((s) => s?.trim() || null),
   instructions: z.string().min(1).max(50000).transform((s) => s.trim()),
-  model: z.string().max(100).optional().default("openai"),
+  model: z.string().max(100).optional().default("default"),
   icon: z.string().max(50).optional(),
   iconColor: z.string().max(20).optional(),
   avatar: z.string().max(500).optional().nullable(),

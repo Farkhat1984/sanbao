@@ -22,7 +22,6 @@ import type { NativeToolContext } from "@/lib/native-tools";
 import {
   DEFAULT_TEMPERATURE_COMPACTION,
   DEFAULT_MAX_TOKENS_COMPACTION,
-  DEFAULT_PROVIDER,
   CONTEXT_KEEP_LAST_MESSAGES,
 } from "@/lib/constants";
 
@@ -394,7 +393,6 @@ export async function POST(req: Request) {
   }
   const {
     messages,
-    provider = DEFAULT_PROVIDER,
     agentId,
     skillId,
     thinkingEnabled = true,
@@ -479,7 +477,6 @@ export async function POST(req: Request) {
 
   // Load admin-editable system prompt from DB (cached 60s)
   let systemPrompt = await getGlobalSystemPrompt();
-  let effectiveProvider = provider;
   const agentMcpTools: McpToolContext[] = [];
 
   if (agentId) {
@@ -602,6 +599,13 @@ export async function POST(req: Request) {
   if (webSearchEnabled) {
     systemPrompt +=
       "\n\nУ тебя есть доступ к веб-поиску. Используй его когда нужно найти актуальную информацию, последние изменения в законодательстве, судебную практику или новости.\n\nВАЖНО: Когда используешь веб-поиск, ОБЯЗАТЕЛЬНО в конце ответа добавь раздел «Источники:» со списком URL-ссылок откуда была взята информация. Формат:\n\nИсточники:\n- [Название](URL)\n- [Название](URL)";
+  }
+
+  if (thinkingEnabled) {
+    systemPrompt += "\n\nАктивирован режим рассуждений. " +
+      "ПРИОРИТИЗИРУЙ полноту артефактов и кода. " +
+      "Рассуждай кратко и по делу, не за счёт полноты результата. " +
+      "Код и документы ВСЕГДА завершай полностью — никогда не обрывай.";
   }
 
   // ─── Load context from DB ───────────────────────────────
@@ -734,11 +738,19 @@ export async function POST(req: Request) {
     },
   };
 
-  // ─── Moonshot-compatible providers (custom SSE streaming) ─
+  // ─── Route by provider apiFormat ─────────────────────────
 
-  if (effectiveProvider === "deepinfra") {
+  const apiFormat = textModel?.provider.apiFormat ?? "OPENAI_COMPAT";
+
+  if (apiFormat === "OPENAI_COMPAT") {
+    // OpenAI-compatible SSE streaming (Moonshot, DeepInfra, etc.)
+    let effectiveMaxTokens = plan.tokensPerMessage;
+    if (thinkingEnabled && textModel?.maxThinkingTokens) {
+      effectiveMaxTokens += textModel.maxThinkingTokens;
+    }
+
     const stream = streamMoonshot(apiMessages, {
-      maxTokens: plan.tokensPerMessage,
+      maxTokens: effectiveMaxTokens,
       thinkingEnabled,
       webSearchEnabled,
       mcpTools: agentMcpTools,
@@ -757,16 +769,15 @@ export async function POST(req: Request) {
     });
   }
 
-  // ─── Other providers (OpenAI, Anthropic via AI SDK) ─────
+  // ─── AI SDK path (AI_SDK_OPENAI / AI_SDK_ANTHROPIC) ─────
 
   const stream = streamAiSdk({
-    provider: effectiveProvider,
-    canUseProvider: plan.canChooseProvider || effectiveProvider === "openai",
+    apiFormat,
     systemPrompt: enrichedSystemPrompt,
     messages: effectiveMessages,
     thinkingEnabled,
     maxTokens: plan.tokensPerMessage,
-    resolvedModelId: textModel?.modelId,
+    textModel,
     contextInfo,
   });
 

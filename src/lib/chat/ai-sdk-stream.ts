@@ -6,19 +6,18 @@ import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from "@/lib/constants";
+import type { ResolvedModel } from "@/lib/model-router";
 
 // ─── Options ─────────────────────────────────────────────
 
 export interface AiSdkStreamOptions {
-  provider: string;
-  canUseProvider: boolean;
+  apiFormat: string;
   systemPrompt: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messages: any[];
   thinkingEnabled: boolean;
   maxTokens: number;
-  /** Resolved model from admin config — used instead of hardcoded defaults when provided */
-  resolvedModelId?: string;
+  textModel: ResolvedModel | null;
   contextInfo?: {
     usagePercent: number;
     totalTokens: number;
@@ -188,42 +187,45 @@ function createPlanDetectorStream(
 
 export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
   const {
-    provider,
-    canUseProvider,
+    apiFormat,
     systemPrompt,
     messages,
     thinkingEnabled,
     maxTokens,
-    resolvedModelId,
+    textModel,
     contextInfo,
   } = options;
 
-  if (!resolvedModelId) {
+  if (!textModel) {
     throw new Error("No model resolved from DB — configure models via /admin/models");
   }
 
-  const isAnthropic = canUseProvider && provider === "anthropic";
+  const isAnthropic = apiFormat === "AI_SDK_ANTHROPIC";
   const model = isAnthropic
-    ? anthropic(resolvedModelId)
-    : openai(resolvedModelId);
+    ? anthropic(textModel.modelId)
+    : openai(textModel.modelId);
+
+  const temperature = thinkingEnabled ? 1.0 : (textModel.temperature ?? DEFAULT_TEMPERATURE);
+  const topP = textModel.topP ?? DEFAULT_TOP_P;
+  const budgetTokens = textModel.maxThinkingTokens ?? Math.min(maxTokens, 10000);
+  const effectiveMaxTokens = thinkingEnabled
+    ? maxTokens + (textModel.maxThinkingTokens ?? 0)
+    : maxTokens;
 
   const result = streamText({
     model,
     system: systemPrompt,
     messages,
-    // Anthropic requires temperature=1 when thinking is enabled
-    temperature:
-      isAnthropic && thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
-    topP: DEFAULT_TOP_P,
-    maxOutputTokens: maxTokens,
-    // Pass thinking/reasoning config for providers that support it
+    temperature,
+    topP,
+    maxOutputTokens: effectiveMaxTokens,
     ...(thinkingEnabled && isAnthropic
       ? {
           providerOptions: {
             anthropic: {
               thinking: {
                 type: "enabled",
-                budgetTokens: Math.min(maxTokens, 10000),
+                budgetTokens,
               },
             },
           },

@@ -22,7 +22,7 @@ export interface ChatMessage {
   createdAt: string;
 }
 
-export type AIProvider = "openai" | "anthropic" | "deepinfra";
+export type AIProvider = string;
 
 export interface LegalRef {
   id: string;

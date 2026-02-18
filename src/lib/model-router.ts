@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { ModelCategory } from "@prisma/client";
+import type { ModelCategory, ApiFormat } from "@prisma/client";
 import { decrypt } from "@/lib/crypto";
 import { CACHE_TTL as CONSTANTS_CACHE_TTL } from "@/lib/constants";
 import { BoundedMap } from "@/lib/bounded-map";
@@ -9,6 +9,7 @@ export interface ResolvedModel {
     slug: string;
     baseUrl: string;
     apiKey: string;
+    apiFormat: ApiFormat;
   };
   modelId: string;
   displayName: string;
@@ -138,6 +139,7 @@ type ModelWithProvider = {
     slug: string;
     baseUrl: string;
     apiKey: string;
+    apiFormat: ApiFormat;
   };
 };
 
@@ -147,6 +149,7 @@ function toResolvedModel(model: ModelWithProvider): ResolvedModel {
       slug: model.provider.slug,
       baseUrl: model.provider.baseUrl,
       apiKey: decrypt(model.provider.apiKey),
+      apiFormat: model.provider.apiFormat,
     },
     modelId: model.modelId,
     displayName: model.displayName,

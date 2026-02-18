@@ -151,8 +151,8 @@ export function streamMoonshot(
               model: modelId,
               messages: currentMessages,
               max_tokens: maxTokens,
-              temperature: thinkingEnabled ? 1.0 : DEFAULT_TEMPERATURE,
-              top_p: DEFAULT_TOP_P,
+              temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? DEFAULT_TEMPERATURE),
+              top_p: textModel?.topP ?? DEFAULT_TOP_P,
               stream: true,
               tools: [
                 ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),

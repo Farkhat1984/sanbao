@@ -650,14 +650,21 @@ model McpToolLog {
 
 // ─── AI Provider & Model models ────────────────────────
 
+enum ApiFormat {
+  OPENAI_COMPAT
+  AI_SDK_OPENAI
+  AI_SDK_ANTHROPIC
+}
+
 model AiProvider {
-  id       String  @id @default(cuid())
-  name     String  @unique
-  slug     String  @unique
-  baseUrl  String
-  apiKey   String  @db.Text
-  isActive Boolean @default(true)
-  priority Int     @default(0)
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  baseUrl   String
+  apiKey    String    @db.Text
+  isActive  Boolean   @default(true)
+  priority  Int       @default(0)
+  apiFormat ApiFormat  @default(OPENAI_COMPAT)
 
   models AiModel[]
 

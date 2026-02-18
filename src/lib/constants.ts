@@ -138,7 +138,6 @@ export const NATIVE_TOOL_MAX_TURNS = 5;
 
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;
-export const DEFAULT_PROVIDER = "deepinfra";
 export const ALLOWED_FILE_TYPES = [
   "application/pdf",
   "application/msword",

@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { ChatMessage, ConversationSummary, AIProvider } from "@/types/chat";
-import { DEFAULT_PROVIDER } from "@/lib/constants";
+import type { ChatMessage, ConversationSummary } from "@/types/chat";
 
 export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | null;
 
@@ -62,7 +61,7 @@ interface ChatState {
   streamingToolName: string | null;
 
   // AI feature toggles
-  provider: AIProvider;
+  provider: string;
   thinkingEnabled: boolean;
   webSearchEnabled: boolean;
   planningEnabled: boolean;
@@ -84,7 +83,7 @@ interface ChatState {
   setStreaming: (isStreaming: boolean) => void;
   setStreamingPhase: (phase: StreamingPhase, toolName?: string | null) => void;
 
-  setProvider: (provider: AIProvider) => void;
+  setProvider: (provider: string) => void;
   toggleThinking: () => void;
   toggleWebSearch: () => void;
   togglePlanning: () => void;
@@ -113,7 +112,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isStreaming: false,
   streamingPhase: null,
   streamingToolName: null,
-  provider: DEFAULT_PROVIDER as AIProvider,
+  provider: "default",
   thinkingEnabled: false,
   webSearchEnabled: false,
   planningEnabled: false,

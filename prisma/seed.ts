@@ -2025,6 +2025,7 @@ water_code — ВК РК
     where: { slug: "moonshot" },
     update: {
       apiKey: process.env.MOONSHOT_API_KEY || "sk-placeholder",
+      apiFormat: "OPENAI_COMPAT",
     },
     create: {
       name: "Moonshot",
@@ -2033,6 +2034,7 @@ water_code — ВК РК
       apiKey: process.env.MOONSHOT_API_KEY || "sk-placeholder",
       isActive: true,
       priority: 10,
+      apiFormat: "OPENAI_COMPAT",
     },
   });
 
@@ -2040,6 +2042,7 @@ water_code — ВК РК
     where: { slug: "deepinfra" },
     update: {
       apiKey: process.env.DEEPINFRA_API_KEY || "placeholder",
+      apiFormat: "OPENAI_COMPAT",
     },
     create: {
       name: "DeepInfra",
@@ -2048,6 +2051,7 @@ water_code — ВК РК
       apiKey: process.env.DEEPINFRA_API_KEY || "placeholder",
       isActive: true,
       priority: 5,
+      apiFormat: "OPENAI_COMPAT",
     },
   });
 

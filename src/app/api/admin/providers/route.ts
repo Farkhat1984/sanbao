@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   if (result.error) return result.error;
 
   const body = await req.json();
-  const { name, slug, baseUrl, apiKey, isActive, priority } = body;
+  const { name, slug, baseUrl, apiKey, isActive, priority, apiFormat } = body;
 
   if (!name || !slug || !baseUrl || !apiKey) {
     return NextResponse.json(
@@ -65,6 +65,7 @@ export async function POST(req: Request) {
       apiKey: encrypt(apiKey),
       isActive: isActive ?? true,
       priority: priority ?? 0,
+      ...(apiFormat ? { apiFormat } : {}),
     },
   });
 

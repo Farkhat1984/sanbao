@@ -78,7 +78,7 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 - Resolution priority: plan default → plan-model mapping → global default → env fallback
 - Categories: TEXT, IMAGE, VOICE, VIDEO, CODE, EMBEDDING
 - `PlanModel` — ties plans to specific models; A/B experiments via `src/lib/ab-experiment.ts`
-- `DEFAULT_PROVIDER = "deepinfra"` fallback when no model resolved from DB
+- Provider routing via `AiProvider.apiFormat` enum: `OPENAI_COMPAT` | `AI_SDK_OPENAI` | `AI_SDK_ANTHROPIC`
 
 ### Context Management
 

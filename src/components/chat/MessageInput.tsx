@@ -31,7 +31,7 @@ const ImageGenerateModal = dynamic(
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/stores/agentStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { MAX_FILE_SIZE_PARSE, DEFAULT_PROVIDER } from "@/lib/constants";
+import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
 
 const CHAT_ACCEPTED_EXTENSIONS =
   ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls,.csv,.html,.htm,.pptx,.rtf";
@@ -383,7 +383,6 @@ export function MessageInput() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: apiMessages,
-          provider: DEFAULT_PROVIDER,
           agentId: activeAgentId,
           conversationId: convId,
           thinkingEnabled,
