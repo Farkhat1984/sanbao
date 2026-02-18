@@ -483,22 +483,22 @@ curl -s http://localhost:20241/metrics | grep -E 'total_requests|request_errors|
 
 **Симптомы:** после `docker compose up -d app` или `deploy.sh` сайт возвращает 502 или 503.
 
-**Причина:** старый способ деплоя (`docker compose up -d app`) убивает ВСЕ 3 реплики одновременно и создаёт новые. Новые контейнеры имеют `start_period: 60s` — пока они не прошли healthcheck, Nginx получает 502, а если cloudflared на Server 2 ещё и запущен, Cloudflare балансирует часть трафика туда → 503.
+**Причина:** `docker compose up -d app` убивает ВСЕ 3 реплики одновременно и может пересоздать DB/Redis контейнеры (новые имена/ID). App контейнеры теряют зависимости (pgbouncer, redis) и не стартуют. Nginx получает 502.
 
 **Решение:**
-1. Всегда деплоить через `./scripts/deploy.sh app` — он делает rolling restart
-2. Скрипт автоматически останавливает cloudflared на Server 2 перед деплоем
-3. Если контейнеры уже упали:
+1. **Деплой:** всегда через `./scripts/deploy.sh app` — rolling restart без потери зависимостей
+2. **Если контейнеры уже упали** — поднимать ВСЕ сервисы, не только app:
 ```bash
-# Проверить состояние
+# ПРАВИЛЬНО — поднимает всё с корректными зависимостями:
+docker compose -f docker-compose.prod.yml up -d
+# Подождать ~60с
 docker compose -f docker-compose.prod.yml ps
-# Поднять контейнеры
-docker compose -f docker-compose.prod.yml up -d app
-# Подождать ~60с и проверить
 curl -s http://localhost:3004/api/ready
 # Перезагрузить nginx
 docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload
 ```
+
+> **ВАЖНО:** `docker compose up -d app` может сломать связи между контейнерами. Если нужно восстановить — всегда `docker compose up -d` (без указания сервиса).
 
 **Проверить Server 2 cloudflared:**
 ```bash

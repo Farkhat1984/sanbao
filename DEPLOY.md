@@ -551,9 +551,9 @@ sudo systemctl restart cloudflared
 
 ### Деплой вызывает 502/503
 
-**Причина:** Использование `docker compose up -d app` вместо скрипта
+**Причина:** `docker compose up -d app` пересоздаёт DB/Redis контейнеры (новые ID), app теряет зависимости и не стартует
 
-**Решение:** Всегда использовать `./scripts/deploy.sh app` (rolling restart)
+**Решение:** деплой через `./scripts/deploy.sh app`. Если контейнеры уже упали — восстанавливать через `docker compose -f docker-compose.prod.yml up -d` (все сервисы, НЕ только app)
 
 ### PgBouncer Image Not Found
 
