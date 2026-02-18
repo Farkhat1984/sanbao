@@ -20,6 +20,8 @@ export interface ResolvedModel {
   contextWindow: number | null;
   supportsThinking: boolean;
   maxThinkingTokens: number | null;
+  costPer1kInput: number;
+  costPer1kOutput: number;
 }
 
 // In-memory cache: category+planId -> { model, expiresAt }
@@ -135,6 +137,8 @@ type ModelWithProvider = {
   contextWindow: number | null;
   supportsThinking: boolean;
   maxThinkingTokens: number | null;
+  costPer1kInput: number;
+  costPer1kOutput: number;
   provider: {
     slug: string;
     baseUrl: string;
@@ -160,6 +164,8 @@ function toResolvedModel(model: ModelWithProvider): ResolvedModel {
     contextWindow: model.contextWindow,
     supportsThinking: model.supportsThinking ?? false,
     maxThinkingTokens: model.maxThinkingTokens ?? null,
+    costPer1kInput: model.costPer1kInput,
+    costPer1kOutput: model.costPer1kOutput,
   };
 }
 

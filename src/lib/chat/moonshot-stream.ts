@@ -49,6 +49,7 @@ export interface MoonshotStreamOptions {
     compacting: boolean;
   };
   textModel?: ResolvedModel | null;
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
 }
 
 // ─── SSE Parser ──────────────────────────────────────────
@@ -104,6 +105,7 @@ export function streamMoonshot(
     nativeToolCtx,
     contextInfo,
     textModel,
+    onUsage,
   } = options;
   const nativeToolDefs = getNativeToolDefinitions();
 
@@ -139,6 +141,10 @@ export function streamMoonshot(
         let insidePlan = false;
         let planBuffer = "";
 
+        // Usage accumulation for token logging
+        let totalInputTokens = 0;
+        let totalOutputTokens = 0;
+
         // Tool-call loop
         for (let turn = 0; turn < NATIVE_TOOL_MAX_TURNS; turn++) {
           const response = await fetch(apiUrl, {
@@ -154,6 +160,7 @@ export function streamMoonshot(
               temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? DEFAULT_TEMPERATURE),
               top_p: textModel?.topP ?? DEFAULT_TOP_P,
               stream: true,
+              stream_options: { include_usage: true },
               tools: [
                 ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
                 ...nativeToolDefs,
@@ -223,6 +230,12 @@ export function streamMoonshot(
                 )
               );
               return;
+            }
+
+            // Accumulate usage from SSE chunks
+            if (chunk.usage) {
+              totalInputTokens += chunk.usage.prompt_tokens ?? 0;
+              totalOutputTokens += chunk.usage.completion_tokens ?? 0;
             }
 
             const choice = chunk.choices?.[0];
@@ -491,6 +504,11 @@ export function streamMoonshot(
           }
 
           break;
+        }
+
+        // Report accumulated usage for token logging
+        if (onUsage && (totalInputTokens > 0 || totalOutputTokens > 0)) {
+          onUsage({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
         }
       } catch {
         controller.enqueue(

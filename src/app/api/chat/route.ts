@@ -15,6 +15,8 @@ import { resolveAgentId } from "@/lib/system-agents";
 import { resolveAgentContext } from "@/lib/tool-resolver";
 import { resolveModel, type ResolvedModel } from "@/lib/model-router";
 import { checkContentFilter } from "@/lib/content-filter";
+import { logTokenUsage } from "@/lib/audit";
+import { fireAndForget } from "@/lib/logger";
 import { recordRequestDuration } from "@/lib/request-metrics";
 import { CORRELATION_HEADER, runWithCorrelationId, generateCorrelationId } from "@/lib/correlation";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
@@ -674,10 +676,15 @@ export async function POST(req: Request) {
     systemPrompt += `\n\n--- ФАЙЛЫ ПОЛЬЗОВАТЕЛЯ ---\nУ пользователя есть загруженные файлы. Используй инструмент read_knowledge для поиска в них.\n${filesList}\n--- КОНЕЦ ФАЙЛОВ ---`;
   }
 
+  // ─── Resolve text model (needed for context window + max tokens) ──
+
+  const textModel = await resolveModel("TEXT", plan.id);
+
   // ─── Autocompact ────────────────────────────────────────
 
   const systemTokens = estimateTokens(systemPrompt);
-  const contextCheck = checkContextWindow(messages, systemTokens, plan.contextWindowSize);
+  const effectiveContextWindow = Math.min(plan.contextWindowSize, textModel?.contextWindow ?? Infinity);
+  const contextCheck = checkContextWindow(messages, systemTokens, effectiveContextWindow);
 
   let effectiveMessages = messages;
   let isCompacting = false;
@@ -691,8 +698,7 @@ export async function POST(req: Request) {
       effectiveMessages = messagesToKeep;
       isCompacting = true;
       if (reqConvId) {
-        const compactModel = await resolveModel("TEXT", plan.id);
-        compactInBackground(reqConvId, existingSummary, messagesToSummarize, plan.tokensPerMessage, session.user.id, compactModel);
+        compactInBackground(reqConvId, existingSummary, messagesToSummarize, plan.tokensPerMessage, session.user.id, textModel);
       }
     }
   }
@@ -719,10 +725,6 @@ export async function POST(req: Request) {
   const estimatedTokens = Math.max(100, Math.ceil(inputChars / 3));
   await incrementUsage(session.user.id, estimatedTokens);
 
-  // ─── Resolve text model ─────────────────────────────────
-
-  const textModel = await resolveModel("TEXT", plan.id);
-
   // ─── Native tool context ────────────────────────────────
 
   const nativeToolCtx: NativeToolContext = {
@@ -738,13 +740,40 @@ export async function POST(req: Request) {
     },
   };
 
+  // ─── Token usage callback (fire-and-forget) ─────────────
+
+  const onUsage = (usage: { inputTokens: number; outputTokens: number }) => {
+    const totalTokens = usage.inputTokens + usage.outputTokens;
+    // Correct DailyUsage with real tokens (subtract initial estimate)
+    fireAndForget(
+      incrementTokens(session.user.id, Math.max(0, totalTokens - estimatedTokens)),
+      "post-stream token correction"
+    );
+    // Record to TokenLog for analytics
+    if (textModel) {
+      fireAndForget(
+        logTokenUsage({
+          userId: session.user.id,
+          conversationId: reqConvId || undefined,
+          provider: textModel.provider.slug,
+          model: textModel.modelId,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          costPer1kInput: textModel.costPer1kInput,
+          costPer1kOutput: textModel.costPer1kOutput,
+        }),
+        "logTokenUsage"
+      );
+    }
+  };
+
   // ─── Route by provider apiFormat ─────────────────────────
 
   const apiFormat = textModel?.provider.apiFormat ?? "OPENAI_COMPAT";
 
   if (apiFormat === "OPENAI_COMPAT") {
     // OpenAI-compatible SSE streaming (Moonshot, DeepInfra, etc.)
-    let effectiveMaxTokens = plan.tokensPerMessage;
+    let effectiveMaxTokens = Math.min(plan.tokensPerMessage, textModel?.maxTokens ?? Infinity);
     if (thinkingEnabled && textModel?.maxThinkingTokens) {
       effectiveMaxTokens += textModel.maxThinkingTokens;
     }
@@ -757,6 +786,7 @@ export async function POST(req: Request) {
       nativeToolCtx,
       contextInfo,
       textModel,
+      onUsage,
     });
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
@@ -776,9 +806,10 @@ export async function POST(req: Request) {
     systemPrompt: enrichedSystemPrompt,
     messages: effectiveMessages,
     thinkingEnabled,
-    maxTokens: plan.tokensPerMessage,
+    maxTokens: Math.min(plan.tokensPerMessage, textModel?.maxTokens ?? Infinity),
     textModel,
     contextInfo,
+    onUsage,
   });
 
   recordRequestDuration("/api/chat", Date.now() - _requestStart);

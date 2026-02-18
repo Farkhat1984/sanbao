@@ -24,6 +24,7 @@ export interface AiSdkStreamOptions {
     contextWindowSize: number;
     compacting: boolean;
   };
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
 }
 
 // ─── Plan detection wrapper for AI SDK streams ───────────
@@ -194,6 +195,7 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     maxTokens,
     textModel,
     contextInfo,
+    onUsage,
   } = options;
 
   if (!textModel) {
@@ -232,6 +234,16 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
         }
       : {}),
   });
+
+  // Report token usage asynchronously
+  if (onUsage) {
+    Promise.resolve(result.usage).then((usage) => {
+      onUsage({
+        inputTokens: usage.inputTokens ?? 0,
+        outputTokens: usage.outputTokens ?? 0,
+      });
+    }).catch(() => {});
+  }
 
   // Wrap AI SDK full stream with plan detection and reasoning
   return createPlanDetectorStream(

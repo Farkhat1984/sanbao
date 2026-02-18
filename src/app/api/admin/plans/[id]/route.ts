@@ -37,6 +37,7 @@ export async function PUT(
     "isDefault",
     "sortOrder",
     "highlighted",
+    "maxStorageMb",
   ];
 
   const data: Record<string, unknown> = {};
