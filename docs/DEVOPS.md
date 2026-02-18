@@ -53,7 +53,7 @@
 | PgBouncer | - | `5432` | Connection pooling |
 | Redis | - | `6379` | Кеш, очереди, rate-limit |
 
-**Docker Compose:** `docker-compose.prod.yml`
+**Docker Compose:** `docker-compose.prod.yml` (**ВСЕГДА** указывать `-f docker-compose.prod.yml`, иначе Docker мержит с dev-файлом и ломает порты!)
 **Cloudflared:** `/etc/cloudflared/config.yml` (systemd сервис, НЕ Docker)
 **Системный Nginx:** `/etc/nginx/sites-enabled/sanbao.ai` (SSL + proxy)
 
@@ -566,6 +566,26 @@ sudo tee /deploy/cloudflared/config.yml < config-template.yml
 sudo tee /deploy/cloudflared/credentials.json < credentials-template.json
 # НЕ запускать cloudflared если Server 1 жив — только при failover!
 ```
+
+### App не стартует: `port is already allocated`
+
+**Симптомы:** app-контейнеры в статусе "Created" (никогда не запускаются), nginx unhealthy, сайт отдаёт 502. В `docker inspect` ошибка: `Bind for 0.0.0.0:3004 failed: port is already allocated`.
+
+**Причина:** Docker Compose запущен с мержем двух файлов (`docker-compose.yml` + `docker-compose.prod.yml`). В `docker-compose.yml` app маппит `ports: "3004:3004"` на хост, а в `docker-compose.prod.yml` nginx маппит `"3004:80"`. При мерже оба маппинга активны → конфликт портов → app не может стартовать.
+
+**Проверить:** `docker compose ls` — если в колонке CONFIG FILES два файла через запятую, это оно.
+
+**Решение:**
+```bash
+# Пересоздать стек ТОЛЬКО с prod-файлом:
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+# Проверить:
+docker compose ls  # должен показать ТОЛЬКО docker-compose.prod.yml
+docker compose -f docker-compose.prod.yml ps
+```
+
+> **ВАЖНО:** На проде **НИКОГДА** не запускать `docker compose up -d` без `-f docker-compose.prod.yml`! Без флага `-f` Docker мержит оба compose-файла, что приводит к конфликту портов. Всегда использовать `./scripts/deploy.sh` или указывать `-f docker-compose.prod.yml` явно.
 
 ### Google OAuth не работает (PKCE error)
 

@@ -218,6 +218,8 @@ docker compose -f docker-compose.prod.yml up --build -d
 - Вызывает 60+ секунд даунтайма
 - Приводит к ошибкам 502/503
 
+> **КРИТИЧЕСКИ ВАЖНО:** На проде **НИКОГДА** не запускать `docker compose up -d` без `-f docker-compose.prod.yml`! Без флага `-f` Docker мержит `docker-compose.yml` (dev) и `docker-compose.prod.yml` — app получает `ports: "3004:3004"` из dev-файла, nginx тоже маппит `"3004:80"` → конфликт портов → app не стартует вообще. Всегда указывать `-f docker-compose.prod.yml` явно или использовать `./scripts/deploy.sh`.
+
 ---
 
 ## Kubernetes
@@ -547,7 +549,7 @@ sudo systemctl restart cloudflared
 |---------|---------|
 | cloudflared на Сервере 2 запущен, но Sanbao не стартовал | Остановить cloudflared на Сервере 2 |
 | cloudflared на Сервере 1 не запущен | `sudo systemctl restart cloudflared` |
-| Docker-контейнеры на Сервере 1 упали | `docker compose -f docker-compose.prod.yml up -d app` |
+| Docker-контейнеры на Сервере 1 упали | `docker compose -f docker-compose.prod.yml up -d` (все сервисы!) |
 
 ### Деплой вызывает 502/503
 
@@ -584,6 +586,18 @@ sudo systemctl restart cloudflared
 **Причина:** Docker bind mount создаёт директорию вместо файла, если файл отсутствует на хосте
 
 **Решение:** остановить контейнер → `sudo rm -rf /deploy/cloudflared/config.yml` → создать настоящий файл → НЕ запускать cloudflared пока не нужен failover
+
+### App: `port is already allocated` (контейнеры не стартуют)
+
+**Причина:** Docker Compose запущен без `-f docker-compose.prod.yml`, подхватил оба файла. В dev-файле app маппит `3004:3004`, в prod-файле nginx маппит `3004:80` — конфликт
+
+**Диагностика:** `docker compose ls` — если в CONFIG FILES два файла, это причина
+
+**Решение:**
+```bash
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ---
 
