@@ -123,6 +123,9 @@
 | `METRICS_TOKEN` | Bearer-токен для /api/metrics |
 | `LOG_FORMAT` | `json` (prod) или `pretty` (dev) |
 | `LOG_LEVEL` | `info`, `debug`, `warn`, `error` |
+| `LAWYER_MCP_URL` | URL MCP Юриста (`http://host.docker.internal:8120/lawyer`) |
+| `FRAGMENTDB_MCP_URL` | URL FragmentDB MCP |
+| `FRAGMENTDB_MCP_TOKEN` | Токен для FragmentDB MCP |
 
 ---
 
@@ -563,11 +566,13 @@ sudo systemctl restart cloudflared
 
 **Стало:** `edoburu/pgbouncer:latest`
 
-### MCP-серверы недоступны
+### MCP-серверы недоступны (502 на /api/articles)
 
-- Сервер 2 запускает на 46.225.122.142:8120
-- Сервер 1 обращается через Docker bridge: 172.28.0.1:8120
-- Проверка: `ssh faragj@46.225.122.142 "docker logs deploy-orchestrator-1 --tail 20"`
+- MCP Orchestrator слушает на хосте Сервера 1 (localhost:8120)
+- Docker-контейнеры обращаются через `host.docker.internal:8120`
+- Если 502 — вероятно, iptables блокирует трафик Docker → хост
+- Решение: `sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT`
+- Подробная диагностика: `docs/DEVOPS.md` → Troubleshooting → MCP серверы недоступны
 
 ### Docker CLI отсутствует в боте
 
@@ -603,13 +608,17 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## MCP-серверы
 
-| Сервер | URL | Назначение |
-|--------|-----|------------|
-| Юрист | `http://172.28.0.1:8120/lawyer` | НПА, поиск, статьи |
-| Брокер | `http://172.28.0.1:8120/broker` | Таможня, пошлины, декларации |
+| Сервер | URL (из Docker-контейнеров) | Назначение |
+|--------|----------------------------|------------|
+| Юрист | `http://host.docker.internal:8120/lawyer` | НПА, поиск, статьи |
+| Брокер | `http://host.docker.internal:8120/broker` | Таможня, пошлины, декларации |
 | Бухгалтер | `https://mcp.sanbao.ai/accountant` | Бухгалтерия |
 
-Примечание: 172.28.0.1 — Docker bridge gateway. Физически MCP работают на Сервере 2 (46.225.122.142:8120).
+MCP Orchestrator работает на хосте Сервера 1 (python3, порт 8120). Docker-контейнеры обращаются через `host.docker.internal` (настроено в `docker-compose.prod.yml` через `extra_hosts`).
+
+**Env:** `LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer`
+
+> Если MCP недоступен из контейнеров (502 на `/api/articles`) — проверить iptables: `sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT`. Подробнее: `docs/DEVOPS.md` → Troubleshooting.
 
 ---
 

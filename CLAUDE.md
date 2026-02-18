@@ -48,7 +48,7 @@ Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB 
 - `src/app/(auth)/` — аутентификация: `/login`, `/register`
 - `src/app/(admin)/admin/` — админ-панель (29 страниц): dashboard, users, agents, tools, plugins, skills, mcp, models, models/matrix, providers, plans, billing, usage, analytics, experiments, settings, notifications, webhooks, promo-codes, templates, email, api-keys, sessions, logs, errors, files, moderation, agent-moderation, health
 - `src/app/(legal)/` — юридические страницы: `/terms`, `/privacy`, `/offer`
-- `src/app/api/` — 105 route-файлов: chat, conversations, agents, tools, plugins, skills, tasks, memory, billing (stripe + freedom), admin/*, auth (2fa, nextauth, register), health, ready, metrics, notifications, reports, user, user-files, files, mcp, image-generate, image-edit, fix-code
+- `src/app/api/` — 107 route-файлов: chat, conversations, agents, tools, plugins, skills, tasks, memory, billing (stripe + freedom), admin/*, auth (2fa, nextauth, register, apple, mobile/google), health, ready, metrics, notifications, reports, user, user-files, files, mcp, image-generate, image-edit, fix-code
 
 ### Streaming Protocol
 
@@ -90,8 +90,10 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 
 ### Security
 
-- **Auth:** NextAuth v5, JWT, Credentials + Google OAuth, 2FA TOTP (`otplib` OTP class)
-- **Middleware:** `src/proxy.ts` (113 lines, Edge Runtime) — auth wrapper, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
+- **Auth:** NextAuth v5, JWT, Credentials + Google OAuth + Apple Sign In (mobile), 2FA TOTP (`otplib` OTP class)
+- **Mobile auth:** `src/lib/mobile-auth.ts` (JWKS token verification via `jose`), `src/lib/mobile-session.ts` (NextAuth-compatible JWT minting, 30-day expiry). Endpoints: `POST /api/auth/apple`, `POST /api/auth/mobile/google` — verify provider ID tokens, upsert user + account, return Bearer token. Apple bundle ID: `com.sanbao.sanbaoai`
+- **Bearer-to-Cookie bridge:** `src/proxy.ts` middleware converts `Authorization: Bearer <token>` → NextAuth session cookie for mobile API clients
+- **Middleware:** `src/proxy.ts` (~135 lines, Edge Runtime) — auth wrapper, Bearer-to-Cookie bridge, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
 - **CSP:** Content-Security-Policy header via `next.config.ts` (dynamic CDN/Sentry/Cloudflare domains)
 - **Admin guard:** `src/lib/admin.ts` → `requireAdmin()` — role + 2FA + IP whitelist
 - **Rate-limit:** `src/lib/rate-limit.ts` — Redis-first with in-memory fallback, auto-block on abuse (10 violations → 30 min block)
@@ -223,6 +225,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **docx / jspdf / html2canvas-pro** — document export; **mammoth / pdf-parse / xlsx / officeparser** — file parsing
 - **@modelcontextprotocol/sdk** — MCP server connections (`src/lib/mcp-client.ts`)
 - **@napi-rs/canvas + qrcode** — server-side image generation (invoices, QR)
+- **jose** — JWKS-based JWT verification for Apple/Google mobile auth (`src/lib/mobile-auth.ts`)
 - **framer-motion** — spring-based animations
 
 ### Frontend Structure

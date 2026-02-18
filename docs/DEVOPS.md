@@ -140,13 +140,24 @@ BOT_PASSWORD=Ckdshfh231161!
 
 ## MCP серверы
 
-| Сервер | URL (из Server 1) | Агенты | Инструменты |
-|--------|-------------------|--------|-------------|
-| **Юрист** | `http://172.28.0.1:8120/lawyer` | НПА, Бухгалтер, Брокер | search, lookup, list_domains, get_article, graph_traverse |
-| **Брокер** | `http://172.28.0.1:8120/broker` | Таможенный брокер | search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration |
+| Сервер | URL (из Docker-контейнеров Server 1) | Агенты | Инструменты |
+|--------|--------------------------------------|--------|-------------|
+| **Юрист** | `http://host.docker.internal:8120/lawyer` | НПА, Бухгалтер, Брокер | search, lookup, list_domains, get_article, graph_traverse |
+| **Брокер** | `http://host.docker.internal:8120/broker` | Таможенный брокер | search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration |
 | **AccountingDB** | `https://mcp.sanbao.ai/accountant` | Бухгалтер | (manual discovery) |
 
-`172.28.0.1` — Docker bridge gateway, MCP Orchestrator на Server 2 слушает `:8120`.
+### Docker → Host доступ к MCP
+
+MCP Orchestrator слушает на хосте Server 1 (`:8120`, python3 процесс). Docker-контейнеры обращаются через `host.docker.internal`.
+
+**Конфигурация:**
+- `docker-compose.prod.yml` → app сервис: `extra_hosts: ["host.docker.internal:host-gateway"]`
+- `.env` → `LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer`
+- БД `McpServer` записи: URL = `http://host.docker.internal:8120/lawyer` (и `/broker`)
+
+**ВАЖНО:** `host.docker.internal` на Linux резолвится в IP Docker bridge (`172.17.0.1` для docker0 или `172.19.0.1` для compose-сети). Если iptables блокирует трафик с Docker-сетей на хост, MCP будет недоступен — см. секцию Troubleshooting.
+
+> Ранее использовался хардкод `172.28.0.1` (Docker bridge gateway), но этот IP нестабилен и меняется при пересоздании Docker-сетей.
 
 ---
 
@@ -354,6 +365,12 @@ docker compose -f infra/docker-compose.monitoring.yml up -d
 | `ADMIN_IP_WHITELIST` | CSV IP адресов для админки |
 | `METRICS_TOKEN` | Bearer токен для /api/metrics |
 | `CRON_SECRET` | Секрет для cron endpoint'ов |
+| `GOOGLE_IOS_CLIENT_ID` | Google OAuth Client ID для iOS приложения |
+| `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Client ID для Android приложения |
+| `APPLE_BUNDLE_ID` | Apple Bundle ID (default: `com.sanbao.sanbaoai`) |
+| `LAWYER_MCP_URL` | URL MCP Юриста (default: `http://host.docker.internal:8120/lawyer`) |
+| `FRAGMENTDB_MCP_URL` | URL FragmentDB MCP |
+| `FRAGMENTDB_MCP_TOKEN` | Токен для FragmentDB MCP |
 
 ---
 
@@ -440,9 +457,39 @@ deploy/
 
 `edoburu/pgbouncer:1.23.1-p2` удалён → использовать `edoburu/pgbouncer:latest`
 
-### MCP серверы недоступны
+### MCP серверы недоступны из Docker-контейнеров
 
-MCP Orchestrator на Server 2 (`46.225.122.142:8120`). Server 1 обращается через Docker bridge `172.28.0.1:8120`. Проверить:
+**Симптомы:** `/api/articles` возвращает 502, в логах app-контейнера таймаут на `host.docker.internal:8120`.
+
+**Диагностика:**
+```bash
+# 1. Проверить что MCP слушает на хосте
+curl -s http://localhost:8120/lawyer -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' | head -c 200
+
+# 2. Проверить какой IP резолвит host.docker.internal
+docker compose -f docker-compose.prod.yml exec app getent hosts host.docker.internal
+
+# 3. Проверить доступность из контейнера
+docker compose -f docker-compose.prod.yml exec app wget -q -O- --timeout=5 http://host.docker.internal:8120/lawyer
+
+# 4. Проверить iptables (разрешён ли трафик с Docker-подсетей)
+sudo iptables -L INPUT -n | grep -E '172\.(17|19|28)'
+sudo iptables -L DOCKER-USER -n 2>/dev/null
+```
+
+**Решение — открыть порт 8120 для Docker:**
+```bash
+# Разрешить трафик от Docker-сетей к хосту на порт 8120
+sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT
+# Сохранить правило
+sudo netfilter-persistent save  # или iptables-save > /etc/iptables/rules.v4
+```
+
+**Альтернатива — network_mode: host (НЕ рекомендуется):** app-контейнер будет в host-сети, но тогда не работает Docker DNS (pgbouncer, redis).
+
+**Проверить Server 2 Orchestrator:**
 ```bash
 ssh faragj@46.225.122.142 "docker logs deploy-orchestrator-1 --tail 20"
 ```
