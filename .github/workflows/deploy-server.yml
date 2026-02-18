@@ -28,8 +28,8 @@ jobs:
             git reset --hard origin/main
 
             echo "=== Rebuilding sanbao container ==="
-            docker compose build --no-cache app
-            docker compose up -d app
+            docker compose -f docker-compose.prod.yml build --no-cache app
+            docker compose -f docker-compose.prod.yml up -d app
 
             echo "=== Waiting for health check ==="
             for i in $(seq 1 30); do
@@ -41,7 +41,7 @@ jobs:
               sleep 5
             done
             echo "Health check failed!"
-            docker compose logs --tail=50 app
+            docker compose -f docker-compose.prod.yml logs --tail=50 app
             exit 1
 
   deploy-server2:
