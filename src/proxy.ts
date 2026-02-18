@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest, NextFetchEvent } from "next/server";
 
 // ─── Correlation ID ───
 
@@ -31,9 +32,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 const SUSPICIOUS = /(\.\.|%2e%2e|%00|<script|javascript:|data:text\/html)/i;
 
+// ─── Bearer-to-Cookie bridge for mobile clients ───
+
+const SESSION_COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+
 // ─── Main proxy ───
 
-export default auth((req) => {
+const withAuth = auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Block suspicious paths/query strings
@@ -96,6 +104,18 @@ export default auth((req) => {
   addSecurityHeaders(response);
   return response;
 });
+
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
+  // Inject Bearer token as session cookie so auth() can read it
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ") && !req.cookies.has(SESSION_COOKIE)) {
+      req.cookies.set(SESSION_COOKIE, authHeader.slice(7));
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (withAuth as any)(req, event);
+}
 
 export const config = {
   matcher: [
