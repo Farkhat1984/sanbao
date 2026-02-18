@@ -84,7 +84,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 ```bash
 # 1. Namespace
-kubectl apply -f k8s/namespace.yml
+kubectl apply -f infra/k8s/namespace.yml
 
 # 2. Секреты
 kubectl create secret generic sanbao-secrets \
@@ -99,39 +99,39 @@ kubectl create secret generic sanbao-secrets \
   -n sanbao
 
 # 3. ConfigMap (отредактировать домен и URLs в configmap.yml)
-kubectl apply -f k8s/configmap.yml
+kubectl apply -f infra/k8s/configmap.yml
 
 # 4. Инфраструктура
-kubectl apply -f k8s/postgres.yml
-kubectl apply -f k8s/redis.yml
-kubectl apply -f k8s/pgbouncer.yml
+kubectl apply -f infra/k8s/postgres.yml
+kubectl apply -f infra/k8s/redis.yml
+kubectl apply -f infra/k8s/pgbouncer.yml
 
 # 5. Дождаться БД
 kubectl wait --for=condition=ready pod -l app=postgres -n sanbao --timeout=120s
 
 # 6. Миграции (обновить image в migration-job.yml)
-kubectl apply -f k8s/migration-job.yml
+kubectl apply -f infra/k8s/migration-job.yml
 kubectl wait --for=condition=complete job/sanbao-migrate -n sanbao --timeout=120s
 
 # 7. Приложение + автоскейлинг
-kubectl apply -f k8s/app-deployment.yml
-kubectl apply -f k8s/hpa.yml
-kubectl apply -f k8s/pdb.yml
+kubectl apply -f infra/k8s/app-deployment.yml
+kubectl apply -f infra/k8s/hpa.yml
+kubectl apply -f infra/k8s/pdb.yml
 
 # 8. Ingress (отредактировать домен в ingress.yml)
-kubectl apply -f k8s/ingress.yml
+kubectl apply -f infra/k8s/ingress.yml
 
 # 9. Network Policies (опционально)
-kubectl apply -f k8s/network-policies.yml
+kubectl apply -f infra/k8s/network-policies.yml
 ```
 
 #### Мониторинг
 
 ```bash
-kubectl apply -f k8s/monitoring/namespace.yml
-kubectl apply -f k8s/monitoring/prometheus.yml
-kubectl apply -f k8s/monitoring/grafana.yml
-kubectl apply -f k8s/monitoring/alertmanager.yml
+kubectl apply -f infra/k8s/monitoring/namespace.yml
+kubectl apply -f infra/k8s/monitoring/prometheus.yml
+kubectl apply -f infra/k8s/monitoring/grafana.yml
+kubectl apply -f infra/k8s/monitoring/alertmanager.yml
 
 # Grafana: http://<grafana-ip>:3000 (admin/admin)
 # Дашборд "Sanbao Overview" загружается автоматически
@@ -142,7 +142,7 @@ kubectl apply -f k8s/monitoring/alertmanager.yml
 ```bash
 # Ежедневный pg_dump → S3 в 03:00 UTC (хранение 30 дней)
 # Добавить S3_BACKUP_BUCKET в sanbao-secrets
-kubectl apply -f k8s/backup-cronjob.yml
+kubectl apply -f infra/k8s/backup-cronjob.yml
 ```
 
 #### Canary Deployments (Argo Rollouts)
@@ -155,7 +155,7 @@ kubectl apply -n argo-rollouts \
 
 # Заменить Deployment на Rollout
 kubectl delete deployment sanbao-app -n sanbao
-kubectl apply -f k8s/canary-rollout.yml
+kubectl apply -f infra/k8s/canary-rollout.yml
 
 # Обновление: 10% → 30% → 60% → 100% с паузами
 kubectl argo rollouts set image sanbao-app app=NEW_IMAGE -n sanbao
@@ -348,18 +348,20 @@ k6 run tests/load/stress.js
 ```
 sanbao/
 ├── .github/workflows/     CI/CD (ci.yml, deploy.yml)
-├── docs/                  Документация (ADMINGUIDE, DEVOPS, STYLEGUIDE, USERGUIDE)
-├── k8s/                   Kubernetes manifests
-│   ├── monitoring/        Prometheus + Grafana + Alertmanager
-│   ├── app-deployment.yml Deployment + Service (3 replicas)
-│   ├── hpa.yml            HPA (3-20 pods, CPU 70% / mem 80%)
-│   ├── pdb.yml            PodDisruptionBudget (minAvailable: 2)
-│   ├── ingress.yml        Nginx Ingress + TLS
-│   ├── canary-rollout.yml Argo Rollouts (10→30→60→100%)
-│   ├── network-policies.yml  Default deny + allow rules
-│   ├── backup-cronjob.yml pg_dump → S3 (ежедневно)
-│   └── ...                postgres, redis, pgbouncer, configmap, secrets
-├── nginx/                 Nginx LB config
+├── docs/                  Документация (ADMINGUIDE, DEVOPS, STYLEGUIDE, USERGUIDE, HOTFIX*)
+├── infra/                 Инфраструктура (k8s, nginx, monitoring)
+│   ├── k8s/               Kubernetes manifests
+│   │   ├── monitoring/    Prometheus + Grafana + Alertmanager
+│   │   ├── app-deployment.yml Deployment + Service (3 replicas)
+│   │   ├── hpa.yml        HPA (3-20 pods, CPU 70% / mem 80%)
+│   │   ├── pdb.yml        PodDisruptionBudget (minAvailable: 2)
+│   │   ├── ingress.yml    Nginx Ingress + TLS
+│   │   ├── canary-rollout.yml Argo Rollouts (10→30→60→100%)
+│   │   ├── network-policies.yml  Default deny + allow rules
+│   │   ├── backup-cronjob.yml pg_dump → S3 (ежедневно)
+│   │   └── ...            postgres, redis, pgbouncer, configmap, secrets
+│   ├── nginx/             Nginx LB config
+│   └── docker-compose.monitoring.yml  Prometheus + Grafana (Docker)
 ├── prisma/                Schema + seed
 ├── scripts/
 │   ├── pg-backup.sh       Скрипт бэкапа PostgreSQL
@@ -387,7 +389,7 @@ sanbao/
 │   ├── e2e/               E2E-тесты API
 │   └── load/              k6 нагрузочные тесты
 ├── docker-compose.yml     Dev (DB + PgBouncer + Redis + App)
-├── docker-compose.prod.yml Prod (+ Nginx + 3 replicas)
+├── docker-compose.prod.yml  Prod (+ Nginx + 3 replicas)
 ├── Dockerfile             Multi-stage production build
 └── sentry.*.config.ts     Sentry error tracking
 ```

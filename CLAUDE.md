@@ -171,18 +171,18 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - `GET /api/ready` — lightweight readiness probe (DB `SELECT 1` + Redis ping). Used by k8s readinessProbe
 - `GET /api/metrics` — Prometheus-compatible metrics (business, process, Redis, request duration histogram)
 - `src/lib/request-metrics.ts` — in-memory request duration tracking with histogram buckets
-- Grafana dashboard auto-provisioned via `k8s/monitoring/grafana.yml`
-- 7 Prometheus alert rules in `k8s/monitoring/prometheus.yml`
+- Grafana dashboard auto-provisioned via `infra/k8s/monitoring/grafana.yml`
+- 7 Prometheus alert rules in `infra/k8s/monitoring/prometheus.yml`
 
 ### Infrastructure
 
 - **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner)
 - **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas)
-- **Nginx:** `nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching
-- **Kubernetes:** full manifests in `k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies
-- **Canary:** Argo Rollouts manifest (`k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
+- **Nginx:** `infra/nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching
+- **Kubernetes:** full manifests in `infra/k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies
+- **Canary:** Argo Rollouts manifest (`infra/k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
 - **CI/CD:** `.github/workflows/` — CI (lint + test + build) and Deploy (image → registry → k8s)
-- **Backups:** CronJob (`k8s/backup-cronjob.yml`) — daily pg_dump → S3, 30-day retention
+- **Backups:** CronJob (`infra/k8s/backup-cronjob.yml`) — daily pg_dump → S3, 30-day retention
 - **CDN:** `assetPrefix` in `next.config.ts`, upload script `scripts/upload-static.sh`
 - **Sentry:** `sentry.{client,server,edge}.config.ts` — active only when `SENTRY_DSN` is set
 

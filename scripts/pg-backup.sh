@@ -1,6 +1,6 @@
 #!/bin/sh
 # PostgreSQL backup to S3
-# Used by k8s/backup-cronjob.yml
+# Used by infra/k8s/backup-cronjob.yml
 #
 # Required env:
 #   PGHOST, PGUSER, PGPASSWORD, PGDATABASE

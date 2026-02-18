@@ -90,7 +90,7 @@
 ### Prometheus + Grafana
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f infra/docker-compose.monitoring.yml up -d
 ```
 
 - Prometheus: `http://localhost:9090` — скрейпит `/api/metrics`

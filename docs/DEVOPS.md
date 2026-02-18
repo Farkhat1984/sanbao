@@ -279,7 +279,7 @@ docker compose -f docker-compose.failover.yml up -d fragmentdb embedding-proxy o
 
 ## Бекапы
 
-**Автоматические:** CronJob в k8s (`k8s/backup-cronjob.yml`) — daily 03:00 UTC, pg_dump → S3, 30 дней retention.
+**Автоматические:** CronJob в k8s (`infra/k8s/backup-cronjob.yml`) — daily 03:00 UTC, pg_dump → S3, 30 дней retention.
 
 **Ручные (через Telegram бот):** `/backup`
 
@@ -300,7 +300,7 @@ docker compose -f docker-compose.failover.yml up -d fragmentdb embedding-proxy o
 ### Docker Compose Monitoring (опционально)
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f infra/docker-compose.monitoring.yml up -d
 # Prometheus: http://localhost:9090
 # Grafana: http://localhost:3001 (admin/sanbao-grafana)
 ```
@@ -364,9 +364,32 @@ sanbao/
 ├── docker-entrypoint.sh            # Миграции + seed + запуск
 ├── docker-compose.yml              # Dev (db + pgbouncer + redis + app)
 ├── docker-compose.prod.yml         # Prod (+ nginx LB, 3 реплики)
-├── docker-compose.monitoring.yml   # Prometheus + Grafana
-├── nginx/
-│   └── nginx.conf                  # LB, rate-limit, SSE, security headers
+├── infra/
+│   ├── docker-compose.monitoring.yml  # Prometheus + Grafana
+│   ├── nginx/
+│   │   └── nginx.conf              # LB, rate-limit, SSE, security headers
+│   ├── monitoring/
+│   │   ├── prometheus.yml          # Prom config + alerting rules
+│   │   └── grafana/                # Provisioning + dashboards
+│   └── k8s/
+│       ├── namespace.yml
+│       ├── secrets.yml
+│       ├── configmap.yml
+│       ├── app-deployment.yml      # 3 реплики, HPA 3→20
+│       ├── postgres.yml            # StatefulSet, 50Gi PVC
+│       ├── redis.yml
+│       ├── pgbouncer.yml
+│       ├── ingress.yml             # Nginx Ingress + Let's Encrypt
+│       ├── hpa.yml                 # CPU/Memory autoscaling
+│       ├── pdb.yml                 # minAvailable: 2
+│       ├── canary-rollout.yml      # Argo Rollouts 10→30→60→100%
+│       ├── network-policies.yml
+│       ├── migration-job.yml
+│       ├── backup-cronjob.yml      # Daily 03:00 UTC
+│       └── monitoring/
+│           ├── prometheus.yml      # 7 alert rules
+│           ├── grafana.yml         # 12 panels dashboard
+│           └── alertmanager.yml
 ├── .github/workflows/
 │   ├── ci.yml                      # Lint + test + build
 │   ├── deploy.yml                  # K8s deploy (GHCR + rollout)
@@ -376,25 +399,6 @@ sanbao/
 │   ├── pg-backup.sh                # PostgreSQL → S3 бекап
 │   ├── start-mcp-servers.sh        # Запуск 5 MCP серверов (dev)
 │   └── upload-static.sh            # Static → S3/CDN
-├── k8s/
-│   ├── namespace.yml
-│   ├── secrets.yml
-│   ├── configmap.yml
-│   ├── app-deployment.yml          # 3 реплики, HPA 3→20
-│   ├── postgres.yml                # StatefulSet, 50Gi PVC
-│   ├── redis.yml
-│   ├── pgbouncer.yml
-│   ├── ingress.yml                 # Nginx Ingress + Let's Encrypt
-│   ├── hpa.yml                     # CPU/Memory autoscaling
-│   ├── pdb.yml                     # minAvailable: 2
-│   ├── canary-rollout.yml          # Argo Rollouts 10→30→60→100%
-│   ├── network-policies.yml
-│   ├── migration-job.yml
-│   ├── backup-cronjob.yml          # Daily 03:00 UTC
-│   └── monitoring/
-│       ├── prometheus.yml          # 7 alert rules
-│       ├── grafana.yml             # 12 panels dashboard
-│       └── alertmanager.yml
 └── .env                            # Environment variables
 ```
 
