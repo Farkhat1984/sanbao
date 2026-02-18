@@ -231,15 +231,15 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     [parts]
   );
 
-  // Detect overflow for assistant messages (skip when artifacts present)
+  // Detect overflow for assistant messages
   useEffect(() => {
-    if (!isAssistant || isExpanded || hasSpecialParts) return;
+    if (!isAssistant || isExpanded) return;
     const el = bubbleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
       setIsOverflowing(el.scrollHeight > 500);
     });
-  }, [message.content, isAssistant, isExpanded, hasSpecialParts]);
+  }, [message.content, isAssistant, isExpanded]);
 
   // Detect overflow for user messages
   useEffect(() => {
@@ -378,7 +378,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             isUser
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
-            isAssistant && !isExpanded && !hasSpecialParts && "max-h-[500px] overflow-hidden relative",
+            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative",
             isAssistant && isExpanded && "overflow-x-auto",
             isUser && !isUserExpanded && isUserOverflowing && "max-h-[400px] overflow-hidden relative",
           )}
@@ -482,7 +482,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           )}
 
           {/* Gradient overlay + expand button for collapsed messages */}
-          {isAssistant && !isExpanded && isOverflowing && !hasSpecialParts && (
+          {isAssistant && !isExpanded && isOverflowing && (
             <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent flex items-end justify-center pb-2">
               <button
                 onClick={() => setIsExpanded(true)}
@@ -496,7 +496,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
         </div>
 
         {/* Collapse button when expanded — assistant */}
-        {isAssistant && isExpanded && isOverflowing && !hasSpecialParts && (
+        {isAssistant && isExpanded && isOverflowing && (
           <div className="flex justify-center mt-2">
             <button
               onClick={() => setIsExpanded(false)}
