@@ -545,3 +545,36 @@ docker exec deploy-monitor-bot-1 docker compose version
 - Credentials: `~/faragj/deploy/cloudflared/credentials.json`
 - Docker compose: `command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run`
 - **user: root** (иначе permission denied на credentials)
+
+### Cloudflared Server 2: `config.yml: is a directory`
+
+**Симптомы:** cloudflared на Server 2 в restart loop. В логах: `error parsing YAML in config file: read /etc/cloudflared/config.yml: is a directory`.
+
+**Причина:** Docker создаёт пустую директорию вместо файла при bind mount, если файл не существует на хосте в момент первого запуска контейнера.
+
+**Решение:**
+```bash
+ssh faragj@46.225.122.142
+cd ~/faragj/deploy
+# Остановить и удалить контейнер
+docker compose -f docker-compose.failover.yml stop cloudflared
+docker compose -f docker-compose.failover.yml rm -f cloudflared
+# Удалить фейковые директории
+sudo rm -rf /deploy/cloudflared/config.yml /deploy/cloudflared/credentials.json
+# Создать настоящие файлы (скопировать с Server 1 или из репо)
+sudo tee /deploy/cloudflared/config.yml < config-template.yml
+sudo tee /deploy/cloudflared/credentials.json < credentials-template.json
+# НЕ запускать cloudflared если Server 1 жив — только при failover!
+```
+
+### Google OAuth не работает (PKCE error)
+
+**Симптомы:** при входе через Google — ошибка. В логах app: `[auth][error] InvalidCheck: pkceCodeVerifier value could not be parsed`.
+
+**Причина:** nginx передавал `X-Forwarded-Proto: $scheme` (= `http`, т.к. nginx слушает порт 80). NextAuth видел HTTP и не мог корректно обработать Secure cookies для PKCE верификации.
+
+**Решение:** в `infra/nginx/nginx.conf` все `proxy_set_header X-Forwarded-Proto` должны быть `https` (не `$scheme`), т.к. весь внешний трафик приходит через Cloudflare SSL:
+```nginx
+proxy_set_header X-Forwarded-Proto https;  # НЕ $scheme!
+```
+После изменения: `docker compose -f docker-compose.prod.yml restart nginx`

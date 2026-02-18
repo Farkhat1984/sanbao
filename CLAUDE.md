@@ -190,7 +190,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 
 - **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner), port 3004
 - **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas)
-- **Nginx:** `infra/nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching
+- **Nginx:** `infra/nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching, `X-Forwarded-Proto: https` (hardcoded — behind Cloudflare SSL)
 - **Kubernetes:** full manifests in `infra/k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies (6 rules)
 - **Canary:** Argo Rollouts manifest (`infra/k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
 - **CI/CD:** `.github/workflows/` — CI (lint + test + build), Deploy (image → registry → k8s), Deploy-Server (SSH to prod servers + Telegram notify)

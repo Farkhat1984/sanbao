@@ -371,6 +371,12 @@ kubectl apply -f infra/k8s/network-policies.yml
 - `HSTS: max-age=63072000; includeSubDomains; preload`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 
+### Proxy Headers
+
+- `X-Forwarded-Proto: https` — **захардкожен** (не `$scheme`!), т.к. весь трафик через Cloudflare SSL. Нужен для корректной работы NextAuth OAuth (PKCE cookies).
+- `X-Forwarded-For: $proxy_add_x_forwarded_for`
+- `X-Real-IP: $remote_addr`
+
 ### Лимиты
 
 - Client body: 20 МБ
@@ -566,6 +572,18 @@ sudo systemctl restart cloudflared
 **Причина:** docker binary не установлен в образ бота
 
 **Решение:** Пересобрать с Docker static binary в Dockerfile бота
+
+### Google OAuth: `pkceCodeVerifier could not be parsed`
+
+**Причина:** nginx передаёт `X-Forwarded-Proto: $scheme` (= `http`), NextAuth не может прочитать Secure PKCE cookies
+
+**Решение:** в `infra/nginx/nginx.conf` все `X-Forwarded-Proto` должны быть `https`, затем `docker compose restart nginx`
+
+### Cloudflared Server 2: `config.yml: is a directory`
+
+**Причина:** Docker bind mount создаёт директорию вместо файла, если файл отсутствует на хосте
+
+**Решение:** остановить контейнер → `sudo rm -rf /deploy/cloudflared/config.yml` → создать настоящий файл → НЕ запускать cloudflared пока не нужен failover
 
 ---
 
