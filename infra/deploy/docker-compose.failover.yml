@@ -1,0 +1,262 @@
+# Unified Docker Compose for Active-Passive Failover
+# FragmentDB (vector DB) + Sanbao (Next.js AI assistant)
+#
+# Usage:
+#   docker compose -f docker-compose.failover.yml build
+#   docker compose -f docker-compose.failover.yml up -d
+
+services:
+  # =========================================================================
+  # FragmentDB Stack
+  # =========================================================================
+
+  embedding-proxy:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.embedding
+    restart: unless-stopped
+    ports:
+      - "${EMBEDDING_PORT:-8097}:8097"
+    environment:
+      - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
+      - DEEPINFRA_MODEL=${DEEPINFRA_MODEL:-Qwen/Qwen3-Embedding-8B}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8097/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  fragmentdb:
+    build:
+      context: ../fragmentdb
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${FRAGMENTDB_PORT:-8110}:8080"
+    volumes:
+      - fragmentdb-data:/home/fragmentdb/data
+    environment:
+      - RUST_LOG=nexus=info
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.orchestrator
+    restart: unless-stopped
+    ports:
+      - "${ORCHESTRATOR_PORT:-8120}:8120"
+    environment:
+      - FRAGMENTDB_URL=http://fragmentdb:8080
+      - FEMIDA_PORT=8120
+      - FEMIDA_AUTH_TOKEN=${FRAGMENTDB_MCP_TOKEN}
+      - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      fragmentdb:
+        condition: service_healthy
+      embedding-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import httpx; httpx.get('http://localhost:8120/health').raise_for_status()\" 2>/dev/null || python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8120)); s.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # =========================================================================
+  # Sanbao Stack
+  # =========================================================================
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: sanbao
+    ports:
+      - "${POSTGRES_PORT:-5436}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "log_min_duration_statement=500"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sanbao"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/sanbao
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: 50
+      MAX_CLIENT_CONN: 500
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  sanbao:
+    build:
+      context: ../sanbao
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${SANBAO_PORT:-3004}:3004"
+    env_file:
+      - .env.sanbao
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@pgbouncer:5432/sanbao
+      - DIRECT_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/sanbao
+      - REDIS_URL=redis://redis:6379
+      - PORT=3004
+      - NODE_ENV=production
+      - FRAGMENTDB_MCP_URL=http://orchestrator:8120/mcp
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3004/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # =========================================================================
+  # Monitoring Bot (always running on standby)
+  # =========================================================================
+
+  monitor-bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_CHAT_ID=${TG_CHAT_ID}
+      - BOT_PASSWORD=${BOT_PASSWORD:-Ckdshfh231161!}
+      - PRIMARY_IP=${PRIMARY_IP:-128.127.102.170}
+      - STANDBY_IP=${STANDBY_IP:-46.225.122.142}
+      - SANBAO_PORT=${SANBAO_PORT:-3004}
+      - FRAGMENTDB_PORT=${FRAGMENTDB_PORT:-8110}
+      - SYNC_SSH_USER=${SYNC_SSH_USER:-metadmin}
+      - SYNC_SSH_HOST=${SYNC_SSH_HOST:-128.127.102.170}
+      - SYNC_SSH_PORT=${SYNC_SSH_PORT:-22222}
+      - DEPLOY_DIR=/deploy
+    volumes:
+      - bot-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log
+      - /backups:/backups
+      - .:/deploy:ro
+      - ${HOME}/.ssh:/root/.ssh:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  # =========================================================================
+  # Cloudflare Tunnel (запускается при failover)
+  # =========================================================================
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    profiles:
+      - failover
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+volumes:
+  fragmentdb-data:
+    driver: local
+  pgdata:
+    driver: local
+  bot-data:
+    driver: local
