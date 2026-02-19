@@ -1,17 +1,15 @@
 // ─── Vercel AI SDK streaming handler ─────────────────────
 // Extracted from route.ts — wraps streamText() with plan detection
-// and reasoning support for OpenAI and Anthropic providers.
+// and reasoning support for OpenAI-compatible providers via AI SDK.
 
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from "@/lib/constants";
 import type { ResolvedModel } from "@/lib/model-router";
 
 // ─── Options ─────────────────────────────────────────────
 
 export interface AiSdkStreamOptions {
-  apiFormat: string;
   systemPrompt: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messages: any[];
@@ -37,8 +35,7 @@ function createPlanDetectorStream(
     totalTokens: number;
     contextWindowSize: number;
     compacting: boolean;
-  },
-  hasReasoning?: boolean
+  }
 ): ReadableStream {
   const encoder = new TextEncoder();
 
@@ -65,7 +62,7 @@ function createPlanDetectorStream(
 
         for await (const part of fullStream) {
           // Stream reasoning chunks from AI SDK
-          if (hasReasoning && part.type === "reasoning-delta") {
+          if (part.type === "reasoning-delta") {
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({ t: "r", v: part.text }) + "\n"
@@ -188,7 +185,6 @@ function createPlanDetectorStream(
 
 export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
   const {
-    apiFormat,
     systemPrompt,
     messages,
     thinkingEnabled,
@@ -202,17 +198,9 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     throw new Error("No model resolved from DB — configure models via /admin/models");
   }
 
-  const isAnthropic = apiFormat === "AI_SDK_ANTHROPIC";
-  const model = isAnthropic
-    ? anthropic(textModel.modelId)
-    : openai(textModel.modelId);
-
+  const model = openai(textModel.modelId);
   const temperature = thinkingEnabled ? 1.0 : (textModel.temperature ?? DEFAULT_TEMPERATURE);
   const topP = textModel.topP ?? DEFAULT_TOP_P;
-  const budgetTokens = textModel.maxThinkingTokens ?? Math.min(maxTokens, 10000);
-  const effectiveMaxTokens = thinkingEnabled
-    ? maxTokens + (textModel.maxThinkingTokens ?? 0)
-    : maxTokens;
 
   const result = streamText({
     model,
@@ -220,19 +208,7 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     messages,
     temperature,
     topP,
-    maxOutputTokens: effectiveMaxTokens,
-    ...(thinkingEnabled && isAnthropic
-      ? {
-          providerOptions: {
-            anthropic: {
-              thinking: {
-                type: "enabled",
-                budgetTokens,
-              },
-            },
-          },
-        }
-      : {}),
+    maxOutputTokens: maxTokens,
   });
 
   // Report token usage asynchronously
@@ -246,9 +222,5 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
   }
 
   // Wrap AI SDK full stream with plan detection and reasoning
-  return createPlanDetectorStream(
-    result.fullStream,
-    contextInfo,
-    thinkingEnabled && isAnthropic
-  );
+  return createPlanDetectorStream(result.fullStream, contextInfo);
 }

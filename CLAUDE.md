@@ -58,7 +58,7 @@ Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB 
 Chat logic split across 4 files (~1600 lines total):
 - `src/app/api/chat/route.ts` (~780 lines) — main handler, system prompt, tool dispatch
 - `src/lib/chat/moonshot-stream.ts` (~510 lines) — Moonshot/Kimi SSE with tool calling
-- `src/lib/chat/ai-sdk-stream.ts` (~240 lines) — OpenAI/Anthropic via Vercel AI SDK
+- `src/lib/chat/ai-sdk-stream.ts` (~200 lines) — OpenAI via Vercel AI SDK
 - `src/lib/chat/message-builder.ts` (~66 lines) — message/attachment formatting
 
 ### Custom Tag System
@@ -78,7 +78,7 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 - Resolution priority: plan default → plan-model mapping → global default → env fallback
 - Categories: TEXT, IMAGE, VOICE, VIDEO, CODE, EMBEDDING
 - `PlanModel` — ties plans to specific models; A/B experiments via `src/lib/ab-experiment.ts`
-- Provider routing via `AiProvider.apiFormat` enum: `OPENAI_COMPAT` | `AI_SDK_OPENAI` | `AI_SDK_ANTHROPIC`
+- Provider routing via `AiProvider.apiFormat` enum: `OPENAI_COMPAT` | `AI_SDK_OPENAI`
 
 ### Context Management
 

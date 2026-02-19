@@ -133,10 +133,15 @@ const SYSTEM_PROMPT = `Ты — Sanbao, AI-платформа для профе�
 
 СОЗДАНИЕ КОДА (type="CODE"):
 - Игры, анимации, визуализации → HTML5 Canvas + JavaScript или React JSX
+- Графики и диаграммы → SVG или HTML5 Canvas (рисуй вручную, БЕЗ библиотек)
 - Вычислительные скрипты → Python (исполняется через Pyodide в браузере)
 - Код должен быть ПОЛНОСТЬЮ самодостаточным и работать автономно
-- Для React: один файл JSX, export default компонент
+- Для React: один файл JSX, export default компонент, НЕ используй import/export
 - Для HTML: полный документ с <html>, <style>, <script>
+- ⚠ ЗАПРЕЩЕНЫ внешние npm-пакеты (recharts, d3, chart.js, axios, lodash и любые другие import из npm)
+- Доступные библиотеки: React, ReactDOM, Tailwind CSS — они уже подключены через CDN
+- Для графиков используй SVG элементы напрямую или Canvas API, НЕ библиотеки
+- НЕ пиши import/export statements — используй глобальные React/ReactDOM
 
 ═══════════════════════════════════════════════════════
 РАЗДЕЛ 3. РЕДАКТИРОВАНИЕ ДОКУМЕНТОВ — ТЕГ <sanbao-edit>
@@ -772,10 +777,16 @@ export async function POST(req: Request) {
   const apiFormat = textModel?.provider.apiFormat ?? "OPENAI_COMPAT";
 
   if (apiFormat === "OPENAI_COMPAT") {
-    // OpenAI-compatible SSE streaming (Moonshot, DeepInfra, etc.)
-    let effectiveMaxTokens = Math.min(plan.tokensPerMessage, textModel?.maxTokens ?? Infinity);
+    // OpenAI-compatible SSE streaming (Moonshot/Kimi, DeepInfra, etc.)
+    // Kimi K2.5: thinking + content share the same max_tokens budget.
+    // Base = plan content budget; add thinking budget when enabled.
+    let effectiveMaxTokens = plan.tokensPerMessage;
     if (thinkingEnabled && textModel?.maxThinkingTokens) {
       effectiveMaxTokens += textModel.maxThinkingTokens;
+    }
+    // Cap at model's actual max output capability
+    if (textModel?.maxTokens) {
+      effectiveMaxTokens = Math.min(effectiveMaxTokens, textModel.maxTokens);
     }
 
     const stream = streamMoonshot(apiMessages, {
@@ -799,14 +810,15 @@ export async function POST(req: Request) {
     });
   }
 
-  // ─── AI SDK path (AI_SDK_OPENAI / AI_SDK_ANTHROPIC) ─────
+  // ─── AI SDK path (AI_SDK_OPENAI) ─────────────────────────
 
+  // AI SDK path: maxTokens = plan content budget (no thinking budget needed here,
+  // AI SDK handles thinking budget internally via provider options)
   const stream = streamAiSdk({
-    apiFormat,
     systemPrompt: enrichedSystemPrompt,
     messages: effectiveMessages,
     thinkingEnabled,
-    maxTokens: Math.min(plan.tokensPerMessage, textModel?.maxTokens ?? Infinity),
+    maxTokens: plan.tokensPerMessage,
     textModel,
     contextInfo,
     onUsage,

@@ -266,6 +266,20 @@ _plt.close("all")
 </html>`;
 }
 
+/** Strip ES module import/export statements that don't work in browser script tags */
+function stripImportsExports(code: string): string {
+  return code
+    // Remove: import { X } from 'pkg'; import X from 'pkg'; import 'pkg';
+    .replace(/^import\s+.*?from\s+['"][^'"]+['"];?\s*$/gm, "")
+    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, "")
+    // Remove: export default X; export { X }; but keep the declaration
+    .replace(/^export\s+default\s+(?=function|class|const|let|var)/gm, "")
+    .replace(/^export\s+default\s+(\w+);?\s*$/gm, "")
+    .replace(/^export\s+\{[^}]*\};?\s*$/gm, "")
+    .replace(/^export\s+(?=function|class|const|let|var)/gm, "")
+    .trim();
+}
+
 function buildPreviewHtml(code: string): string {
   let cleanCode = code.trim();
   const fenceMatch = cleanCode.match(/^```(?:tsx?|jsx?|javascript|typescript|html)?\n([\s\S]*?)```$/);
@@ -276,6 +290,11 @@ function buildPreviewHtml(code: string): string {
   // Python code — run via Pyodide
   if (isPythonCode(code)) {
     return buildPythonHtml(code);
+  }
+
+  // Strip import/export for non-HTML code (React/JSX) — they can't work in browser
+  if (!/^\s*<!DOCTYPE|^\s*<html/i.test(cleanCode)) {
+    cleanCode = stripImportsExports(cleanCode);
   }
 
   // Error reporter script — injected into any HTML
@@ -339,15 +358,18 @@ function buildPreviewHtml(code: string): string {
 
     ;(function() {
       try {
-        const candidates = [
-          typeof App !== 'undefined' ? App : null,
-          typeof Main !== 'undefined' ? Main : null,
-          typeof Component !== 'undefined' ? Component : null,
-          typeof Page !== 'undefined' ? Page : null,
-          typeof Home !== 'undefined' ? Home : null,
-          typeof Demo !== 'undefined' ? Demo : null,
-          typeof Example !== 'undefined' ? Example : null,
-        ].filter(Boolean);
+        // Scan all global functions/classes to find React components
+        const knownNames = ['App','Main','Component','Page','Home','Demo','Example','Game','Chart','Dashboard','Calculator','Timer','Editor','Viewer','Player','Widget'];
+        const candidates = knownNames
+          .map(n => { try { return eval(n); } catch { return null; } })
+          .filter(Boolean);
+        // Fallback: find any PascalCase function that returns JSX
+        if (candidates.length === 0) {
+          const allVars = Object.keys(window).filter(k => /^[A-Z]/.test(k) && typeof window[k] === 'function');
+          for (const k of allVars) {
+            try { candidates.push(window[k]); break; } catch {}
+          }
+        }
 
         const RootComponent = candidates[0];
         if (RootComponent) {

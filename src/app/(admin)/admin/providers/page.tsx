@@ -154,7 +154,6 @@ export default function AdminProvidersPage() {
             >
               <option value="OPENAI_COMPAT">OpenAI Compatible</option>
               <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
-              <option value="AI_SDK_ANTHROPIC">AI SDK — Anthropic</option>
             </select>
             <Button variant="gradient" size="sm" onClick={handleCreate}>
               <Save className="h-3.5 w-3.5" />
@@ -215,8 +214,7 @@ export default function AdminProvidersPage() {
                 >
                   <option value="OPENAI_COMPAT">OpenAI Compatible</option>
                   <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
-                  <option value="AI_SDK_ANTHROPIC">AI SDK — Anthropic</option>
-                </select>
+                    </select>
               </div>
               {testResult[p.id] && (
                 <div className="flex items-center gap-2">
