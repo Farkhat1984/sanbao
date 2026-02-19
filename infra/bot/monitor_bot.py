@@ -64,6 +64,20 @@ consecutive_recoveries = 0
 last_switch_time = 0.0         # monotonic timestamp of last failover/failback
 failover_active = False
 
+# ── Server 2 local health state ───────────────────────────────────────────
+ORCHESTRATOR_PORT = os.getenv("ORCHESTRATOR_PORT", "8120")
+S2_ALERT_THRESHOLD = 2         # consecutive failures before alerting (60s)
+# Docker service names (bot runs in same compose network)
+# Internal ports: sanbao=3004, fragmentdb=8080, orchestrator=8120
+S2_SERVICES: dict[str, dict] = {
+    "Sanbao":      {"url": "http://sanbao:3004/api/ready"},
+    "FragmentDB":  {"url": "http://fragmentdb:8080/health"},
+    "Orchestrator": {"url": "http://orchestrator:8120/health"},
+}
+# Track per-service: {"Sanbao": True/False/None} — None = unknown (first run)
+s2_health_state: dict[str, bool | None] = {n: None for n in S2_SERVICES}
+s2_fail_counts: dict[str, int] = {n: 0 for n in S2_SERVICES}
+
 
 # ── Auth persistence ────────────────────────────────────────────────────────
 def load_authorized() -> set[int]:
@@ -98,14 +112,18 @@ def require_auth(func):
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
-async def check_url(url: str, timeout: int = 8) -> tuple[bool, str]:
-    """Check HTTP endpoint, return (ok, detail)."""
+async def check_url(url: str, timeout: int = 8, any_response: bool = False) -> tuple[bool, str]:
+    """Check HTTP endpoint, return (ok, detail).
+
+    If any_response=True, any HTTP status counts as alive (for services
+    where /health may require auth but responding means the process is up).
+    """
     import aiohttp
     try:
         async with aiohttp.ClientSession() as s:
             async with s.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
                 body = await r.text()
-                if r.status == 200:
+                if r.status == 200 or any_response:
                     return True, body[:200]
                 return False, f"HTTP {r.status}"
     except Exception as e:
@@ -315,6 +333,53 @@ async def auto_monitor_loop() -> None:
                         remaining = int(COOLDOWN_SECONDS - (now - last_switch_time))
                         logger.warning("Server 1 down but in cooldown (%ds remaining)", remaining)
 
+            # ── Server 2 local health checks ──────────────────────────────
+            for svc_name, svc_cfg in S2_SERVICES.items():
+                try:
+                    svc_ok, svc_detail = await check_url(
+                        svc_cfg["url"], timeout=5,
+                        any_response=svc_cfg.get("any_response", False),
+                    )
+                except Exception as exc:
+                    svc_ok, svc_detail = False, str(exc)[:120]
+
+                prev_state = s2_health_state[svc_name]
+
+                if svc_ok:
+                    s2_fail_counts[svc_name] = 0
+                    if prev_state is False:
+                        # Recovered
+                        s2_health_state[svc_name] = True
+                        logger.info("S2 %s recovered", svc_name)
+                        await send_telegram_async(
+                            f"✅ <b>Server 2 {svc_name} восстановлен</b>\n\n"
+                            f"Сервис снова отвечает на health check."
+                        )
+                    elif prev_state is None:
+                        s2_health_state[svc_name] = True
+                else:
+                    s2_fail_counts[svc_name] += 1
+                    if prev_state is not False and s2_fail_counts[svc_name] >= S2_ALERT_THRESHOLD:
+                        # Went down
+                        s2_health_state[svc_name] = False
+                        logger.warning("S2 %s is DOWN: %s", svc_name, svc_detail)
+                        await send_telegram_async(
+                            f"🔴 <b>Server 2 {svc_name} упал!</b>\n\n"
+                            f"Не отвечает {s2_fail_counts[svc_name]} проверок подряд "
+                            f"({s2_fail_counts[svc_name] * MONITOR_INTERVAL}с).\n"
+                            f"Ошибка: <code>{svc_detail}</code>\n\n"
+                            f"Проверьте: <code>docker logs deploy-{svc_name.lower()}-1 --tail 20</code>"
+                        )
+                    elif prev_state is None and s2_fail_counts[svc_name] >= S2_ALERT_THRESHOLD:
+                        # Was unknown at startup and still down
+                        s2_health_state[svc_name] = False
+                        logger.warning("S2 %s is DOWN on startup: %s", svc_name, svc_detail)
+                        await send_telegram_async(
+                            f"🔴 <b>Server 2 {svc_name} не работает!</b>\n\n"
+                            f"Сервис недоступен при запуске бота.\n"
+                            f"Ошибка: <code>{svc_detail}</code>"
+                        )
+
         except Exception as e:
             logger.error("Monitor loop error: %s", e)
 
@@ -338,6 +403,7 @@ HELP_TEXT = """
 
 <b>Авто-failover:</b> если Server 1 недоступен 90с → автопереключение.
 Авто-failback через 90с + 5мин cooldown после восстановления.
+<b>Авто-мониторинг S2:</b> Sanbao, FragmentDB, Orchestrator — алерт при падении/восстановлении.
 """
 
 
@@ -375,8 +441,8 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     checks = await asyncio.gather(
         check_via_ssh(SANBAO_PORT, "/api/health"),
         check_via_ssh(FRAGMENTDB_PORT, "/health"),
-        check_url(f"http://localhost:{SANBAO_PORT}/api/health"),
-        check_url(f"http://localhost:{FRAGMENTDB_PORT}/health"),
+        check_url("http://sanbao:3004/api/health"),
+        check_url("http://fragmentdb:8080/health"),
     )
 
     s1_sanbao, s1_fragment = checks[0], checks[1]
@@ -396,6 +462,9 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     mode = "🔴 FAILOVER (трафик на Server 2)" if failover_active else "🟢 Normal (трафик на Server 1)"
 
+    # Also check orchestrator on S2
+    s2_orch = await check_url("http://orchestrator:8120/health")
+
     text = f"""<b>Статус серверов</b> ({now_str})
 
 <b>Server 1</b> ({PRIMARY_IP}) — Primary
@@ -405,9 +474,11 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 <b>Server 2</b> ({STANDBY_IP}) — Standby
   {icon(s2_sanbao[0])} Sanbao :{SANBAO_PORT}
   {icon(s2_fragment[0])} FragmentDB :{FRAGMENTDB_PORT}
+  {icon(s2_orch[0])} Orchestrator :{ORCHESTRATOR_PORT}
 
 <b>Режим:</b> {mode}{cooldown_str}
-<b>Мониторинг:</b> failures={consecutive_failures}, recoveries={consecutive_recoveries}"""
+<b>Мониторинг S1:</b> failures={consecutive_failures}, recoveries={consecutive_recoveries}
+<b>Мониторинг S2:</b> {', '.join(f'{n}={"ok" if s2_health_state[n] else "DOWN" if s2_health_state[n] is False else "?"}' for n in S2_SERVICES)}"""
 
     await msg.edit_text(text, parse_mode="HTML")
 
