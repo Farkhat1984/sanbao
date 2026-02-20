@@ -1,4 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+// Mock prisma for buildCompactionPrompt (now async, reads from DB)
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    systemSetting: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
 import {
   estimateTokens,
   estimateMessagesTokens,
@@ -193,24 +203,24 @@ describe("buildCompactionPrompt", () => {
     { role: "assistant", content: "Вот договор аренды..." },
   ];
 
-  it("builds initial compaction prompt without existing summary", () => {
-    const result = buildCompactionPrompt(null, messages);
+  it("builds initial compaction prompt without existing summary", async () => {
+    const result = await buildCompactionPrompt(null, messages);
     expect(result).toContain("[USER]: Создай договор аренды");
     expect(result).toContain("[ASSISTANT]: Вот договор аренды...");
     expect(result).toContain("РАЗГОВОР:");
     expect(result).not.toContain("ПРЕДЫДУЩЕЕ КРАТКОЕ СОДЕРЖАНИЕ");
   });
 
-  it("builds update prompt with existing summary", () => {
-    const result = buildCompactionPrompt("User requested a rental agreement", messages);
+  it("builds update prompt with existing summary", async () => {
+    const result = await buildCompactionPrompt("User requested a rental agreement", messages);
     expect(result).toContain("ПРЕДЫДУЩЕЕ КРАТКОЕ СОДЕРЖАНИЕ:");
     expect(result).toContain("User requested a rental agreement");
     expect(result).toContain("НОВЫЕ СООБЩЕНИЯ ДЛЯ ВКЛЮЧЕНИЯ:");
     expect(result).toContain("[USER]: Создай договор аренды");
   });
 
-  it("includes document preservation instruction", () => {
-    const result = buildCompactionPrompt(null, messages);
+  it("includes document preservation instruction", async () => {
+    const result = await buildCompactionPrompt(null, messages);
     expect(result).toContain("sanbao-doc");
     expect(result).toContain("800 слов");
   });
