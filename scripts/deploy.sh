@@ -147,6 +147,7 @@ case "${1:-full}" in
     $COMPOSE restart app
     wait_for_app_healthy 3 24
     $COMPOSE exec -T nginx nginx -s reload 2>/dev/null || true
+    purge_cf_cache
     $COMPOSE ps
     ;;
 

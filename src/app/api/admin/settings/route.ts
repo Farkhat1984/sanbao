@@ -30,15 +30,25 @@ export async function PUT(req: Request) {
     "smtp_port",
     "smtp_user",
     "smtp_password",
+    "smtp_pass",
     "smtp_from",
     "maintenance_mode",
     "maintenance_message",
     "registration_enabled",
     "default_plan_id",
     "max_file_upload_mb",
+    "max_upload_size_mb",
+    "max_file_count",
     "app_name",
     "app_description",
     "system_prompt_global",
+    "default_language",
+    "welcome_title",
+    "welcome_message",
+    "onboarding_enabled",
+    "onboarding_steps",
+    "session_ttl_hours",
+    "google_oauth_enabled",
   ]);
 
   // Validate numeric settings to prevent NaN/Infinity/overflow
@@ -50,6 +60,8 @@ export async function PUT(req: Request) {
     "content_filter_enabled",
     "maintenance_mode",
     "registration_enabled",
+    "onboarding_enabled",
+    "google_oauth_enabled",
   ]);
 
   // body is { key: value, key2: value2, ... }
