@@ -3,17 +3,7 @@ import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { DEFAULT_MAX_TOKENS_FIX, DEFAULT_TEMPERATURE_CODE_FIX } from "@/lib/constants";
-
-const FIX_PROMPT = `You are a code fixer. You receive code that has a runtime error and must return ONLY the fixed code.
-
-Rules:
-- Fix ONLY the error described, do not change anything else
-- Return ONLY the raw code, no markdown fences, no explanations
-- If the code is HTML, return the full HTML document
-- If the code is React/JSX, return only the component code (no HTML wrapper)
-- If the code is Python, return only the Python code. Replace Unicode arrows/symbols in strings with ASCII equivalents (e.g. ← → ↑ ↓ with < > ^ v). Ensure all strings use only ASCII-safe characters.
-- Preserve the original formatting and style
-- Do NOT add comments about what was fixed`;
+import { getPrompt } from "@/lib/prompts";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -60,7 +50,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: modelId,
         messages: [
-          { role: "system", content: FIX_PROMPT },
+          { role: "system", content: await getPrompt("prompt_fix_code") },
           {
             role: "user",
             content: `Error:\n${error}\n\nCode:\n${code}`,

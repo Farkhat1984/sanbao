@@ -1,4 +1,5 @@
 import { CONTEXT_COMPACTION_THRESHOLD, CONTEXT_KEEP_LAST_MESSAGES } from "@/lib/constants";
+import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 
 // ─── Context management utilities for autocompact & planning ───
 
@@ -100,48 +101,19 @@ export function buildSystemPromptWithContext(
 
 // ─── Compaction prompt for LLM ──────────────────────────
 
-export function buildCompactionPrompt(
+export async function buildCompactionPrompt(
   existingSummary: string | null,
   messagesToSummarize: Array<{ role: string; content: string }>
-): string {
+): Promise<string> {
   const conversation = messagesToSummarize
     .map((m) => `[${m.role.toUpperCase()}]: ${m.content}`)
     .join("\n\n");
 
   if (existingSummary) {
-    return `Ты — ассистент для сжатия контекста разговора. У тебя есть предыдущее краткое содержание и новые сообщения. Объедини их в обновлённое краткое содержание.
-
-ПРЕДЫДУЩЕЕ КРАТКОЕ СОДЕРЖАНИЕ:
-${existingSummary}
-
-НОВЫЕ СООБЩЕНИЯ ДЛЯ ВКЛЮЧЕНИЯ:
-${conversation}
-
-Создай обновлённое краткое содержание, которое:
-1. Сохраняет все ключевые факты, решения, имена, даты, суммы
-2. Сохраняет юридический контекст (статьи законов, ссылки на НПА)
-3. Отмечает все созданные документы и их параметры
-4. Убирает повторы и малозначимые обмены репликами
-5. Написано от третьего лица в прошедшем времени
-6. ОБЯЗАТЕЛЬНО сохраняй структуру и ключевое содержание всех созданных документов (<sanbao-doc> тегов) — тип, заголовок, основные разделы, суммы, стороны, реквизиты. Это критически важно для возможности дальнейшего редактирования документов
-7. Занимает не более 800 слов
-
-КРАТКОЕ СОДЕРЖАНИЕ:`;
+    const template = await getPrompt("prompt_compaction_update");
+    return interpolatePrompt(template, { SUMMARY: existingSummary, CONVERSATION: conversation });
   }
 
-  return `Ты — ассистент для сжатия контекста разговора. Создай краткое содержание следующего разговора.
-
-РАЗГОВОР:
-${conversation}
-
-Создай краткое содержание, которое:
-1. Сохраняет все ключевые факты, решения, имена, даты, суммы
-2. Сохраняет юридический контекст (статьи законов, ссылки на НПА)
-3. Отмечает все созданные документы и их параметры
-4. Убирает повторы и малозначимые обмены репликами
-5. Написано от третьего лица в прошедшем времени
-6. ОБЯЗАТЕЛЬНО сохраняй структуру и ключевое содержание всех созданных документов (<sanbao-doc> тегов) — тип, заголовок, основные разделы, суммы, стороны, реквизиты. Это критически важно для возможности дальнейшего редактирования документов
-7. Занимает не более 800 слов
-
-КРАТКОЕ СОДЕРЖАНИЕ:`;
+  const template = await getPrompt("prompt_compaction_initial");
+  return interpolatePrompt(template, { CONVERSATION: conversation });
 }

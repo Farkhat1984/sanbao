@@ -6,27 +6,7 @@ import {
   VALID_ICONS, VALID_COLORS,
   DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
 } from "@/lib/constants";
-
-const SYSTEM_GEN_PROMPT = `Ты — мета-промпт-инженер. Твоя задача — создать профессионального AI-агента на основе описания пользователя.
-
-Ты должен вернуть JSON-объект с полями:
-- "name": короткое название агента (2-5 слов, на русском)
-- "description": краткое описание для карточки (1-2 предложения, на русском)
-- "instructions": детальный системный промпт для агента (на русском, 300-800 слов)
-- "icon": одна из иконок: ${VALID_ICONS.join(", ")}
-- "iconColor": один из цветов: ${VALID_COLORS.join(", ")}
-
-Правила для instructions:
-1. Начни с определения роли: "Ты — [роль]. Твоя специализация — ..."
-2. Опиши ключевые компетенции и области знаний
-3. Укажи формат и стиль ответов (структурированность, тон, длина)
-4. Добавь ограничения: чего агент НЕ должен делать
-5. Включи примеры типичных задач, которые агент решает
-6. Если это юридический агент — укажи юрисдикцию и основные НПА
-
-Выбирай icon и iconColor, наиболее подходящие к тематике агента.
-
-ВАЖНО: Ответ ТОЛЬКО в формате JSON, без markdown-обёртки.`;
+import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -63,7 +43,10 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: modelId,
         messages: [
-          { role: "system", content: SYSTEM_GEN_PROMPT },
+          { role: "system", content: interpolatePrompt(await getPrompt("prompt_gen_agent"), {
+            VALID_ICONS: VALID_ICONS.join(", "),
+            VALID_COLORS: VALID_COLORS.join(", "),
+          }) },
           { role: "user", content: `Создай агента: ${description.trim()}` },
         ],
         temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,

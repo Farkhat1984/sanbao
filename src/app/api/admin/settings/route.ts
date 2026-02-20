@@ -41,7 +41,6 @@ export async function PUT(req: Request) {
     "max_file_count",
     "app_name",
     "app_description",
-    "system_prompt_global",
     "default_language",
     "welcome_title",
     "welcome_message",

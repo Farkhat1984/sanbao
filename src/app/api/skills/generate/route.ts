@@ -6,37 +6,9 @@ import {
   VALID_ICONS, VALID_COLORS,
   DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
 } from "@/lib/constants";
+import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 
 const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"];
-
-const SYSTEM_GEN_PROMPT = `Ты — мета-промпт-инженер, специализирующийся на создании юридических скиллов для AI-ассистента.
-
-Ты должен вернуть JSON-объект с полями:
-- "name": название скилла (2-4 слова, на русском)
-- "description": краткое описание (1 предложение, на русском)
-- "systemPrompt": детальный системный промпт (на русском, 200-600 слов)
-- "citationRules": правила цитирования НПА (на русском, 50-150 слов)
-- "jurisdiction": одна из: ${JURISDICTIONS.join(", ")}
-- "icon": одна из иконок: ${VALID_ICONS.join(", ")}
-- "iconColor": один из цветов: ${VALID_COLORS.join(", ")}
-
-Правила для systemPrompt:
-1. Определи роль и специализацию
-2. Укажи ключевые НПА и источники права для этой области
-3. Опиши методологию анализа
-4. Формат ответа: структура, уровень детализации
-5. Ограничения: что скилл НЕ покрывает
-
-Правила для citationRules:
-1. Формат ссылок на НПА (статья, пункт, подпункт)
-2. Приоритет источников
-3. Как обозначать актуальность нормы
-
-ВАЖНО:
-- Ответ ТОЛЬКО в формате JSON, без markdown-обёртки
-- systemPrompt должен быть СТРОГО по указанной теме — НЕ смешивай разные области знаний
-- Генерируй промпт ТОЛЬКО для одной конкретной специализации из описания пользователя
-- Максимум 600 слов в systemPrompt`;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -77,7 +49,11 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: modelId,
         messages: [
-          { role: "system", content: SYSTEM_GEN_PROMPT },
+          { role: "system", content: interpolatePrompt(await getPrompt("prompt_gen_skill"), {
+            VALID_ICONS: VALID_ICONS.join(", "),
+            VALID_COLORS: VALID_COLORS.join(", "),
+            JURISDICTIONS: JURISDICTIONS.join(", "),
+          }) },
           { role: "user", content: userMsg },
         ],
         temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,

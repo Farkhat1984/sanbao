@@ -27,7 +27,7 @@ export default function AdminExperimentsPage() {
   const [form, setForm] = useState({
     name: "",
     description: "",
-    key: "global_system_prompt",
+    key: "prompt_system_global",
     variantA: "",
     variantB: "",
     trafficPct: 50,
@@ -49,7 +49,7 @@ export default function AdminExperimentsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setForm({ name: "", description: "", key: "global_system_prompt", variantA: "", variantB: "", trafficPct: 50 });
+      setForm({ name: "", description: "", key: "prompt_system_global", variantA: "", variantB: "", trafficPct: 50 });
       fetchData();
     }
   };
@@ -88,7 +88,7 @@ export default function AdminExperimentsPage() {
           <div className="grid grid-cols-2 gap-3 mb-3">
             <input placeholder="Название эксперимента" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <select value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent">
-              <option value="global_system_prompt">Глобальный системный промпт</option>
+              <option value="prompt_system_global">Глобальный системный промпт</option>
             </select>
           </div>
           <input placeholder="Описание (опционально)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent mb-3" />

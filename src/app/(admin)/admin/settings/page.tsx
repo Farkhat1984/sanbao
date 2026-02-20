@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 
 const SETTING_FIELDS = [
   { key: "app_name", label: "Название приложения", placeholder: "Sanbao" },
-  { key: "system_prompt_global", label: "Глобальный системный промпт", placeholder: "Ты — AI-ассистент...", multiline: true },
   { key: "max_upload_size_mb", label: "Макс. размер файла (МБ)", placeholder: "10" },
   { key: "max_file_count", label: "Макс. количество файлов", placeholder: "5" },
   { key: "registration_enabled", label: "Регистрация открыта", type: "toggle" },

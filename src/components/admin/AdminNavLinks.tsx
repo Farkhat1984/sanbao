@@ -8,7 +8,7 @@ import {
   Settings, FileText, Scale, Globe,
   Bell, Key, Webhook, ClipboardList,
   AlertTriangle, DollarSign, UserX, Eye, Tag,
-  Wrench, Puzzle,
+  Wrench, Puzzle, ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,7 @@ const sections = [
       { href: "/admin/tools", label: "Инструменты", icon: Wrench },
       { href: "/admin/plugins", label: "Плагины", icon: Puzzle },
       { href: "/admin/skills", label: "Скиллы", icon: FileText },
+      { href: "/admin/prompts", label: "Промпты", icon: ScrollText },
       { href: "/admin/mcp", label: "MCP-серверы", icon: Globe },
     ],
   },
