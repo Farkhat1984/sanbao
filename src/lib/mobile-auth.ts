@@ -59,6 +59,8 @@ export interface GoogleTokenPayload {
 function getGoogleAudiences(): string[] {
   const audiences: string[] = [];
   if (process.env.AUTH_GOOGLE_ID) audiences.push(process.env.AUTH_GOOGLE_ID);
+  if (process.env.GOOGLE_SERVER_CLIENT_ID)
+    audiences.push(process.env.GOOGLE_SERVER_CLIENT_ID);
   if (process.env.GOOGLE_IOS_CLIENT_ID)
     audiences.push(process.env.GOOGLE_IOS_CLIENT_ID);
   if (process.env.GOOGLE_ANDROID_CLIENT_ID)

@@ -148,12 +148,12 @@ BOT_PASSWORD=Ckdshfh231161!
 
 ### Docker → Host доступ к MCP
 
-MCP Orchestrator слушает на хосте Server 1 (`:8120`, python3 процесс). Docker-контейнеры обращаются через `host.docker.internal`.
+AI Cortex Orchestrator (v0.7.0) слушает на хосте Server 1 (`:8120`, python3 процесс). Два endpoint'а: `/lawyer` (правовая база РК) и `/broker` (таможня ЕАЭС). Docker-контейнеры обращаются через `host.docker.internal`.
 
 **Конфигурация:**
 - `docker-compose.prod.yml` → app сервис: `extra_hosts: ["host.docker.internal:host-gateway"]`
-- `.env` → `LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer`
-- БД `McpServer` записи: URL = `http://host.docker.internal:8120/lawyer` (и `/broker`)
+- `.env` → `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
+- БД `McpServer` записи: `mcp-lawyer` → `/lawyer`, `mcp-broker` → `/broker`
 
 **ВАЖНО:** `host.docker.internal` на Linux резолвится в IP Docker bridge (`172.17.0.1` для docker0 или `172.19.0.1` для compose-сети). Если iptables блокирует трафик с Docker-сетей на хост, MCP будет недоступен — см. секцию Troubleshooting.
 
@@ -369,8 +369,8 @@ docker compose -f infra/docker-compose.monitoring.yml up -d
 | `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Client ID для Android приложения |
 | `APPLE_BUNDLE_ID` | Apple Bundle ID (default: `com.sanbao.sanbaoai`) |
 | `LAWYER_MCP_URL` | URL MCP Юриста (default: `http://host.docker.internal:8120/lawyer`) |
-| `FRAGMENTDB_MCP_URL` | URL FragmentDB MCP |
-| `FRAGMENTDB_MCP_TOKEN` | Токен для FragmentDB MCP |
+| `BROKER_MCP_URL` | URL MCP Брокера (default: `http://host.docker.internal:8120/broker`) |
+| `AI_CORTEX_AUTH_TOKEN` | Токен для AI Cortex MCP (Юрист + Брокер) |
 
 ---
 

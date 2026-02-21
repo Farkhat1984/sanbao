@@ -1,10 +1,35 @@
-# FragmentDB — Пайплайн автообновления и пользовательские базы знаний
+# FragmentDB (AI Cortex) — Интеграция и пользовательские базы знаний
 
-> Архитектура ночного обновления данных и per-user knowledge bases для Sanbao
+> Архитектура интеграции Sanbao ↔ AI Cortex (FragmentDB v3 + Orchestrator)
 
 ## Обзор
 
-FragmentDB — сервис семантического поиска по фрагментам документов. Каждый документ разбивается на чанки, для каждого генерируется embedding, и хранится в векторном индексе с метаданными.
+**FragmentDB** (NexusCore) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
+
+**AI Cortex Orchestrator** (v0.7.0) — Python MCP-сервер с двумя endpoint'ами:
+- `/lawyer` — правовая база РК (18 кодексов, НПА, графы ссылок)
+- `/broker` — таможня ЕАЭС (ТН ВЭД, расчёт пошлин, декларации)
+
+### Текущая интеграция
+
+```
+Sanbao App
+  ├── Agent: Юрист (system-femida-agent)
+  │   └── MCP: http://orchestrator:8120/lawyer
+  │       └── Tools: search, lookup, get_article, graph_traverse, list_domains
+  ├── Agent: Брокер (system-broker-agent)
+  │   └── MCP: http://orchestrator:8120/broker
+  │       └── Tools: search, classify_goods, calculate_duties, get_required_docs, generate_declaration
+  └── API: /api/articles → direct MCP call for article deep-linking
+```
+
+### Env-переменные
+
+```env
+LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
+BROKER_MCP_URL=http://host.docker.internal:8120/broker
+AI_CORTEX_AUTH_TOKEN=<bearer-token>
+```
 
 ---
 
@@ -178,17 +203,48 @@ registerNativeTool({
 
 ---
 
-## Конфигурация FragmentDB
+## Конфигурация AI Cortex
+
+### Sanbao → Orchestrator (MCP)
 
 ```env
-FRAGMENTDB_URL=http://fragmentdb:8080
-FRAGMENTDB_API_KEY=...
-FRAGMENTDB_WEBHOOK_SECRET=...
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_BATCH_SIZE=100
-CHUNK_SIZE=800
-CHUNK_OVERLAP=100
+LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
+BROKER_MCP_URL=http://host.docker.internal:8120/broker
+AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
+
+### Orchestrator → FragmentDB
+
+```env
+FRAGMENTDB_URL=http://fragmentdb:8080      # REST API v3
+AI_CORTEX_PORT=8120                         # Orchestrator port
+AI_CORTEX_AUTH_TOKEN=<bearer-token>         # MCP auth
+DEEPINFRA_API_KEY=<key>                     # Embedding service
+```
+
+### Docker Compose (failover)
+
+```yaml
+fragmentdb:   # Rust server, port 8080 → host 8110
+  build: ../ai_cortex
+
+orchestrator: # Python MCP, port 8120
+  build: deploy/Dockerfile.orchestrator
+  depends_on: [fragmentdb, embedding-proxy]
+```
+
+---
+
+## Домены (AI Cortex Orchestrator)
+
+| Домен | Тип | Коллекция | Назначение |
+|-------|-----|-----------|------------|
+| `legal_kz` | text | `legal_code_kz` | 18 кодексов РК |
+| `legal_ref_kz` | table | — | Правовые справочники (МРП, МЗП) |
+| `tnved` | mixed | `tnved_rates` | ТН ВЭД ЕАЭС (13 279 кодов) |
+| `sop` | text | `company_sops` | СОП компании |
+| `snip` | text | `construction_norms` | Строительные нормы |
+| `generic` | text | `documents` | Произвольные документы |
 
 ---
 
@@ -196,27 +252,24 @@ CHUNK_OVERLAP=100
 
 | Метрика | Описание |
 |---------|----------|
-| `fragmentdb_pipeline_duration_seconds` | Время полного обновления |
-| `fragmentdb_documents_processed_total` | Обработанные документы |
-| `fragmentdb_chunks_updated_total` | Обновлённые фрагменты |
-| `fragmentdb_errors_total` | Ошибки обработки |
-| `fragmentdb_search_latency_seconds` | Задержка поиска |
-| `fragmentdb_storage_bytes` | Использованное хранилище |
+| `GET /health` (orchestrator:8120) | Статус оркестратора |
+| `GET /health` (fragmentdb:8080) | Статус FragmentDB |
+| `GET /metrics` (fragmentdb:8080) | Prometheus метрики (QPS, latency) |
 
 ---
 
-## Roadmap
+## Roadmap (пользовательские базы знаний)
 
-1. **Phase 1** — Базовая интеграция: upload → chunk → embed → search (1 неделя)
-2. **Phase 2** — Ночной пайплайн с diff engine (3-5 дней)
-3. **Phase 3** — Per-user квоты и биллинг (3 дня)
-4. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой (3-5 дней)
-5. **Phase 5** — Мониторинг и алертинг (2 дня)
+1. **Phase 1** — Базовая интеграция: MCP agents (Юрист + Брокер) ✅
+2. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
+3. **Phase 3** — Per-user квоты и биллинг (Plan.maxStorageMb)
+4. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой
+5. **Phase 5** — Мониторинг и алертинг
 
 ---
 
 ## Зависимости
 
-- **FragmentDB service** — Docker container или external API
-- **Embedding model** — OpenAI API или local (sentence-transformers)
-- **Sanbao C3** — AI Cortex implementation (базовая интеграция)
+- **AI Cortex** — FragmentDB Rust server + Python orchestrator (`/home/metadmin/faragj/ai_cortex/`)
+- **Embedding** — DeepInfra Qwen3-Embedding-8B (dimension: 4096)
+- **Docker** — `docker-compose.failover.yml` запускает fragmentdb + orchestrator + embedding-proxy

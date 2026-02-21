@@ -124,8 +124,8 @@
 | `LOG_FORMAT` | `json` (prod) или `pretty` (dev) |
 | `LOG_LEVEL` | `info`, `debug`, `warn`, `error` |
 | `LAWYER_MCP_URL` | URL MCP Юриста (`http://host.docker.internal:8120/lawyer`) |
-| `FRAGMENTDB_MCP_URL` | URL FragmentDB MCP |
-| `FRAGMENTDB_MCP_TOKEN` | Токен для FragmentDB MCP |
+| `BROKER_MCP_URL` | URL MCP Брокера (`http://host.docker.internal:8120/broker`) |
+| `AI_CORTEX_AUTH_TOKEN` | Токен для AI Cortex MCP (Юрист + Брокер) |
 
 ---
 
@@ -614,9 +614,14 @@ docker compose -f docker-compose.prod.yml up -d
 | Брокер | `http://host.docker.internal:8120/broker` | Таможня, пошлины, декларации |
 | Бухгалтер | `https://mcp.sanbao.ai/accountant` | Бухгалтерия |
 
-MCP Orchestrator работает на хосте Сервера 1 (python3, порт 8120). Docker-контейнеры обращаются через `host.docker.internal` (настроено в `docker-compose.prod.yml` через `extra_hosts`).
+AI Cortex Orchestrator (v0.7.0) работает на хосте Сервера 1 (python3, порт 8120). Два MCP endpoint'а: `/lawyer` (правовая база) и `/broker` (таможня). Docker-контейнеры обращаются через `host.docker.internal` (настроено в `docker-compose.prod.yml` через `extra_hosts`).
 
-**Env:** `LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer`
+**Env:**
+```
+LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
+BROKER_MCP_URL=http://host.docker.internal:8120/broker
+AI_CORTEX_AUTH_TOKEN=<bearer-token>
+```
 
 > Если MCP недоступен из контейнеров (502 на `/api/articles`) — проверить iptables: `sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT`. Подробнее: `docs/DEVOPS.md` → Troubleshooting.
 
