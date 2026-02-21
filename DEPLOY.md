@@ -123,6 +123,7 @@
 | `METRICS_TOKEN` | Bearer-токен для /api/metrics |
 | `LOG_FORMAT` | `json` (prod) или `pretty` (dev) |
 | `LOG_LEVEL` | `info`, `debug`, `warn`, `error` |
+| `GOOGLE_SERVER_CLIENT_ID` | Google OAuth Server Client ID (audience для Android idToken) |
 | `LAWYER_MCP_URL` | URL MCP Юриста (`http://host.docker.internal:8120/lawyer`) |
 | `BROKER_MCP_URL` | URL MCP Брокера (`http://host.docker.internal:8120/broker`) |
 | `AI_CORTEX_AUTH_TOKEN` | Токен для AI Cortex MCP (Юрист + Брокер) |

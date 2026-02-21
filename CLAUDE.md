@@ -91,7 +91,7 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 ### Security
 
 - **Auth:** NextAuth v5, JWT, Credentials + Google OAuth + Apple Sign In (mobile), 2FA TOTP (`otplib` OTP class)
-- **Mobile auth:** `src/lib/mobile-auth.ts` (JWKS token verification via `jose`), `src/lib/mobile-session.ts` (NextAuth-compatible JWT minting, 30-day expiry). Endpoints: `POST /api/auth/apple`, `POST /api/auth/mobile/google` — verify provider ID tokens, upsert user + account, return Bearer token. Apple bundle ID: `com.sanbao.sanbaoai`
+- **Mobile auth:** `src/lib/mobile-auth.ts` (JWKS token verification via `jose`), `src/lib/mobile-session.ts` (NextAuth-compatible JWT minting, 30-day expiry). Endpoints: `POST /api/auth/apple`, `POST /api/auth/mobile/google` — verify provider ID tokens, upsert user + account, return Bearer token. Apple bundle ID: `com.sanbao.sanbaoai`. Google audiences: `AUTH_GOOGLE_ID` (web) + `GOOGLE_SERVER_CLIENT_ID` + `GOOGLE_IOS_CLIENT_ID` + `GOOGLE_ANDROID_CLIENT_ID`
 - **Bearer-to-Cookie bridge:** `src/proxy.ts` middleware converts `Authorization: Bearer <token>` → NextAuth session cookie for mobile API clients
 - **Middleware:** `src/proxy.ts` (~135 lines, Edge Runtime) — auth wrapper, Bearer-to-Cookie bridge, admin IP whitelist, suspicious path blocking, correlation ID (`x-request-id`) generation
 - **CSP:** Content-Security-Policy header via `next.config.ts` (dynamic CDN/Sentry/Cloudflare domains)
@@ -157,6 +157,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 ### MCP Integration
 
 - `src/lib/mcp-client.ts` — connects to MCP servers via `@modelcontextprotocol/sdk`
+- **AI Cortex** (external): Orchestrator v0.7.0 at `:8120` — `/lawyer` (legal RK) + `/broker` (customs EAEU). Env: `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
 - **Admin toggle:** `McpServer.isEnabled` controls user visibility
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
 - `route.ts` loads user-enabled global MCPs + user's own connected MCPs
@@ -265,5 +266,5 @@ UI text primarily in Russian; Kazakh (kk) locale also supported.
 - `docs/ADMINGUIDE.md` — admin panel guide
 - `docs/USERGUIDE.md` — user guide
 - `docs/ADVERTISING.md` — advertising system
-- `docs/FRAGMENTDB_PIPELINE.md` — FragmentDB integration pipeline
+- `docs/FRAGMENTDB_PIPELINE.md` — AI Cortex (FragmentDB v3) integration: MCP endpoints, domains, architecture
 - `docs/HOTFIX.md`, `docs/HOTFIX2.md` — historical fixes

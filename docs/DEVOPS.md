@@ -365,6 +365,7 @@ docker compose -f infra/docker-compose.monitoring.yml up -d
 | `ADMIN_IP_WHITELIST` | CSV IP адресов для админки |
 | `METRICS_TOKEN` | Bearer токен для /api/metrics |
 | `CRON_SECRET` | Секрет для cron endpoint'ов |
+| `GOOGLE_SERVER_CLIENT_ID` | Google OAuth Server Client ID (audience для Android idToken) |
 | `GOOGLE_IOS_CLIENT_ID` | Google OAuth Client ID для iOS приложения |
 | `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Client ID для Android приложения |
 | `APPLE_BUNDLE_ID` | Apple Bundle ID (default: `com.sanbao.sanbaoai`) |
