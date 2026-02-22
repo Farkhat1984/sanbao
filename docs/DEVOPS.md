@@ -134,7 +134,15 @@ BOT_PASSWORD=Ckdshfh231161!
 
 **Docker CLI в контейнере бота:** бот выполняет `docker compose` команды для запуска/остановки cloudflared. Dockerfile устанавливает Docker CLI (static binary) + Docker Compose plugin. При ребилде убедиться что `docker.io` в Dockerfile заменён на static binary (Debian Trixie не включает docker CLI в пакет `docker.io`).
 
-**Протестировано (2026-02-22):** failover (Server 1 → Server 2) и failback (Server 2 → Server 1) — оба работают. Cloudflared на Server 2 использует config-file с ingress rules (volumes mount, не token-режим). Исправлено 2026-02-22: `docker-compose.failover.yml` переключён с `--token` на `--config /etc/cloudflared/config.yml` mode.
+**Протестировано (2026-02-22):** все сценарии проверены:
+
+1. **Failover (Server 1 → Server 2):** 5/5 HTTP 200, cloudflared config-file mode с ingress rules (volumes mount, не token-режим).
+2. **Failback (Server 2 → Server 1):** 5/5 HTTP 200, 3/3 replicas healthy, cloudflared на Server 2 остановлен.
+3. **Падение Server 2:** Server 1 работает без перебоев (3/3 HTTP 200). Восстановление через `docker compose up -d`.
+4. **Sync:** каждые 5 мин (PG pg_dump + FragmentDB rsync), retry 3x, Telegram alerts.
+5. **Backup:** ежедневно 03:00, PG (584K) + FragmentDB (64M) + configs (3K), gzip integrity verified, rotation 7/4/3.
+
+**Замечания:** FragmentDB WAL recovery при холодном старте занимает ~10 мин (rebuild 13K TNVED + 7K legal_code + BM25 индексы). `start_period` увеличен до 600s. Sanbao healthcheck использует `127.0.0.1` (не `localhost`) из-за IPv6 mismatch в Alpine-контейнерах + добавлен `HOSTNAME=0.0.0.0` для Next.js standalone binding.
 
 ---
 
