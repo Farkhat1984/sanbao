@@ -134,7 +134,7 @@ BOT_PASSWORD=Ckdshfh231161!
 
 **Docker CLI в контейнере бота:** бот выполняет `docker compose` команды для запуска/остановки cloudflared. Dockerfile устанавливает Docker CLI (static binary) + Docker Compose plugin. При ребилде убедиться что `docker.io` в Dockerfile заменён на static binary (Debian Trixie не включает docker CLI в пакет `docker.io`).
 
-**Протестировано (2026-02-17):** failover (Server 1 → Server 2) и failback (Server 2 → Server 1) — оба работают. Cloudflared на Server 2 использует config-file с ingress rules (не token-режим).
+**Протестировано (2026-02-22):** failover (Server 1 → Server 2) и failback (Server 2 → Server 1) — оба работают. Cloudflared на Server 2 использует config-file с ingress rules (volumes mount, не token-режим). Исправлено 2026-02-22: `docker-compose.failover.yml` переключён с `--token` на `--config /etc/cloudflared/config.yml` mode.
 
 ---
 
