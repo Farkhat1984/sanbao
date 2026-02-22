@@ -140,7 +140,7 @@ Universal metadata-driven system. All agents (system and user) use the same `Age
 - **tool-executor.ts**: executes WEBHOOK/URL/FUNCTION tools with `{{key}}` interpolation
 - **API routes**: `/api/tools`, `/api/plugins`, `/api/agents/[id]/tools`, `/api/admin/tools`, `/api/admin/plugins`
 - **Frontend**: agentStore.agentTools loaded in ChatArea, consumed by WelcomeScreen, ToolsPanel, MessageInput
-- **Legacy compat**: `resolveAgentId()` maps old "system-femida" → "system-femida-agent". SystemAgent table kept (deprecated)
+- **Legacy compat**: `resolveAgentId()` maps old "system-lawyer"/"system-femida" → "system-femida-agent". Constants: `LAWYER_ID`, `LAWYER_AGENT_ID`, `BROKER_AGENT_ID`, `SANBAO_AGENT_ID` + legacy aliases `FEMIDA_ID`, `FEMIDA_AGENT_ID`
 
 ### Native Tools
 
