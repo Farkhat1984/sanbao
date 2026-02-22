@@ -6,10 +6,15 @@
 
 import { prisma } from "@/lib/prisma";
 
-// Legacy constants — kept for backward compat
-export const FEMIDA_ID = "system-femida";
-export const FEMIDA_AGENT_ID = "system-femida-agent";
+// System agent constants
+export const LAWYER_ID = "system-lawyer";
+export const LAWYER_AGENT_ID = "system-femida-agent";
+export const BROKER_AGENT_ID = "system-broker-agent";
 export const SANBAO_AGENT_ID = "system-sanbao-agent";
+
+// Legacy aliases (backward compat)
+export const FEMIDA_ID = LAWYER_ID;
+export const FEMIDA_AGENT_ID = LAWYER_AGENT_ID;
 
 // Cache for system agent IDs
 let systemAgentIdsCache: { ids: Set<string>; expiresAt: number } | null = null;
@@ -28,7 +33,7 @@ async function getSystemAgentIds(): Promise<Set<string>> {
     systemAgentIdsCache = { ids, expiresAt: Date.now() + CACHE_TTL };
     return ids;
   } catch {
-    return new Set([FEMIDA_AGENT_ID, SANBAO_AGENT_ID]);
+    return new Set([LAWYER_AGENT_ID, BROKER_AGENT_ID, SANBAO_AGENT_ID]);
   }
 }
 
@@ -36,7 +41,7 @@ async function getSystemAgentIds(): Promise<Set<string>> {
 export function isSystemAgent(agentId: string | null | undefined): boolean {
   if (!agentId) return false;
   // Synchronous check for well-known IDs
-  if (agentId === FEMIDA_ID || agentId === FEMIDA_AGENT_ID || agentId === SANBAO_AGENT_ID) {
+  if (agentId === LAWYER_ID || agentId === LAWYER_AGENT_ID || agentId === BROKER_AGENT_ID || agentId === SANBAO_AGENT_ID) {
     return true;
   }
   // Check cache if available
@@ -51,7 +56,7 @@ export function isSystemAgent(agentId: string | null | undefined): boolean {
 export async function isSystemAgentAsync(agentId: string | null | undefined): Promise<boolean> {
   if (!agentId) return false;
   const ids = await getSystemAgentIds();
-  return ids.has(agentId) || agentId === FEMIDA_ID;
+  return ids.has(agentId) || agentId === LAWYER_ID;
 }
 
 /** Load system agents from DB */
@@ -93,6 +98,7 @@ export async function getSystemAgents() {
 
 /** Resolve a legacy system agent ID to the new Agent ID */
 export function resolveAgentId(agentId: string): string {
-  if (agentId === FEMIDA_ID) return FEMIDA_AGENT_ID;
+  if (agentId === LAWYER_ID) return LAWYER_AGENT_ID;
+  if (agentId === "system-femida") return LAWYER_AGENT_ID;
   return agentId;
 }

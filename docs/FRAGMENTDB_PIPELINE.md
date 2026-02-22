@@ -6,9 +6,10 @@
 
 **FragmentDB** (NexusCore) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
 
-**AI Cortex Orchestrator** (v0.7.0) — Python MCP-сервер с двумя endpoint'ами:
-- `/lawyer` — правовая база РК (18 кодексов, НПА, графы ссылок)
-- `/broker` — таможня ЕАЭС (ТН ВЭД, расчёт пошлин, декларации)
+**AI Cortex Orchestrator** (v0.7.0) — Python MCP-сервер (aiohttp) с двумя endpoint'ами:
+- `POST /lawyer` — правовая база РК (18 кодексов, НПА, графы ссылок)
+- `POST /broker` — таможня ЕАЭС (ТН ВЭД, расчёт пошлин, декларации ДТ1)
+- `GET /health` — liveness probe
 
 ### Текущая интеграция
 
@@ -16,10 +17,11 @@
 Sanbao App
   ├── Agent: Юрист (system-femida-agent)
   │   └── MCP: http://orchestrator:8120/lawyer
-  │       └── Tools: search, lookup, get_article, graph_traverse, list_domains
-  ├── Agent: Брокер (system-broker-agent)
+  │       └── Tools (5): search, lookup, get_article, graph_traverse, list_domains
+  ├── Agent: Таможенный брокер (system-broker-agent)
   │   └── MCP: http://orchestrator:8120/broker
-  │       └── Tools: search, classify_goods, calculate_duties, get_required_docs, generate_declaration
+  │       └── Tools (7): search, sql_query, classify_goods, calculate_duties,
+  │                       get_required_docs, list_domains, generate_declaration
   └── API: /api/articles → direct MCP call for article deep-linking
 ```
 
@@ -239,12 +241,37 @@ orchestrator: # Python MCP, port 8120
 
 | Домен | Тип | Коллекция | Назначение |
 |-------|-----|-----------|------------|
-| `legal_kz` | text | `legal_code_kz` | 18 кодексов РК |
+| `legal_kz` | text | `legal_code_kz` | 18 кодексов РК (~50K документов) |
 | `legal_ref_kz` | table | — | Правовые справочники (МРП, МЗП) |
-| `tnved` | mixed | `tnved_rates` | ТН ВЭД ЕАЭС (13 279 кодов) |
+| `tnved` | mixed | `tnved_rates` | ТН ВЭД ЕАЭС (13,279 кодов, BM25 weight=2.0) |
 | `sop` | text | `company_sops` | СОП компании |
 | `snip` | text | `construction_norms` | Строительные нормы |
 | `generic` | text | `documents` | Произвольные документы |
+| `sales` | table | — | Данные продаж (пример) |
+
+### MCP-инструменты по endpoint'ам
+
+**Lawyer (5 tools):**
+
+| Инструмент | Описание |
+|------------|----------|
+| `search` | Семантический + BM25 гибридный поиск по правовым доменам |
+| `lookup` | Точный поиск по ключевому полю (номер статьи, раздел) |
+| `get_article` | Получить полный текст статьи по коду и номеру (deep-linking) |
+| `graph_traverse` | Обход графа знаний от документа (BFS, cross-references) |
+| `list_domains` | Список доступных доменов |
+
+**Broker (7 tools):**
+
+| Инструмент | Описание |
+|------------|----------|
+| `search` | Семантический + BM25 поиск по кодам ТН ВЭД (domain=tnved) |
+| `sql_query` | NL→SQL→DuckDB запрос по тарифным данным |
+| `classify_goods` | Классификация товара → top-5 кодов с иерархией и документами |
+| `calculate_duties` | Расчёт пошлин (ad valorem/specific/combined) + НДС 12% + акциз |
+| `get_required_docs` | Необходимые документы по коду (13 типов, динамически по группе) |
+| `list_domains` | Список доступных таможенных доменов |
+| `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257) |
 
 ---
 
@@ -252,9 +279,17 @@ orchestrator: # Python MCP, port 8120
 
 | Метрика | Описание |
 |---------|----------|
-| `GET /health` (orchestrator:8120) | Статус оркестратора |
+| `GET /health` (orchestrator:8120) | Статус оркестратора + версия + список endpoints |
 | `GET /health` (fragmentdb:8080) | Статус FragmentDB |
 | `GET /metrics` (fragmentdb:8080) | Prometheus метрики (QPS, latency) |
+
+### Производительность (2x Xeon E5-2695 v4, 21K документов)
+
+| Операция | p50 | p99 | MCP tool |
+|----------|-----|-----|----------|
+| BM25 search | 6 ms | 31 ms | `search` |
+| Document read | 1 ms | 27 ms | `get_article` |
+| Metadata scan | 88 ms | 138 ms | `lookup` |
 
 ---
 
