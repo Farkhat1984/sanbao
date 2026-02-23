@@ -18,7 +18,7 @@ const cspValue = [
   "frame-src 'self' blob: data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://accounts.google.com",
   "object-src 'none'",
 ].join("; ");
 
