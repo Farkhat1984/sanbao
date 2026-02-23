@@ -83,11 +83,97 @@ services:
         reservations:
           memory: 256M
 
+  # =========================================================================
+  # AI Cortex Stack (FragmentDB + Orchestrator)
+  # =========================================================================
+
+  embedding-proxy:
+    build:
+      context: ..
+      dockerfile: sanbao/infra/deploy/Dockerfile.embedding
+    restart: unless-stopped
+    ports:
+      - "${EMBEDDING_PORT:-8097}:8097"
+    environment:
+      - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
+      - DEEPINFRA_MODEL=${DEEPINFRA_MODEL:-Qwen/Qwen3-Embedding-8B}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8097/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  fragmentdb:
+    build:
+      context: ../ai_cortex
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "${FRAGMENTDB_PORT:-8110}:8080"
+    volumes:
+      - ../ai_cortex/nexuscore_data:/home/fragmentdb/data
+    environment:
+      - RUST_LOG=nexus=info
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 600s
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 1G
+
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: sanbao/infra/deploy/Dockerfile.orchestrator
+    restart: unless-stopped
+    ports:
+      - "${ORCHESTRATOR_PORT:-8120}:8120"
+    environment:
+      - FRAGMENTDB_URL=http://fragmentdb:8080
+      - AI_CORTEX_PORT=8120
+      - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
+      - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      fragmentdb:
+        condition: service_healthy
+      embedding-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8120/health || python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8120)); s.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # =========================================================================
+  # Sanbao App
+  # =========================================================================
+
   app:
     build: .
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     environment:
@@ -101,6 +187,8 @@ services:
       pgbouncer:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      orchestrator:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://0.0.0.0:3004/api/ready || exit 1"]

@@ -6,8 +6,9 @@ set -e
 # See docs/DEVOPS.md for full infrastructure docs.
 #
 # Usage:
-#   ./scripts/deploy.sh              # Full rebuild (build + restart all)
-#   ./scripts/deploy.sh app          # Rebuild only app (rolling restart)
+#   ./scripts/deploy.sh              # Full rebuild (build + restart all + AI Cortex)
+#   ./scripts/deploy.sh app          # Rebuild only app (rolling restart, no AI Cortex)
+#   ./scripts/deploy.sh cortex       # Rebuild AI Cortex stack (fragmentdb, orchestrator, embedding)
 #   ./scripts/deploy.sh restart      # Restart without rebuild
 #   ./scripts/deploy.sh status       # Show container status
 #   ./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
@@ -76,14 +77,49 @@ wait_for_app_healthy() {
 case "${1:-full}" in
 
   full)
-    echo "=== Full rebuild & deploy ==="
+    echo "=== Full rebuild & deploy (app + AI Cortex) ==="
     check_server2_cloudflared
     npm run build
-    $COMPOSE build app
+    $COMPOSE build app embedding-proxy fragmentdb orchestrator
     $COMPOSE up -d
     wait_for_app_healthy 3 36
     purge_cf_cache
     $COMPOSE ps
+    ;;
+
+  cortex)
+    echo "=== Rebuild AI Cortex stack ==="
+    echo "--- Building AI Cortex images ---"
+    $COMPOSE build embedding-proxy fragmentdb orchestrator
+
+    echo "--- Restarting AI Cortex services ---"
+    $COMPOSE up -d --no-deps embedding-proxy fragmentdb
+    echo "  Waiting for FragmentDB to become healthy (this can take up to 10 min)..."
+    for i in $(seq 1 120); do
+      FRAG_HEALTHY=$($COMPOSE ps fragmentdb --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
+      EMBED_HEALTHY=$($COMPOSE ps embedding-proxy --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
+      if [ "$FRAG_HEALTHY" -ge 1 ] && [ "$EMBED_HEALTHY" -ge 1 ]; then
+        echo "  FragmentDB + embedding-proxy healthy!"
+        break
+      fi
+      echo "  [$i/120] fragmentdb=$FRAG_HEALTHY, embedding=$EMBED_HEALTHY, waiting..."
+      sleep 5
+    done
+
+    echo "--- Starting orchestrator ---"
+    $COMPOSE up -d --no-deps orchestrator
+    for i in $(seq 1 12); do
+      ORCH_HEALTHY=$($COMPOSE ps orchestrator --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
+      if [ "$ORCH_HEALTHY" -ge 1 ]; then
+        echo "  Orchestrator healthy!"
+        break
+      fi
+      echo "  [$i/12] orchestrator=$ORCH_HEALTHY, waiting..."
+      sleep 5
+    done
+
+    echo ""
+    $COMPOSE ps embedding-proxy fragmentdb orchestrator
     ;;
 
   app)
@@ -161,7 +197,7 @@ case "${1:-full}" in
     ;;
 
   *)
-    echo "Usage: $0 {full|app|restart|status|logs [service]}"
+    echo "Usage: $0 {full|app|cortex|restart|status|logs [service]}"
     exit 1
     ;;
 

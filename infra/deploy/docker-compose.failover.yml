@@ -54,9 +54,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 32G
         reservations:
-          memory: 512M
+          memory: 1G
 
   orchestrator:
     build:

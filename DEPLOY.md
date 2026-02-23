@@ -124,8 +124,8 @@
 | `LOG_FORMAT` | `json` (prod) или `pretty` (dev) |
 | `LOG_LEVEL` | `info`, `debug`, `warn`, `error` |
 | `GOOGLE_SERVER_CLIENT_ID` | Google OAuth Server Client ID (audience для Android idToken) |
-| `LAWYER_MCP_URL` | URL MCP Юриста (`http://host.docker.internal:8120/lawyer`) |
-| `BROKER_MCP_URL` | URL MCP Брокера (`http://host.docker.internal:8120/broker`) |
+| `LAWYER_MCP_URL` | URL MCP Юриста (`http://orchestrator:8120/lawyer`) |
+| `BROKER_MCP_URL` | URL MCP Брокера (`http://orchestrator:8120/broker`) |
 | `AI_CORTEX_AUTH_TOKEN` | Токен для AI Cortex MCP (Юрист + Брокер) |
 
 ---
@@ -569,10 +569,10 @@ sudo systemctl restart cloudflared
 
 ### MCP-серверы недоступны (502 на /api/articles)
 
-- MCP Orchestrator слушает на хосте Сервера 1 (localhost:8120)
-- Docker-контейнеры обращаются через `host.docker.internal:8120`
-- Если 502 — вероятно, iptables блокирует трафик Docker → хост
-- Решение: `sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT`
+- AI Cortex (embedding-proxy, fragmentdb, orchestrator) работает как Docker-сервисы в `docker-compose.prod.yml`
+- App-контейнеры обращаются по Docker-сетевому имени `orchestrator:8120`
+- Если 502 — проверить что AI Cortex сервисы запущены: `docker compose -f docker-compose.prod.yml ps orchestrator fragmentdb`
+- Пересборка: `./scripts/deploy.sh cortex`
 - Подробная диагностика: `docs/DEVOPS.md` → Troubleshooting → MCP серверы недоступны
 
 ### Docker CLI отсутствует в боте
@@ -611,20 +611,22 @@ docker compose -f docker-compose.prod.yml up -d
 
 | Сервер | URL (из Docker-контейнеров) | Назначение |
 |--------|----------------------------|------------|
-| Юрист | `http://host.docker.internal:8120/lawyer` | НПА, поиск, статьи |
-| Брокер | `http://host.docker.internal:8120/broker` | Таможня, пошлины, декларации |
+| Юрист | `http://orchestrator:8120/lawyer` | НПА, поиск, статьи |
+| Брокер | `http://orchestrator:8120/broker` | Таможня, пошлины, декларации |
 | Бухгалтер | `https://mcp.sanbao.ai/accountant` | Бухгалтерия |
 
-AI Cortex Orchestrator (v0.7.0) работает на хосте Сервера 1 (python3, порт 8120). Два MCP endpoint'а: `/lawyer` (правовая база) и `/broker` (таможня). Docker-контейнеры обращаются через `host.docker.internal` (настроено в `docker-compose.prod.yml` через `extra_hosts`).
+AI Cortex Orchestrator (v0.7.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Зависит от `fragmentdb` (векторная БД) и `embedding-proxy` (DeepInfra embeddings). App-контейнеры обращаются по Docker-сетевому имени.
 
 **Env:**
 ```
-LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
-BROKER_MCP_URL=http://host.docker.internal:8120/broker
+LAWYER_MCP_URL=http://orchestrator:8120/lawyer
+BROKER_MCP_URL=http://orchestrator:8120/broker
 AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
 
-> Если MCP недоступен из контейнеров (502 на `/api/articles`) — проверить iptables: `sudo iptables -I INPUT -p tcp --dport 8120 -s 172.16.0.0/12 -j ACCEPT`. Подробнее: `docs/DEVOPS.md` → Troubleshooting.
+**Деплой AI Cortex:** `./scripts/deploy.sh cortex`
+
+> Если MCP недоступен (502) — проверить сервисы: `docker compose -f docker-compose.prod.yml ps orchestrator fragmentdb`. Подробнее: `docs/DEVOPS.md` → Troubleshooting.
 
 ---
 

@@ -28,8 +28,8 @@ Sanbao App
 ### Env-переменные
 
 ```env
-LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
-BROKER_MCP_URL=http://host.docker.internal:8120/broker
+LAWYER_MCP_URL=http://orchestrator:8120/lawyer
+BROKER_MCP_URL=http://orchestrator:8120/broker
 AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
 
@@ -210,8 +210,8 @@ registerNativeTool({
 ### Sanbao → Orchestrator (MCP)
 
 ```env
-LAWYER_MCP_URL=http://host.docker.internal:8120/lawyer
-BROKER_MCP_URL=http://host.docker.internal:8120/broker
+LAWYER_MCP_URL=http://orchestrator:8120/lawyer
+BROKER_MCP_URL=http://orchestrator:8120/broker
 AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
 

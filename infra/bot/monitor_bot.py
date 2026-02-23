@@ -78,6 +78,15 @@ S2_SERVICES: dict[str, dict] = {
 s2_health_state: dict[str, bool | None] = {n: None for n in S2_SERVICES}
 s2_fail_counts: dict[str, int] = {n: 0 for n in S2_SERVICES}
 
+# ── Server 1 AI Cortex health state (checked via SSH) ────────────────────
+S1_CORTEX_SERVICES: dict[str, dict] = {
+    "FragmentDB":   {"port": FRAGMENTDB_PORT, "path": "/health"},
+    "Orchestrator": {"port": ORCHESTRATOR_PORT, "path": "/health"},
+}
+s1_cortex_health_state: dict[str, bool | None] = {n: None for n in S1_CORTEX_SERVICES}
+s1_cortex_fail_counts: dict[str, int] = {n: 0 for n in S1_CORTEX_SERVICES}
+S1_CORTEX_ALERT_THRESHOLD = 2  # consecutive failures before alerting (60s)
+
 
 # ── Auth persistence ────────────────────────────────────────────────────────
 def load_authorized() -> set[int]:
@@ -153,6 +162,17 @@ def check_s1_sanbao_sync() -> bool:
         timeout=15,
     )
     return rc == 0
+
+
+def check_s1_cortex_service(port: str, path: str) -> tuple[bool, str]:
+    """Check a Server 1 AI Cortex service via SSH (blocking)."""
+    rc, out = run_shell(
+        f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {SYNC_SSH_PORT} '
+        f'{SYNC_SSH_USER}@{SYNC_SSH_HOST} '
+        f'"curl -sf --max-time 5 http://localhost:{port}{path}"',
+        timeout=15,
+    )
+    return (rc == 0, out[:200] if rc == 0 else "unreachable")
 
 
 def verify_cloudflared_running(retries: int = 3, wait: int = 5) -> tuple[bool, str]:
@@ -333,6 +353,50 @@ async def auto_monitor_loop() -> None:
                         remaining = int(COOLDOWN_SECONDS - (now - last_switch_time))
                         logger.warning("Server 1 down but in cooldown (%ds remaining)", remaining)
 
+            # ── Server 1 AI Cortex health checks (via SSH) ─────────────────
+            for svc_name, svc_cfg in S1_CORTEX_SERVICES.items():
+                try:
+                    svc_ok, svc_detail = await asyncio.to_thread(
+                        check_s1_cortex_service,
+                        svc_cfg["port"], svc_cfg["path"],
+                    )
+                except Exception as exc:
+                    svc_ok, svc_detail = False, str(exc)[:120]
+
+                prev_state = s1_cortex_health_state[svc_name]
+
+                if svc_ok:
+                    s1_cortex_fail_counts[svc_name] = 0
+                    if prev_state is False:
+                        s1_cortex_health_state[svc_name] = True
+                        logger.info("S1 AI Cortex %s recovered", svc_name)
+                        await send_telegram_async(
+                            f"✅ <b>Server 1 AI Cortex {svc_name} восстановлен</b>\n\n"
+                            f"Сервис снова отвечает на health check."
+                        )
+                    elif prev_state is None:
+                        s1_cortex_health_state[svc_name] = True
+                else:
+                    s1_cortex_fail_counts[svc_name] += 1
+                    if prev_state is not False and s1_cortex_fail_counts[svc_name] >= S1_CORTEX_ALERT_THRESHOLD:
+                        s1_cortex_health_state[svc_name] = False
+                        logger.warning("S1 AI Cortex %s is DOWN: %s", svc_name, svc_detail)
+                        await send_telegram_async(
+                            f"🔴 <b>Server 1 AI Cortex {svc_name} упал!</b>\n\n"
+                            f"Не отвечает {s1_cortex_fail_counts[svc_name]} проверок подряд "
+                            f"({s1_cortex_fail_counts[svc_name] * MONITOR_INTERVAL}с).\n"
+                            f"Ошибка: <code>{svc_detail}</code>\n\n"
+                            f"Проверьте: <code>docker logs sanbao-{svc_name.lower()}-1 --tail 20</code>"
+                        )
+                    elif prev_state is None and s1_cortex_fail_counts[svc_name] >= S1_CORTEX_ALERT_THRESHOLD:
+                        s1_cortex_health_state[svc_name] = False
+                        logger.warning("S1 AI Cortex %s is DOWN on startup: %s", svc_name, svc_detail)
+                        await send_telegram_async(
+                            f"🔴 <b>Server 1 AI Cortex {svc_name} не работает!</b>\n\n"
+                            f"Сервис недоступен при запуске бота.\n"
+                            f"Ошибка: <code>{svc_detail}</code>"
+                        )
+
             # ── Server 2 local health checks ──────────────────────────────
             for svc_name, svc_cfg in S2_SERVICES.items():
                 try:
@@ -403,6 +467,7 @@ HELP_TEXT = """
 
 <b>Авто-failover:</b> если Server 1 недоступен 90с → автопереключение.
 Авто-failback через 90с + 5мин cooldown после восстановления.
+<b>Авто-мониторинг S1:</b> AI Cortex (FragmentDB, Orchestrator) — алерт при падении/восстановлении.
 <b>Авто-мониторинг S2:</b> Sanbao, FragmentDB, Orchestrator — алерт при падении/восстановлении.
 """
 
@@ -441,12 +506,15 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     checks = await asyncio.gather(
         check_via_ssh(SANBAO_PORT, "/api/health"),
         check_via_ssh(FRAGMENTDB_PORT, "/health"),
+        check_via_ssh(ORCHESTRATOR_PORT, "/health"),
         check_url("http://sanbao:3004/api/health"),
         check_url("http://fragmentdb:8080/health"),
+        check_url("http://orchestrator:8120/health"),
     )
 
-    s1_sanbao, s1_fragment = checks[0], checks[1]
-    s2_sanbao, s2_fragment = checks[2], checks[3]
+    s1_sanbao = checks[0]
+    s1_fragment, s1_orch = checks[1], checks[2]
+    s2_sanbao, s2_fragment, s2_orch = checks[3], checks[4], checks[5]
 
     def icon(ok: bool) -> str:
         return "✅" if ok else "❌"
@@ -462,14 +530,12 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     mode = "🔴 FAILOVER (трафик на Server 2)" if failover_active else "🟢 Normal (трафик на Server 1)"
 
-    # Also check orchestrator on S2
-    s2_orch = await check_url("http://orchestrator:8120/health")
-
     text = f"""<b>Статус серверов</b> ({now_str})
 
 <b>Server 1</b> ({PRIMARY_IP}) — Primary
   {icon(s1_sanbao[0])} Sanbao :{SANBAO_PORT}
   {icon(s1_fragment[0])} FragmentDB :{FRAGMENTDB_PORT}
+  {icon(s1_orch[0])} Orchestrator :{ORCHESTRATOR_PORT}
 
 <b>Server 2</b> ({STANDBY_IP}) — Standby
   {icon(s2_sanbao[0])} Sanbao :{SANBAO_PORT}
@@ -478,6 +544,7 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 <b>Режим:</b> {mode}{cooldown_str}
 <b>Мониторинг S1:</b> failures={consecutive_failures}, recoveries={consecutive_recoveries}
+<b>S1 AI Cortex:</b> {', '.join(f'{n}={"ok" if s1_cortex_health_state[n] else "DOWN" if s1_cortex_health_state[n] is False else "?"}' for n in S1_CORTEX_SERVICES)}
 <b>Мониторинг S2:</b> {', '.join(f'{n}={"ok" if s2_health_state[n] else "DOWN" if s2_health_state[n] is False else "?"}' for n in S2_SERVICES)}"""
 
     await msg.edit_text(text, parse_mode="HTML")

@@ -148,24 +148,25 @@ BOT_PASSWORD=Ckdshfh231161!
 
 ## MCP серверы
 
-| Сервер | URL (из Docker-контейнеров Server 1) | Агенты | Инструменты |
-|--------|--------------------------------------|--------|-------------|
-| **Юрист** | `http://host.docker.internal:8120/lawyer` | НПА, Бухгалтер, Брокер | search, lookup, list_domains, get_article, graph_traverse |
-| **Брокер** | `http://host.docker.internal:8120/broker` | Таможенный брокер | search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration |
+| Сервер | URL (из Docker-контейнеров) | Агенты | Инструменты |
+|--------|----------------------------|--------|-------------|
+| **Юрист** | `http://orchestrator:8120/lawyer` | НПА, Бухгалтер, Брокер | search, lookup, list_domains, get_article, graph_traverse |
+| **Брокер** | `http://orchestrator:8120/broker` | Таможенный брокер | search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration |
 | **AccountingDB** | `https://mcp.sanbao.ai/accountant` | Бухгалтер | (manual discovery) |
 
-### Docker → Host доступ к MCP
+### AI Cortex в Docker Compose
 
-AI Cortex Orchestrator (v0.7.0) слушает на хосте Server 1 (`:8120`, python3 процесс). Два endpoint'а: `/lawyer` (правовая база РК) и `/broker` (таможня ЕАЭС). Docker-контейнеры обращаются через `host.docker.internal`.
+AI Cortex Orchestrator (v0.7.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Два MCP endpoint'а: `/lawyer` (правовая база РК) и `/broker` (таможня ЕАЭС). App-контейнеры обращаются по Docker-сетевому имени `orchestrator`.
+
+**Стек:**
+- `embedding-proxy` — DeepInfra embedding service (порт 8097)
+- `fragmentdb` — векторная БД (внутренний порт 8080, хост порт 8110), bind mount `ai_cortex/nexuscore_data`
+- `orchestrator` — MCP сервер (порт 8120), depends on fragmentdb + embedding-proxy
 
 **Конфигурация:**
-- `docker-compose.prod.yml` → app сервис: `extra_hosts: ["host.docker.internal:host-gateway"]`
-- `.env` → `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
+- `.env` → `LAWYER_MCP_URL=http://orchestrator:8120/lawyer`, `BROKER_MCP_URL=http://orchestrator:8120/broker`, `AI_CORTEX_AUTH_TOKEN`
 - БД `McpServer` записи: `mcp-lawyer` → `/lawyer`, `mcp-broker` → `/broker`
-
-**ВАЖНО:** `host.docker.internal` на Linux резолвится в IP Docker bridge (`172.17.0.1` для docker0 или `172.19.0.1` для compose-сети). Если iptables блокирует трафик с Docker-сетей на хост, MCP будет недоступен — см. секцию Troubleshooting.
-
-> Ранее использовался хардкод `172.28.0.1` (Docker bridge gateway), но этот IP нестабилен и меняется при пересоздании Docker-сетей.
+- Деплой AI Cortex: `./scripts/deploy.sh cortex`
 
 ---
 
@@ -377,8 +378,8 @@ docker compose -f infra/docker-compose.monitoring.yml up -d
 | `GOOGLE_IOS_CLIENT_ID` | Google OAuth Client ID для iOS приложения |
 | `GOOGLE_ANDROID_CLIENT_ID` | Google OAuth Client ID для Android приложения |
 | `APPLE_BUNDLE_ID` | Apple Bundle ID (default: `com.sanbao.sanbaoai`) |
-| `LAWYER_MCP_URL` | URL MCP Юриста (default: `http://host.docker.internal:8120/lawyer`) |
-| `BROKER_MCP_URL` | URL MCP Брокера (default: `http://host.docker.internal:8120/broker`) |
+| `LAWYER_MCP_URL` | URL MCP Юриста (default: `http://orchestrator:8120/lawyer`) |
+| `BROKER_MCP_URL` | URL MCP Брокера (default: `http://orchestrator:8120/broker`) |
 | `AI_CORTEX_AUTH_TOKEN` | Токен для AI Cortex MCP (Юрист + Брокер) |
 
 ---
@@ -466,26 +467,29 @@ deploy/
 
 `edoburu/pgbouncer:1.23.1-p2` удалён → использовать `edoburu/pgbouncer:latest`
 
-### MCP серверы недоступны из Docker-контейнеров
+### MCP серверы недоступны (502)
 
-**Симптомы:** `/api/articles` возвращает 502, в логах app-контейнера таймаут на `host.docker.internal:8120`.
+**Симптомы:** `/api/articles` возвращает 502, в логах app-контейнера таймаут на `orchestrator:8120`.
 
 **Диагностика:**
 ```bash
-# 1. Проверить что MCP слушает на хосте
+# 1. Проверить что AI Cortex сервисы запущены
+docker compose -f docker-compose.prod.yml ps embedding-proxy fragmentdb orchestrator
+
+# 2. Проверить health checks
+curl -s http://localhost:8110/health   # FragmentDB
+curl -s http://localhost:8120/health   # Orchestrator
+
+# 3. Проверить MCP tools list
 curl -s http://localhost:8120/lawyer -X POST \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' | head -c 200
 
-# 2. Проверить какой IP резолвит host.docker.internal
-docker compose -f docker-compose.prod.yml exec app getent hosts host.docker.internal
+# 4. Проверить доступность из app-контейнера
+docker compose -f docker-compose.prod.yml exec app wget -q -O- --timeout=5 http://orchestrator:8120/health
 
-# 3. Проверить доступность из контейнера
-docker compose -f docker-compose.prod.yml exec app wget -q -O- --timeout=5 http://host.docker.internal:8120/lawyer
-
-# 4. Проверить iptables (разрешён ли трафик с Docker-подсетей)
-sudo iptables -L INPUT -n | grep -E '172\.(17|19|28)'
-sudo iptables -L DOCKER-USER -n 2>/dev/null
+# 5. Пересобрать AI Cortex
+./scripts/deploy.sh cortex
 ```
 
 **Решение — открыть порт 8120 для Docker:**
