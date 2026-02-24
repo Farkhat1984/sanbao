@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookOpen, RotateCcw, Copy, Download, Check } from "lucide-react";
+import { BookOpen, Wrench, RotateCcw, Copy, Download, Check } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useArticleStore } from "@/stores/articleStore";
 import { usePanelStore } from "@/stores/panelStore";
-import { cn } from "@/lib/utils";
 import { exportAsText } from "@/lib/export-utils";
 
 const CODE_LABELS: Record<string, string> = {
@@ -26,7 +27,24 @@ const CODE_LABELS: Record<string, string> = {
   family_code: "КоБС РК",
   social_code: "СК РК",
   water_code: "ВК РК",
+  law: "Закон РК",
+  "1c": "1С",
+  "1c_buh": "1С Бухгалтерия",
 };
+
+const LEGAL_CODES = new Set([
+  "constitution", "criminal_code", "criminal_procedure",
+  "civil_code_general", "civil_code_special", "civil_procedure",
+  "admin_offenses", "admin_procedure", "tax_code",
+  "labor_code", "land_code", "ecological_code",
+  "entrepreneurship", "budget_code", "customs_code",
+  "family_code", "social_code", "water_code",
+]);
+
+/** Content with markdown images (1C articles) needs rich rendering */
+function hasMarkdownContent(text: string): boolean {
+  return /!\[.*?\]\(.*?\)|^#{1,6}\s|^\|.*\|/m.test(text);
+}
 
 // ─── Skeleton loader ─────────────────────────────────────
 
@@ -100,6 +118,11 @@ export function ArticleContentView() {
   if (error) return <ArticleError error={error} onRetry={retry} />;
   if (!activeArticle) return null;
 
+  const is1c = activeArticle.code === "1c" || activeArticle.code === "1c_buh";
+  const isLegal = LEGAL_CODES.has(activeArticle.code);
+  const isLaw = activeArticle.code === "law";
+  const useMarkdown = hasMarkdownContent(activeArticle.text);
+
   const fullText = [
     activeArticle.title,
     "",
@@ -109,7 +132,18 @@ export function ArticleContentView() {
     .filter(Boolean)
     .join("\n");
 
-  const headerLabel = `Ст. ${activeArticle.article} ${CODE_LABELS[activeArticle.code] || activeArticle.code}`;
+  let headerLabel: string;
+  if (isLegal) {
+    headerLabel = `Ст. ${activeArticle.article} ${CODE_LABELS[activeArticle.code] || activeArticle.code}`;
+  } else if (isLaw) {
+    headerLabel = activeArticle.title || `Закон ${activeArticle.article}`;
+  } else if (is1c) {
+    headerLabel = activeArticle.title || activeArticle.article;
+  } else {
+    headerLabel = `${activeArticle.article} ${CODE_LABELS[activeArticle.code] || activeArticle.code}`;
+  }
+
+  const HeaderIcon = is1c ? Wrench : BookOpen;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(fullText);
@@ -126,7 +160,7 @@ export function ArticleContentView() {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <BookOpen className="h-4 w-4 text-legal-ref shrink-0" />
+          <HeaderIcon className="h-4 w-4 text-legal-ref shrink-0" />
           <span className="text-sm font-semibold text-text-primary truncate">
             {headerLabel}
           </span>
@@ -161,9 +195,19 @@ export function ArticleContentView() {
               {activeArticle.title}
             </h3>
           )}
-          <div className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
-            {activeArticle.text}
-          </div>
+
+          {useMarkdown ? (
+            <div className="prose prose-sm max-w-none text-text-primary [&_img]:rounded-xl [&_img]:border [&_img]:border-border [&_img]:my-3 [&_img]:max-w-full">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {activeArticle.text}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <div className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+              {activeArticle.text}
+            </div>
+          )}
+
           {activeArticle.annotation && (
             <>
               <hr className="border-border my-4" />
