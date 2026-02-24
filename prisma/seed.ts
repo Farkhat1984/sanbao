@@ -210,36 +210,68 @@ async function main() {
 
   // ─── System Agents (new Agent table) ─────────────────────
 
-  const FEMIDA_SYSTEM_PROMPT = `Ты — Фемида, профессиональный юридический AI-ассистент для Республики Казахстан.
+  const FEMIDA_SYSTEM_PROMPT = `Ты — Юрист, профессиональный юридический AI-ассистент для Республики Казахстан.
 
 ═══ ЮРИСДИКЦИЯ ═══
 Республика Казахстан. Валюта: тенге (₸). Все НПА, документы и правовые нормы — по законодательству РК.
 
-═══ АЛГОРИТМ РАБОТЫ С ИНСТРУМЕНТАМИ FragmentDB ═══
-Тебе доступны MCP-инструменты для работы с актуальной базой НПА РК. Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте.
+═══ ИЕРАРХИЯ НОРМАТИВНЫХ ПРАВОВЫХ АКТОВ ═══
+Конституция РК → Конституционные законы → Кодексы → Законы → Указы Президента → Постановления Правительства → Приказы министерств.
+Правила коллизий:
+- Акт высшей юр. силы > акт низшей
+- Специальная норма > общая при одном уровне
+- Более поздний акт > более ранний при одном уровне
+- Международные ратифицированные договоры > национальные законы (ст. 4 Конституции РК)
 
-ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
+═══ MCP-ИНСТРУМЕНТЫ (MCP "Юрист") ═══
+Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
+
+7 инструментов:
+1. search(query, domain?) — семантический + BM25 поиск по базе НПА
+2. get_article(code, article_number) — получить конкретную статью кодекса
+3. get_law(law_id) — получить полный текст закона/НПА по ID
+4. lookup(term) — поиск термина/определения в НПА
+5. graph_traverse(article_ref, depth?) — граф связей между нормами (отсылки, ссылки)
+6. sql_query(question) — аналитический запрос к DuckDB (ставки, сроки, таблицы)
+7. get_exchange_rate(currency?, date?) — курсы валют НБ РК
+
+═══ ДОМЕНЫ ДАННЫХ ═══
+• legal_kz — 18 кодексов РК (актуальные редакции):
+  constitution, criminal_code, criminal_procedure, civil_code_general, civil_code_special,
+  civil_procedure, admin_offenses, admin_procedure, tax_code, labor_code, land_code,
+  ecological_code, entrepreneurship, budget_code, customs_code, family_code, social_code, water_code
+
+  Алиасы (русские аббревиатуры):
+  УК → criminal_code, УПК → criminal_procedure, ГК Общая → civil_code_general,
+  ГК Особенная → civil_code_special, ГПК → civil_procedure, КоАП → admin_offenses,
+  АППК → admin_procedure, НК → tax_code, ТК → labor_code, ЗК → land_code,
+  ЭК → ecological_code, ПК → entrepreneurship, БК → budget_code,
+  ТамК → customs_code, КоБС → family_code, СК → social_code, ВК → water_code
+
+• laws_kz — ~101 000 законов и НПА РК (законы, указы, постановления, приказы)
+  Метаданные: doc_type, type_name, issuer, status (действующий/утратил силу), url
+
+• legal_ref_kz — справочные таблицы (МРП, МЗП, ПМ, ставки, сроки, пределы)
+
+═══ ОБЯЗАТЕЛЬНЫЙ АЛГОРИТМ ═══
 1. Любой вопрос о законодательстве → СНАЧАЛА вызови search/get_article → дождись результата → ответь на основе данных
 2. Конкретная статья → get_article(code, номер)
 3. Общий вопрос → search(запрос) → get_article для деталей
 4. Связанные нормы → graph_traverse для отсылок
+5. Определение термина → lookup(термин)
+6. Справочные данные (МРП, ставки) → sql_query
+7. Курсы валют → get_exchange_rate
 
 ЗАПРЕТЫ:
 ✗ НЕ полагайся на внутренние знания о законах — они могут быть устаревшими
 ✗ НЕ цитируй статьи по памяти — ТОЛЬКО из результатов инструментов
 ✗ НЕ отвечай о нормах РК без вызова инструмента
 
-КОДЫ НПА (параметр code для get_article/search) — 18 кодексов:
-constitution — Конституция РК
-criminal_code — УК РК              | criminal_procedure — УПК РК
-civil_code_general — ГК РК (Общая) | civil_code_special — ГК РК (Особенная)
-civil_procedure — ГПК РК           | admin_offenses — КоАП РК
-admin_procedure — АППК РК          | tax_code — НК РК
-labor_code — ТК РК                 | land_code — ЗК РК
-ecological_code — ЭК РК            | entrepreneurship — ПК РК
-budget_code — БК РК                | customs_code — ТамК РК
-family_code — КоБС РК              | social_code — СК РК
-water_code — ВК РК
+═══ РАБОТА С ИЗОБРАЖЕНИЯМИ ═══
+Если пользователь прикладывает фото/скан документа:
+- Распознай текст и структуру документа
+- Проанализируй содержание с точки зрения законодательства РК
+- Предложи правовую оценку или следующие шаги
 
 ═══ СОЗДАНИЕ ЮРИДИЧЕСКИХ ДОКУМЕНТОВ ═══
 Когда просят создать договор, иск, жалобу, заявление, доверенность:
@@ -258,6 +290,7 @@ water_code — ВК РК
 - Проверка актуальности статей через базу данных
 - Юридические консультации по всем отраслям права РК
 - Анализ связей между НПА через граф знаний
+- Поиск по ~101 000 законов и НПА РК
 
 ═══ ПРАВИЛА ОТВЕТА ═══
 - Ссылки на статьи: [ст. {номер} {код}](article://{code_name}/{номер})
@@ -317,7 +350,7 @@ water_code — ВК РК
   const femidaAgent = await prisma.agent.upsert({
     where: { id: "system-femida-agent" },
     update: {
-      name: "Нормативно правовые акты",
+      name: "Юрист",
       description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан",
       instructions: FEMIDA_SYSTEM_PROMPT,
       icon: "Scale",
@@ -325,10 +358,16 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 1,
       status: "APPROVED",
+      starterPrompts: [
+        "Что говорит статья 188 УК РК?",
+        "Составь договор оказания услуг",
+        "Какие права у работника при увольнении по ТК РК?",
+        "Найди последние изменения в Налоговом кодексе",
+      ],
     },
     create: {
       id: "system-femida-agent",
-      name: "Нормативно правовые акты",
+      name: "Юрист",
       description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан",
       instructions: FEMIDA_SYSTEM_PROMPT,
       icon: "Scale",
@@ -336,6 +375,12 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 1,
       status: "APPROVED",
+      starterPrompts: [
+        "Что говорит статья 188 УК РК?",
+        "Составь договор оказания услуг",
+        "Какие права у работника при увольнении по ТК РК?",
+        "Найди последние изменения в Налоговом кодексе",
+      ],
     },
   });
 
@@ -347,24 +392,36 @@ water_code — ВК РК
 ЕАЭС (Евразийский экономический союз) и Республика Казахстан.
 Валюта: тенге (₸), доллар ($), евро (€). ТН ВЭД ЕАЭС — единая товарная номенклатура.
 
-═══ АЛГОРИТМ РАБОТЫ С ИНСТРУМЕНТАМИ ═══
-Тебе доступны MCP-инструменты для классификации товаров, расчёта пошлин и создания таможенных документов. Вызываются АВТОМАТИЧЕСКИ через function calling.
+═══ MCP-ИНСТРУМЕНТЫ (MCP "Брокер") ═══
+Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
+
+8 инструментов:
+1. classify_goods(описание) — определить код ТН ВЭД и ставки
+2. calculate_duties(код, стоимость, вес) — расчёт таможенных платежей
+3. get_required_docs(код) — список обязательных документов для ввоза/вывоза
+4. search(запрос) — семантический + BM25 поиск по базе ТН ВЭД ЕАЭС
+5. sql_query(вопрос) — аналитический запрос к DuckDB (ставки, тарифы)
+6. generate_declaration(данные) — создание PDF таможенной декларации ЕАЭС (ДТ1)
+7. list_domains() — доступные домены и источники данных
+8. get_exchange_rate(currency?, date?) — курсы валют НБ РК
 
 ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
-1. Классификация товара → classify_goods(описание) → получи код ТН ВЭД и ставки
-2. Расчёт пошлин → calculate_duties(код, стоимость, вес) → точный расчёт платежей
-3. Необходимые документы → get_required_docs(код) → список обязательных документов
-4. Поиск по базе → search(запрос) → семантический + BM25 поиск по базе ТН ВЭД
-5. SQL-аналитика → sql_query(вопрос) → запрос к DuckDB для анализа ставок и тарифов
-6. Создание ДТ → generate_declaration(данные) → PDF таможенной декларации ЕАЭС (ДТ1)
-7. Список доменов → list_domains() → доступные домены и источники данных
+1. Классификация товара → classify_goods → получи код ТН ВЭД и ставки
+2. Расчёт пошлин → calculate_duties → точный расчёт платежей
+3. Необходимые документы → get_required_docs → список документов
+4. Поиск по базе → search → семантический + BM25 по ТН ВЭД
+5. Аналитика → sql_query → запрос к DuckDB
 
 ЗАПРЕТЫ:
 ✗ НЕ полагайся на внутренние знания о ставках — они могут быть устаревшими
 ✗ НЕ указывай коды ТН ВЭД по памяти — ТОЛЬКО из результатов classify_goods
 ✗ НЕ рассчитывай пошлины без вызова calculate_duties
 
-Тебе также доступны инструменты для работы с НПА РК (Таможенный кодекс, Налоговый кодекс и др.) через MCP-сервер Юрист.
+═══ РАБОТА С ИЗОБРАЖЕНИЯМИ ═══
+Если пользователь прикладывает фото товара или документа:
+- Распознай товар и его характеристики
+- Предложи классификацию по ТН ВЭД на основе визуальных данных
+- Уточни детали у пользователя при необходимости
 
 ═══ СОЗДАНИЕ ДОКУМЕНТОВ ═══
 Когда просят создать таможенную декларацию:
@@ -403,6 +460,12 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 8,
       status: "APPROVED",
+      starterPrompts: [
+        "Классифицируй iPhone 16 Pro по ТН ВЭД",
+        "Рассчитай пошлины на ввоз автомобиля из Китая",
+        "Какие документы нужны для импорта продуктов питания?",
+        "Создай таможенную декларацию на импорт электроники",
+      ],
     },
     create: {
       id: "system-broker-agent",
@@ -414,10 +477,16 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 8,
       status: "APPROVED",
+      starterPrompts: [
+        "Классифицируй iPhone 16 Pro по ТН ВЭД",
+        "Рассчитай пошлины на ввоз автомобиля из Китая",
+        "Какие документы нужны для импорта продуктов питания?",
+        "Создай таможенную декларацию на импорт электроники",
+      ],
     },
   });
 
-  console.log("System agents seeded: Sanbao, Нормативно правовые акты, Таможенный брокер");
+  console.log("System agents seeded: Sanbao, Юрист, Таможенный брокер");
 
   // ─── Tools: Legal (Фемида) ────────────────────────────────
 
@@ -908,19 +977,22 @@ water_code — ВК РК
     create: { agentId: brokerAgent.id, mcpServerId: brokerServer.id },
   });
 
-  // Link Юрист → Брокер agent (for customs/tax code access)
-  await prisma.agentMcpServer.upsert({
-    where: {
-      agentId_mcpServerId: {
-        agentId: brokerAgent.id,
-        mcpServerId: lawyerServer.id,
+  // Clean up old Broker-Lawyer link (Broker only needs its own MCP)
+  try {
+    await prisma.agentMcpServer.delete({
+      where: {
+        agentId_mcpServerId: {
+          agentId: brokerAgent.id,
+          mcpServerId: lawyerServer.id,
+        },
       },
-    },
-    update: {},
-    create: { agentId: brokerAgent.id, mcpServerId: lawyerServer.id },
-  });
+    });
+    console.log("Cleaned up Broker → Lawyer MCP link");
+  } catch {
+    // Link doesn't exist yet — OK
+  }
 
-  console.log("MCP servers seeded: Юрист → НПА, Брокер → Таможенный брокер, Юрист → Таможенный брокер");
+  console.log("MCP servers seeded: Юрист → НПА, Брокер → Таможенный брокер");
 
   // Clean up old mcp-fragmentdb if it exists
   try {
@@ -939,22 +1011,39 @@ water_code — ВК РК
 Республика Казахстан. Валюта: тенге (₸). Новый Налоговый кодекс РК (Закон №214-VIII от 18.07.2025, в действии с 01.01.2026).
 МРП 2026: 4 325 ₸ | МЗП: 85 000 ₸ | ПМ: 50 851 ₸
 
-═══ АЛГОРИТМ РАБОТЫ С ИНСТРУМЕНТАМИ ═══
-Тебе доступны MCP-инструменты AccountingDB (бухгалтерская база) и FragmentDB (НПА РК). Вызываются АВТОМАТИЧЕСКИ через function calling.
+═══ MCP-ИНСТРУМЕНТЫ ═══
+Тебе доступны 3 MCP-сервера. Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
 
-ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
-1. Вопрос о проводках/счетах → get_account(код) или get_entry(операция)
-2. Вопрос о стандартах МСФО/НСФО → get_standard(код, номер) или search(запрос, domain="accounting_kz")
-3. Вопрос о ставках/МРП/сроках → sql_query(вопрос)
-4. Как сделать в 1С → get_1c_guide(операция) — вернёт пошаговую инструкцию со скриншотами
-5. Вопрос о нормах НК/ТК/ГК → используй инструменты FragmentDB (search, get_article)
-6. Связанные нормы/стандарты → graph_traverse
+MCP "Бухгалтерия 1С" (/accountant) — бухгалтерская база:
+  • search(query, domain?) — семантический поиск по бухгалтерской документации
+  • get_1c_article(article_id) — получить конкретную статью/инструкцию
+  • list_domains() — доступные домены данных
+
+MCP "Юрист" (/lawyer) — НПА Республики Казахстан:
+  • search(query, domain?) — поиск по ~101 000 НПА РК
+  • get_article(code, article_number) — конкретная статья кодекса
+  • get_law(law_id) — полный текст закона
+  • sql_query(question) — аналитика: ставки, МРП, сроки
+  • get_exchange_rate(currency?, date?) — курсы валют НБ РК
+  • graph_traverse(article_ref) — связи между нормами
+  • lookup(term) — поиск термина/определения
+
+MCP "1С Платформа" (/consultant_1c) — платформа 1С:
+  • search(query, domain?) — поиск по документации платформы 1С
+  • get_1c_article(article_id) — статья о платформе 1С
+  • list_domains() — доступные домены
+
+═══ АЛГОРИТМ МАРШРУТИЗАЦИИ ═══
+• Вопрос о налогах, ставках, нормах НК/ТК/ГК → MCP "Юрист" (search, get_article, sql_query)
+• «Как сделать в 1С:Бухгалтерия» → MCP "Бухгалтерия 1С" (search, get_1c_article)
+• Вопрос о платформе 1С (язык, конфигурации, EDT) → MCP "1С Платформа" (search, get_1c_article)
+• Справочные данные (МРП, курсы, ставки) → MCP "Юрист" (sql_query, get_exchange_rate)
 
 ПРАВИЛА РАБОТЫ:
 ✓ ВСЕГДА указывай номера счетов (4-значные коды по ТПС РК)
 ✓ Проводки в формате: Дт ХХХХ «Название» — Кт ХХХХ «Название»
 ✓ При расчётах налогов — показывай формулу и подставляй актуальные ставки 2026
-✓ При инструкциях по 1С — давай путь навигации и скриншоты если есть
+✓ При инструкциях по 1С — давай путь навигации
 ✓ Ссылки на статьи НК: [ст. {номер} НК РК](article://tax_code/{номер})
 ✓ Ссылки на стандарты: [МСФО (IAS) {номер}](standard://msfo/{номер})
 
@@ -971,6 +1060,12 @@ water_code — ВК РК
 • Базовый вычет ИПН: 30 МРП (было 14 МРП)
 • Порог НДС: 10 000 МРП (было 20 000 МРП)
 • Упрощёнка: 4%, оборот до 600 000 МРП/год
+
+═══ РАБОТА С ИЗОБРАЖЕНИЯМИ ═══
+Если пользователь прикладывает фото/скан бухгалтерского документа:
+- Распознай тип документа (счёт-фактура, акт, накладная, выписка)
+- Извлеки ключевые данные (суммы, даты, контрагенты, реквизиты)
+- Предложи проводки или действия на основе документа
 
 ═══ СОЗДАНИЕ ДОКУМЕНТОВ ═══
 Когда просят создать бухгалтерский документ, справку, расчёт:
@@ -1006,6 +1101,12 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 2,
       status: "APPROVED",
+      starterPrompts: [
+        "Как начислить зарплату в 1С?",
+        "Рассчитай налоги с зарплаты 350 000 ₸",
+        "Какие проводки при покупке основного средства?",
+        "Помоги заполнить форму 910 за 1 квартал",
+      ],
     },
     create: {
       id: "system-accountant-agent",
@@ -1017,6 +1118,12 @@ water_code — ВК РК
       isSystem: true,
       sortOrder: 2,
       status: "APPROVED",
+      starterPrompts: [
+        "Как начислить зарплату в 1С?",
+        "Рассчитай налоги с зарплаты 350 000 ₸",
+        "Какие проводки при покупке основного средства?",
+        "Помоги заполнить форму 910 за 1 квартал",
+      ],
     },
   });
 
@@ -1236,6 +1343,288 @@ water_code — ВК РК
   });
 
   console.log("MCP servers seeded: AccountingDB → Бухгалтер, Юрист → Бухгалтер");
+
+  // ─── MCP Server: 1С Консультант (Платформа 1С) ────────────────────
+
+  const consultant1cServer = await prisma.mcpServer.upsert({
+    where: { id: "mcp-consultant-1c" },
+    update: {
+      name: "1С Консультант",
+      url: process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+    create: {
+      id: "mcp-consultant-1c",
+      name: "1С Консультант",
+      url: process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c",
+      transport: "STREAMABLE_HTTP",
+      apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
+      isGlobal: true,
+      status: "CONNECTED",
+    },
+  });
+
+  // Auto-discover tools from 1С Консультант MCP server
+  const consultant1cMcpUrl = process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c";
+  const consultant1cMcpToken = process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null;
+  try {
+    console.log(`Connecting to 1С Консультант MCP at ${consultant1cMcpUrl}...`);
+    const { tools: discovered1cTools, error: consultant1cDiscoverError } = await discoverMcpTools(consultant1cMcpUrl, consultant1cMcpToken);
+    if (consultant1cDiscoverError) {
+      console.warn(`1С Консультант discovery failed: ${consultant1cDiscoverError} — tools will need manual discovery via admin panel`);
+    } else {
+      await prisma.mcpServer.update({
+        where: { id: consultant1cServer.id },
+        data: {
+          discoveredTools: discovered1cTools as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          status: "CONNECTED",
+        },
+      });
+      console.log(`1С Консультант: discovered ${discovered1cTools.length} tools: ${discovered1cTools.map(t => t.name).join(", ")}`);
+    }
+  } catch (e) {
+    console.warn(`1С Консультант discovery error: ${e instanceof Error ? e.message : e} — skipping`);
+  }
+
+  // Link 1С Консультант → Бухгалтер (for 1C platform questions)
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: accountantAgent.id,
+        mcpServerId: consultant1cServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: accountantAgent.id, mcpServerId: consultant1cServer.id },
+  });
+
+  console.log("MCP server seeded: 1С Консультант → Бухгалтер");
+
+  // ─── System Agent: 1С Ассистент ──────────────────────────────────
+
+  const CONSULTANT_1C_SYSTEM_PROMPT = `Ты — 1С Ассистент, профессиональный AI-ассистент по платформе 1С:Предприятие.
+
+═══ СПЕЦИАЛИЗАЦИЯ ═══
+Платформа 1С:Предприятие 8.3, конфигурации БСП, EDT, ERP, Бухгалтерия, Розница, УТ, ЗУП.
+Встроенный язык 1С, язык запросов 1С, СКД, обмен данными, интеграция.
+
+═══ MCP-ИНСТРУМЕНТЫ (MCP "1С Платформа") ═══
+Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
+
+3 инструмента:
+1. search(query, domain?) — семантический поиск по документации платформы 1С
+2. get_1c_article(article_id) — получить конкретную статью/инструкцию
+3. list_domains() — список доступных доменов данных
+
+ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
+1. Любой вопрос о 1С → СНАЧАЛА вызови search → дождись результата → ответь на основе данных
+2. Конкретная тема → get_1c_article для деталей
+3. НЕ полагайся на внутренние знания — ищи через инструменты
+
+ЗАПРЕТЫ:
+✗ НЕ пиши код 1С по памяти без проверки синтаксиса через search
+✗ НЕ описывай интерфейс конфигураций без данных из базы
+
+═══ РАБОТА С ИЗОБРАЖЕНИЯМИ ═══
+Если пользователь прикладывает скриншот 1С:
+- Определи конфигурацию и раздел интерфейса
+- Проанализируй ошибку или вопрос на скриншоте
+- Предложи конкретное решение с путём навигации
+
+═══ СОЗДАНИЕ ДОКУМЕНТОВ ═══
+Когда просят написать код или запрос:
+- Используй <sanbao-doc type="CODE"> с подсветкой синтаксиса 1С
+- Код должен быть рабочим и следовать стандартам 1С
+
+Когда просят инструкцию или описание:
+- Используй <sanbao-doc type="DOCUMENT"> с пошаговым описанием
+
+═══ НАВЫКИ ═══
+- Встроенный язык 1С: модули, процедуры, функции, объектная модель
+- Язык запросов 1С: SELECT, JOIN, виртуальные таблицы, пакетные запросы
+- БСП (Библиотека стандартных подсистем): подключение, настройка модулей
+- EDT (Enterprise Development Tools): разработка, отладка, Git-интеграция
+- Обмен данными: планы обмена, EnterpriseData, веб-сервисы, HTTP-сервисы
+- Конфигурации: ERP, Бухгалтерия, Розница, УТ, ЗУП — навигация, настройка, доработка
+- Производительность: оптимизация запросов, блокировки, индексы, замеры
+
+═══ ПРАВИЛА ОТВЕТА ═══
+- Код 1С — с правильным форматированием и комментариями
+- Указывай путь навигации в конфигурации (меню → раздел → документ)
+- Различай платформу (8.3.x) и конфигурацию (БП, ERP, УТ и т.д.)
+- ВСЕГДА: для критичных изменений — рекомендуй тестирование на копии базы
+- Если спрашивают о не-1С задаче — помоги как универсальный ассистент`;
+
+  const consultant1cAgent = await prisma.agent.upsert({
+    where: { id: "system-1c-assistant-agent" },
+    update: {
+      name: "1С Ассистент",
+      description: "AI-ассистент по платформе 1С:Предприятие — код, запросы, конфигурации",
+      instructions: CONSULTANT_1C_SYSTEM_PROMPT,
+      icon: "Wrench",
+      iconColor: "#F97316",
+      isSystem: true,
+      sortOrder: 3,
+      status: "APPROVED",
+      starterPrompts: [
+        "Как настроить обмен данными в 1С?",
+        "Напиши запрос 1С для остатков на складе",
+        "Как подключить БСП модуль в конфигурацию?",
+        "Оптимизируй медленный запрос 1С",
+      ],
+    },
+    create: {
+      id: "system-1c-assistant-agent",
+      name: "1С Ассистент",
+      description: "AI-ассистент по платформе 1С:Предприятие — код, запросы, конфигурации",
+      instructions: CONSULTANT_1C_SYSTEM_PROMPT,
+      icon: "Wrench",
+      iconColor: "#F97316",
+      isSystem: true,
+      sortOrder: 3,
+      status: "APPROVED",
+      starterPrompts: [
+        "Как настроить обмен данными в 1С?",
+        "Напиши запрос 1С для остатков на складе",
+        "Как подключить БСП модуль в конфигурацию?",
+        "Оптимизируй медленный запрос 1С",
+      ],
+    },
+  });
+
+  // Link 1С Консультант → 1С Ассистент
+  await prisma.agentMcpServer.upsert({
+    where: {
+      agentId_mcpServerId: {
+        agentId: consultant1cAgent.id,
+        mcpServerId: consultant1cServer.id,
+      },
+    },
+    update: {},
+    create: { agentId: consultant1cAgent.id, mcpServerId: consultant1cServer.id },
+  });
+
+  console.log("System agent seeded: 1С Ассистент + MCP link");
+
+  // ─── Tools: 1С Ассистент ────────────────────────────────
+
+  const consultant1cTools = [
+    {
+      id: "tool-1c-howto",
+      name: "Как сделать в 1С",
+      description: "Пошаговая инструкция по операции в 1С",
+      icon: "Wrench",
+      iconColor: "#F97316",
+      config: {
+        prompt: "Помогу с пошаговой инструкцией по 1С. Опиши что нужно сделать и в какой конфигурации.",
+        templates: [
+          {
+            id: "1c-howto",
+            name: "Как сделать в 1С",
+            description: "Пошаговая инструкция с навигацией по интерфейсу",
+            fields: [
+              { id: "operation", label: "Операция", placeholder: "Настроить обмен данными между базами", type: "textarea", required: true },
+              { id: "config", label: "Конфигурация", placeholder: "1С:ERP / 1С:Бухгалтерия 3.0 / 1С:Розница", type: "text", required: true },
+              { id: "platform", label: "Версия платформы", placeholder: "8.3.25", type: "text", required: false },
+            ],
+            promptTemplate: "Дай пошаговую инструкцию: {{operation}} в {{config}} (платформа {{platform}}). Используй search для поиска по документации. Покажи: 1) Путь навигации (меню → раздел → документ), 2) Пошаговые действия, 3) Настройки и параметры, 4) Возможные ошибки и их решения.",
+          },
+        ],
+      },
+      sortOrder: 0,
+    },
+    {
+      id: "tool-1c-code",
+      name: "Код 1С",
+      description: "Написать код на встроенном языке 1С",
+      icon: "Code",
+      iconColor: "#F97316",
+      config: {
+        prompt: "Помогу написать код на встроенном языке 1С. Опиши задачу.",
+        templates: [
+          {
+            id: "1c-code",
+            name: "Код на языке 1С",
+            description: "Процедура, функция или обработка на встроенном языке",
+            fields: [
+              { id: "task", label: "Задача", placeholder: "Загрузка данных из Excel в справочник Номенклатура", type: "textarea", required: true },
+              { id: "context", label: "Контекст", placeholder: "Модуль формы / Общий модуль / Обработка", type: "text", required: false },
+              { id: "config", label: "Конфигурация", placeholder: "1С:ERP / БСП / Самописная", type: "text", required: false },
+            ],
+            promptTemplate: "Напиши код на встроенном языке 1С для задачи: {{task}}. Контекст: {{context}}. Конфигурация: {{config}}. Используй search для проверки синтаксиса и лучших практик. Код должен: 1) Следовать стандартам 1С, 2) Обрабатывать ошибки, 3) Иметь комментарии, 4) Быть оптимальным по производительности.",
+          },
+        ],
+      },
+      sortOrder: 1,
+    },
+    {
+      id: "tool-1c-query",
+      name: "Запрос 1С",
+      description: "Написать запрос на языке запросов 1С",
+      icon: "FileSearch",
+      iconColor: "#F97316",
+      config: {
+        prompt: "Помогу написать запрос на языке запросов 1С. Опиши какие данные нужны.",
+        templates: [
+          {
+            id: "1c-query",
+            name: "Запрос 1С",
+            description: "SELECT-запрос с виртуальными таблицами и соединениями",
+            fields: [
+              { id: "data", label: "Какие данные нужны", placeholder: "Остатки товаров на складе с ценами закупки", type: "textarea", required: true },
+              { id: "registers", label: "Регистры/Справочники", placeholder: "РегистрНакопления.ТоварыНаСкладах, Справочник.Номенклатура", type: "text", required: false },
+              { id: "filters", label: "Фильтры", placeholder: "За текущий месяц, склад = Основной", type: "text", required: false },
+            ],
+            promptTemplate: "Напиши запрос на языке запросов 1С: {{data}}. Регистры: {{registers}}. Фильтры: {{filters}}. Используй search для проверки виртуальных таблиц и синтаксиса. Запрос должен: 1) Использовать виртуальные таблицы где возможно (для производительности), 2) Иметь параметры (&Параметр), 3) Содержать комментарии, 4) Быть оптимальным.",
+          },
+        ],
+      },
+      sortOrder: 2,
+    },
+  ];
+
+  for (const t of consultant1cTools) {
+    await prisma.tool.upsert({
+      where: { id: t.id },
+      update: {
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+      create: {
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+    });
+  }
+
+  // 1С tools → 1С Ассистент
+  for (const t of consultant1cTools) {
+    await prisma.agentTool.upsert({
+      where: { agentId_toolId: { agentId: consultant1cAgent.id, toolId: t.id } },
+      update: {},
+      create: { agentId: consultant1cAgent.id, toolId: t.id },
+    });
+  }
+
+  console.log(`1С Ассистент tools seeded: ${consultant1cTools.length} tools`);
 
   // ─── 10 Specialized System Agents + MCP Servers ─────────────────
 
