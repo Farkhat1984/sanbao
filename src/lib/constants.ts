@@ -70,7 +70,7 @@ export const DEFAULT_MAX_TOKENS_FIX = 8192;
 export const DEFAULT_MAX_TOKENS_PREVIEW = 512;
 export const DEFAULT_MAX_TOKENS_COMPACTION = 2048;
 export const DEFAULT_TOP_P = 0.95;
-export const DEFAULT_CONTEXT_WINDOW = 128000;
+export const DEFAULT_CONTEXT_WINDOW = 262144;
 
 // ─── Fallback provider (used only when no model resolved from DB) ───
 export const FALLBACK_PROVIDER_SLUG = "deepinfra";
