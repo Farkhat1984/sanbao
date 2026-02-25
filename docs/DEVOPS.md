@@ -134,13 +134,22 @@ BOT_PASSWORD=Ckdshfh231161!
 
 **Docker CLI в контейнере бота:** бот выполняет `docker compose` команды для запуска/остановки cloudflared. Dockerfile устанавливает Docker CLI (static binary) + Docker Compose plugin. При ребилде убедиться что `docker.io` в Dockerfile заменён на static binary (Debian Trixie не включает docker CLI в пакет `docker.io`).
 
-**Протестировано (2026-02-22):** все сценарии проверены:
+**Протестировано (2026-02-25):** полный E2E drill (`scripts/ops-test.sh`), 77 автотестов + failover drill:
 
-1. **Failover (Server 1 → Server 2):** 5/5 HTTP 200, cloudflared config-file mode с ingress rules (volumes mount, не token-режим).
-2. **Failback (Server 2 → Server 1):** 5/5 HTTP 200, 3/3 replicas healthy, cloudflared на Server 2 остановлен.
-3. **Падение Server 2:** Server 1 работает без перебоев (3/3 HTTP 200). Восстановление через `docker compose up -d`.
-4. **Sync:** каждые 5 мин (PG pg_dump + FragmentDB rsync), retry 3x, Telegram alerts.
-5. **Backup:** ежедневно 03:00, PG (584K) + FragmentDB (64M) + configs (3K), gzip integrity verified, rotation 7/4/3.
+1. **Health:** 21/21 — все сервисы обоих серверов healthy, ресурсы в норме
+2. **Network:** DNS, SSH, Docker network, Cloudflare tunnel latency (local 17ms, external 290ms)
+3. **Database:** PostgreSQL 16.11 R/W OK, PgBouncer healthy, 55 таблиц, 13MB
+4. **Redis:** PONG, R/W OK, BullMQ очереди пусты, rate-limit работает
+5. **AI Cortex:** FragmentDB 7 коллекций (236K документов), Orchestrator v0.8.0 4 MCP endpoints, Embedding Proxy OK
+6. **Sync:** PG + FDB за 6с, пароль auto-resync для PgBouncer совместимости, данные S1=S2
+7. **Backup:** PG (639K) + FragmentDB (64M) + configs (3K), gzip integrity verified, rotation 7/4/3
+8. **Failover drill:**
+   - App stopped → auto-failover за ~60с (бот: 3×30с)
+   - Cloudflare switch → sanbao.ai через S2 за <1с
+   - S1 recovery → auto-failback за ~75с
+   - Общий даунтайм при полном падении S1: ~2.5 мин
+
+**Важно:** failover работает только при **полном** падении сервера (cloudflared + app). При частичном (app down, cloudflared up) Cloudflare продолжает слать на S1 (502). Это ожидаемое поведение tunnel-based архитектуры.
 
 **Замечания:** FragmentDB WAL recovery при холодном старте занимает ~10 мин (rebuild 13K TNVED + 7K legal_code + BM25 индексы). `start_period` увеличен до 600s. Sanbao healthcheck использует `127.0.0.1` (не `localhost`) из-за IPv6 mismatch в Alpine-контейнерах + добавлен `HOSTNAME=0.0.0.0` для Next.js standalone binding.
 
@@ -248,19 +257,48 @@ curl -s "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records" \
 ```bash
 ./scripts/deploy.sh              # Full rebuild (build + restart all + healthcheck)
 ./scripts/deploy.sh app          # Rebuild only app (rolling restart) ← рекомендуется
+./scripts/deploy.sh cortex       # Rebuild AI Cortex stack
 ./scripts/deploy.sh restart      # Restart without rebuild
 ./scripts/deploy.sh status       # Show container status
 ./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
 ```
 
 **Что делает скрипт автоматически:**
-1. **Проверяет Server 2 cloudflared** — если запущен, останавливает (предотвращает 503 от Cloudflare LB split)
-2. **Rolling restart** (команда `app`): оставляет 1 старый контейнер, запускает новые, ждёт healthy, потом убирает старый
-3. **Healthcheck** — ждёт до 3 минут пока N контейнеров станут healthy
-4. **Nginx soft reload** — `nginx -s reload` вместо restart (без прерывания соединений)
-5. **Cloudflare cache purge** — автоматически очищает CDN кеш
+1. **Tmux обёртка** — долгие команды (full/app/cortex/restart) запускаются в tmux сессии, переживают обрыв SSH
+2. **Логирование** — весь вывод пишется в `logs/deploy/YYYYMMDD-HHMMSS.log`
+3. **Проверяет Server 2 cloudflared** — если запущен, останавливает (предотвращает 503 от Cloudflare LB split)
+4. **Rolling restart** (команда `app`): оставляет 1 старый контейнер, запускает новые, ждёт healthy, потом убирает старый
+5. **Healthcheck** — ждёт до 3 минут пока N контейнеров станут healthy
+6. **Nginx soft reload** — `nginx -s reload` вместо restart (без прерывания соединений)
+7. **Cloudflare cache purge** — автоматически очищает CDN кеш
+
+Если SSH оборвётся во время деплоя, подключиться к сессии:
+```bash
+tmux ls                      # Список сессий
+tmux attach -t deploy-HHMMSS # Подключиться к работающему деплою
+```
 
 > **ВАЖНО:** НЕ деплоить вручную через `docker compose up -d app` — это убивает все 3 реплики одновременно и вызывает даунтайм 60+ секунд! Всегда использовать `./scripts/deploy.sh app`.
+
+### Скрипт `scripts/ops-test.sh`
+
+**Комплексное тестирование всех серверных сценариев:**
+
+```bash
+./scripts/ops-test.sh           # Интерактивное меню
+./scripts/ops-test.sh all       # Все тесты (кроме failover)
+./scripts/ops-test.sh health    # Проверка всех сервисов обоих серверов
+./scripts/ops-test.sh network   # DNS, SSH, Docker сеть, latency
+./scripts/ops-test.sh database  # PostgreSQL R/W, PgBouncer, таблицы
+./scripts/ops-test.sh redis     # Ping, R/W, BullMQ очереди
+./scripts/ops-test.sh cortex    # FragmentDB коллекции, Orchestrator MCP
+./scripts/ops-test.sh deploy    # Готовность к деплою
+./scripts/ops-test.sh sync      # Синхронизация S1→S2 (с ручным запуском)
+./scripts/ops-test.sh backup    # Бекапы (с ручным запуском)
+./scripts/ops-test.sh failover  # DRILL: полный failover+failback (даунтайм!)
+```
+
+Логи тестов: `logs/ops-test/YYYYMMDD-HHMMSS.log`
 
 ### Server 1 — полный рестарт (ручной, если скрипт недоступен)
 
@@ -308,11 +346,45 @@ docker compose -f docker-compose.failover.yml up -d fragmentdb embedding-proxy o
 
 ## Бекапы
 
-**Автоматические:** CronJob в k8s (`infra/k8s/backup-cronjob.yml`) — daily 03:00 UTC, pg_dump → S3, 30 дней retention.
+### Server 2 (основная система бекапов)
 
-**Ручные (через Telegram бот):** `/backup`
+**Автоматический:** Cron ежедневно 03:00 UTC (`~/faragj/deploy/backup.sh`)
 
-**Скрипт:** `scripts/pg-backup.sh`
+**Что бекапится:**
+- PostgreSQL — `pg_dump` + gzip + integrity verify
+- FragmentDB — tar.gz всех данных
+- Configs — `.env` + `docker-compose.failover.yml`
+
+**Ротация:**
+- Daily: 7 бекапов (`/backups/daily/`)
+- Weekly: 4 бекапа (`/backups/weekly/`, по воскресеньям)
+- Monthly: 3 бекапа (`/backups/monthly/`, 1-е число)
+
+**Размеры (типичные):** PG ~640K, FragmentDB ~64M, configs ~3K
+
+**Ручной запуск:** через Telegram бот `/backup` или напрямую:
+```bash
+ssh faragj@46.225.122.142 "cd ~/faragj/deploy && bash backup.sh"
+```
+
+### Синхронизация Server 1 → Server 2
+
+**Cron:** каждые 5 минут (`~/faragj/deploy/sync.sh`)
+
+**Что синхронизируется:**
+- PostgreSQL — `pg_dump --clean` по SSH → restore на S2
+- FragmentDB — rsync data directory
+
+**Особенности:**
+- Retry 3x с exponential backoff
+- Проверка Docker healthcheck на S1 перед pg_dump
+- Автоматический сброс пароля postgres после restore (для совместимости с PgBouncer)
+- Lock file для предотвращения параллельного запуска
+- Telegram алерты при ошибках
+
+### K8s (опционально)
+
+CronJob (`infra/k8s/backup-cronjob.yml`) — daily 03:00 UTC, pg_dump → S3, 30 дней retention.
 
 ---
 
@@ -435,7 +507,8 @@ sanbao/
 │   ├── deploy.yml                  # K8s deploy (GHCR + rollout)
 │   └── deploy-server.yml           # SSH deploy Server 1 + Server 2 + TG
 ├── scripts/
-│   ├── deploy.sh                   # Zero-downtime deploy (rolling restart)
+│   ├── deploy.sh                   # Zero-downtime deploy (tmux + rolling restart)
+│   ├── ops-test.sh                 # E2E ops testing (health/network/db/redis/cortex/failover)
 │   ├── pg-backup.sh                # PostgreSQL → S3 бекап
 │   ├── start-mcp-servers.sh        # Запуск 5 MCP серверов (dev)
 │   └── upload-static.sh            # Static → S3/CDN

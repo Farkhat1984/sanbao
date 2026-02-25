@@ -151,6 +151,14 @@ pg_sync() {
 
 if pg_sync; then
     PG_ERROR=""
+    # Ensure local postgres password matches .env after restore
+    # (pg_dump --clean can reset role passwords from Server 1's SCRAM hash,
+    # which breaks PgBouncer authentication on Server 2)
+    docker compose -f "${COMPOSE_FILE}" exec -T db \
+        psql -U postgres -c "ALTER USER postgres PASSWORD '${POSTGRES_PASSWORD:-postgres}';" \
+        >/dev/null 2>&1 \
+        && log "PostgreSQL password re-synced for PgBouncer compatibility." \
+        || log "WARNING: Failed to reset postgres password after sync."
 else
     PG_ERROR="pg_dump/psql не удался после ${MAX_RETRIES} попыток"
     log_error "PostgreSQL sync failed after ${MAX_RETRIES} retries!"

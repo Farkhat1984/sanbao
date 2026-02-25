@@ -15,7 +15,28 @@ set -e
 # ─────────────────────────────────────────────────────────────────────────────
 
 cd "$(dirname "$0")/.."
+
+# ─── Auto-tmux: long-running commands survive SSH disconnect ────────────────
+# status/logs are interactive — run directly. Everything else goes through tmux.
+if [ -z "$TMUX" ] && [ "${1:-full}" != "status" ] && [ "${1:-full}" != "logs" ]; then
+  SESSION="deploy-$(date +%H%M%S)"
+  echo "=== Launching deploy in tmux session '$SESSION' ==="
+  echo "  If SSH drops, reconnect with: tmux attach -t $SESSION"
+  echo ""
+  tmux new-session -d -s "$SESSION" "cd $(pwd) && bash scripts/deploy.sh $* ; echo ''; echo 'Deploy finished. Press Enter to close.'; read"
+  exec tmux attach -t "$SESSION"
+fi
+
 COMPOSE="docker compose -f docker-compose.prod.yml"
+
+# ─── Logging: tee all output to timestamped log file ────────────────────────
+LOG_DIR="$(pwd)/logs/deploy"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "=== Deploy started: $(date) | args: ${*:-full} ==="
+echo "=== Log: $LOG_FILE ==="
+echo ""
 
 # Cloudflare cache purge
 CF_API_TOKEN="${CF_API_TOKEN:-ympF_5OJdcmeFAZCrb3As2ArTQhg_5lYQ4nCCxDS}"

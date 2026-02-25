@@ -26,12 +26,23 @@ npx prisma studio    # Visual DB browser
 ```bash
 ./scripts/deploy.sh              # Full rebuild (build + restart all + healthcheck)
 ./scripts/deploy.sh app          # Rebuild only app containers + restart nginx
+./scripts/deploy.sh cortex       # Rebuild AI Cortex stack
 ./scripts/deploy.sh restart      # Restart without rebuild
 ./scripts/deploy.sh status       # Show container status
 ./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
 ```
 
 After code changes, use `./scripts/deploy.sh app` for fastest production update.
+Deploy auto-wraps in tmux (survives SSH disconnect). Logs: `logs/deploy/`.
+
+### Operations testing
+
+```bash
+./scripts/ops-test.sh            # Interactive menu (9 scenarios)
+./scripts/ops-test.sh all        # All tests except failover
+./scripts/ops-test.sh health     # Both servers health check
+./scripts/ops-test.sh failover   # Full failover drill (causes downtime!)
+```
 
 Tests live in `src/__tests__/` (not colocated). Vitest config: jsdom environment, 15s timeout, setup file at `src/__tests__/setup.ts`.
 
