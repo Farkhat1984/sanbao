@@ -150,22 +150,30 @@ BOT_PASSWORD=Ckdshfh231161!
 
 | Сервер | URL (из Docker-контейнеров) | Агенты | Инструменты |
 |--------|----------------------------|--------|-------------|
-| **Юрист** | `http://orchestrator:8120/lawyer` | НПА, Бухгалтер, Брокер | search, lookup, list_domains, get_article, graph_traverse |
+| **Юрист** | `http://orchestrator:8120/lawyer` | Юрист, Бухгалтер | search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate |
 | **Брокер** | `http://orchestrator:8120/broker` | Таможенный брокер | search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration |
-| **AccountingDB** | `https://mcp.sanbao.ai/accountant` | Бухгалтер | (manual discovery) |
+| **Бухгалтер** | `http://orchestrator:8120/accountant` | Бухгалтер | search, get_1c_article, list_domains |
+| **1С Консультант** | `http://orchestrator:8120/consultant_1c` | 1С Ассистент, Бухгалтер | search, get_1c_article, list_domains |
 
 ### AI Cortex в Docker Compose
 
-AI Cortex Orchestrator (v0.7.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Два MCP endpoint'а: `/lawyer` (правовая база РК) и `/broker` (таможня ЕАЭС). App-контейнеры обращаются по Docker-сетевому имени `orchestrator`.
+AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Четыре MCP endpoint'а: `/lawyer` (правовая база РК), `/broker` (таможня ЕАЭС), `/accountant` (1С Бухгалтерия), `/consultant_1c` (платформа 1С). App-контейнеры обращаются по Docker-сетевому имени `orchestrator`.
 
 **Стек:**
 - `embedding-proxy` — DeepInfra embedding service (порт 8097)
 - `fragmentdb` — векторная БД (внутренний порт 8080, хост порт 8110), bind mount `ai_cortex/nexuscore_data`
 - `orchestrator` — MCP сервер (порт 8120), depends on fragmentdb + embedding-proxy
 
+**FragmentDB коллекции:**
+- `legal_kz` — 7,451 статья (17 кодексов РК, BM25-only)
+- `laws_kz` — ~101K законов (НПА РК с adilet.zan.kz, BM25-only)
+- `tnved_rates` — 13,279 кодов (ТН ВЭД ЕАЭС, семантика + BM25)
+- `accounting_1c` — 6,736 чанков (ITS + PRO1C бухгалтерия, семантика + BM25)
+- `platform_1c` — 29,201 чанков (ITS + PRO1C платформа, семантика + BM25)
+
 **Конфигурация:**
-- `.env` → `LAWYER_MCP_URL=http://orchestrator:8120/lawyer`, `BROKER_MCP_URL=http://orchestrator:8120/broker`, `AI_CORTEX_AUTH_TOKEN`
-- БД `McpServer` записи: `mcp-lawyer` → `/lawyer`, `mcp-broker` → `/broker`
+- `.env` → `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
+- БД `McpServer` записи: `mcp-lawyer`, `mcp-broker`, `mcp-accountingdb`, `mcp-consultant-1c`
 - Деплой AI Cortex: `./scripts/deploy.sh cortex`
 
 ---

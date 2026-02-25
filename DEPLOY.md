@@ -611,16 +611,19 @@ docker compose -f docker-compose.prod.yml up -d
 
 | Сервер | URL (из Docker-контейнеров) | Назначение |
 |--------|----------------------------|------------|
-| Юрист | `http://orchestrator:8120/lawyer` | НПА, поиск, статьи |
-| Брокер | `http://orchestrator:8120/broker` | Таможня, пошлины, декларации |
-| Бухгалтер | `https://mcp.sanbao.ai/accountant` | Бухгалтерия |
+| Юрист | `http://orchestrator:8120/lawyer` | НПА (18 кодексов + 101K законов), поиск, статьи |
+| Брокер | `http://orchestrator:8120/broker` | Таможня (13K ТН ВЭД), пошлины, декларации |
+| Бухгалтер | `http://orchestrator:8120/accountant` | 1С Бухгалтерия КЗ (6.7K чанков) |
+| 1С Консультант | `http://orchestrator:8120/consultant_1c` | Платформа 1С (29K чанков, BSP, EDT, ERP) |
 
-AI Cortex Orchestrator (v0.7.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Зависит от `fragmentdb` (векторная БД) и `embedding-proxy` (DeepInfra embeddings). App-контейнеры обращаются по Docker-сетевому имени.
+AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orchestrator` в `docker-compose.prod.yml` (порт 8120). Зависит от `fragmentdb` (векторная БД) и `embedding-proxy` (DeepInfra embeddings). App-контейнеры обращаются по Docker-сетевому имени.
 
 **Env:**
 ```
 LAWYER_MCP_URL=http://orchestrator:8120/lawyer
 BROKER_MCP_URL=http://orchestrator:8120/broker
+ACCOUNTINGDB_MCP_URL=http://orchestrator:8120/accountant
+CONSULTANT_1C_MCP_URL=http://orchestrator:8120/consultant_1c
 AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
 

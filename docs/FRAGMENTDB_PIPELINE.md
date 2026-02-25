@@ -1,28 +1,36 @@
 # FragmentDB (AI Cortex) — Интеграция и пользовательские базы знаний
 
-> Архитектура интеграции Sanbao ↔ AI Cortex (FragmentDB v3 + Orchestrator)
+> Архитектура интеграции Sanbao ↔ AI Cortex (FragmentDB v4 + Orchestrator v0.8.0)
 
 ## Обзор
 
-**FragmentDB** (NexusCore) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
+**FragmentDB** (NexusCore v0.5.0) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
 
-**AI Cortex Orchestrator** (v0.7.0) — Python MCP-сервер (aiohttp) с двумя endpoint'ами:
-- `POST /lawyer` — правовая база РК (18 кодексов, НПА, графы ссылок)
-- `POST /broker` — таможня ЕАЭС (ТН ВЭД, расчёт пошлин, декларации ДТ1)
-- `GET /health` — liveness probe
+**AI Cortex Orchestrator** (v0.8.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
+- `POST /lawyer` — правовая база РК (18 кодексов + 101K законов, графы ссылок)
+- `POST /broker` — таможня ЕАЭС (ТН ВЭД 13K кодов, расчёт пошлин, декларации ДТ1)
+- `POST /accountant` — бухгалтерия 1С для Казахстана (6.7K чанков)
+- `POST /consultant_1c` — платформа 1С (29K чанков, BSP, EDT, ERP, Розница)
+- `GET /health` — liveness probe (version, endpoints, agents, tool_count)
 
 ### Текущая интеграция
 
 ```
 Sanbao App
   ├── Agent: Юрист (system-femida-agent)
-  │   └── MCP: http://orchestrator:8120/lawyer
-  │       └── Tools (5): search, lookup, get_article, graph_traverse, list_domains
+  │   └── MCP: /lawyer
+  │       └── Tools (7): search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate
   ├── Agent: Таможенный брокер (system-broker-agent)
-  │   └── MCP: http://orchestrator:8120/broker
+  │   └── MCP: /broker
   │       └── Tools (7): search, sql_query, classify_goods, calculate_duties,
   │                       get_required_docs, list_domains, generate_declaration
-  └── API: /api/articles → direct MCP call for article deep-linking
+  ├── Agent: Бухгалтер (system-accountant-agent)
+  │   └── MCP: /accountant + /lawyer + /consultant_1c
+  │       └── Tools: search, get_1c_article, list_domains + lawyer tools
+  ├── Agent: 1С Ассистент (system-1c-assistant-agent)
+  │   └── MCP: /consultant_1c
+  │       └── Tools (3): search, get_1c_article, list_domains
+  └── API: /api/articles → direct MCP calls for article:// deep-linking
 ```
 
 ### Env-переменные
@@ -30,6 +38,8 @@ Sanbao App
 ```env
 LAWYER_MCP_URL=http://orchestrator:8120/lawyer
 BROKER_MCP_URL=http://orchestrator:8120/broker
+ACCOUNTINGDB_MCP_URL=http://orchestrator:8120/accountant
+CONSULTANT_1C_MCP_URL=http://orchestrator:8120/consultant_1c
 AI_CORTEX_AUTH_TOKEN=<bearer-token>
 ```
 
@@ -239,27 +249,50 @@ orchestrator: # Python MCP, port 8120
 
 ## Домены (AI Cortex Orchestrator)
 
-| Домен | Тип | Коллекция | Назначение |
-|-------|-----|-----------|------------|
-| `legal_kz` | text | `legal_code_kz` | 18 кодексов РК (~50K документов) |
-| `legal_ref_kz` | table | — | Правовые справочники (МРП, МЗП) |
-| `tnved` | mixed | `tnved_rates` | ТН ВЭД ЕАЭС (13,279 кодов, BM25 weight=2.0) |
-| `sop` | text | `company_sops` | СОП компании |
-| `snip` | text | `construction_norms` | Строительные нормы |
-| `generic` | text | `documents` | Произвольные документы |
-| `sales` | table | — | Данные продаж (пример) |
+| Домен | Тип | Коллекция | Документов | Назначение |
+|-------|-----|-----------|-----------|------------|
+| `legal_kz` | text | `legal_kz` | 7,451 статей | 17 кодексов РК (УК, ГК, НК, ТК, КоАП и др.) |
+| `laws_kz` | text | `laws_kz` | ~101K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
+| `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
+| `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы) |
+| `accounting_1c` | text | `accounting_1c` | 6,736 чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
+| `platform_1c` | text | `platform_1c` | 29,201 чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
+| `sop` | text | `company_sops` | — | СОП компании (пусто) |
+| `snip` | text | `construction_norms` | — | Строительные нормы (пусто) |
+| `generic` | text | `documents` | — | Произвольные документы |
+| `sales` | table | — | — | Данные продаж (пример) |
+
+### Источники данных
+
+| Коллекция | Источник | Скрипт загрузки |
+|-----------|----------|-----------------|
+| `legal_kz` | `data/legal_codes/*.txt` (17 кодексов, 30MB) | `scripts/ingestion/ingest_all_codes.py` |
+| `laws_kz` | `data/adilet/` (парсинг adilet.zan.kz, ~173K НПА) | `scripts/ingestion/ingest_adilet.py` |
+| `tnved_rates` | `data/tnved/tnved_rates.json` (13K записей) | `scripts/ingestion/ingest_tnved.py` |
+| `accounting_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target accounting` |
+| `platform_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target platform` |
+
+### Эмбеддинги
+
+- **Модель:** Qwen/Qwen3-Embedding-8B (DeepInfra API)
+- **Размерность:** 4096
+- **Кэш:** SQLite (`data/cache/embedding_cache.db`, ~223K эмбеддингов, 16GB)
+- **Коллекции с эмбеддингами:** tnved_rates, accounting_1c, platform_1c
+- **BM25-only коллекции:** legal_kz, laws_kz (не требуют эмбеддингов)
 
 ### MCP-инструменты по endpoint'ам
 
-**Lawyer (5 tools):**
+**Lawyer (7 tools):**
 
 | Инструмент | Описание |
 |------------|----------|
 | `search` | Семантический + BM25 гибридный поиск по правовым доменам |
+| `get_article` | Полный текст статьи кодекса по коду и номеру |
+| `get_law` | Полный текст закона/НПА по doc_code (из laws_kz) |
 | `lookup` | Точный поиск по ключевому полю (номер статьи, раздел) |
-| `get_article` | Получить полный текст статьи по коду и номеру (deep-linking) |
 | `graph_traverse` | Обход графа знаний от документа (BFS, cross-references) |
-| `list_domains` | Список доступных доменов |
+| `sql_query` | NL→SQL→DuckDB запрос по справочным таблицам |
+| `get_exchange_rate` | Курсы валют НБ РК на дату |
 
 **Broker (7 tools):**
 
@@ -273,6 +306,22 @@ orchestrator: # Python MCP, port 8120
 | `list_domains` | Список доступных таможенных доменов |
 | `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257) |
 
+**Accountant (3 tools):**
+
+| Инструмент | Описание |
+|------------|----------|
+| `search` | Поиск по базе знаний 1С Бухгалтерии (ITS + PRO1C) |
+| `get_1c_article` | Полный текст статьи 1С по article_id (с картинками) |
+| `list_domains` | Список доступных доменов |
+
+**Consultant 1C (3 tools):**
+
+| Инструмент | Описание |
+|------------|----------|
+| `search` | Поиск по документации платформы 1С (BSP, EDT, ERP, Розница) |
+| `get_1c_article` | Полный текст статьи 1С по article_id (с картинками) |
+| `list_domains` | Список доступных доменов |
+
 ---
 
 ## Мониторинг
@@ -283,23 +332,48 @@ orchestrator: # Python MCP, port 8120
 | `GET /health` (fragmentdb:8080) | Статус FragmentDB |
 | `GET /metrics` (fragmentdb:8080) | Prometheus метрики (QPS, latency) |
 
-### Производительность (2x Xeon E5-2695 v4, 21K документов)
+### Производительность (2x Xeon E5-2695 v4, ~157K документов)
 
 | Операция | p50 | p99 | MCP tool |
 |----------|-----|-----|----------|
 | BM25 search | 6 ms | 31 ms | `search` |
 | Document read | 1 ms | 27 ms | `get_article` |
 | Metadata scan | 88 ms | 138 ms | `lookup` |
+| 1C article (full) | 50 ms | 500 ms | `get_1c_article` |
+| Law (full text) | 100 ms | 2s | `get_law` |
+
+---
+
+## article:// Deep Linking Protocol
+
+AI-ответы содержат ссылки `article://` — при клике открывается полный текст в UnifiedPanel.
+
+### Форматы
+
+```
+[ст. 188 УК РК](article://criminal_code/188)          → /api/articles → /lawyer get_article
+[Закон о защите](article://law/Z000000072_)            → /api/articles → /lawyer get_law
+[Начисление зарплаты](article://1c_buh/{article_id})   → /api/articles → /accountant get_1c_article
+[Настройка обмена](article://1c/{article_id})          → /api/articles → /consultant_1c get_1c_article
+```
+
+### Компоненты
+
+- `src/components/chat/ArticleLink.tsx` — кликабельная кнопка § / 📖
+- `src/components/panel/ArticleContentView.tsx` — рендер в панели (markdown для 1С с картинками)
+- `src/stores/articleStore.ts` — LRU-кэш, загрузка через /api/articles
+- `src/app/api/articles/route.ts` — маршрутизация по code type → MCP tool
 
 ---
 
 ## Roadmap (пользовательские базы знаний)
 
-1. **Phase 1** — Базовая интеграция: MCP agents (Юрист + Брокер) ✅
-2. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
-3. **Phase 3** — Per-user квоты и биллинг (Plan.maxStorageMb)
-4. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой
-5. **Phase 5** — Мониторинг и алертинг
+1. **Phase 1** — Базовая интеграция: 4 MCP agents (Юрист + Брокер + Бухгалтер + 1С Ассистент) ✅
+2. **Phase 1.5** — Полная загрузка данных: 5 коллекций (legal_kz, laws_kz, tnved_rates, accounting_1c, platform_1c) ✅
+3. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
+4. **Phase 3** — Per-user квоты и биллинг (Plan.maxStorageMb)
+5. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой
+6. **Phase 5** — Мониторинг и алертинг
 
 ---
 
@@ -307,4 +381,5 @@ orchestrator: # Python MCP, port 8120
 
 - **AI Cortex** — FragmentDB Rust server + Python orchestrator (`/home/metadmin/faragj/ai_cortex/`)
 - **Embedding** — DeepInfra Qwen3-Embedding-8B (dimension: 4096)
-- **Docker** — `docker-compose.failover.yml` запускает fragmentdb + orchestrator + embedding-proxy
+- **Docker** — `docker-compose.prod.yml` запускает fragmentdb + orchestrator + embedding-proxy
+- **Ingestion scripts** — `ai_cortex/scripts/ingestion/` (ingest_all_codes.py, ingest_1c.py, ingest_tnved.py, ingest_adilet.py)

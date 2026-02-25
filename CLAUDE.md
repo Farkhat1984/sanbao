@@ -157,7 +157,14 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 ### MCP Integration
 
 - `src/lib/mcp-client.ts` — connects to MCP servers via `@modelcontextprotocol/sdk`
-- **AI Cortex** (external): Orchestrator v0.7.0 at `:8120` — `/lawyer` (legal RK) + `/broker` (customs EAEU). Env: `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
+- **AI Cortex** (external): Orchestrator v0.8.0 at `:8120` — 4 MCP endpoints:
+  - `/lawyer` — legal RK (18 codes + 101K laws). Tools: search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate
+  - `/broker` — customs EAEU (13K TNVED codes). Tools: search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration
+  - `/accountant` — 1C accounting KZ (6.7K chunks). Tools: search, get_1c_article, list_domains
+  - `/consultant_1c` — 1C platform (29K chunks). Tools: search, get_1c_article, list_domains
+- **Env:** `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
+- **FragmentDB collections:** legal_kz (7,451 articles), laws_kz (~101K laws), tnved_rates (13,279 codes), accounting_1c (6,736 chunks), platform_1c (29,201 chunks)
+- **article:// protocol:** `[label](article://{code}/{id})` — opens articles in UnifiedPanel. Supports: 18 legal codes, laws (doc_code), 1c/1c_buh (article_id)
 - **Admin toggle:** `McpServer.isEnabled` controls user visibility
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
 - `route.ts` loads user-enabled global MCPs + user's own connected MCPs
