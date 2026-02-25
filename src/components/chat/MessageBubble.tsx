@@ -139,15 +139,19 @@ const markdownComponents = {
     </div>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
-    // article://criminal_code/188 → clickable ArticleLink
+    // article://criminal_code/188 → clickable ArticleLink (internal panel)
     if (href?.startsWith("article://")) {
-      const parts = href.replace("article://", "").split("/");
-      const code = parts[0] || "";
-      const article = parts[1] || "";
+      const raw = href.replace("article://", "").replace(/\/+$/, ""); // strip trailing slashes
+      const slashIdx = raw.indexOf("/");
+      const code = slashIdx > 0 ? raw.slice(0, slashIdx) : raw;
+      const article = slashIdx > 0 ? raw.slice(slashIdx + 1) : "";
       if (code && article) {
         return <ArticleLink code={code} article={article}>{children}</ArticleLink>;
       }
+      // Malformed article:// (no article number) — render as plain text, never <a>
+      return <span className="text-legal-ref font-medium">§ {children}</span>;
     }
+    // External links → open in new browser tab
     return (
       <a
         href={href}
@@ -156,6 +160,7 @@ const markdownComponents = {
         className="text-accent hover:underline inline-flex items-center gap-0.5"
       >
         {children}
+        <ExternalLink className="h-3 w-3 inline shrink-0 opacity-40" />
       </a>
     );
   },
