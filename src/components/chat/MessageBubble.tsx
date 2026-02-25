@@ -11,6 +11,7 @@ import {
   FileText,
   ExternalLink,
   Pencil,
+  Image,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -21,7 +22,7 @@ import { LegalReference } from "./LegalReference";
 import { ArticleLink } from "./ArticleLink";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
-import { openArtifactInPanel } from "@/lib/panel-actions";
+import { openArtifactInPanel, openImageInPanel } from "@/lib/panel-actions";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
@@ -164,13 +165,21 @@ const markdownComponents = {
       </a>
     );
   },
-  img: ({ src, alt }: { src?: string; alt?: string }) => (
-    <img
-      src={src}
-      alt={alt || ""}
-      className="rounded-xl border border-border my-3 max-w-full h-auto"
-      loading="lazy"
-    />
+  img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+    <button
+      type="button"
+      onClick={() => typeof props.src === "string" && openImageInPanel(props.src, String(props.alt || ""))}
+      className="my-2 flex items-center gap-3 p-2.5 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/img"
+    >
+      <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
+        <Image className="h-5 w-5 text-accent" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-text-primary truncate">{props.alt || "Изображение"}</p>
+        <p className="text-xs text-text-muted">Нажмите чтобы открыть</p>
+      </div>
+      <ExternalLink className="h-4 w-4 text-text-muted group-hover/img:text-accent transition-colors shrink-0" />
+    </button>
   ),
   code: ({
     className,

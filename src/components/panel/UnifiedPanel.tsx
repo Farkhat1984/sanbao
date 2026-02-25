@@ -78,6 +78,17 @@ export function UnifiedPanel() {
     if (!activeTab) return null;
     if (activeTab.kind === "artifact") return <ArtifactContent />;
     if (activeTab.kind === "article") return <ArticleContentView />;
+    if (activeTab.kind === "image" && activeTab.imageSrc) {
+      return (
+        <div className="h-full flex items-center justify-center p-4 overflow-auto bg-surface-alt">
+          <img
+            src={activeTab.imageSrc}
+            alt={activeTab.label}
+            className="max-w-full max-h-full object-contain rounded-xl border border-border shadow-sm"
+          />
+        </div>
+      );
+    }
     return null;
   };
 

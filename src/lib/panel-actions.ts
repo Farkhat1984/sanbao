@@ -4,6 +4,19 @@ import { usePanelStore } from "@/stores/panelStore";
 import type { ArtifactData } from "@/types/chat";
 
 /**
+ * Open an image in the unified panel (like artifacts / articles).
+ */
+export function openImageInPanel(src: string, alt: string) {
+  const { openTab } = usePanelStore.getState();
+  openTab({
+    id: `image-${src}`,
+    kind: "image",
+    label: alt || "Изображение",
+    imageSrc: src,
+  });
+}
+
+/**
  * Open an artifact in the unified panel.
  * Calls artifactStore for data tracking, then panelStore for UI.
  */
