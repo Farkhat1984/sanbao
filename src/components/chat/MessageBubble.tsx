@@ -164,6 +164,14 @@ const markdownComponents = {
       </a>
     );
   },
+  img: ({ src, alt }: { src?: string; alt?: string }) => (
+    <img
+      src={src}
+      alt={alt || ""}
+      className="rounded-xl border border-border my-3 max-w-full h-auto"
+      loading="lazy"
+    />
+  ),
   code: ({
     className,
     children,
