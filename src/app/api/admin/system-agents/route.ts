@@ -11,8 +11,10 @@ export async function GET() {
     where: { isSystem: true },
     orderBy: { sortOrder: "asc" },
     include: {
-      tools: { include: { tool: { select: { id: true, name: true } } } },
-      plugins: { include: { plugin: { select: { id: true, name: true } } } },
+      skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+      mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+      tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+      plugins: { include: { plugin: { select: { id: true, name: true, icon: true, iconColor: true } } } },
     },
     take: 500,
   });
@@ -29,6 +31,8 @@ export async function GET() {
     isActive: a.status === "APPROVED",
     sortOrder: a.sortOrder,
     starterPrompts: a.starterPrompts || [],
+    skills: a.skills.map((s) => s.skill),
+    mcpServers: a.mcpServers.map((m) => m.mcpServer),
     tools: a.tools.map((t) => t.tool),
     plugins: a.plugins.map((p) => p.plugin),
   })));
@@ -39,7 +43,7 @@ export async function POST(req: Request) {
   if (result.error) return result.error;
 
   const body = await req.json();
-  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder, starterPrompts } = body;
+  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = body;
 
   if (!name || !systemPrompt) {
     return NextResponse.json({ error: "Обязательные поля: name, systemPrompt" }, { status: 400 });
@@ -60,6 +64,20 @@ export async function POST(req: Request) {
       starterPrompts: Array.isArray(starterPrompts) ? starterPrompts.filter((s: string) => s.trim()) : [],
     },
   });
+
+  // Create associations
+  if (Array.isArray(skillIds) && skillIds.length > 0) {
+    await prisma.agentSkill.createMany({ data: skillIds.map((skillId: string) => ({ agentId: agent.id, skillId })) });
+  }
+  if (Array.isArray(mcpServerIds) && mcpServerIds.length > 0) {
+    await prisma.agentMcpServer.createMany({ data: mcpServerIds.map((mcpServerId: string) => ({ agentId: agent.id, mcpServerId })) });
+  }
+  if (Array.isArray(toolIds) && toolIds.length > 0) {
+    await prisma.agentTool.createMany({ data: toolIds.map((toolId: string) => ({ agentId: agent.id, toolId })) });
+  }
+  if (Array.isArray(pluginIds) && pluginIds.length > 0) {
+    await prisma.agentPlugin.createMany({ data: pluginIds.map((pluginId: string) => ({ agentId: agent.id, pluginId })) });
+  }
 
   return NextResponse.json({
     id: agent.id,
