@@ -6,10 +6,10 @@
 
 **FragmentDB** (NexusCore v0.5.0) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
 
-**AI Cortex Orchestrator** (v0.8.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
-- `POST /lawyer` — правовая база РК (18 кодексов + 101K законов, графы ссылок)
+**AI Cortex Orchestrator** (v0.9.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
+- `POST /lawyer` — правовая база РК (18 кодексов + 101K законов, графы ссылок, sql_query → legal_ref_kz)
 - `POST /broker` — таможня ЕАЭС (ТН ВЭД 13K кодов, расчёт пошлин, декларации ДТ1)
-- `POST /accountant` — бухгалтерия 1С для Казахстана (6.7K чанков)
+- `POST /accountant` — бухгалтерия 1С для Казахстана (6.7K чанков + sql_query → 6 DuckDB-таблиц)
 - `POST /consultant_1c` — платформа 1С (29K чанков, BSP, EDT, ERP, Розница)
 - `GET /health` — liveness probe (version, endpoints, agents, tool_count)
 
@@ -26,7 +26,7 @@ Sanbao App
   │                       get_required_docs, list_domains, generate_declaration
   ├── Agent: Бухгалтер (system-accountant-agent)
   │   └── MCP: /accountant + /lawyer + /consultant_1c
-  │       └── Tools: search, get_1c_article, list_domains + lawyer tools
+  │       └── Tools: search, get_1c_article, sql_query, list_domains + lawyer tools
   ├── Agent: 1С Ассистент (system-1c-assistant-agent)
   │   └── MCP: /consultant_1c
   │       └── Tools (3): search, get_1c_article, list_domains
@@ -231,7 +231,9 @@ AI_CORTEX_AUTH_TOKEN=<bearer-token>
 FRAGMENTDB_URL=http://fragmentdb:8080      # REST API v3
 AI_CORTEX_PORT=8120                         # Orchestrator port
 AI_CORTEX_AUTH_TOKEN=<bearer-token>         # MCP auth
-DEEPINFRA_API_KEY=<key>                     # Embedding service
+MOONSHOT_API_KEY=<key>                      # LLM for NL-to-SQL (Kimi K2.5, primary)
+DEEPINFRA_API_KEY=<key>                     # Embedding service + LLM fallback
+FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,platform_1c,tnved,laws_kz
 ```
 
 ### Docker Compose (failover)
@@ -254,6 +256,7 @@ orchestrator: # Python MCP, port 8120
 | `legal_kz` | text | `legal_kz` | 7,451 статей | 17 кодексов РК (УК, ГК, НК, ТК, КоАП и др.) |
 | `laws_kz` | text | `laws_kz` | ~101K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
 | `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
+| `accounting_ref_kz` | table | — | 6 таблиц | Бухгалтерские справочники (ставки, ТПС, проводки, амортизация, ФНО) |
 | `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы) |
 | `accounting_1c` | text | `accounting_1c` | 6,736 чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
 | `platform_1c` | text | `platform_1c` | 29,201 чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
@@ -271,6 +274,7 @@ orchestrator: # Python MCP, port 8120
 | `tnved_rates` | `data/tnved/tnved_rates.json` (13K записей) | `scripts/ingestion/ingest_tnved.py` |
 | `accounting_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target accounting` |
 | `platform_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target platform` |
+| `accounting_ref_kz` | `data/accounting_ref_kz/*.csv` (5 CSV) + `data/legal_reference_kz.csv` | CSV → DuckDB in-memory (автозагрузка) |
 
 ### Эмбеддинги
 
@@ -291,7 +295,7 @@ orchestrator: # Python MCP, port 8120
 | `get_law` | Полный текст закона/НПА по doc_code (из laws_kz) |
 | `lookup` | Точный поиск по ключевому полю (номер статьи, раздел) |
 | `graph_traverse` | Обход графа знаний от документа (BFS, cross-references) |
-| `sql_query` | NL→SQL→DuckDB запрос по справочным таблицам |
+| `sql_query` | NL→SQL→DuckDB запрос по справочным таблицам → domain: legal_ref_kz |
 | `get_exchange_rate` | Курсы валют НБ РК на дату |
 
 **Broker (7 tools):**
@@ -306,21 +310,35 @@ orchestrator: # Python MCP, port 8120
 | `list_domains` | Список доступных таможенных доменов |
 | `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257) |
 
-**Accountant (3 tools):**
+**Accountant (6 tools):**
 
 | Инструмент | Описание |
 |------------|----------|
-| `search` | Поиск по базе знаний 1С Бухгалтерии (ITS + PRO1C) |
+| `search` | Поиск по базе знаний 1С Бухгалтерии (ITS + PRO1C) → domain: accounting_1c |
 | `get_1c_article` | Полный текст статьи 1С по article_id (с картинками) |
+| `sql_query` | NL→SQL→DuckDB по 6 справочным таблицам → domain: accounting_ref_kz |
 | `list_domains` | Список доступных доменов |
+| `get_exchange_rate` | Курсы валют НБ РК на дату |
 
-**Consultant 1C (3 tools):**
+`sql_query` таблицы (DuckDB in-memory):
+
+| Таблица | Строк | Содержимое |
+|---------|-------|------------|
+| `tax_rates` | ~60 | Ставки налогов/взносов по годам (ИПН, КПН, НДС, ОПВ, ОПВР, ВОСМС, СО, СН) |
+| `chart_of_accounts` | ~150 | Типовой план счетов РК (1010-7710) |
+| `journal_templates` | ~80 | Типовые проводки: зарплата, покупки, продажи, ОС, амортизация, налоги |
+| `depreciation_groups` | ~15 | Группы ОС + нормы амортизации (ст. 271 НК РК) |
+| `tax_calendar` | ~25 | Сроки сдачи ФНО (100, 200, 300, 910 и др.) |
+| `legal_params` | ~40 | МРП, МЗП, ПМ, БВ, МП, БПВ по годам |
+
+**Consultant 1C (4 tools):**
 
 | Инструмент | Описание |
 |------------|----------|
 | `search` | Поиск по документации платформы 1С (BSP, EDT, ERP, Розница) |
 | `get_1c_article` | Полный текст статьи 1С по article_id (с картинками) |
 | `list_domains` | Список доступных доменов |
+| `get_exchange_rate` | Курсы валют НБ РК на дату |
 
 ---
 
@@ -370,7 +388,8 @@ AI-ответы содержат ссылки `article://` — при клике
 
 1. **Phase 1** — Базовая интеграция: 4 MCP agents (Юрист + Брокер + Бухгалтер + 1С Ассистент) ✅
 2. **Phase 1.5** — Полная загрузка данных: 5 коллекций (legal_kz, laws_kz, tnved_rates, accounting_1c, platform_1c) ✅
-3. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
+3. **Phase 1.6** — DuckDB-backed sql_query для Бухгалтера (6 таблиц: ставки, ТПС, проводки, амортизация, ФНО, МРП) + per-tool domain routing ✅
+4. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
 4. **Phase 3** — Per-user квоты и биллинг (Plan.maxStorageMb)
 5. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой
 6. **Phase 5** — Мониторинг и алертинг

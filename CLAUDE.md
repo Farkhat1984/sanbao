@@ -161,7 +161,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **Entry:** `src/lib/native-tools.ts` — re-exports + side-effect imports of all tool modules
 - **Modules:** `system.ts` (time, user info, context), `http-request.ts`, `productivity.ts` (tasks, memory, notifications, scratchpad), `analysis.ts` (calculate, CSV, chart data), `content.ts` (read/search knowledge)
 - **14 tools:** `http_request`, `get_current_time`, `get_user_info`, `get_conversation_context`, `create_task`, `save_memory`, `send_notification`, `write_scratchpad`, `read_scratchpad`, `calculate`, `analyze_csv`, `read_knowledge`, `search_knowledge`, `generate_chart_data`
-- Tool call loop max 5 iterations (`NATIVE_TOOL_MAX_TURNS` in route.ts)
+- Tool call loop max 50 iterations (`NATIVE_TOOL_MAX_TURNS` in constants.ts)
 - Stream phase `using_tool` via `{t:"s", v:"using_tool"}`
 - Adding a new native tool: create function in appropriate module → call `registerNativeTool()` → it auto-registers on import
 
@@ -171,8 +171,8 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **AI Cortex** (external): Orchestrator v0.8.0 at `:8120` — 4 MCP endpoints:
   - `/lawyer` — legal RK (18 codes + 101K laws). Tools: search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate
   - `/broker` — customs EAEU (13K TNVED codes). Tools: search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration
-  - `/accountant` — 1C accounting KZ (6.7K chunks). Tools: search, get_1c_article, list_domains
-  - `/consultant_1c` — 1C platform (29K chunks). Tools: search, get_1c_article, list_domains
+  - `/accountant` — 1C accounting KZ (6.7K chunks + tabular ref data). Tools: search, get_1c_article, sql_query, list_domains, get_exchange_rate
+  - `/consultant_1c` — 1C platform (29K chunks). Tools: search, get_1c_article, list_domains, get_exchange_rate
 - **Env:** `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
 - **FragmentDB collections:** legal_kz (7,451 articles), laws_kz (~101K laws), tnved_rates (13,279 codes), accounting_1c (6,736 chunks), platform_1c (29,201 chunks)
 - **article:// protocol:** `[label](article://{code}/{id})` — opens articles in UnifiedPanel. Supports: 18 legal codes, laws (doc_code), 1c/1c_buh (article_id)
@@ -180,6 +180,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
 - `route.ts` loads user-enabled global MCPs + user's own connected MCPs
 - User pages: `/mcp` for managing personal MCP connections
+- **MCP tool namespace dedup:** when multiple MCP servers expose tools with identical names (e.g. `search`), `route.ts` auto-prefixes them with URL path segment (`accountant_search`, `lawyer_search`). `McpToolContext.originalName` stores the original name for dispatch via `callMcpTool()`
 - **SSRF protection** on MCP server URL registration
 
 ### Export System

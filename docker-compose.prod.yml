@@ -147,8 +147,10 @@ services:
       - FRAGMENTDB_URL=http://fragmentdb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
+      - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,platform_1c,tnved,laws_kz
     depends_on:
       fragmentdb:
         condition: service_healthy
@@ -158,8 +160,8 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8120/health || python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8120)); s.close()\""]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 600s
     deploy:
       resources:
         limits:

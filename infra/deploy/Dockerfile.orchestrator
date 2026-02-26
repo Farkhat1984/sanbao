@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir \
     duckdb==1.*
 
 COPY ai_cortex/orchestrator/ /app/orchestrator/
+COPY ai_cortex/data/accounting_ref_kz/ /app/data/accounting_ref_kz/
+COPY ai_cortex/data/legal_reference_kz.csv /app/data/legal_reference_kz.csv
 
 EXPOSE 8120
 
