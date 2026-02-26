@@ -1,6 +1,7 @@
 "use client";
 
-import { Triangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
@@ -77,7 +78,7 @@ export function WelcomeScreen() {
         })() : (
           <>
             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
-              <Triangle className="h-8 w-8 text-white" />
+              <SanbaoCompass size={32} className="text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">
               Sanbao AI

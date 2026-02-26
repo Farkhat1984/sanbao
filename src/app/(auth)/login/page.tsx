@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Triangle, ShieldCheck, Brain, Zap } from "lucide-react";
+import { ShieldCheck, Brain, Zap } from "lucide-react";
+import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
       {/* Logo */}
       <div className="text-center mb-8">
         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Triangle className="h-7 w-7 text-white" />
+          <SanbaoCompass size={28} className="text-white" />
         </div>
         <h1 className="text-2xl font-bold text-text-primary">Sanbao AI</h1>
         <p className="text-sm text-text-secondary mt-1">

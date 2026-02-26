@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 type CompassState = "idle" | "loading" | "thinking" | "found";
@@ -10,30 +11,92 @@ interface SanbaoCompassProps {
   className?: string;
 }
 
-const NEEDLE_ANIMATIONS: Record<CompassState, {
-  animate: Record<string, number | number[]>;
-  transition: Record<string, unknown>;
-}> = {
-  idle: {
-    animate: { rotate: [0, 5, -5, 3, -3, 0] },
-    transition: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-  },
-  loading: {
-    animate: { rotate: [0, -45, 45, -30, 30, -15, 15, 0] },
-    transition: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-  },
-  thinking: {
-    animate: { rotate: [0, 360] },
-    transition: { duration: 3, repeat: Infinity, ease: "linear" },
-  },
-  found: {
-    animate: { rotate: 0 },
-    transition: { type: "spring", damping: 8, stiffness: 200 },
-  },
-};
+// Kaaba, Mecca
+const MECCA_LAT = 21.4225;
+const MECCA_LNG = 39.8262;
+
+// Default fallback: Almaty, Kazakhstan
+const DEFAULT_LAT = 43.2389;
+const DEFAULT_LNG = 76.9453;
+
+function calculateQibla(lat: number, lng: number): number {
+  const phi1 = (lat * Math.PI) / 180;
+  const phi2 = (MECCA_LAT * Math.PI) / 180;
+  const dLambda = ((MECCA_LNG - lng) * Math.PI) / 180;
+
+  const x = Math.sin(dLambda);
+  const y = Math.cos(phi1) * Math.tan(phi2) - Math.sin(phi1) * Math.cos(dLambda);
+
+  let bearing = (Math.atan2(x, y) * 180) / Math.PI;
+  return (bearing + 360) % 360;
+}
 
 export function SanbaoCompass({ state = "idle", size = 32, className = "" }: SanbaoCompassProps) {
-  const anim = NEEDLE_ANIMATIONS[state];
+  const [qibla, setQibla] = useState(() => calculateQibla(DEFAULT_LAT, DEFAULT_LNG));
+
+  // Determine user location: IP geolocation first, then browser API if already granted
+  useEffect(() => {
+    let cancelled = false;
+
+    // 1. Try IP-based geolocation (no permission needed, works everywhere)
+    fetch("https://ip-api.com/json/?fields=lat,lon", { signal: AbortSignal.timeout(3000) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && typeof data.lat === "number" && typeof data.lon === "number") {
+          setQibla(calculateQibla(data.lat, data.lon));
+        }
+      })
+      .catch(() => {});
+
+    // 2. If browser geolocation already granted — use precise coords (overrides IP)
+    navigator?.permissions
+      ?.query({ name: "geolocation" })
+      .then((result) => {
+        if (result.state === "granted") {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (!cancelled) {
+                setQibla(calculateQibla(pos.coords.latitude, pos.coords.longitude));
+              }
+            },
+            () => {},
+            { maximumAge: 86400000, timeout: 5000 }
+          );
+        }
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const q = qibla;
+
+  const getNeedleAnimation = () => {
+    switch (state) {
+      case "idle":
+        return {
+          animate: { rotate: [q, q + 5, q - 5, q + 3, q - 3, q] },
+          transition: { duration: 4, repeat: Infinity, ease: "easeInOut" as const },
+        };
+      case "loading":
+        return {
+          animate: { rotate: [q, q - 45, q + 45, q - 30, q + 30, q - 15, q + 15, q] },
+          transition: { duration: 2, repeat: Infinity, ease: "easeInOut" as const },
+        };
+      case "thinking":
+        return {
+          animate: { rotate: [q, q + 360] },
+          transition: { duration: 3, repeat: Infinity, ease: "linear" as const },
+        };
+      case "found":
+        return {
+          animate: { rotate: q },
+          transition: { type: "spring" as const, damping: 8, stiffness: 200 },
+        };
+    }
+  };
+
+  const anim = getNeedleAnimation();
   const r = size / 2;
   const strokeW = size * 0.06;
   const needleLen = r * 0.6;
@@ -89,7 +152,7 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
         animate={anim.animate}
         transition={anim.transition}
       >
-        {/* North needle (red/accent) */}
+        {/* Qibla needle (accent) */}
         <line
           x1={r}
           y1={r}
@@ -99,7 +162,7 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
           strokeWidth={strokeW * 1.2}
           strokeLinecap="round"
         />
-        {/* South needle (muted) */}
+        {/* Opposite needle (muted) */}
         <line
           x1={r}
           y1={r}
@@ -110,7 +173,7 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
           strokeLinecap="round"
           opacity={0.3}
         />
-        {/* North tip diamond */}
+        {/* Tip diamond */}
         <polygon
           points={`${r},${r - needleLen - size * 0.06} ${r - size * 0.04},${r - needleLen + size * 0.02} ${r + size * 0.04},${r - needleLen + size * 0.02}`}
           fill="var(--accent, #4F6EF7)"
