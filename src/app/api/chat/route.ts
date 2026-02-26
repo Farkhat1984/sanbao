@@ -278,14 +278,43 @@ export async function POST(req: Request) {
     }
   }
 
-  // Deduplicate MCP tools by name (API rejects duplicate function names)
+  // Deduplicate MCP tools by name (API rejects duplicate function names).
+  // When multiple MCP servers expose tools with the same name (e.g. "search"),
+  // prefix them with a namespace derived from the URL path so the AI can call each one.
   {
+    // 1. Detect which names collide
+    const nameCount = new Map<string, number>();
+    for (const tool of agentMcpTools) {
+      nameCount.set(tool.name, (nameCount.get(tool.name) || 0) + 1);
+    }
+
+    // 2. Build namespace prefix from MCP server URL path (e.g. "/accountant" → "accountant")
+    const urlNamespace = (url: string): string => {
+      try {
+        const path = new URL(url).pathname;
+        const segment = path.split("/").filter(Boolean).pop() || "mcp";
+        return segment.replace(/[^a-zA-Z0-9_]/g, "_");
+      } catch {
+        return "mcp";
+      }
+    };
+
+    // 3. Deduplicate: namespace colliding tools, keep unique ones as-is
     const seen = new Set<string>();
     const deduped: McpToolContext[] = [];
     for (const tool of agentMcpTools) {
-      if (!seen.has(tool.name)) {
-        seen.add(tool.name);
-        deduped.push(tool);
+      const isCollision = (nameCount.get(tool.name) || 0) > 1;
+      const finalName = isCollision
+        ? `${urlNamespace(tool.url)}_${tool.name}`
+        : tool.name;
+
+      if (!seen.has(finalName)) {
+        seen.add(finalName);
+        deduped.push({
+          ...tool,
+          originalName: tool.name,
+          name: finalName,
+        });
       }
     }
     agentMcpTools.length = 0;

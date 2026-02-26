@@ -58,6 +58,8 @@ export interface McpToolContext {
   transport: "SSE" | "STREAMABLE_HTTP";
   apiKey: string | null;
   name: string;
+  /** Original tool name on the MCP server (before namespace prefix). Used for dispatch. */
+  originalName?: string;
   description: string;
   inputSchema: Record<string, unknown>;
 }

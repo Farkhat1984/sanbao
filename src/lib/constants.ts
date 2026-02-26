@@ -134,7 +134,7 @@ export const NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS = 60_000;
 export const NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES = 50 * 1024; // 50KB
 export const NATIVE_TOOL_CSV_MAX_BYTES = 100 * 1024; // 100KB
 export const NATIVE_TOOL_CSV_MAX_ROWS = 10_000;
-export const NATIVE_TOOL_MAX_TURNS = 5;
+export const NATIVE_TOOL_MAX_TURNS = 50;
 
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;

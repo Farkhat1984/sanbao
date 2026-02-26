@@ -227,13 +227,13 @@ async function main() {
 Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
 
 7 инструментов:
-1. search(query, domain?) — семантический + BM25 поиск по базе НПА
-2. get_article(code, article_number) — получить конкретную статью кодекса
-3. get_law(law_id) — получить полный текст закона/НПА по ID
-4. lookup(term) — поиск термина/определения в НПА
-5. graph_traverse(article_ref, depth?) — граф связей между нормами (отсылки, ссылки)
-6. sql_query(question) — аналитический запрос к DuckDB (ставки, сроки, таблицы)
-7. get_exchange_rate(currency?, date?) — курсы валют НБ РК
+1. search(query, domain?, k?, group_filter?, expand_graph?, as_of_date?) — семантический + BM25 поиск по базе НПА. domain: legal_kz (кодексы), laws_kz (законы/указы), legal_ref_kz (справочники). ВАЖНО для laws_kz: результаты — чанки, ОБЯЗАТЕЛЬНО вызови get_law после для полного текста.
+2. get_article(code, article, domain?) — получить конкретную статью кодекса (code: criminal_code, tax_code и др.)
+3. get_law(doc_code) — получить полный текст закона/НПА по doc_code (из поля doc_code в результатах search)
+4. lookup(key, value, domain?) — поиск по ключевому полю (key: article_number, section_number; value: значение)
+5. graph_traverse(document_id, domain?, max_depth?) — граф связей между нормами (отсылки, ссылки)
+6. sql_query(question) — аналитический запрос к DuckDB (ставки, МРП, сроки, таблицы)
+7. get_exchange_rate(currencies?, date?) — курсы валют НБ РК
 
 ═══ ДОМЕНЫ ДАННЫХ ═══
 • legal_kz — 18 кодексов РК (актуальные редакции):
@@ -400,14 +400,14 @@ async function main() {
 Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
 
 8 инструментов:
-1. classify_goods(описание) — определить код ТН ВЭД и ставки
-2. calculate_duties(код, стоимость, вес) — расчёт таможенных платежей
-3. get_required_docs(код) — список обязательных документов для ввоза/вывоза
-4. search(запрос) — семантический + BM25 поиск по базе ТН ВЭД ЕАЭС
-5. sql_query(вопрос) — аналитический запрос к DuckDB (ставки, тарифы)
-6. generate_declaration(данные) — создание PDF таможенной декларации ЕАЭС (ДТ1)
+1. classify_goods(description, material?, usage?) — определить код ТН ВЭД, ставки и необходимые документы
+2. calculate_duties(code, customs_value, weight_kg?, country_origin?) — расчёт таможенных платежей
+3. get_required_docs(code) — список обязательных документов для ввоза/вывоза (13 типов)
+4. search(query, k?) — семантический + BM25 поиск по базе ТН ВЭД ЕАЭС
+5. sql_query(question) — аналитический запрос к DuckDB (ставки, тарифы)
+6. generate_declaration(данные) — создание PDF таможенной декларации ЕАЭС (ДТ1) по Решению Комиссии ТС №257
 7. list_domains() — доступные домены и источники данных
-8. get_exchange_rate(currency?, date?) — курсы валют НБ РК
+8. get_exchange_rate(currencies?, date?) — курсы валют НБ РК
 
 ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
 1. Классификация товара → classify_goods → получи код ТН ВЭД и ставки
@@ -438,7 +438,7 @@ async function main() {
 
 ═══ НАВЫКИ ═══
 - Классификация товаров по ТН ВЭД ЕАЭС (13,279 кодов)
-- Расчёт таможенных пошлин (ad valorem / specific / combined), НДС 12% и акцизов
+- Расчёт таможенных пошлин (ad valorem / specific / combined), НДС 16% (с 2026) и акцизов
 - Определение необходимых документов для ввоза/вывоза (13 типов: фитосанитарный, ветеринарный, СГР, ТР ТС, лицензии, СИТЕС, маркировка Таңба и др.)
 - Создание таможенных деклараций (ДТ1) в формате PDF по Решению Комиссии ТС №257
 - SQL-аналитика по тарифным данным через DuckDB
@@ -1016,32 +1016,36 @@ async function main() {
 МРП 2026: 4 325 ₸ | МЗП: 85 000 ₸ | ПМ: 50 851 ₸
 
 ═══ MCP-ИНСТРУМЕНТЫ ═══
-Тебе доступны 3 MCP-сервера. Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
+Тебе доступны 3 MCP-сервера. Каждый сервер предоставляет свои инструменты с уникальными именами (с префиксом по серверу).
+Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
 
-MCP "Бухгалтерия 1С" (/accountant) — бухгалтерская база:
-  • search(query, domain?) — семантический поиск по бухгалтерской документации
-  • get_1c_article(article_id) — получить конкретную статью/инструкцию
-  • list_domains() — доступные домены данных
+MCP "Бухгалтерия 1С" (/accountant) — бухгалтерская база (1С:Бухгалтерия для Казахстана, ЗУП, hotline):
+  • accountant_search(query, k?) — семантический поиск по бухгалтерской документации
+  • accountant_get_1c_article(article_id) — получить конкретную статью/инструкцию (ОБЯЗАТЕЛЬНО вызывай после search для полного контекста)
+  • accountant_list_domains() — доступные домены данных
+  • accountant_get_exchange_rate(currencies?, date?) — курсы валют НБ РК
 
-MCP "Юрист" (/lawyer) — НПА Республики Казахстан:
-  • search(query, domain?) — поиск по ~101 000 НПА РК
-  • get_article(code, article_number) — конкретная статья кодекса
-  • get_law(law_id) — полный текст закона
-  • sql_query(question) — аналитика: ставки, МРП, сроки
-  • get_exchange_rate(currency?, date?) — курсы валют НБ РК
-  • graph_traverse(article_ref) — связи между нормами
-  • lookup(term) — поиск термина/определения
+MCP "Юрист" (/lawyer) — НПА Республики Казахстан (~101 000 законов и кодексов):
+  • lawyer_search(query, domain?, k?, group_filter?) — поиск по НПА РК (domain: legal_kz=кодексы, laws_kz=законы, legal_ref_kz=справочники)
+  • get_article(code, article_number) — конкретная статья кодекса (code: tax_code, labor_code и др.)
+  • get_law(law_id) — полный текст закона по doc_code (ОБЯЗАТЕЛЬНО вызывай после lawyer_search по laws_kz)
+  • sql_query(question) — аналитика: ставки, МРП, сроки, суммы
+  • lawyer_get_exchange_rate(currencies?, date?) — курсы валют НБ РК
+  • graph_traverse(article_ref, depth?) — связи между нормами
+  • lookup(key, value, domain?) — поиск термина/определения
 
-MCP "1С Платформа" (/consultant_1c) — платформа 1С:
-  • search(query, domain?) — поиск по документации платформы 1С
-  • get_1c_article(article_id) — статья о платформе 1С
-  • list_domains() — доступные домены
+MCP "1С Платформа" (/consultant_1c) — платформа 1С:Предприятие, BSP, EDT, ERP, Розница:
+  • consultant_1c_search(query, k?) — поиск по документации платформы 1С
+  • consultant_1c_get_1c_article(article_id) — статья о платформе 1С (ОБЯЗАТЕЛЬНО вызывай после search)
+  • consultant_1c_list_domains() — доступные домены
+  • consultant_1c_get_exchange_rate(currencies?, date?) — курсы валют НБ РК
 
 ═══ АЛГОРИТМ МАРШРУТИЗАЦИИ ═══
-• Вопрос о налогах, ставках, нормах НК/ТК/ГК → MCP "Юрист" (search, get_article, sql_query)
-• «Как сделать в 1С:Бухгалтерия» → MCP "Бухгалтерия 1С" (search, get_1c_article)
-• Вопрос о платформе 1С (язык, конфигурации, EDT) → MCP "1С Платформа" (search, get_1c_article)
-• Справочные данные (МРП, курсы, ставки) → MCP "Юрист" (sql_query, get_exchange_rate)
+• Вопрос о налогах, ставках, нормах НК/ТК/ГК → lawyer_search + get_article / get_law / sql_query
+• «Как сделать в 1С:Бухгалтерия» → accountant_search + accountant_get_1c_article
+• Вопрос о платформе 1С (язык, конфигурации, EDT) → consultant_1c_search + consultant_1c_get_1c_article
+• Справочные данные (МРП, курсы, ставки) → sql_query, accountant_get_exchange_rate
+• ВАЖНО: после search ВСЕГДА вызывай get_1c_article / get_law для полного текста — чанки неполные!
 
 ПРАВИЛА РАБОТЫ:
 ✓ ВСЕГДА указывай номера счетов (4-значные коды по ТПС РК)
@@ -1054,9 +1058,11 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:
 ✓ НЕ используй внешние ссылки — ТОЛЬКО внутренние article://
 
 ЗАПРЕТЫ:
-✗ НЕ полагайся на внутренние знания о ставках — они могут быть устаревшими
-✗ НЕ цитируй стандарты по памяти — ТОЛЬКО из результатов инструментов
-✗ НЕ рассчитывай налоги без проверки актуальных ставок через sql_query
+✗ Для ставок НЕ из секции "КЛЮЧЕВЫЕ ИЗМЕНЕНИЯ 2026" — проверяй через инструменты
+✗ НЕ цитируй тексты законов по памяти — используй get_article для точных цитат
+✗ Ставки из секции КЛЮЧЕВЫЕ ИЗМЕНЕНИЯ 2026 — ДОСТОВЕРНЫ, верификация НЕ нужна
+✗ НЕ отвечай на вопрос по НПА без вызова lawyer_search / get_article
+✗ НЕ давай инструкции по 1С без вызова accountant_search / consultant_1c_search
 
 ═══ КЛЮЧЕВЫЕ ИЗМЕНЕНИЯ 2026 (Новый НК РК) ═══
 • НДС: 16% (было 12%), медицина 5%, издания 10%
@@ -1420,10 +1426,11 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:
 ═══ MCP-ИНСТРУМЕНТЫ (MCP "1С Платформа") ═══
 Вызываются АВТОМАТИЧЕСКИ через function calling — НЕ пиши вызовы в тексте ответа.
 
-3 инструмента:
-1. search(query, domain?) — семантический поиск по документации платформы 1С
-2. get_1c_article(article_id) — получить конкретную статью/инструкцию
+4 инструмента:
+1. search(query, k?) — семантический поиск по документации платформы 1С. ПОСЛЕ search ОБЯЗАТЕЛЬНО вызови get_1c_article для полного текста.
+2. get_1c_article(article_id) — получить полный текст статьи/инструкции по article_id из результатов search
 3. list_domains() — список доступных доменов данных
+4. get_exchange_rate(currencies?, date?) — курсы валют НБ РК
 
 ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК:
 1. Любой вопрос о 1С → СНАЧАЛА вызови search → дождись результата → ответь на основе данных
