@@ -118,7 +118,7 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
         fill="none"
         stroke="currentColor"
         strokeWidth={strokeW}
-        opacity={0.2}
+        opacity={0.35}
       />
 
       {/* Cardinal ticks */}
@@ -137,14 +137,14 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
             y2={y2}
             stroke="currentColor"
             strokeWidth={strokeW * 0.8}
-            opacity={0.3}
+            opacity={0.5}
             strokeLinecap="round"
           />
         );
       })}
 
       {/* Center dot */}
-      <circle cx={r} cy={r} r={size * 0.06} fill="currentColor" opacity={0.4} />
+      <circle cx={r} cy={r} r={size * 0.07} fill="currentColor" opacity={0.6} />
 
       {/* Animated needle group */}
       <motion.g
@@ -152,14 +152,14 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
         animate={anim.animate}
         transition={anim.transition}
       >
-        {/* Qibla needle (accent) */}
+        {/* Qibla needle */}
         <line
           x1={r}
           y1={r}
           x2={r}
           y2={r - needleLen}
-          stroke="var(--accent, #4F6EF7)"
-          strokeWidth={strokeW * 1.2}
+          stroke="currentColor"
+          strokeWidth={strokeW * 1.4}
           strokeLinecap="round"
         />
         {/* Opposite needle (muted) */}
@@ -171,12 +171,12 @@ export function SanbaoCompass({ state = "idle", size = 32, className = "" }: San
           stroke="currentColor"
           strokeWidth={strokeW * 0.8}
           strokeLinecap="round"
-          opacity={0.3}
+          opacity={0.35}
         />
         {/* Tip diamond */}
         <polygon
-          points={`${r},${r - needleLen - size * 0.06} ${r - size * 0.04},${r - needleLen + size * 0.02} ${r + size * 0.04},${r - needleLen + size * 0.02}`}
-          fill="var(--accent, #4F6EF7)"
+          points={`${r},${r - needleLen - size * 0.08} ${r - size * 0.05},${r - needleLen + size * 0.02} ${r + size * 0.05},${r - needleLen + size * 0.02}`}
+          fill="currentColor"
         />
       </motion.g>
     </motion.svg>

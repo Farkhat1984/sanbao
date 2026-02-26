@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Triangle,
   User,
   Copy,
   Check,
@@ -13,6 +12,7 @@ import {
   Pencil,
   Image,
 } from "lucide-react";
+import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
@@ -325,7 +325,8 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     >
       {/* Avatar */}
       {(() => {
-        const AgentIcon = agentIcon ? (ICON_MAP[agentIcon] || Triangle) : Triangle;
+        const hasCustomIcon = agentIcon && ICON_MAP[agentIcon];
+        const AgentIcon = hasCustomIcon ? ICON_MAP[agentIcon] : null;
         return (
           <div
             className={cn(
@@ -338,8 +339,10 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           >
             {isUser ? (
               <User className="h-4 w-4" />
-            ) : (
+            ) : AgentIcon ? (
               <AgentIcon className="h-4 w-4" />
+            ) : (
+              <SanbaoCompass size={18} className="text-white" />
             )}
           </div>
         );

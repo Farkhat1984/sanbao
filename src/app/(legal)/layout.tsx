@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { Triangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +15,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           </Link>
           <Link href="/login" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
-              <Triangle className="h-4 w-4 text-white" />
+              <SanbaoCompass size={18} className="text-white" />
             </div>
             <span className="text-sm font-semibold text-text-primary">Sanbao</span>
           </Link>
