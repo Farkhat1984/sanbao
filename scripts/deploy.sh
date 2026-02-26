@@ -157,31 +157,37 @@ case "${1:-full}" in
     OLD_COUNT=$(echo "$OLD_IDS" | grep -c . || echo 0)
 
     if [ "$OLD_COUNT" -gt 1 ]; then
-      # Rolling restart: scale down to 1, then scale back up
-      # This keeps at least 1 container alive during the transition
-      echo "--- Rolling restart: keeping service alive ---"
+      # Rolling restart: replace one container at a time
+      # Uses --no-recreate so compose leaves running old containers alone
+      echo "--- Rolling restart: replacing containers one by one ---"
+      REPLICA_TARGET=$OLD_COUNT
+      REPLACED=0
 
-      # Scale to 1 old container (keep serving while we rebuild)
-      KEEP=$(echo "$OLD_IDS" | head -1)
-      REMOVE=$(echo "$OLD_IDS" | tail -n +2)
-      for CID in $REMOVE; do
+      for CID in $OLD_IDS; do
+        REPLACED=$((REPLACED + 1))
+        SHORT_ID=$(echo "$CID" | cut -c1-12)
+        echo ""
+        echo "  [$REPLACED/$REPLICA_TARGET] Replacing container $SHORT_ID..."
+
+        # Stop and remove one old container
         docker stop "$CID" --time 15 >/dev/null 2>&1 || true
         docker rm "$CID" >/dev/null 2>&1 || true
+
+        # Compose creates 1 new container (new image) to fill the gap
+        # --no-recreate keeps remaining old containers untouched
+        $COMPOSE up -d --no-deps --no-build --no-recreate --scale app=$REPLICA_TARGET app 2>/dev/null
+
+        # Wait until at least (total - 1) containers are healthy before proceeding
+        NEED=$(( REPLICA_TARGET - 1 ))
+        [ "$NEED" -lt 1 ] && NEED=1
+        wait_for_app_healthy "$NEED" 24
+        echo "  Container $SHORT_ID replaced"
       done
-      echo "  Scaled down to 1 old container ($KEEP)"
 
-      # Start 2 new containers with new image
-      $COMPOSE up -d --no-deps --no-build --scale app=3 app 2>/dev/null
-      echo "  Starting 2 new containers..."
-      wait_for_app_healthy 2 24  # Wait for 2 new to be healthy
-
-      # Now stop the last old container (new ones are healthy)
-      docker stop "$KEEP" --time 15 >/dev/null 2>&1 || true
-      docker rm "$KEEP" >/dev/null 2>&1 || true
-
-      # Ensure we have 3 replicas running
-      $COMPOSE up -d --no-deps --no-build --scale app=3 app 2>/dev/null
-      wait_for_app_healthy 3 24
+      # Final check: all replicas healthy
+      echo ""
+      echo "--- Final healthcheck ---"
+      wait_for_app_healthy "$REPLICA_TARGET" 24
     else
       # Fresh start or single container — just bring up
       echo "--- Starting app containers ---"
