@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookOpen, Wrench, RotateCcw, Copy, Download, Check } from "lucide-react";
+import { BookOpen, Wrench, RotateCcw, Copy, Download, Check, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useArticleStore } from "@/stores/articleStore";
@@ -70,20 +70,41 @@ function ArticleSkeleton() {
 
 // ─── Error state ─────────────────────────────────────────
 
-function ArticleError({ error, onRetry }: { error: string; onRetry: () => void }) {
+function ArticleError({ error, onRetry, code, article }: { error: string; onRetry: () => void; code?: string; article?: string }) {
+  const isLaw = code === "law";
+  const adiletUrl = isLaw && article ? `https://adilet.zan.kz/rus/docs/${article}` : null;
+
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center gap-3">
       <div className="h-12 w-12 rounded-xl bg-red-50 flex items-center justify-center">
         <BookOpen className="h-6 w-6 text-red-500" />
       </div>
       <p className="text-sm text-text-muted">{error}</p>
-      <button
-        onClick={onRetry}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-alt border border-border hover:border-accent text-text-primary transition-colors cursor-pointer"
-      >
-        <RotateCcw className="h-3 w-3" />
-        Повторить
-      </button>
+      {isLaw && (
+        <p className="text-xs text-text-muted">
+          Документ может быть ещё не загружен в базу
+        </p>
+      )}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-alt border border-border hover:border-accent text-text-primary transition-colors cursor-pointer"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Повторить
+        </button>
+        {adiletUrl && (
+          <a
+            href={adiletUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-alt border border-border hover:border-accent text-text-primary transition-colors"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Открыть на adilet.zan.kz
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -91,7 +112,7 @@ function ArticleError({ error, onRetry }: { error: string; onRetry: () => void }
 // ─── Article content view ────────────────────────────────
 
 export function ArticleContentView() {
-  const { activeArticle, loading, error, retry } = useArticleStore();
+  const { activeArticle, loading, error, retry, _lastRequest } = useArticleStore();
   const activeTabId = usePanelStore((s) => s.activeTabId);
   const tabs = usePanelStore((s) => s.tabs);
   const [copied, setCopied] = useState(false);
@@ -115,7 +136,7 @@ export function ArticleContentView() {
   }, [activeTabId, tabs]);
 
   if (loading) return <ArticleSkeleton />;
-  if (error) return <ArticleError error={error} onRetry={retry} />;
+  if (error) return <ArticleError error={error} onRetry={retry} code={_lastRequest?.code} article={_lastRequest?.article} />;
   if (!activeArticle) return null;
 
   const is1c = activeArticle.code === "1c" || activeArticle.code === "1c_buh";

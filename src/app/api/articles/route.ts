@@ -88,6 +88,15 @@ export async function GET(request: NextRequest) {
 function parseArticleResponse(code: string, article: string, result: string) {
   try {
     const parsed = JSON.parse(result);
+
+    // Detect error response from MCP
+    if (parsed.error) {
+      return NextResponse.json(
+        { error: parsed.error, code, article },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json({
       code,
       article,
@@ -105,15 +114,29 @@ function parseArticleResponse(code: string, article: string, result: string) {
   }
 }
 
+function buildAdiletUrl(docCode: string): string {
+  return `https://adilet.zan.kz/rus/docs/${docCode}`;
+}
+
 function parseLawResponse(docCode: string, result: string) {
   try {
     const parsed = JSON.parse(result);
+
+    // Detect error response from MCP
+    if (parsed.error) {
+      return NextResponse.json(
+        { error: parsed.error, code: "law", article: docCode, adiletUrl: buildAdiletUrl(docCode) },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json({
       code: "law",
       article: docCode,
       title: parsed.title || parsed.type_name || "",
       text: parsed.full_text || parsed.text || result,
       annotation: parsed.note || parsed.status || "",
+      adiletUrl: parsed.url || buildAdiletUrl(docCode),
     });
   } catch {
     return NextResponse.json({
@@ -121,6 +144,7 @@ function parseLawResponse(docCode: string, result: string) {
       title: docCode,
       text: result,
       annotation: "",
+      adiletUrl: buildAdiletUrl(docCode),
     });
   }
 }
