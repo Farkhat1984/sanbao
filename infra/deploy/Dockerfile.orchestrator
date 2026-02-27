@@ -9,11 +9,13 @@ WORKDIR /app
 RUN pip install --no-cache-dir \
     httpx==0.28.* \
     aiohttp==3.* \
-    duckdb==1.*
+    duckdb==1.* \
+    reportlab==4.*
 
 COPY ai_cortex/orchestrator/ /app/orchestrator/
 COPY ai_cortex/data/accounting_ref_kz/ /app/data/accounting_ref_kz/
 COPY ai_cortex/data/legal_reference_kz.csv /app/data/legal_reference_kz.csv
+COPY ai_cortex/data/tnved/ /app/data/tnved/
 
 EXPOSE 8120
 

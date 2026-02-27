@@ -257,7 +257,7 @@ orchestrator: # Python MCP, port 8120
 | `laws_kz` | text | `laws_kz` | ~199K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
 | `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
 | `accounting_ref_kz` | table | — | 6 таблиц | Бухгалтерские справочники (ставки, ТПС, проводки, амортизация, ФНО) |
-| `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы) |
+| `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы, DuckDB: duty_rates + required_docs) |
 | `accounting_1c` | text | `accounting_1c` | ~20.7K чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
 | `platform_1c` | text | `platform_1c` | ~39K чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
 | `sop` | text | `company_sops` | — | СОП компании (пусто) |
@@ -303,12 +303,12 @@ orchestrator: # Python MCP, port 8120
 | Инструмент | Описание |
 |------------|----------|
 | `search` | Семантический + BM25 поиск по кодам ТН ВЭД (domain=tnved) |
-| `sql_query` | NL→SQL→DuckDB запрос по тарифным данным |
+| `sql_query` | NL→SQL→DuckDB по 2 таблицам (duty_rates, required_docs) → domain: tnved |
 | `classify_goods` | Классификация товара → top-5 кодов с иерархией и документами |
 | `calculate_duties` | Расчёт пошлин (ad valorem/specific/combined) + НДС 12% + акциз |
-| `get_required_docs` | Необходимые документы по коду (13 типов, динамически по группе) |
+| `get_required_docs` | Необходимые документы по коду (14 типов, DuckDB `required_docs` → fallback hardcoded) |
 | `list_domains` | Список доступных таможенных доменов |
-| `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257) |
+| `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257, reportlab) |
 | `get_exchange_rate` | Курсы валют НБ РК на дату |
 
 **Accountant (5 tools):**
@@ -390,7 +390,8 @@ AI-ответы содержат ссылки `article://` — при клике
 1. **Phase 1** — Базовая интеграция: 4 MCP agents (Юрист + Брокер + Бухгалтер + 1С Ассистент) ✅
 2. **Phase 1.5** — Полная загрузка данных: 5 коллекций (legal_kz, laws_kz, tnved_rates, accounting_1c, platform_1c) ✅
 3. **Phase 1.6** — DuckDB-backed sql_query для Бухгалтера (6 таблиц: ставки, ТПС, проводки, амортизация, ФНО, МРП) + per-tool domain routing ✅
-4. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
+4. **Phase 1.7** — DuckDB-backed sql_query для Брокера (duty_rates + required_docs), dehardcoded _GROUP_TO_DOCS → CSV, reportlab для generate_declaration ✅
+5. **Phase 2** — Per-user knowledge bases: upload → chunk → embed → search
 4. **Phase 3** — Per-user квоты и биллинг (Plan.maxStorageMb)
 5. **Phase 4** — UI: страница /knowledge с drag-n-drop загрузкой
 6. **Phase 5** — Мониторинг и алертинг
