@@ -1,124 +1,90 @@
-# TODOLIST: Улучшение системного агента Юрист
+# TODOLIST: AI Cortex — Качество и пайплайны
 
-**Дата начала:** 2026-02-26
-**Статус:** Завершено
-
----
-
-## Фаза 1: Ингест Z и S типов законов в FragmentDB
-
-### Задачи
-- [x] 1.1 Dry-run тест: `python3 scripts/ingestion/ingest_adilet.py --types Z,S --dry-run`
-- [x] 1.2 Запуск ингеста Z-type (3,519 законов): `--types Z --resume`
-- [x] 1.3 Запуск ингеста S-type (270 конституционных законов): `--types S --resume`
-- [x] 1.4 Проверка BM25 индекс перестроен после ингеста
-
-### Тестирование Фазы 1
-- [x] T1.1 Проверить количество Z-type документов в FragmentDB
-- [x] T1.2 Проверить количество S-type документов
-- [x] T1.3 Тест get_law для известного Z-type закона
-- [x] T1.4 Тест get_law для S-type
-- [x] T1.5 Тест search по laws_kz
-- [x] T1.6 Проверить общее количество документов: ~199K
+**Дата:** 2026-02-27
+**Источник:** E2E тестирование всех 4 агентов
 
 ---
 
-## Фаза 2: Исправление parseLawResponse (баг с ошибкой как текст)
+## P0 — Критично
 
-### Задачи
-- [x] 2.1 Исправить `parseLawResponse` в `src/app/api/articles/route.ts` — детектить `parsed.error`, возвращать 404 с `adiletUrl`
-- [x] 2.2 Добавить `adiletUrl` в успешные ответы (из `parsed.url` или по шаблону)
-- [x] 2.3 Исправить `parseArticleResponse` аналогично (консистентность)
+### 1. Юрист: статус закона "утратил силу" не реализован
+**Проблема:** `get_law` возвращает только `"new"` и `"updated"`. Законы, утратившие силу (напр. старый "О банках" Z950002444_, заменён Z2600000258 в 2026), показывают `"updated"` вместо `"expired"`. Нет статуса "в силе" / "утратил силу".
+**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py` (парсинг), `ai_cortex/orchestrator/mcp_server.py` (_handle_get_law)
+**Решение:**
+- [ ] 1.1 Проверить существующую реализацию (типы Z, V, U — уже есть парсинг?)
+- [ ] 1.2 Парсить статус с adilet.zan.kz при ингесте (тег `<status>` или текст "Утратил силу")
+- [ ] 1.3 Добавить metadata field `status` со значениями: `active` / `updated` / `expired` / `suspended`
+- [ ] 1.4 Re-ingest laws_kz с обновлённым парсером (или enrichment скрипт по существующим)
+- [ ] 1.5 В get_law ответе показывать русский статус: "В силе", "С изменениями", "Утратил силу"
+- [ ] 1.6 В search results по laws_kz включать статус в snippet
 
-### Тестирование Фазы 2
-- [x] T2.1 Тест ошибки: `GET /api/articles?code=law&article=ZNONEXISTENT` — 404 с adiletUrl
-- [x] T2.2 Тест успеха: `GET /api/articles?code=law&article=Z120000434_` — 200 с adiletUrl
-- [x] T2.3 Тест ошибки для кодексов: `GET /api/articles?code=criminal_code&article=99999` — 404
-- [x] T2.4 Тест парсинга: raw JSON `{"error":"..."}` никогда не показывается как текст
-- [x] T2.5 Сборка проекта: `npm run build` — без ошибок
-
----
-
-## Фаза 3: Улучшение UX ошибки в ArticleContentView
-
-### Задачи
-- [x] 3.1 Добавить fallback ссылку на adilet.zan.kz в компонент `ArticleError`
-- [x] 3.2 Показывать текст "Документ может быть ещё не загружен в базу" + ссылка на adilet
-- [x] 3.3 Ссылка только для `code === "law"` (для кодексов adilet не нужен)
-
-### Тестирование Фазы 3
-- [x] T3.1 Клик по ссылке article://law/ZNONEXISTENT — ошибка + ссылка на adilet
-- [x] T3.2 Клик по ссылке article://criminal_code/188 — нормально открывается
-- [x] T3.3 Клик по ссылке article://criminal_code/99999 — ошибка БЕЗ ссылки на adilet
-- [x] T3.4 Кнопка "Повторить" работает
-- [x] T3.5 Ссылка на adilet.zan.kz открывается в новой вкладке
-- [x] T3.6 Мобильный вид: ошибка отображается корректно
-- [x] T3.7 Сборка: `npm run build` — без ошибок
+### 2. Юрист: graph_traverse пуст
+**Проблема:** `graph_traverse` всегда возвращает `{nodes: [], count: 0}` — граф cross-references не построен для legal_kz.
+**Где:** `ai_cortex/orchestrator/search/graph_builder.py`, `ai_cortex/orchestrator/domains/legal_kz.py`
+**Решение:**
+- [ ] 2.1 Проверить `graph_edge_types` в конфиге legal_kz (сейчас пусто?)
+- [ ] 2.2 Реализовать парсинг ссылок между статьями ("см. статью X", "в соответствии со статьёй Y")
+- [ ] 2.3 Построить граф и пересобрать оркестратор
 
 ---
 
-## Фаза 4: Улучшение промпта юриста (FEMIDA_SYSTEM_PROMPT)
+## P1 — Важно
 
-### Задачи
-- [x] 4.1 Добавить критическое правило: doc_code ТОЛЬКО из результатов search()
-- [x] 4.2 Добавить пошаговый алгоритм: search → doc_code из результатов → get_law
-- [x] 4.3 Добавить запрет: "НЕ выдумывай doc_code" + "НЕ выдумывай ссылки article://law/"
-- [x] 4.4 Добавить раздел "СТРУКТУРА ОТВЕТА"
-- [x] 4.5 Обновить описание get_law: подчеркнуть источник doc_code
-- [x] 4.6 Запустить seed: `npx prisma db seed`
+### 3. Юрист: lookup не фильтрует по code
+**Проблема:** `lookup(key="article_number", value="188", code="criminal_code")` возвращает ст. 188 из ВСЕХ кодексов, игнорируя фильтр `code`.
+**Где:** `ai_cortex/orchestrator/mcp_server.py` (_handle_lookup)
+**Решение:**
+- [ ] 3.1 Добавить фильтрацию по metadata `code` в lookup
+- [ ] 3.2 Тест: lookup article 188 + code=criminal_code → только УК
 
-### Тестирование Фазы 4
-- [x] T4.1–T4.6 Проверки формата, ссылок, seed — пройдены
-
----
-
-## Фаза 5: Улучшение ответа ошибки в оркестраторе
-
-### Задачи
-- [x] 5.1 Обогатить ответ ошибки в `_handle_get_law`: url, doc_code, suggestion
-- [x] 5.2 Рестарт оркестратора после изменений
-
-### Тестирование Фазы 5
-- [x] T5.1 Прямой вызов MCP: get_law с несуществующим doc_code — ответ содержит url + suggestion
-- [x] T5.2 Через чат: AI предоставляет ссылку на adilet
-- [x] T5.3 Оркестратор стабилен после рестарта
+### 4. Юрист: search relevance — ключевые статьи
+**Проблема:** Поиск "увольнение работника" не возвращает ст.52 ТК (основная статья). "алименты" не возвращает семейный кодекс.
+**Где:** `ai_cortex/orchestrator/domains/legal_kz.py` (synonyms, weights)
+**Решение:**
+- [ ] 4.1 Расширить синонимы: увольнение→расторжение, алименты→содержание
+- [ ] 4.2 Увеличить BM25 weight для legal_kz (сейчас default?)
+- [ ] 4.3 Тест top-5 relevance для 10 ключевых запросов
 
 ---
 
-## Фаза 6: Обновление глобального промпта
+## P2 — Улучшения
 
-### Задачи
-- [x] 6.1 Добавить предупреждение в `src/lib/prompts.ts`: doc_code только из search
-- [x] 6.2 Запустить seed
+### 5. platform_1c BM25 timeout при старте
+**Проблема:** 39K docs → BM25 rebuild таймаутит (>60s на каждую попытку), вызывает рестарты контейнера.
+**Статус:** Workaround — переставили tnved/laws_kz перед platform_1c в FRAGMENTDB_DOMAINS.
+**Решение:**
+- [ ] 5.1 Увеличить timeout для BM25 rebuild до 300s
+- [ ] 5.2 Или pre-build BM25 index при ингесте (persist to disk)
 
-### Тестирование Фазы 6
-- [x] T6.1 Сборка: `npm run build` — без ошибок
-- [x] T6.2 Чат с любым агентом: ссылки article:// формируются корректно
+### 6. laws_kz: пустой статус для P/V типов документов
+**Проблема:** Постановления (P) и ведомственные акты (V) имеют пустой `status`, `date`, `issuer`.
+**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py`
+**Решение:**
+- [ ] 6.1 Enrichment скрипт: парсить метаданные из adilet для P/V типов
 
 ---
 
-## Финальная проверка (после всех фаз)
+## Завершено (2026-02-27)
 
-### Сквозные сценарии
-- [x] F1–F8 Все сквозные сценарии пройдены
-
-### Деплой
-- [x] D1 `./scripts/deploy.sh app` — пересборка контейнеров приложения
-- [x] D2 Рестарт оркестратора
-- [x] D3 Health check: `GET /api/health` — 200 OK
-- [x] D4 Smoke test в продакшене
+| # | Задача | Что сделано |
+|---|--------|------------|
+| ~~3~~ | ~~NL→SQL fuzzy matching~~ | Обновлён промпт: ILIKE, keyword split, fuzzy stems. "проводка зарплата" → 6 записей |
+| ~~4~~ | ~~classify_goods EN→RU~~ | Добавлен LLM-перевод `_translate_to_russian()`. "iPhone" → 8517130000 (смартфоны) #1 |
+| ~~9~~ | ~~NL→SQL текущий год~~ | Добавлен `current_year` в промпт LLM |
+| ~~—~~ | ~~Broker sql_query~~ | Добавлен `tool_domains: {sql_query: tnved}`, COPY tnved data в Docker |
+| ~~—~~ | ~~get_required_docs → DuckDB~~ | required_docs.csv (276 строк) → DuckDB, fallback на hardcoded |
+| ~~—~~ | ~~generate_declaration PDF~~ | reportlab==4.* добавлен в Dockerfile |
+| ~~—~~ | ~~FRAGMENTDB_DOMAINS order~~ | tnved/laws_kz перед platform_1c (workaround timeout) |
 
 ---
 
 ## Прогресс
 
-| Фаза | Статус | Дата завершения |
-|------|--------|----------------|
-| 1. Ингест Z/S | ✅ Завершено | 2026-02-26 |
-| 2. parseLawResponse fix | ✅ Завершено | 2026-02-26 |
-| 3. ArticleContentView UX | ✅ Завершено | 2026-02-26 |
-| 4. Промпт юриста | ✅ Завершено | 2026-02-26 |
-| 5. Оркестратор error | ✅ Завершено | 2026-02-26 |
-| 6. Глобальный промпт | ✅ Завершено | 2026-02-26 |
-| Финальная проверка | ✅ Завершено | 2026-02-27 |
-| Деплой | ✅ Завершено | 2026-02-27 |
+| # | Задача | Приоритет | Статус |
+|---|--------|-----------|--------|
+| 1 | Статус "утратил силу" | P0 | TODO |
+| 2 | graph_traverse граф | P0 | TODO |
+| 3 | lookup фильтр по code | P1 | TODO |
+| 4 | Search relevance | P1 | TODO |
+| 5 | platform_1c timeout | P2 | Workaround |
+| 6 | P/V type metadata | P2 | TODO |
