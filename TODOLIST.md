@@ -78,13 +78,92 @@
 
 ---
 
+## Данные — Обогащение и ингест
+
+### 7. Enrichment: добавить V-тип в обогащение
+**Проблема:** `adilet_enrich_loop.sh` запущен с `--types Z,U,P,H,S` — **V (121,785 приказов) пропущен**. V-файлы скачаны, заингестированы в laws_kz, но без metadata (status/date/number/issuer).
+**Где:** `ai_cortex/scripts/scraping/adilet_enrich_loop.sh`
+**Решение:**
+- [ ] 7.1 Добавить V в `--types Z,U,P,V,H,S` в loop-скрипте
+- [ ] 7.2 Перезапустить enrichment loop
+- [ ] 7.3 После обогащения — re-ingest V-документы с metadata
+
+### 8. Ингест H-документов (7,807 норм. постановлений)
+**Проблема:** H (нормативные постановления) скачаны (7,807 файлов, 395 MB), но **не заингестированы** в laws_kz. Default types в `ingest_adilet.py`: Z,U,P,V — H отсутствует.
+**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py`
+**Решение:**
+- [ ] 8.1 Сначала обогатить H-документы (enrichment loop уже включает H)
+- [ ] 8.2 Запустить `ingest_adilet.py --types H --resume` (нужен FragmentDB + DEEPINFRA_API_KEY)
+- [ ] 8.3 Проверить laws_kz collection size после ингеста
+
+### 9. Доскачать 813 failed V-документов
+**Проблема:** Из 122,598 URL типа V скачано 121,785. Осталось **813 failed** (все с 1 попыткой).
+**Где:** `ai_cortex/data/adilet/cache/crawl_state.json` (failed dict)
+**Решение:**
+- [ ] 9.1 Сбросить failed count в crawl_state.json (все = 1 попытка, лимит = 3)
+- [ ] 9.2 Запустить `adilet_scraper.py --resume` — подхватит только failed
+- [ ] 9.3 После скачивания — обогатить + заингестировать
+
+### 10. P-обогащение неполное (1,164 из 34,803)
+**Проблема:** Только 1,164 постановлений обогащены из 34,803. Остальные без date/number/status.
+**Статус:** IN PROGRESS — enrichment loop обрабатывает P в текущем ране.
+**Решение:**
+- [ ] 10.1 Дождаться завершения enrichment loop (ETA ~6ч для всех типов)
+- [ ] 10.2 После обогащения — re-ingest P-документы с обновлёнными metadata
+
+### 11. Удалить nexuscore_data_testcopy (389 MB)
+**Проблема:** Старый бэкап БД с Hnsw-индексом (до миграции на MmapHnsw). Не используется.
+**Где:** `ai_cortex/nexuscore_data_testcopy/`
+**Решение:**
+- [ ] 11.1 Удалить `rm -rf nexuscore_data_testcopy/`
+
+---
+
+## Инвентаризация данных (2026-02-27)
+
+### Сырые данные (data/) — 30 GB
+
+| Датасет | Файлов | Размер | Обогащено | Заингестировано |
+|---------|--------|--------|-----------|-----------------|
+| Adilet Z (законы) | 3,519 | 279 MB | 3,519 (100%) | laws_kz |
+| Adilet U (указы) | 4,228 | 102 MB | 4,228 (100%) | laws_kz |
+| Adilet P (постановления) | 34,803 | 1.2 GB | 1,164 (3%) | laws_kz |
+| Adilet V (приказы) | 121,785 | 5.2 GB | 0 (0%) | laws_kz |
+| Adilet H (норм. постан.) | 7,807 | 395 MB | 0 (0%) | **НЕТ** |
+| Adilet S (конст. законы) | 270 | 7.9 MB | 0 (0%) | laws_kz |
+| 1C ITS | 33,868 | 4.4 GB | — | platform_1c + accounting_1c |
+| 1C PRO1C | 3,399 | 58 MB | — | accounting_1c |
+| TNVED | 13,279 | 24 MB | — | tnved_rates |
+| Правовые кодексы | 7,737 ст. | 62 MB | — | legal_kz + legal_code_kz |
+| Бух. справочник | 241 строка | 52 KB | — | DuckDB in-memory |
+| Правовой справочник | 18 строк | 1.2 KB | — | DuckDB in-memory |
+| Embedding кеш | 242,709 | 17 GB | — | — |
+
+### FragmentDB (nexuscore_data/) — 15 GB
+
+| Коллекция | Dim | Доки (chunks) | Размер |
+|-----------|-----|---------------|--------|
+| laws_kz | 4096 | ~340K | 8.6 GB |
+| platform_1c | 4096 | ~200K | 3.8 GB |
+| accounting_1c | 4096 | ~58K | 1.1 GB |
+| tnved_rates | 4096 | 13,279 | 448 MB |
+| legal_kz | 4096 | ~9,200 | 266 MB |
+| legal_code_kz | 4096 | ~7,737 | 177 MB |
+
+---
+
 ## Прогресс
 
 | # | Задача | Приоритет | Статус |
 |---|--------|-----------|--------|
-| 1 | Статус "утратил силу" | P0 | TODO |
+| 1 | Статус "утратил силу" | P0 | IN PROGRESS (enrichment запущен, парсинг есть) |
 | 2 | graph_traverse граф | P0 | TODO |
 | 3 | lookup фильтр по code | P1 | TODO |
 | 4 | Search relevance | P1 | TODO |
 | 5 | platform_1c timeout | P2 | Workaround |
-| 6 | P/V type metadata | P2 | TODO |
+| 6 | P/V type metadata | P2 | IN PROGRESS (= задача #7+#10) |
+| 7 | V-тип в enrichment | P1 | TODO |
+| 8 | Ингест H-документов | P1 | TODO (после enrichment) |
+| 9 | Доскачать 813 failed V | P2 | TODO |
+| 10 | P-обогащение | P1 | IN PROGRESS |
+| 11 | Удалить testcopy | P2 | TODO |
