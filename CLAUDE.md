@@ -169,12 +169,12 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 
 - `src/lib/mcp-client.ts` — connects to MCP servers via `@modelcontextprotocol/sdk`
 - **AI Cortex** (external): Orchestrator v0.8.0 at `:8120` — 4 MCP endpoints:
-  - `/lawyer` — legal RK (18 codes + 101K laws). Tools: search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate
-  - `/broker` — customs EAEU (13K TNVED codes). Tools: search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration
-  - `/accountant` — 1C accounting KZ (6.7K chunks + tabular ref data). Tools: search, get_1c_article, sql_query, list_domains, get_exchange_rate
-  - `/consultant_1c` — 1C platform (29K chunks). Tools: search, get_1c_article, list_domains, get_exchange_rate
+  - `/lawyer` — legal RK (18 codes + ~199K laws). Tools: search, get_article, get_law, lookup, graph_traverse, list_domains, get_exchange_rate
+  - `/broker` — customs EAEU (13K TNVED codes). Tools: search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration, get_exchange_rate
+  - `/accountant` — 1C accounting KZ (~20.7K chunks + tabular ref data). Tools: search, get_1c_article, sql_query, list_domains, get_exchange_rate
+  - `/consultant_1c` — 1C platform (~40K chunks). Tools: search, get_1c_article, list_domains, get_exchange_rate
 - **Env:** `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
-- **FragmentDB collections:** legal_kz (7,451 articles), laws_kz (~101K laws), tnved_rates (13,279 codes), accounting_1c (6,736 chunks), platform_1c (29,201 chunks)
+- **FragmentDB collections:** legal_kz (7,463 articles), laws_kz (~199K laws), tnved_rates (13,279 codes), accounting_1c (~20.7K chunks), platform_1c (~39K chunks)
 - **article:// protocol:** `[label](article://{code}/{id})` — opens articles in UnifiedPanel. Supports: 18 legal codes, laws (doc_code), 1c/1c_buh (article_id)
 - **Admin toggle:** `McpServer.isEnabled` controls user visibility
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs

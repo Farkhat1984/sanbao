@@ -143,6 +143,8 @@ services:
     restart: unless-stopped
     ports:
       - "${ORCHESTRATOR_PORT:-8120}:8120"
+    volumes:
+      - ../ai_cortex/data/1c_knowledge/images:/app/data/1c_knowledge/images:ro
     environment:
       - FRAGMENTDB_URL=http://fragmentdb:8080
       - AI_CORTEX_PORT=8120

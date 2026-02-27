@@ -6,11 +6,11 @@
 
 **FragmentDB** (NexusCore v0.5.0) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
 
-**AI Cortex Orchestrator** (v0.9.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
-- `POST /lawyer` — правовая база РК (18 кодексов + 101K законов, графы ссылок, sql_query → legal_ref_kz)
+**AI Cortex Orchestrator** (v0.8.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
+- `POST /lawyer` — правовая база РК (18 кодексов + ~199K законов, графы ссылок, sql_query → legal_ref_kz)
 - `POST /broker` — таможня ЕАЭС (ТН ВЭД 13K кодов, расчёт пошлин, декларации ДТ1)
-- `POST /accountant` — бухгалтерия 1С для Казахстана (6.7K чанков + sql_query → 6 DuckDB-таблиц)
-- `POST /consultant_1c` — платформа 1С (29K чанков, BSP, EDT, ERP, Розница)
+- `POST /accountant` — бухгалтерия 1С для Казахстана (~20.7K чанков + sql_query → 6 DuckDB-таблиц)
+- `POST /consultant_1c` — платформа 1С (~39K чанков, BSP, EDT, ERP, Розница)
 - `GET /health` — liveness probe (version, endpoints, agents, tool_count)
 
 ### Текущая интеграция
@@ -19,17 +19,17 @@
 Sanbao App
   ├── Agent: Юрист (system-femida-agent)
   │   └── MCP: /lawyer
-  │       └── Tools (7): search, get_article, get_law, lookup, graph_traverse, sql_query, get_exchange_rate
+  │       └── Tools (7): search, get_article, get_law, lookup, graph_traverse, list_domains, get_exchange_rate
   ├── Agent: Таможенный брокер (system-broker-agent)
   │   └── MCP: /broker
-  │       └── Tools (7): search, sql_query, classify_goods, calculate_duties,
-  │                       get_required_docs, list_domains, generate_declaration
+  │       └── Tools (8): search, sql_query, classify_goods, calculate_duties,
+  │                       get_required_docs, list_domains, generate_declaration, get_exchange_rate
   ├── Agent: Бухгалтер (system-accountant-agent)
   │   └── MCP: /accountant + /lawyer + /consultant_1c
-  │       └── Tools: search, get_1c_article, sql_query, list_domains + lawyer tools
+  │       └── Tools: search, get_1c_article, sql_query, list_domains, get_exchange_rate + lawyer tools
   ├── Agent: 1С Ассистент (system-1c-assistant-agent)
   │   └── MCP: /consultant_1c
-  │       └── Tools (3): search, get_1c_article, list_domains
+  │       └── Tools (4): search, get_1c_article, list_domains, get_exchange_rate
   └── API: /api/articles → direct MCP calls for article:// deep-linking
 ```
 
@@ -253,13 +253,13 @@ orchestrator: # Python MCP, port 8120
 
 | Домен | Тип | Коллекция | Документов | Назначение |
 |-------|-----|-----------|-----------|------------|
-| `legal_kz` | text | `legal_kz` | 7,451 статей | 17 кодексов РК (УК, ГК, НК, ТК, КоАП и др.) |
-| `laws_kz` | text | `laws_kz` | ~101K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
+| `legal_kz` | text | `legal_kz` | 7,463 статей | 18 кодексов РК (УК, ГК, НК, ТК, КоАП и др.) |
+| `laws_kz` | text | `laws_kz` | ~199K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
 | `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
 | `accounting_ref_kz` | table | — | 6 таблиц | Бухгалтерские справочники (ставки, ТПС, проводки, амортизация, ФНО) |
 | `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы) |
-| `accounting_1c` | text | `accounting_1c` | 6,736 чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
-| `platform_1c` | text | `platform_1c` | 29,201 чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
+| `accounting_1c` | text | `accounting_1c` | ~20.7K чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
+| `platform_1c` | text | `platform_1c` | ~39K чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
 | `sop` | text | `company_sops` | — | СОП компании (пусто) |
 | `snip` | text | `construction_norms` | — | Строительные нормы (пусто) |
 | `generic` | text | `documents` | — | Произвольные документы |
@@ -295,10 +295,10 @@ orchestrator: # Python MCP, port 8120
 | `get_law` | Полный текст закона/НПА по doc_code (из laws_kz) |
 | `lookup` | Точный поиск по ключевому полю (номер статьи, раздел) |
 | `graph_traverse` | Обход графа знаний от документа (BFS, cross-references) |
-| `sql_query` | NL→SQL→DuckDB запрос по справочным таблицам → domain: legal_ref_kz |
+| `list_domains` | Список доступных правовых доменов |
 | `get_exchange_rate` | Курсы валют НБ РК на дату |
 
-**Broker (7 tools):**
+**Broker (8 tools):**
 
 | Инструмент | Описание |
 |------------|----------|
@@ -309,8 +309,9 @@ orchestrator: # Python MCP, port 8120
 | `get_required_docs` | Необходимые документы по коду (13 типов, динамически по группе) |
 | `list_domains` | Список доступных таможенных доменов |
 | `generate_declaration` | PDF декларации ДТ1 (54 графы, Решение КТС №257) |
+| `get_exchange_rate` | Курсы валют НБ РК на дату |
 
-**Accountant (6 tools):**
+**Accountant (5 tools):**
 
 | Инструмент | Описание |
 |------------|----------|
@@ -350,7 +351,7 @@ orchestrator: # Python MCP, port 8120
 | `GET /health` (fragmentdb:8080) | Статус FragmentDB |
 | `GET /metrics` (fragmentdb:8080) | Prometheus метрики (QPS, latency) |
 
-### Производительность (2x Xeon E5-2695 v4, ~157K документов)
+### Производительность (2x Xeon E5-2695 v4, ~280K документов)
 
 | Операция | p50 | p99 | MCP tool |
 |----------|-----|-----|----------|
