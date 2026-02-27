@@ -153,7 +153,7 @@ services:
       - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,platform_1c,tnved,laws_kz
+      - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
     depends_on:
       fragmentdb:
         condition: service_healthy
