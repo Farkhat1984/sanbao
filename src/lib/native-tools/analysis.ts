@@ -3,81 +3,22 @@ import {
   NATIVE_TOOL_CSV_MAX_BYTES,
   NATIVE_TOOL_CSV_MAX_ROWS,
 } from "../constants";
+import { Parser } from "expr-eval";
 
-// ─── Safe math evaluator ───────────────────────────────
+// ─── Safe math evaluator (expr-eval — no eval/new Function) ──
 
-const ALLOWED_MATH_PATTERN = /^[\d\s+\-*/%().,eE]+$/;
 const MAX_EXPRESSION_LENGTH = 500;
-const MAX_PAREN_DEPTH = 20;
 
-const MATH_FUNCTIONS: Record<string, (...args: number[]) => number> = {
-  abs: Math.abs,
-  ceil: Math.ceil,
-  floor: Math.floor,
-  round: Math.round,
-  sqrt: Math.sqrt,
-  pow: Math.pow,
-  min: Math.min,
-  max: Math.max,
-  log: Math.log,
-  log10: Math.log10,
-  log2: Math.log2,
-  sin: Math.sin,
-  cos: Math.cos,
-  tan: Math.tan,
-  PI: () => Math.PI,
-  E: () => Math.E,
-};
+const mathParser = new Parser();
 
 function safeEvaluate(expression: string): number {
-  let expr = expression.trim();
+  const expr = expression.trim();
 
   if (expr.length > MAX_EXPRESSION_LENGTH) {
     throw new Error(`Выражение слишком длинное (макс. ${MAX_EXPRESSION_LENGTH} символов)`);
   }
 
-  // Check parentheses depth to prevent stack overflow
-  let depth = 0;
-  for (const ch of expr) {
-    if (ch === "(") depth++;
-    else if (ch === ")") depth--;
-    if (depth > MAX_PAREN_DEPTH) {
-      throw new Error("Слишком глубокая вложенность скобок");
-    }
-  }
-  if (depth !== 0) {
-    throw new Error("Несбалансированные скобки");
-  }
-
-  // Replace known function calls: sqrt(x) → __fn_sqrt(x)
-  for (const fn of Object.keys(MATH_FUNCTIONS)) {
-    const regex = new RegExp(`\\b${fn}\\b`, "g");
-    expr = expr.replace(regex, `__fn_${fn}`);
-  }
-
-  // Check only safe characters remain (after function substitution)
-  const cleaned = expr.replace(/__fn_\w+/g, "0");
-  if (!ALLOWED_MATH_PATTERN.test(cleaned)) {
-    throw new Error("Выражение содержит недопустимые символы");
-  }
-
-  // Reject any remaining letter sequences (not part of known functions)
-  if (/[a-df-zA-DF-Z]/.test(cleaned)) {
-    throw new Error("Выражение содержит недопустимые символы");
-  }
-
-  // Blocklist dangerous patterns that could escape the sandbox
-  const DANGEROUS = /constructor|prototype|__proto__|this|global|process|require|import|window|eval|Function/i;
-  if (DANGEROUS.test(expr)) {
-    throw new Error("Выражение содержит запрещённые конструкции");
-  }
-
-  // Build evaluator function with Math functions in scope
-  const fnArgs = Object.keys(MATH_FUNCTIONS).map((k) => `__fn_${k}`);
-  const fnVals = Object.values(MATH_FUNCTIONS);
-
-  const evaluator = new Function(...fnArgs, `"use strict"; return (${expr});`);
-  const result = evaluator(...fnVals);
+  const result = mathParser.evaluate(expr);
 
   if (typeof result !== "number" || !isFinite(result)) {
     throw new Error("Результат не является конечным числом");

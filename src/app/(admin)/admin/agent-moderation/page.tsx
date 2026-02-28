@@ -55,7 +55,8 @@ export default function AgentModerationPage() {
 
   const fetchAgents = async () => {
     const res = await fetch(`/api/admin/agents?status=${statusFilter}`);
-    setAgents(await res.json());
+    const data = await res.json();
+    setAgents(Array.isArray(data) ? data : data.items ?? []);
   };
 
   const fetchReports = async () => {

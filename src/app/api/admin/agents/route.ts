@@ -9,6 +9,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") as SkillStatus | null;
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10) || 100, 200);
 
   const where: Record<string, unknown> = { isPublic: true };
   if (status) where.status = status;
@@ -20,10 +22,15 @@ export async function GET(req: Request) {
       _count: { select: { conversations: true } },
     },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
 
-  return NextResponse.json(agents);
+  const hasMore = agents.length > limit;
+  const items = hasMore ? agents.slice(0, limit) : agents;
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
+  return NextResponse.json({ items, nextCursor });
 }
 
 export async function PUT(req: Request) {

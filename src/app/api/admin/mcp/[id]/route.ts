@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { isUrlSafe } from "@/lib/ssrf";
 
 export async function PUT(
   req: Request,
@@ -21,6 +22,10 @@ export async function PUT(
   const data: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) data[field] = body[field];
+  }
+
+  if (typeof data.url === "string" && !isUrlSafe(data.url)) {
+    return NextResponse.json({ error: "URL заблокирован (SSRF protection)" }, { status: 400 });
   }
 
   const updated = await prisma.mcpServer.update({ where: { id }, data });

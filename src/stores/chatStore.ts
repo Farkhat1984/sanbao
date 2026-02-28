@@ -60,6 +60,11 @@ interface ChatState {
   streamingPhase: StreamingPhase;
   streamingToolName: string | null;
 
+  // Streaming content buffer (merged into messages when stream ends)
+  streamingContent: string | null;
+  streamingReasoning: string | null;
+  streamingPlanContent: string | null;
+
   // AI feature toggles
   provider: string;
   thinkingEnabled: boolean;
@@ -80,6 +85,8 @@ interface ChatState {
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
   updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
+  /** Get the latest content for the last assistant message (streaming or committed) */
+  getLastAssistantContent: () => { content: string; reasoning?: string; planContent?: string } | null;
   setStreaming: (isStreaming: boolean) => void;
   setStreamingPhase: (phase: StreamingPhase, toolName?: string | null) => void;
 
@@ -104,7 +111,7 @@ interface ChatState {
   setClarifyQuestions: (questions: ClarifyQuestion[] | null) => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   activeAgentId: null,
   conversations: [],
@@ -112,6 +119,9 @@ export const useChatStore = create<ChatState>((set) => ({
   isStreaming: false,
   streamingPhase: null,
   streamingToolName: null,
+  streamingContent: null,
+  streamingReasoning: null,
+  streamingPlanContent: null,
   provider: "default",
   thinkingEnabled: false,
   webSearchEnabled: false,
@@ -147,24 +157,52 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => ({ messages: [...s.messages, message] })),
 
   updateLastAssistantMessage: (content, reasoning, planContent) =>
-    set((s) => {
-      const msgs = [...s.messages];
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        if (msgs[i].role === "ASSISTANT") {
-          msgs[i] = {
-            ...msgs[i],
-            content,
-            ...(reasoning !== undefined ? { reasoning } : {}),
-            ...(planContent !== undefined ? { planContent } : {}),
-          };
-          break;
-        }
-      }
-      return { messages: msgs };
+    set({
+      streamingContent: content,
+      ...(reasoning !== undefined ? { streamingReasoning: reasoning } : {}),
+      ...(planContent !== undefined ? { streamingPlanContent: planContent } : {}),
     }),
 
+  getLastAssistantContent: () => {
+    const s = get();
+    if (s.streamingContent !== null) {
+      return {
+        content: s.streamingContent,
+        reasoning: s.streamingReasoning ?? undefined,
+        planContent: s.streamingPlanContent ?? undefined,
+      };
+    }
+    return null;
+  },
+
   setStreaming: (isStreaming) =>
-    set({ isStreaming, ...(isStreaming ? {} : { streamingPhase: null, streamingToolName: null }) }),
+    set((s) => {
+      if (!isStreaming && s.streamingContent !== null) {
+        // Merge streaming buffer into messages when stream ends
+        const msgs = [...s.messages];
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === "ASSISTANT") {
+            msgs[i] = {
+              ...msgs[i],
+              content: s.streamingContent!,
+              ...(s.streamingReasoning !== null ? { reasoning: s.streamingReasoning } : {}),
+              ...(s.streamingPlanContent !== null ? { planContent: s.streamingPlanContent } : {}),
+            };
+            break;
+          }
+        }
+        return {
+          isStreaming: false,
+          streamingPhase: null,
+          streamingToolName: null,
+          streamingContent: null,
+          streamingReasoning: null,
+          streamingPlanContent: null,
+          messages: msgs,
+        };
+      }
+      return { isStreaming, ...(isStreaming ? {} : { streamingPhase: null, streamingToolName: null }) };
+    }),
 
   setStreamingPhase: (phase, toolName) => set((s) => {
     if (!phase) return { streamingPhase: null, streamingToolName: null };

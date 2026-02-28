@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,7 +17,7 @@ interface ConversationItemProps {
   isActive: boolean;
 }
 
-export function ConversationItem({
+export const ConversationItem = memo(function ConversationItem({
   conversation,
   isActive,
 }: ConversationItemProps) {
@@ -45,6 +45,40 @@ export function ConversationItem({
     setActiveAgentId(conversation.agentId || null);
     router.push(`/chat/${conversation.id}`);
     if (isMobile) closeSidebar();
+  };
+
+  const handlePinToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    const newPinned = !conversation.pinned;
+    // Optimistic update via store
+    useChatStore.setState((s) => ({
+      conversations: s.conversations.map((c) =>
+        c.id === conversation.id ? { ...c, pinned: newPinned } : c
+      ),
+    }));
+    fetch(`/api/conversations/${conversation.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned: newPinned }),
+    }).catch(console.error);
+  };
+
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    // Remove from list immediately
+    removeConversation(conversation.id);
+    fetch(`/api/conversations/${conversation.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived: true }),
+    }).catch(console.error);
+    if (isActive) {
+      setActiveConversation(null);
+      setActiveAgentId(null);
+      router.push("/chat");
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -126,16 +160,17 @@ export function ConversationItem({
             transition={{ duration: 0.12 }}
             className="absolute right-0 top-full z-20 w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
           >
-            <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+            <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
               <Pin className="h-3 w-3" />
               {conversation.pinned ? "Открепить" : "Закрепить"}
             </button>
-            <button className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+            <button onClick={handleArchive} aria-label="Архивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
               <Archive className="h-3 w-3" />
               В архив
             </button>
             <button
               onClick={handleDeleteClick}
+              aria-label="Удалить чат"
               className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 flex items-center gap-2 cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
@@ -155,4 +190,4 @@ export function ConversationItem({
       />
     </div>
   );
-}
+});

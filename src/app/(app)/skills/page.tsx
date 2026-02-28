@@ -22,10 +22,9 @@ export default function SkillsPage() {
     fetch("/api/skills")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setLocalSkills(data);
-          setSkills(data);
-        }
+        const list = Array.isArray(data) ? data : data.items ?? [];
+        setLocalSkills(list);
+        setSkills(list);
       })
       .catch(console.error)
       .finally(() => {

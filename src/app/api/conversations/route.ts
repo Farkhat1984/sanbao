@@ -3,15 +3,20 @@ import { getUserPlanAndUsage } from "@/lib/usage";
 import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAuth();
   if ("error" in result) return result.error;
   const { userId } = result.auth;
 
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200);
+
   const conversations = await prisma.conversation.findMany({
     where: { userId, archived: false },
     orderBy: { updatedAt: "desc" },
-    take: 200,
+    take: limit + 1, // fetch one extra to determine if there are more
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {
       id: true,
       title: true,
@@ -83,7 +88,13 @@ export async function GET() {
     };
   });
 
-  return jsonOk(items);
+  const hasMore = conversations.length > limit;
+  if (hasMore) {
+    items.pop(); // remove the extra item
+  }
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
+  return jsonOk({ items, nextCursor });
 }
 
 export async function POST(req: Request) {

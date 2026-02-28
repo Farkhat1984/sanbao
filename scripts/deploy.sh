@@ -38,14 +38,18 @@ echo "=== Deploy started: $(date) | args: ${*:-full} ==="
 echo "=== Log: $LOG_FILE ==="
 echo ""
 
-# Cloudflare cache purge
-CF_API_TOKEN="${CF_API_TOKEN:-ympF_5OJdcmeFAZCrb3As2ArTQhg_5lYQ4nCCxDS}"
-CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
+# Cloudflare cache purge (must be set via environment variables)
+CF_API_TOKEN="${CF_API_TOKEN:-}"
+CF_ZONE_ID="${CF_ZONE_ID:-}"
 
 # Server 2 SSH (for cloudflared check)
 SERVER2_SSH="faragj@46.225.122.142"
 
 purge_cf_cache() {
+  if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ZONE_ID" ]; then
+    echo "=== Skipping Cloudflare cache purge (CF_API_TOKEN or CF_ZONE_ID not set) ==="
+    return 0
+  fi
   echo "=== Purging Cloudflare cache ==="
   RESP=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
     -H "Authorization: Bearer ${CF_API_TOKEN}" \

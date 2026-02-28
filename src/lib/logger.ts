@@ -38,7 +38,13 @@ function emit(level: LogLevel, msg: string, meta?: Record<string, unknown>) {
 
   if (useJson) {
     const entry: LogEntry = { level, msg, ts: new Date().toISOString(), ...(requestId && { requestId }), ...meta };
-    const line = JSON.stringify(entry);
+    let line: string;
+    try {
+      line = JSON.stringify(entry);
+    } catch {
+      // Circular reference or non-serializable value — fall back to safe subset
+      line = JSON.stringify({ level, msg, ts: entry.ts, requestId, error: "meta not serializable" });
+    }
     if (level === "error") {
       process.stderr?.write?.(line + "\n") ?? console.error(line);
     } else {

@@ -174,9 +174,10 @@ export async function welcomeEmail(userName: string): Promise<{ subject: string;
   const custom = await getCustomTemplate("WELCOME");
   if (custom) {
     // Replace variables in custom template
+    const safeName = (userName || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     return {
       subject: custom.subject.replace(/\{\{userName\}\}/g, userName || ""),
-      html: custom.html.replace(/\{\{userName\}\}/g, userName || ""),
+      html: custom.html.replace(/\{\{userName\}\}/g, safeName),
     };
   }
   return {

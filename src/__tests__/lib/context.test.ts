@@ -34,9 +34,9 @@ describe("estimateTokens", () => {
     expect(estimateTokens(text)).toBe(1000);
   });
 
-  it("handles Cyrillic text", () => {
-    const text = "Привет мир"; // 10 chars (Cyrillic)
-    expect(estimateTokens(text)).toBe(4); // 10/3 = 3.33 → 4
+  it("handles Cyrillic text with higher token ratio", () => {
+    const text = "Привет мир"; // 10 chars, 9 Cyrillic → divisor ~1.65
+    expect(estimateTokens(text)).toBe(7); // ceil(10/1.65) = 7
   });
 });
 

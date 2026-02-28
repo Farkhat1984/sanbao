@@ -161,10 +161,10 @@ async function main() {
 
   // ─── Admin user ──────────────────────────────────────────
   const adminEmail = process.env.ADMIN_EMAIL || "admin@sanbao.ai";
-  const adminPassword = await bcrypt.hash(
-    process.env.ADMIN_PASSWORD || "ChangeMe123!",
-    12
-  );
+  if (!process.env.ADMIN_PASSWORD) {
+    throw new Error("ADMIN_PASSWORD environment variable is required for seeding");
+  }
+  const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },

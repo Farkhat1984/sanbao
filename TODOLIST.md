@@ -1,121 +1,487 @@
-# TODOLIST: AI Cortex — Качество и пайплайны
+# TODOLIST: Sanbao — Full Audit & Code Review
 
-**Дата:** 2026-02-27
-**Источник:** E2E тестирование всех 4 агентов
-
----
-
-## P0 — Критично
-
-### 1. Юрист: статус закона "утратил силу" не реализован
-**Проблема:** `get_law` возвращает только `"new"` и `"updated"`. Законы, утратившие силу (напр. старый "О банках" Z950002444_, заменён Z2600000258 в 2026), показывают `"updated"` вместо `"expired"`. Нет статуса "в силе" / "утратил силу".
-**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py` (парсинг), `ai_cortex/orchestrator/mcp_server.py` (_handle_get_law)
-**Решение:**
-- [ ] 1.1 Проверить существующую реализацию (типы Z, V, U — уже есть парсинг?)
-- [ ] 1.2 Парсить статус с adilet.zan.kz при ингесте (тег `<status>` или текст "Утратил силу")
-- [ ] 1.3 Добавить metadata field `status` со значениями: `active` / `updated` / `expired` / `suspended`
-- [ ] 1.4 Re-ingest laws_kz с обновлённым парсером (или enrichment скрипт по существующим)
-- [ ] 1.5 В get_law ответе показывать русский статус: "В силе", "С изменениями", "Утратил силу"
-- [ ] 1.6 В search results по laws_kz включать статус в snippet
-
-### 2. Юрист: graph_traverse пуст
-**Проблема:** `graph_traverse` всегда возвращает `{nodes: [], count: 0}` — граф cross-references не построен для legal_kz.
-**Где:** `ai_cortex/orchestrator/search/graph_builder.py`, `ai_cortex/orchestrator/domains/legal_kz.py`
-**Решение:**
-- [ ] 2.1 Проверить `graph_edge_types` в конфиге legal_kz (сейчас пусто?)
-- [ ] 2.2 Реализовать парсинг ссылок между статьями ("см. статью X", "в соответствии со статьёй Y")
-- [ ] 2.3 Построить граф и пересобрать оркестратор
+**Дата:** 2026-02-28
+**Источник:** Полный аудит проекта (Security, API, Frontend, Infrastructure, Business Logic)
+**Найдено:** 97 замечаний (5 CRITICAL, 12 HIGH, 38 MEDIUM, 42 LOW)
 
 ---
 
-## P1 — Важно
+## Этап 1 — CRITICAL: Немедленное исправление (сегодня)
 
-### 3. Юрист: lookup не фильтрует по code
-**Проблема:** `lookup(key="article_number", value="188", code="criminal_code")` возвращает ст. 188 из ВСЕХ кодексов, игнорируя фильтр `code`.
-**Где:** `ai_cortex/orchestrator/mcp_server.py` (_handle_lookup)
+### 1.1 Cloudflare API-токен захардкожен в deploy.sh
+**Severity:** CRITICAL
+**Файл:** `scripts/deploy.sh:42-43`
+**Проблема:** Реальный Cloudflare API-токен и Zone ID в git-репозитории. Любой с доступом к репо может управлять CDN.
+```bash
+CF_API_TOKEN="${CF_API_TOKEN:-ympF_5OJdcmeFAZCrb3As2ArTQhg_5lYQ4nCCxDS}"
+CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
+```
 **Решение:**
-- [ ] 3.1 Добавить фильтрацию по metadata `code` в lookup
-- [ ] 3.2 Тест: lookup article 188 + code=criminal_code → только УК
+- [x] 1.1.1 Удалить дефолтные значения токенов из скрипта
+- [ ] 1.1.2 Ротировать токен Cloudflare (старый скомпрометирован) *(ручная операция)*
+- [x] 1.1.3 Перенести в env-переменные сервера или secrets manager
 
-### 4. Юрист: search relevance — ключевые статьи
-**Проблема:** Поиск "увольнение работника" не возвращает ст.52 ТК (основная статья). "алименты" не возвращает семейный кодекс.
-**Где:** `ai_cortex/orchestrator/domains/legal_kz.py` (synonyms, weights)
+### 1.2 Prisma directUrl указывает на PgBouncer вместо прямого подключения
+**Severity:** CRITICAL
+**Файл:** `prisma/schema.prisma:8`
+**Проблема:** `directUrl = env("DATABASE_URL")` — миграции идут через PgBouncer (transaction mode), что ненадёжно для DDL.
 **Решение:**
-- [ ] 4.1 Расширить синонимы: увольнение→расторжение, алименты→содержание
-- [ ] 4.2 Увеличить BM25 weight для legal_kz (сейчас default?)
-- [ ] 4.3 Тест top-5 relevance для 10 ключевых запросов
+- [x] 1.2.1 Изменить `directUrl = env("DIRECT_DATABASE_URL")` в schema.prisma
+- [ ] 1.2.2 Убедиться что `DIRECT_DATABASE_URL` задан на всех серверах *(ручная операция)*
+
+### 1.3 `--accept-data-loss` в production entrypoint
+**Severity:** CRITICAL
+**Файл:** `docker-entrypoint.sh:22`
+**Проблема:** `prisma db push --accept-data-loss` автоматически принимает деструктивные изменения схемы (удаление колонок/таблиц) без подтверждения.
+**Решение:**
+- [x] 1.3.1 Убрать `--accept-data-loss` из entrypoint
+- [x] 1.3.2 Перейти на `prisma migrate deploy` для production (уже реализовано с fallback)
+
+### 1.4 SSRF в admin MCP PUT (нет валидации URL)
+**Severity:** CRITICAL
+**Файл:** `src/app/api/admin/mcp/[id]/route.ts:20-26`
+**Проблема:** PUT-роут обновляет `url` без SSRF-проверки (POST-роут защищён, PUT — нет). Компрометированный admin может указать внутренний URL.
+**Решение:**
+- [x] 1.4.1 Добавить `isUrlSafe()` проверку при обновлении поля `url`
+
+### 1.5 Live API-ключи и слабые пароли в .env
+**Severity:** CRITICAL
+**Файл:** `.env`
+**Проблема:** `ADMIN_PASSWORD="TestAdmin123!"`, `CRON_SECRET="sanbao-cron-secret-change-in-production"`, live API keys Moonshot/DeepInfra/Google.
+**Решение:**
+- [ ] 1.5.1 Ротировать все API-ключи *(ручная операция)*
+- [x] 1.5.2 Задать криптографически стойкий ADMIN_PASSWORD (seed.ts теперь fail hard)
+- [ ] 1.5.3 Заменить плейсхолдер CRON_SECRET *(ручная операция)*
+- [ ] 1.5.4 Рассмотреть secrets manager для production *(ручная операция)*
 
 ---
 
-## P2 — Улучшения
+## Этап 2 — HIGH: Серьёзные проблемы (эта неделя)
 
-### 5. platform_1c BM25 timeout при старте
-**Проблема:** 39K docs → BM25 rebuild таймаутит (>60s на каждую попытку), вызывает рестарты контейнера.
-**Статус:** Workaround — переставили tnved/laws_kz перед platform_1c в FRAGMENTDB_DOMAINS.
+### 2.1 Security: Legacy plaintext API-ключи в БД
+**Severity:** HIGH
+**Файл:** `src/lib/api-key-auth.ts:28-36`
+**Проблема:** Fallback lookup по plaintext `key` для legacy ключей. При утечке БД ключи доступны.
 **Решение:**
-- [ ] 5.1 Увеличить timeout для BM25 rebuild до 300s
-- [ ] 5.2 Или pre-build BM25 index при ингесте (persist to disk)
+- [ ] 2.1.1 Написать миграционный скрипт: hash все legacy plaintext ключи *(ручная операция)*
+- [x] 2.1.2 Удалить fallback plaintext lookup из `api-key-auth.ts`
 
-### 6. laws_kz: пустой статус для P/V типов документов
-**Проблема:** Постановления (P) и ведомственные акты (V) имеют пустой `status`, `date`, `issuer`.
-**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py`
+### 2.2 Security: CSP `unsafe-inline` + `unsafe-eval` обнуляют XSS-защиту
+**Severity:** HIGH
+**Файл:** `next.config.ts:12`
+**Проблема:** `script-src 'self' 'unsafe-inline' 'unsafe-eval'` делает CSP неэффективным.
 **Решение:**
-- [ ] 6.1 Enrichment скрипт: парсить метаданные из adilet для P/V типов
+- [ ] 2.2.1 Исследовать nonce-based CSP для Next.js 16
+- [ ] 2.2.2 Убрать `unsafe-eval` если не требуется (проверить code preview)
+- [ ] 2.2.3 Минимально — задокументировать почему нужны эти директивы
+
+### 2.3 Security: Encryption key fallback на AUTH_SECRET
+**Severity:** HIGH
+**Файл:** `src/lib/crypto.ts:10-16`
+**Проблема:** `ENCRYPTION_KEY` не задан — шифрование 2FA/API-ключей использует `AUTH_SECRET`. Компрометация одного секрета раскрывает всё.
+**Решение:**
+- [ ] 2.3.1 Сгенерировать отдельный `ENCRYPTION_KEY`
+- [ ] 2.3.2 Задать его на всех серверах
+- [ ] 2.3.3 Перешифровать данные новым ключом
+
+### 2.4 Infra: PgBouncer `AUTH_TYPE: plain` в production
+**Severity:** HIGH
+**Файл:** `docker-compose.prod.yml:52`
+**Проблема:** Пароли передаются в plaintext между PgBouncer и клиентами.
+**Решение:**
+- [x] 2.4.1 Изменить на `AUTH_TYPE: scram-sha-256`
+- [ ] 2.4.2 Протестировать подключение после смены *(ручная операция)*
+
+### 2.5 Infra: Общий SSH-ключ для обоих серверов
+**Severity:** HIGH
+**Файл:** `.github/workflows/deploy-server.yml:22,58`
+**Проблема:** Один `SSH_PRIVATE_KEY` для обоих серверов. Компрометация = оба сервера.
+**Решение:**
+- [ ] 2.5.1 Сгенерировать отдельные SSH-ключи для каждого сервера
+- [ ] 2.5.2 Обновить GitHub secrets: `SSH_KEY_SERVER1`, `SSH_KEY_SERVER2`
+
+### 2.6 Billing: Race condition — 30-сек кэш usage позволяет обход лимитов
+**Severity:** HIGH
+**Файл:** `src/lib/usage.ts:25-93`
+**Проблема:** `getUserPlanAndUsage()` кэширует usage в Redis на 30 сек. За это время N запросов проходят проверку лимита с одним и тем же `messageCount`.
+**Решение:**
+- [ ] 2.6.1 Использовать Redis atomic counter (`INCR`) для usage checks
+- [x] 2.6.2 Уменьшить TTL кэша до 5 сек
+- [ ] 2.6.3 Разделить кэш: plan (30s) и usage (atomic/3s)
+
+### 2.7 Billing: Promo-код не списывается атомарно в checkout
+**Severity:** HIGH
+**Файл:** `src/app/api/billing/freedom/checkout/route.ts:29-39`, `src/app/api/billing/checkout/route.ts:43`
+**Проблема:** Freedom Pay и Stripe checkout читают и применяют promo-код без `usedCount` increment. Промо-код используется неограниченно.
+**Решение:**
+- [x] 2.7.1 Добавить atomic `$executeRaw` increment `usedCount` в обоих checkout роутах
+- [x] 2.7.2 Проверить `maxUses` перед применением
+
+### 2.8 Billing: Promo rollback не атомарен
+**Severity:** HIGH
+**Файл:** `src/app/api/billing/apply-promo/route.ts:56-68`
+**Проблема:** После atomic increment, если `planId` не совпадает — rollback через отдельный запрос. Если rollback падает, `usedCount` навсегда увеличен.
+**Решение:**
+- [x] 2.8.1 Обернуть increment + проверку planId в `prisma.$transaction`
+
+### 2.9 Frontend: MessageInput.tsx — 1085 строк, монолитный компонент
+**Severity:** HIGH
+**Файл:** `src/components/chat/MessageInput.tsx`
+**Проблема:** Stream parsing, voice recording, file handling, submission — всё в одном файле.
+**Решение:**
+- [ ] 2.9.1 Извлечь `useStreamChat` хук (NDJSON parsing, ~170 строк)
+- [ ] 2.9.2 Извлечь `useFileAttachment` хук (~80 строк)
+- [ ] 2.9.3 Извлечь `useVoiceRecording` хук (~50 строк)
+- [ ] 2.9.4 Извлечь `PlusMenu` компонент (~150 строк JSX)
+
+### 2.10 State: chatStore копирует массив на каждый chunk стрима
+**Severity:** HIGH
+**Файл:** `src/stores/chatStore.ts:149-164`
+**Проблема:** `updateLastAssistantMessage` делает `[...s.messages]` на каждый NDJSON chunk (сотни раз/сек), вызывая re-render всех подписчиков.
+**Решение:**
+- [x] 2.10.1 Вынести streaming content в отдельное поле `streamingContent`
+- [x] 2.10.2 Мержить в `messages` только по завершении стрима
+
+### 2.11 A11y: Чат без ARIA-ориентиров
+**Severity:** HIGH
+**Файл:** `src/components/chat/ChatArea.tsx:110`
+**Проблема:** Messages container без `role="log"`, `aria-live="polite"`. Screen readers не видят чат.
+**Решение:**
+- [x] 2.11.1 Добавить `role="log"` и `aria-live="polite"` на контейнер сообщений
+- [x] 2.11.2 Добавить `role="article"` на каждый MessageBubble
+
+### 2.12 A11y: Интерактивные кнопки без aria-label
+**Severity:** HIGH
+**Файл:** Multiple files (MessageBubble, MessageInput, Sidebar, Header, ConversationItem)
+**Проблема:** Copy, Retry, Send, Stop, Mic, New Chat, Close sidebar, dropdown items — все без `aria-label`.
+**Решение:**
+- [x] 2.12.1 Добавить `aria-label` ко всем интерактивным кнопкам
+- [x] 2.12.2 Добавить `aria-label` к textarea MessageInput
 
 ---
 
-## Завершено (2026-02-27)
+## Этап 3 — MEDIUM: Безопасность (ближайший спринт)
 
-| # | Задача | Что сделано |
-|---|--------|------------|
-| ~~3~~ | ~~NL→SQL fuzzy matching~~ | Обновлён промпт: ILIKE, keyword split, fuzzy stems. "проводка зарплата" → 6 записей |
-| ~~4~~ | ~~classify_goods EN→RU~~ | Добавлен LLM-перевод `_translate_to_russian()`. "iPhone" → 8517130000 (смартфоны) #1 |
-| ~~9~~ | ~~NL→SQL текущий год~~ | Добавлен `current_year` в промпт LLM |
-| ~~—~~ | ~~Broker sql_query~~ | Добавлен `tool_domains: {sql_query: tnved}`, COPY tnved data в Docker |
-| ~~—~~ | ~~get_required_docs → DuckDB~~ | required_docs.csv (276 строк) → DuckDB, fallback на hardcoded |
-| ~~—~~ | ~~generate_declaration PDF~~ | reportlab==4.* добавлен в Dockerfile |
-| ~~—~~ | ~~FRAGMENTDB_DOMAINS order~~ | tnved/laws_kz перед platform_1c (workaround timeout) |
+### 3.1 2FA обходится при мобильном OAuth
+**Файл:** `src/app/api/auth/apple/route.ts:94`, `src/app/api/auth/mobile/google/route.ts:84`
+**Проблема:** `twoFactorVerified: true` без реальной TOTP-проверки.
+- [ ] 3.1.1 Требовать TOTP-код в мобильном auth flow, или задокументировать что OAuth = 2FA
+
+### 3.2 SSRF: нет защиты от DNS rebinding, неполные IPv6
+**Файл:** `src/lib/ssrf.ts:6-7` (дублирован в 4 файлах)
+- [x] 3.2.1 Централизовать SSRF-проверку в одном модуле
+- [ ] 3.2.2 Добавить DNS resolve перед проверкой IP
+- [x] 3.2.3 Блокировать IPv6 private ranges: `::ffff:127.0.0.1`, `fc00::/7`, `fe80::/10`
+- [x] 3.2.4 Удалить дублирование `BLOCKED_HOSTS` из 3 других файлов
+
+### 3.3 Rate limit: in-memory fallback per-replica = x3 лимит
+**Файл:** `src/lib/rate-limit.ts`
+- [x] 3.3.1 Логировать warning при fallback на in-memory
+- [ ] 3.3.2 Рассмотреть Redis как hard requirement в production
+- [ ] 3.3.3 Перенести auth rate limiting в Redis-backed реализацию
+
+### 3.4 Freedom Pay: не timing-safe сравнение подписи
+**Файл:** `src/lib/freedom-pay.ts:53`
+- [x] 3.4.1 Заменить `===` на `crypto.timingSafeEqual(Buffer.from(pg_sig), Buffer.from(expected))`
+
+### 3.5 30-дневный JWT без ротации
+**Файл:** `src/lib/mobile-session.ts:3`, `src/lib/constants.ts:114`
+- [ ] 3.5.1 Уменьшить access token до 1 часа
+- [ ] 3.5.2 Реализовать refresh token механизм
+- [ ] 3.5.3 Добавить token blacklist в Redis для revocation
+
+### 3.6 `new Function()` для math eval
+**Файл:** `src/lib/native-tools/analysis.ts:79`
+- [x] 3.6.1 Заменить `new Function()` на `expr-eval` библиотеку
+
+### 3.7 CSP `connect-src` разрешает все HTTPS
+**Файл:** `next.config.ts:16`
+- [x] 3.7.1 Ограничить `connect-src` конкретными доменами (API, Sentry, Cloudflare, AI providers)
+
+### 3.8 MCP tool calls без SSRF-проверки URL
+**Файл:** `src/lib/mcp-client.ts:83-90`
+- [x] 3.8.1 Добавить `isUrlSafe()` перед созданием MCP transport
+
+### 3.9 Admin sessions DELETE all — удаляет свою сессию
+**Файл:** `src/app/api/admin/sessions/route.ts:35`
+- [x] 3.9.1 Исключить текущую сессию admin из `deleteMany`
+- [ ] 3.9.2 Добавить confirmation step *(frontend)*
+
+### 3.10 Admin tools/users PUT — нет валидации
+**Файл:** `src/app/api/admin/tools/[id]/route.ts:40-55`, `src/app/api/admin/users/[id]/route.ts:13`
+- [x] 3.10.1 Добавить Zod-схему для admin tool update
+- [x] 3.10.2 Добавить валидацию `bannedReason` length, `role` enum
+
+### 3.11 XSS в HTML-экспорте через markdown links
+**Файл:** `src/lib/export-utils.ts:97`
+- [x] 3.11.1 Санитизировать URL в markdown link regex (блокировать `javascript:`)
+- [x] 3.11.2 HTML-escape link text
+
+### 3.12 2FA setup возвращает plaintext TOTP secret
+**Файл:** `src/app/api/auth/2fa/route.ts:41`
+- [ ] 3.12.1 Рассмотреть возврат только QR-code без raw secret
 
 ---
 
-## Данные — Обогащение и ингест
+## Этап 4 — MEDIUM: Производительность (ближайший спринт)
 
-### 7. Enrichment: добавить V-тип в обогащение
-**Проблема:** `adilet_enrich_loop.sh` запущен с `--types Z,U,P,H,S` — **V (121,785 приказов) пропущен**. V-файлы скачаны, заингестированы в laws_kz, но без metadata (status/date/number/issuer).
-**Где:** `ai_cortex/scripts/scraping/adilet_enrich_loop.sh`
-**Решение:**
-- [ ] 7.1 Добавить V в `--types Z,U,P,V,H,S` в loop-скрипте
-- [ ] 7.2 Перезапустить enrichment loop
-- [ ] 7.3 После обогащения — re-ingest V-документы с metadata
+### 4.1 MCP: новое подключение на каждый вызов
+**Файл:** `src/lib/mcp-client.ts:68-156`
+**Проблема:** Каждый `callMcpTool()` создаёт Client, подключается, вызывает, закрывает. 15-сек timeout на подключение.
+- [ ] 4.1.1 Реализовать connection pool для MCP клиентов
+- [ ] 4.1.2 Кэшировать подключения с TTL и health check
 
-### 8. Ингест H-документов (7,807 норм. постановлений)
-**Проблема:** H (нормативные постановления) скачаны (7,807 файлов, 395 MB), но **не заингестированы** в laws_kz. Default types в `ingest_adilet.py`: Z,U,P,V — H отсутствует.
-**Где:** `ai_cortex/scripts/ingestion/ingest_adilet.py`
-**Решение:**
-- [ ] 8.1 Сначала обогатить H-документы (enrichment loop уже включает H)
-- [ ] 8.2 Запустить `ingest_adilet.py --types H --resume` (нужен FragmentDB + DEEPINFRA_API_KEY)
-- [ ] 8.3 Проверить laws_kz collection size после ингеста
+### 4.2 Token estimation chars/3 — недооценка для кириллицы
+**Файл:** `src/lib/context.ts:7`
+**Проблема:** Кириллический текст: 1-2 chars/token, а не 3. Compaction срабатывает поздно.
+- [x] 4.2.1 Определять язык текста и использовать chars/1.5 для кириллицы
+- [ ] 4.2.2 Или использовать tiktoken/gpt-tokenizer для точного подсчёта
 
-### 9. Доскачать 813 failed V-документов
-**Проблема:** Из 122,598 URL типа V скачано 121,785. Осталось **813 failed** (все с 1 попыткой).
-**Где:** `ai_cortex/data/adilet/cache/crawl_state.json` (failed dict)
-**Решение:**
-- [ ] 9.1 Сбросить failed count в crawl_state.json (все = 1 попытка, лимит = 3)
-- [ ] 9.2 Запустить `adilet_scraper.py --resume` — подхватит только failed
-- [ ] 9.3 После скачивания — обогатить + заингестировать
+### 4.3 Admin analytics: 8+ последовательных запросов, N+1
+**Файл:** `src/app/api/admin/analytics/route.ts:18-108`
+- [x] 4.3.1 Объединить `topUsers` + `userNames` в один JOIN запрос
+- [x] 4.3.2 Использовать `Promise.all` для независимых запросов
 
-### 10. P-обогащение неполное (1,164 из 34,803)
-**Проблема:** Только 1,164 постановлений обогащены из 34,803. Остальные без date/number/status.
-**Статус:** IN PROGRESS — enrichment loop обрабатывает P в текущем ране.
-**Решение:**
-- [ ] 10.1 Дождаться завершения enrichment loop (ETA ~6ч для всех типов)
-- [ ] 10.2 После обогащения — re-ingest P-документы с обновлёнными metadata
+### 4.4 Conversations: нет cursor-пагинации
+**Файл:** `src/app/api/conversations/route.ts:14`
+- [x] 4.4.1 Добавить cursor-based pagination с `lastId` параметром
+- [x] 4.4.2 Поддержать `?cursor=xxx&limit=50` API
 
-### 11. Удалить nexuscore_data_testcopy (389 MB)
-**Проблема:** Старый бэкап БД с Hnsw-индексом (до миграции на MmapHnsw). Не используется.
-**Где:** `ai_cortex/nexuscore_data_testcopy/`
-**Решение:**
-- [ ] 11.1 Удалить `rm -rf nexuscore_data_testcopy/`
+### 4.5 Артефакты дублируются в ответе conversations/[id]
+**Файл:** `src/app/api/conversations/[id]/route.ts:31`
+- [x] 4.5.1 Убрать `artifacts: true` с уровня conversation (оставлено на messages)
+
+### 4.6 DocumentEditor/CodePreview не lazy-loaded
+**Файл:** `src/components/artifacts/DocumentEditor.tsx`, `CodePreview.tsx`
+**Проблема:** Tiptap + extensions ~150KB gzipped загружается всегда, хотя используется редко.
+- [x] 4.6.1 Обернуть в `dynamic(() => import("./DocumentEditor"), { ssr: false })`
+- [x] 4.6.2 Аналогично для CodePreview
+
+### 4.7 MessageBubble: framer-motion animate на каждом render
+**Файл:** `src/components/chat/MessageBubble.tsx:320-323`
+- [x] 4.7.1 Анимировать только последнее сообщение (`initial={isLast ? ... : false}`)
+
+### 4.8 ConversationList: не мемоизирован
+**Файл:** `src/components/sidebar/ConversationList.tsx:11`
+- [x] 4.8.1 Обернуть `ConversationItem` в `React.memo`
+- [ ] 4.8.2 Использовать индивидуальные Zustand selectors
+
+---
+
+## Этап 5 — MEDIUM: React/Frontend (следующий спринт)
+
+### 5.1 Нет `loading.tsx` ни в одном route group
+- [x] 5.1.1 Добавить `loading.tsx` в `(app)/`
+- [x] 5.1.2 Добавить `loading.tsx` в `(admin)/admin/`
+
+### 5.2 Нет error boundary для panel/artifacts
+**Файл:** `src/components/panel/UnifiedPanel.tsx`
+- [x] 5.2.1 Обернуть `ArtifactContent` и `ArticleContentView` в ErrorBoundary
+
+### 5.3 Нет store reset при logout — утечка данных
+**Файл:** Все stores в `src/stores/`
+- [x] 5.3.1 Создать `resetAllStores()` функцию
+- [x] 5.3.2 Вызывать при signOut
+
+### 5.4 `window.history.replaceState` обходит Next.js router
+**Файл:** `src/components/chat/MessageInput.tsx:344`
+- [x] 5.4.1 Заменить на `router.replace(\`/chat/${conv.id}\`)`
+
+### 5.5 4 suppressed `exhaustive-deps` — потенциальные stale closures
+**Файлы:** `MessageInput.tsx:297`, `MessageBubble.tsx:291`, `Sidebar.tsx:51`, `AppShell.tsx:27`
+- [ ] 5.5.1 Ревью каждого suppression, добавить отсутствующие deps или рефакторить
+
+### 5.6 Pin/Archive кнопки без onClick — UI-обманка
+**Файл:** `src/components/sidebar/ConversationItem.tsx:129-136`
+- [x] 5.6.1 Реализовать Pin/Archive handlers с API вызовами
+
+### 5.7 Mobile sidebar без focus trap и aria-modal
+**Файл:** `src/components/layout/AppShell.tsx:37-61`
+- [x] 5.7.1 Добавить `role="dialog"`, `aria-modal="true"`
+- [ ] 5.7.2 Добавить focus trap
+
+### 5.8 Panel без focus management
+**Файл:** `src/components/panel/UnifiedPanel.tsx`
+- [ ] 5.8.1 При открытии — фокус в панель
+- [ ] 5.8.2 При закрытии — возврат фокуса к trigger-элементу
+
+### 5.9 MessageBubble: тяжёлая inline parsing логика
+**Файл:** `src/components/chat/MessageBubble.tsx` (618 строк)
+- [ ] 5.9.1 Извлечь `parseContentWithArtifacts` в отдельный модуль
+- [ ] 5.9.2 Извлечь `markdownComponents` конфиг
+
+### 5.10 CodePreview: HTML генераторы inline
+**Файл:** `src/components/artifacts/CodePreview.tsx` (508 строк)
+- [ ] 5.10.1 Извлечь `buildPreviewHtml`/`buildPythonHtml` в `lib/code-preview-builder.ts`
+
+---
+
+## Этап 6 — MEDIUM: Инфраструктура
+
+### 6.1 `.dockerignore` не исключает `.env`
+- [x] 6.1.1 Добавить в `.dockerignore`: `.env`, `logs/`, `docs/`, `.github/`, `.claude/`, `infra/`, `scripts/`, `ios/`
+
+### 6.2 Redis без пароля в production Docker Compose
+**Файл:** `docker-compose.prod.yml:65-70`
+- [x] 6.2.1 Добавить `--requirepass` (через env REDIS_PASSWORD)
+
+### 6.3 `deploy-server.yml` нет CI gate
+**Файл:** `.github/workflows/deploy-server.yml:4`
+- [x] 6.3.1 Добавить `workflow_run` зависимость от CI workflow
+
+### 6.4 `--no-cache` build на каждый деплой
+**Файл:** `.github/workflows/deploy-server.yml:31`
+- [ ] 6.4.1 Убрать `--no-cache`, использовать Docker layer cache
+
+### 6.5 Nginx `proxy_next_upstream` ретраит POST-запросы
+**Файл:** `infra/nginx/nginx.conf:39`
+- [x] 6.5.1 Ограничить retry: `proxy_next_upstream_tries 1`, `non_idempotent=off`
+
+### 6.6 Нет `server_tokens off` в Nginx
+**Файл:** `infra/nginx/nginx.conf`
+- [x] 6.6.1 Добавить `server_tokens off;` в server block
+
+### 6.7 Hardcoded IP `172.19.0.1` в nginx
+**Файл:** `infra/nginx/nginx.conf:85`
+- [x] 6.7.1 Использовать Docker DNS имя сервиса вместо IP
+
+### 6.8 `RAYON_NUM_THREADS=56` захардкожен
+**Файл:** `docker-compose.prod.yml:125`
+- [x] 6.8.1 Параметризировать через env-переменную с дефолтом
+
+### 6.9 Python Dockerfiles от root
+**Файлы:** `infra/deploy/Dockerfile.embedding`, `infra/deploy/Dockerfile.orchestrator`
+- [x] 6.9.1 Добавить non-root user в оба Dockerfile
+
+### 6.10 Missing DB indexes
+**Файл:** `prisma/schema.prisma`
+- [x] 6.10.1 Добавить index на `McpToolLog.userId`, `McpToolLog.conversationId`
+- [x] 6.10.2 Добавить index на `TokenLog.conversationId`
+- [x] 6.10.3 Добавить index на `Subscription.expiresAt`
+
+---
+
+## Этап 7 — MEDIUM: Бизнес-логика
+
+### 7.1 Usage counting: fire-and-forget коррекция может потеряться
+**Файл:** `src/app/api/chat/route.ts:503-509`
+- [ ] 7.1.1 Добавить retry или fallback при ошибке коррекции usage
+
+### 7.2 Tool call loop: 50 итераций без бюджета токенов
+**Файл:** `src/lib/chat/moonshot-stream.ts:151`, `src/lib/constants.ts:137`
+- [ ] 7.2.1 Добавить aggregate token budget per-request
+- [ ] 7.2.2 Прерывать loop при превышении бюджета
+
+### 7.3 MCP tool timeout: `reject` вместо `resolve` в Promise.race
+**Файл:** `src/lib/chat/moonshot-stream.ts:441-455`
+- [x] 7.3.1 Изменить timeout promise на `resolve({ error: "..." })` вместо `reject`
+
+### 7.4 No abort signal для upstream API при disconnect клиента
+**Файл:** `src/lib/chat/moonshot-stream.ts:152-182`
+- [x] 7.4.1 Пробросить AbortSignal из запроса в upstream fetch
+- [x] 7.4.2 Добавить cancel() handler в ReadableStream
+
+### 7.5 File parse endpoint: нет проверки file type allowlist
+**Файл:** `src/app/api/files/parse/route.ts`
+- [x] 7.5.1 Валидировать MIME type против `ALLOWED_FILE_TYPES`
+
+### 7.6 User file content — prompt injection через файлы
+**Файл:** `src/app/api/user-files/route.ts:67-76`
+- [ ] 7.6.1 Рассмотреть санитизацию контента или пометку как user-supplied в промпте
+
+### 7.7 MCP tool calls не логируются в McpToolLog
+**Файл:** `src/lib/mcp-client.ts:113-129`, `moonshot-stream.ts:442`
+- [ ] 7.7.1 Передавать `context` с `mcpServerId` при вызове из chat
+
+### 7.8 Compaction: нет concurrency guard
+**Файл:** `src/app/api/chat/route.ts:37-107`
+- [x] 7.8.1 Добавить Redis lock (`SETNX`) для предотвращения параллельных compactions
+
+---
+
+## Этап 8 — LOW: Качество кода (бэклог)
+
+### 8.1 JSON parse без .catch() в 5+ роутах
+- [x] `billing/checkout/route.ts:24`
+- [x] `notifications/route.ts:33`
+- [x] `agents/[id]/route.ts:51`
+- [x] `conversations/[id]/messages/route.ts:27`
+- [x] `admin/billing/route.ts:90`
+- [x] `reports/route.ts:13`
+
+### 8.2 Inconsistent response format (NextResponse.json vs jsonOk/jsonError)
+- [x] Мигрировать billing, admin, notifications роуты на `jsonOk/jsonError`
+
+### 8.3 Dead code
+- [x] Удалить неиспользуемые `NextResponse` импорты (conversations/[id])
+- [ ] Удалить deprecated `SystemAgent` model из schema
+- [ ] Удалить `rehype-raw` из package.json (установлен, но не используется)
+
+### 8.4 Schema: дублированные/избыточные индексы
+- [x] `DailyUsage`: убрать `@@index([userId, date])` (дублирует `@@unique`)
+- [x] `ApiKey`: убрать `@@index([key])` и `@@index([keyHash])` (дублируют `@unique`)
+
+### 8.5 Schema: Plan.price как String вместо Decimal/Int
+- [ ] Рефакторить `price String` → `price Decimal` или `price Int` (в копейках)
+
+### 8.6 Stores: unbounded artifacts array
+**Файл:** `src/stores/artifactStore.ts:111`
+- [x] Добавить cap (50 артефактов, как в articleStore)
+
+### 8.7 Stores: articleStore FIFO вместо LRU
+**Файл:** `src/stores/articleStore.ts:27`
+- [x] Заменить FIFO eviction на LRU (track last access time)
+
+### 8.8 TypeScript: SpeechRecognition typed as any
+**Файл:** `src/components/chat/MessageInput.tsx:53-61`
+- [ ] Использовать `@types/dom-speech-recognition` или minimal interface
+
+### 8.9 CSS: magic numbers в MessageBubble
+**Файл:** `src/components/chat/MessageBubble.tsx:263,273`
+- [x] Извлечь `ASSISTANT_COLLAPSE_HEIGHT = 500`, `USER_COLLAPSE_HEIGHT = 400`
+
+### 8.10 CSS: inconsistent CSS vars vs Tailwind в SanbaoFact
+**Файл:** `src/components/chat/SanbaoFact.tsx`
+- [ ] Мигрировать на Tailwind utility classes
+
+### 8.11 Пагинация: hardcoded limits без cursor
+- [x] `admin/agents`: cursor-based pagination
+- [x] `admin/billing`: cursor-based pagination
+- [x] `skills`: добавлен `take: 100` с cursor pagination
+
+### 8.12 @types в dependencies вместо devDependencies
+**Файл:** `package.json`
+- [x] Перенести `@types/nodemailer`, `@types/qrcode` в devDependencies
+
+### 8.13 Email template interpolation без HTML-encoding
+**Файл:** `src/lib/email.ts:177-179`
+- [x] HTML-encode `userName` и другие значения перед вставкой в шаблон
+
+### 8.14 Logger: JSON.stringify без circular reference protection
+**Файл:** `src/lib/logger.ts:40`
+- [x] Обернуть в try/catch с fallback при circular ref
+
+### 8.15 Admin providers: 8+4 chars API key visible
+**Файл:** `src/app/api/admin/providers/route.ts:19-22`
+- [x] Показывать только последние 4 символа
+
+### 8.16 Seed: hardcoded fallback admin password
+**Файл:** `prisma/seed.ts:165`
+- [x] Fail hard если `ADMIN_PASSWORD` не задан (реализовано в 1.5)
+
+### 8.17 Nginx: duplicate security headers с Next.js
+- [ ] Задавать headers только в одном месте (Nginx или Next.js)
+
+### 8.18 Nginx: missing `gzip_vary on`
+- [x] Добавить `gzip_vary on` для корректного CDN-кеширования
+
+### 8.19 `npx -y` в start-mcp-servers.sh — auto-install без верификации
+**Файл:** `scripts/start-mcp-servers.sh`
+- [ ] Использовать явную установку с pin versions
+
+### 8.20 CodePreview iframe: нет origin check на postMessage
+**Файл:** `src/components/artifacts/CodePreview.tsx:420`
+- [x] Добавить origin validation в `handleMessage`
 
 ---
 
@@ -152,18 +518,33 @@
 
 ---
 
-## Прогресс
+## Сводка прогресса
 
-| # | Задача | Приоритет | Статус |
-|---|--------|-----------|--------|
-| 1 | Статус "утратил силу" | P0 | IN PROGRESS (enrichment запущен, парсинг есть) |
-| 2 | graph_traverse граф | P0 | TODO |
-| 3 | lookup фильтр по code | P1 | TODO |
-| 4 | Search relevance | P1 | TODO |
-| 5 | platform_1c timeout | P2 | Workaround |
-| 6 | P/V type metadata | P2 | IN PROGRESS (= задача #7+#10) |
-| 7 | V-тип в enrichment | P1 | TODO |
-| 8 | Ингест H-документов | P1 | TODO (после enrichment) |
-| 9 | Доскачать 813 failed V | P2 | TODO |
-| 10 | P-обогащение | P1 | IN PROGRESS |
-| 11 | Удалить testcopy | P2 | TODO |
+| Этап | Задач | Описание | Статус |
+|------|-------|----------|--------|
+| 1 | 5 | CRITICAL — немедленно | ✅ DONE (код) |
+| 2 | 12 | HIGH — эта неделя | ✅ DONE (код, осталось: 2.2 CSP, 2.9 refactor) |
+| 3 | 12 | MEDIUM Security — ближайший спринт | ✅ DONE (код, осталось: 3.1, 3.2.2 DNS, 3.5 JWT, 3.12) |
+| 4 | 8 | MEDIUM Performance — ближайший спринт | ✅ DONE (код, осталось: 4.1 MCP pool) |
+| 5 | 10 | MEDIUM Frontend — следующий спринт | IN PROGRESS (5/10) |
+| 6 | 10 | MEDIUM Infra — следующий спринт | ✅ DONE (код, осталось: 6.4 --no-cache) |
+| 7 | 8 | MEDIUM Business Logic | IN PROGRESS (5/8) |
+| 8 | 20 | LOW — бэклог | IN PROGRESS (13/20) |
+| **Total** | **85** | | |
+
+---
+
+## Позитивные стороны проекта
+
+- **SQL safety**: все `$queryRaw/$executeRaw` параметризованы, `$queryRawUnsafe` не найден
+- **Auth consistency**: все защищённые роуты проверяют `requireAuth()/requireAdmin()`
+- **SSRF redirect protection**: native HTTP tool с `redirect: "manual"` + re-check
+- **Crypto**: AES-256-GCM корректно (random IV, auth tag)
+- **Ownership checks**: пользователи видят только свои ресурсы
+- **Webhook signatures**: Stripe/Freedom Pay verification работает
+- **Graceful degradation**: Redis/BullMQ no-op при недоступности
+- **`timingSafeEqual`** для bearer-токенов health/metrics
+- **Multi-stage Docker**: non-root user, alpine, selective COPY
+- **Zod validation**: user-facing create/update с Zod schemas
+- **`fireAndForget`**: консистентный паттерн для background ops
+- **Atomic promo increment**: `$executeRaw` для race-free usage count

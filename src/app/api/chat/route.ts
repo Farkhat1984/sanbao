@@ -31,6 +31,7 @@ import { buildApiMessages, type ChatAttachment } from "@/lib/chat/message-builde
 import { streamMoonshot, type McpToolContext } from "@/lib/chat/moonshot-stream";
 import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
 import { getPrompt, PROMPT_REGISTRY } from "@/lib/prompts";
+import { getRedis } from "@/lib/redis";
 
 // ─── Background compaction ───────────────────────────────
 
@@ -42,7 +43,19 @@ async function compactInBackground(
   userId: string,
   textModel?: ResolvedModel | null
 ) {
+  const lockKey = `compact:${conversationId}`;
+  const LOCK_TTL_SECONDS = 60;
   try {
+    // Acquire Redis lock to prevent parallel compactions on the same conversation
+    const redis = getRedis();
+    if (redis) {
+      const acquired = await redis.set(lockKey, "1", "EX", LOCK_TTL_SECONDS, "NX");
+      if (!acquired) {
+        // Another compaction is already running for this conversation — skip
+        return;
+      }
+    }
+
     const compactionPrompt = await buildCompactionPrompt(existingSummary, messagesToSummarize);
 
     const model = textModel || await resolveModel("TEXT");
@@ -103,6 +116,12 @@ async function compactInBackground(
     }
   } catch (err) {
     console.error("[compaction] Failed for conversation", conversationId, err instanceof Error ? err.message : err);
+  } finally {
+    // Release compaction lock so the conversation can be compacted again
+    try {
+      const redis = getRedis();
+      if (redis) await redis.del(lockKey);
+    } catch { /* ignore cleanup errors */ }
   }
 }
 
@@ -551,6 +570,7 @@ export async function POST(req: Request) {
       contextInfo,
       textModel,
       onUsage,
+      signal: req.signal,
     });
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);

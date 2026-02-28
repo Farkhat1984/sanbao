@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ─── NextAuth models ─────────────────────────────────────
@@ -321,6 +321,7 @@ model Subscription {
   updatedAt DateTime @updatedAt
 
   @@index([planId])
+  @@index([expiresAt])
 }
 
 model DailyUsage {
@@ -334,7 +335,6 @@ model DailyUsage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
-  @@index([userId, date])
 }
 
 // ─── Skills System ──────────────────────────────────────
@@ -646,6 +646,8 @@ model McpToolLog {
 
   @@index([mcpServerId, createdAt])
   @@index([toolName, createdAt])
+  @@index([userId])
+  @@index([conversationId])
 }
 
 // ─── AI Provider & Model models ────────────────────────
@@ -774,6 +776,7 @@ model TokenLog {
   @@index([userId, createdAt])
   @@index([provider, createdAt])
   @@index([createdAt])
+  @@index([conversationId])
 }
 
 // ─── Audit Log ────────────────────────────────────────────
@@ -876,8 +879,6 @@ model ApiKey {
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@index([key])
-  @@index([keyHash])
 }
 
 // ─── Webhooks ─────────────────────────────────────────────

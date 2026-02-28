@@ -18,7 +18,7 @@ export async function GET() {
   // Mask API keys in response
   const masked = providers.map((p) => ({
     ...p,
-    apiKey: p.apiKey ? `${p.apiKey.slice(0, 8)}...${p.apiKey.slice(-4)}` : "",
+    apiKey: p.apiKey ? `***${p.apiKey.slice(-4)}` : "",
   }));
 
   return NextResponse.json(masked);

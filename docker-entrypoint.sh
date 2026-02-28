@@ -19,7 +19,7 @@ else
       DATABASE_URL="$MIGRATE_URL" \
         NODE_PATH=/app/prisma-cli/node_modules:/app/node_modules \
         node /app/prisma-cli/node_modules/prisma/build/index.js db push \
-          --schema=prisma/schema.prisma --skip-generate --accept-data-loss 2>&1 || {
+          --schema=prisma/schema.prisma --skip-generate 2>&1 || {
         echo "[entrypoint] WARNING: prisma db push also failed, continuing..."
       }
     }
@@ -28,7 +28,7 @@ else
     DATABASE_URL="$MIGRATE_URL" \
       NODE_PATH=/app/prisma-cli/node_modules:/app/node_modules \
       node /app/prisma-cli/node_modules/prisma/build/index.js db push \
-        --schema=prisma/schema.prisma --skip-generate --accept-data-loss 2>&1 || {
+        --schema=prisma/schema.prisma --skip-generate 2>&1 || {
       echo "[entrypoint] WARNING: prisma db push failed, continuing..."
     }
   fi

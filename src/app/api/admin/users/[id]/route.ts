@@ -13,6 +13,14 @@ export async function PUT(
   const body = await req.json();
   const { role, planSlug, isBanned, bannedReason } = body;
 
+  // Validate inputs
+  if (role !== undefined && !["USER", "PRO", "ADMIN"].includes(role)) {
+    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+  if (bannedReason !== undefined && typeof bannedReason === "string" && bannedReason.length > 500) {
+    return NextResponse.json({ error: "bannedReason too long (max 500)" }, { status: 400 });
+  }
+
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });

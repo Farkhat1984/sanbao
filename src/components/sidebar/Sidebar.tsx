@@ -35,6 +35,7 @@ export function Sidebar() {
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setConversations(data);
+        else if (data?.items) setConversations(data.items);
       })
       .catch(console.error);
   }, [session?.user, setConversations]);
@@ -86,6 +87,7 @@ export function Sidebar() {
         <Tooltip content="Закрыть" side="right">
           <button
             onClick={close}
+            aria-label="Закрыть боковую панель"
             className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
           >
             <PanelLeftClose className="h-4 w-4" />
@@ -97,6 +99,7 @@ export function Sidebar() {
       <div className="px-3 mb-1">
         <button
           onClick={handleNewChat}
+          aria-label="Создать новый чат"
           className="w-full h-9 rounded-xl bg-accent text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-accent-hover transition-all shadow-sm active:scale-[0.98] cursor-pointer"
         >
           <Plus className="h-4 w-4" />

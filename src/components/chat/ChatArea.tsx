@@ -107,7 +107,7 @@ export function ChatArea() {
       )}
 
       {/* Messages or Welcome */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label="Сообщения чата">
         {!hasMessages ? (
           <WelcomeScreen />
         ) : (

@@ -32,8 +32,11 @@ export async function DELETE(req: Request) {
   const body = await req.json();
 
   if (body.all) {
-    await prisma.session.deleteMany({});
-    return NextResponse.json({ success: true, deleted: "all" });
+    // Exclude the current admin's session to prevent self-lockout
+    await prisma.session.deleteMany({
+      where: { userId: { not: result.userId } },
+    });
+    return NextResponse.json({ success: true, deleted: "all_except_current" });
   }
 
   if (body.sessionId) {

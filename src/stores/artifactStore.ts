@@ -108,7 +108,11 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
       ...artifact,
       versions: [{ version: artifact.version, content: artifact.content, timestamp: Date.now() }],
     };
-    set((s) => ({ artifacts: [...s.artifacts, withHistory] }));
+    set((s) => {
+      const updated = [...s.artifacts, withHistory];
+      // Cap at 50 artifacts to prevent unbounded growth
+      return { artifacts: updated.length > 50 ? updated.slice(-50) : updated };
+    });
     return withHistory;
   },
 

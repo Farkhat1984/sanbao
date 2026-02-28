@@ -8,7 +8,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { targetType, targetId, reason } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const { targetType, targetId, reason } = body;
 
   if (!targetType || !targetId || !reason) {
     return NextResponse.json({ error: "targetType, targetId, reason required" }, { status: 400 });

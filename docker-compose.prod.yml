@@ -49,7 +49,7 @@ services:
       RESERVE_POOL_SIZE: 20
       RESERVE_POOL_TIMEOUT: 3
       SERVER_IDLE_TIMEOUT: 300
-      AUTH_TYPE: plain
+      AUTH_TYPE: scram-sha-256
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +69,7 @@ services:
         --appendonly no
         --tcp-backlog 511
         --hz 10
+        --requirepass ${REDIS_PASSWORD:-changeme}
     volumes:
       - redisdata:/data
     healthcheck:
@@ -122,7 +123,7 @@ services:
       - ../ai_cortex/nexuscore_data:/home/fragmentdb/data
     environment:
       - RUST_LOG=nexus=info
-      - RAYON_NUM_THREADS=56
+      - RAYON_NUM_THREADS=${RAYON_NUM_THREADS:-4}
     command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]

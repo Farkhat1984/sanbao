@@ -21,7 +21,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Stripe не настроен" }, { status: 500 });
   }
 
-  const { planId, promoCode } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Неверный JSON" }, { status: 400 });
+  }
+  const { planId, promoCode } = body;
 
   if (!planId) {
     return NextResponse.json({ error: "planId required" }, { status: 400 });
@@ -37,12 +41,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Бесплатный план не требует оплаты" }, { status: 400 });
   }
 
-  // Apply promo code discount
+  // Apply promo code discount (atomic increment to prevent unlimited reuse)
   let finalAmount = priceNum * 100; // convert to tiyn/cents
   if (promoCode) {
-    const promo = await prisma.promoCode.findUnique({ where: { code: promoCode.toUpperCase() } });
-    if (promo && promo.isActive && promo.discount > 0) {
-      finalAmount = Math.round(finalAmount * (1 - promo.discount / 100));
+    const upperCode = (promoCode as string).toUpperCase().trim();
+    const now = new Date();
+    const claimed = await prisma.$executeRaw`
+      UPDATE "PromoCode"
+      SET "usedCount" = "usedCount" + 1
+      WHERE code = ${upperCode}
+        AND "isActive" = true
+        AND ("validUntil" IS NULL OR "validUntil" >= ${now})
+        AND ("maxUses" = 0 OR "usedCount" < "maxUses")
+    `;
+    if (claimed > 0) {
+      const promo = await prisma.promoCode.findUnique({ where: { code: upperCode } });
+      if (promo && promo.isActive && promo.discount > 0) {
+        finalAmount = Math.round(finalAmount * (1 - promo.discount / 100));
+      }
     }
   }
 

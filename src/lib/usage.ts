@@ -20,7 +20,7 @@ function todayKey(): string {
 
 // ─── Plan cache (Redis-first, 30s TTL) ──────────────────
 
-const PLAN_CACHE_TTL = 30; // seconds
+const PLAN_CACHE_TTL = 5; // seconds (short TTL to reduce race window on usage checks)
 
 export async function getUserPlanAndUsage(userId: string) {
   // Try Redis cache for plan data

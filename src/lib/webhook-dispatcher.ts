@@ -2,19 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { WEBHOOK_MAX_ATTEMPTS, WEBHOOK_TIMEOUT_MS } from "@/lib/constants";
-
-const BLOCKED_HOSTS = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|\[::1?\]|metadata\.google|169\.254\.\d+\.\d+)/i;
-
-function isUrlSafe(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    if (BLOCKED_HOSTS.test(parsed.hostname)) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isUrlSafe } from "@/lib/ssrf";
 
 export async function dispatchWebhook(event: string, payload: Record<string, unknown>) {
   const webhooks = await prisma.webhook.findMany({

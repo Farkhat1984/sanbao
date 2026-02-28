@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 /** GET — user's notifications */
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const notifications = await prisma.notification.findMany({
@@ -20,17 +20,18 @@ export async function GET() {
     take: 50,
   });
 
-  return NextResponse.json(notifications);
+  return jsonOk(notifications);
 }
 
 /** PUT — mark notifications as read */
 export async function PUT(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
-  const { ids } = await req.json();
+  const body = await req.json().catch(() => null);
+  const ids = body?.ids;
 
   if (ids && Array.isArray(ids)) {
     const safeIds = ids.slice(0, 500);
@@ -46,5 +47,5 @@ export async function PUT(req: Request) {
     });
   }
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

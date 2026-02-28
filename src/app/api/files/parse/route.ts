@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseFileToText } from "@/lib/parse-file";
-import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
+import { MAX_FILE_SIZE_PARSE, ALLOWED_FILE_TYPES } from "@/lib/constants";
 
 const MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
@@ -21,6 +21,13 @@ export async function POST(req: Request) {
   if (file.size > MAX_FILE_SIZE) {
     return NextResponse.json(
       { error: "Файл слишком большой (макс. 20MB)" },
+      { status: 400 }
+    );
+  }
+
+  if (file.type && !ALLOWED_FILE_TYPES.includes(file.type)) {
+    return NextResponse.json(
+      { error: `Тип файла не поддерживается: ${file.type}` },
       { status: 400 }
     );
   }

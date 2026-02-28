@@ -22,11 +22,20 @@ import { LegalReference } from "./LegalReference";
 import { ArticleLink } from "./ArticleLink";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
+import { useChatStore } from "@/stores/chatStore";
 import { openArtifactInPanel, openImageInPanel } from "@/lib/panel-actions";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
+
+// ─── Constants ────────────────────────────────────────────
+
+/** Height threshold (px) above which assistant messages are collapsed */
+const ASSISTANT_COLLAPSE_HEIGHT = 500;
+
+/** Height threshold (px) above which user messages are collapsed */
+const USER_COLLAPSE_HEIGHT = 400;
 
 // ─── Artifact parsing ────────────────────────────────────
 
@@ -216,13 +225,24 @@ interface MessageBubbleProps {
   onRetry?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
+export function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const { trackArtifact, findByTitle, applyEdits } = useArtifactStore();
   const isMobile = useIsMobile();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
+
+  // During streaming, read from the lightweight streaming buffer instead of
+  // the full messages array (avoids O(n) array copy per chunk).
+  const streamingContent = useChatStore((s) =>
+    isLast && isAssistant && s.isStreaming ? s.streamingContent : null
+  );
+  const streamingReasoning = useChatStore((s) =>
+    isLast && isAssistant && s.isStreaming ? s.streamingReasoning : null
+  );
+  const displayContent = streamingContent ?? message.content;
+  const displayReasoning = streamingReasoning ?? message.reasoning;
 
   // Track which edits we've already applied (by message id)
   const appliedEditsRef = useRef<Set<string>>(new Set());
@@ -245,8 +265,8 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
 
   // Parse artifacts and edits from assistant messages (memoized — regex parsing is expensive)
   const parts = useMemo(
-    () => (isAssistant ? parseContentWithArtifacts(message.content) : []),
-    [isAssistant, message.content]
+    () => (isAssistant ? parseContentWithArtifacts(displayContent) : []),
+    [isAssistant, displayContent]
   );
   const hasSpecialParts = useMemo(
     () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
@@ -259,9 +279,9 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     const el = bubbleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
-      setIsOverflowing(el.scrollHeight > 500);
+      setIsOverflowing(el.scrollHeight > ASSISTANT_COLLAPSE_HEIGHT);
     });
-  }, [message.content, isAssistant, isExpanded]);
+  }, [displayContent, isAssistant, isExpanded]);
 
   // Detect overflow for user messages
   useEffect(() => {
@@ -269,9 +289,9 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
     const el = userBubbleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
-      setIsUserOverflowing(el.scrollHeight > 400);
+      setIsUserOverflowing(el.scrollHeight > USER_COLLAPSE_HEIGHT);
     });
-  }, [message.content, isUser, isUserExpanded]);
+  }, [displayContent, isUser, isUserExpanded]);
 
   // Auto-apply edits to existing artifacts (run once per message)
   useEffect(() => {
@@ -289,7 +309,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.id, message.content]);
+  }, [message.id, displayContent]);
 
   const handleOpenArtifact = (part: ParsedPart) => {
     // Reuse existing artifact if already tracked (prevents version increment on re-click)
@@ -318,10 +338,12 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={isLast ? { opacity: 0, y: 8 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={cn("group flex gap-3 py-3", isUser && "flex-row-reverse")}
+      role="article"
+      aria-label={isUser ? "Сообщение пользователя" : "Ответ ассистента"}
     >
       {/* Avatar */}
       {(() => {
@@ -361,7 +383,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
         </span>
 
         {/* Reasoning block */}
-        {isAssistant && message.reasoning && (
+        {isAssistant && displayReasoning && (
           <div className="mb-2 w-full">
             <button
               onClick={() => setReasoningOpen(!reasoningOpen)}
@@ -383,7 +405,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
                 className="rounded-xl bg-violet-50 border border-violet-200 px-3 py-2 text-xs text-violet-700 leading-relaxed max-h-[300px] overflow-y-auto"
               >
                 <pre className="whitespace-pre-wrap font-sans">
-                  {message.reasoning}
+                  {displayReasoning}
                 </pre>
               </motion.div>
             )}
@@ -403,10 +425,14 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             isUser
               ? "bg-accent text-white rounded-tr-md"
               : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
-            isAssistant && !isExpanded && "max-h-[500px] overflow-hidden relative",
+            isAssistant && !isExpanded && "overflow-hidden relative",
             isAssistant && isExpanded && "overflow-x-auto",
-            isUser && !isUserExpanded && isUserOverflowing && "max-h-[400px] overflow-hidden relative",
+            isUser && !isUserExpanded && isUserOverflowing && "overflow-hidden relative",
           )}
+          style={{
+            ...(isAssistant && !isExpanded ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
+            ...(isUser && !isUserExpanded && isUserOverflowing ? { maxHeight: USER_COLLAPSE_HEIGHT } : {}),
+          }}
         >
           {isAssistant ? (
             <div className="prose-sanbao">
@@ -485,12 +511,12 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
                   urlTransform={urlTransform}
                   components={markdownComponents}
                 >
-                  {message.content.replace(CLARIFY_REGEX, "").trim()}
+                  {displayContent.replace(CLARIFY_REGEX, "").trim()}
                 </ReactMarkdown>
               )}
             </div>
           ) : (
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <p className="whitespace-pre-wrap">{displayContent}</p>
           )}
 
           {/* Gradient overlay + expand button for collapsed user messages */}
@@ -563,6 +589,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           )}>
             <button
               onClick={handleCopy}
+              aria-label="Копировать сообщение"
               className={cn(
                 "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                 isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
@@ -578,6 +605,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
             {onRetry && (
               <button
                 onClick={() => onRetry(message.id)}
+                aria-label="Повторить запрос"
                 className={cn(
                   "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                   isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
@@ -598,6 +626,7 @@ export function MessageBubble({ message, agentName, agentIcon, agentIconColor, o
           )}>
             <button
               onClick={handleCopy}
+              aria-label="Копировать сообщение"
               className={cn(
                 "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                 isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"

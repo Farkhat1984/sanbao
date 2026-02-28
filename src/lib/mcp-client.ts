@@ -4,6 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { fireAndForget } from "@/lib/logger";
+import { isUrlSafe } from "@/lib/ssrf";
 
 const MCP_CONNECT_TIMEOUT = 15_000; // 15s
 const MCP_TOOL_CALL_TIMEOUT = 30_000; // 30s
@@ -29,6 +30,11 @@ export async function connectAndDiscoverTools(
   transport: "SSE" | "STREAMABLE_HTTP",
   apiKey?: string | null
 ): Promise<{ tools: McpToolInfo[]; error?: string }> {
+  // SSRF protection: block internal/private URLs
+  if (!isUrlSafe(url)) {
+    return { tools: [], error: "URL blocked by SSRF protection" };
+  }
+
   try {
     const headers: Record<string, string> = {};
     if (apiKey) {
@@ -73,6 +79,11 @@ export async function callMcpTool(
   args: Record<string, unknown>,
   context?: { mcpServerId?: string; userId?: string; conversationId?: string }
 ): Promise<{ result: string; error?: string }> {
+  // SSRF protection: block internal/private URLs
+  if (!isUrlSafe(url)) {
+    return { result: "", error: "URL blocked by SSRF protection" };
+  }
+
   const start = Date.now();
   try {
     const headers: Record<string, string> = {};

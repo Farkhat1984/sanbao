@@ -12,8 +12,18 @@ import {
 } from "@/lib/constants";
 import { BoundedMap } from "@/lib/bounded-map";
 import { redisRateLimit, cacheIncr, cacheGet, cacheSet, cacheDel } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
 const RATE_LIMIT_MAX_ENTRIES = 50_000;
+
+/** Warn once per process about in-memory fallback to avoid log spam */
+let _loggedFallbackWarning = false;
+function warnInMemoryFallback(context: string) {
+  if (!_loggedFallbackWarning) {
+    logger.warn("Rate limiting falling back to in-memory — Redis unavailable", { context });
+    _loggedFallbackWarning = true;
+  }
+}
 
 // ─── In-memory fallback structures ──────────────────────
 const requestTimestamps = new BoundedMap<string, number[]>(RATE_LIMIT_MAX_ENTRIES);
@@ -25,7 +35,10 @@ const userBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES);
 async function trackViolationRedis(key: string): Promise<boolean> {
   const vKey = `rl:viol:${key}`;
   const count = await cacheIncr(vKey, Math.ceil(VIOLATION_WINDOW_MS / 1000));
-  if (count === null) return trackViolationMemory(key); // fallback
+  if (count === null) {
+    warnInMemoryFallback("trackViolation");
+    return trackViolationMemory(key);
+  }
   if (count >= VIOLATION_THRESHOLD) {
     const blockKey = `rl:block:${key}`;
     await cacheSet(blockKey, "1", Math.ceil(USER_BLOCK_DURATION_MS / 1000));
@@ -102,6 +115,7 @@ export async function checkMinuteRateLimit(
   }
 
   // Fallback to in-memory
+  warnInMemoryFallback("checkMinuteRateLimit");
   const now = Date.now();
   const windowMs = 60_000;
   const timestamps = requestTimestamps.get(userId) ?? [];
@@ -167,6 +181,7 @@ export async function checkRateLimit(
   if (redisResult !== null) return redisResult;
 
   // Fallback to in-memory
+  warnInMemoryFallback("checkRateLimit");
   const now = Date.now();
   const timestamps = genericTimestamps.get(key) ?? [];
   const recent = timestamps.filter((t) => now - t < windowMs);

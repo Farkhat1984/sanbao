@@ -14,48 +14,69 @@ export async function GET(req: Request) {
   since.setDate(since.getDate() - days);
   since.setHours(0, 0, 0, 0);
 
-  // Messages per day
-  const dailyMessages = await prisma.dailyUsage.groupBy({
-    by: ["date"],
-    where: { date: { gte: since } },
-    _sum: { messageCount: true, tokenCount: true },
-    orderBy: { date: "asc" },
-  });
-
-  // New registrations count
-  const newUsersCount = await prisma.user.count({
-    where: { createdAt: { gte: since } },
-  });
-
-  // Registrations by day (server-side grouping)
-  const regRows = await prisma.$queryRaw<{ day: string; count: bigint }[]>`
-    SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::bigint AS count
-    FROM "User"
-    WHERE "createdAt" >= ${since}
-    GROUP BY day
-    ORDER BY day ASC
-  `;
+  // Run independent queries in parallel
+  const [dailyMessages, newUsersCount, regRows, topUsers, providerDist, userCosts, totalCostAgg] = await Promise.all([
+    // Messages per day
+    prisma.dailyUsage.groupBy({
+      by: ["date"],
+      where: { date: { gte: since } },
+      _sum: { messageCount: true, tokenCount: true },
+      orderBy: { date: "asc" },
+    }),
+    // New registrations count
+    prisma.user.count({
+      where: { createdAt: { gte: since } },
+    }),
+    // Registrations by day (server-side grouping)
+    prisma.$queryRaw<{ day: string; count: bigint }[]>`
+      SELECT DATE_TRUNC('day', "createdAt")::date::text AS day, COUNT(*)::bigint AS count
+      FROM "User"
+      WHERE "createdAt" >= ${since}
+      GROUP BY day
+      ORDER BY day ASC
+    `,
+    // Top 10 users by token usage
+    prisma.dailyUsage.groupBy({
+      by: ["userId"],
+      where: { date: { gte: since } },
+      _sum: { tokenCount: true, messageCount: true },
+      orderBy: { _sum: { tokenCount: "desc" } },
+      take: 10,
+    }),
+    // Provider distribution
+    prisma.tokenLog.groupBy({
+      by: ["provider"],
+      where: { createdAt: { gte: since } },
+      _count: true,
+      _sum: { inputTokens: true, outputTokens: true, cost: true },
+    }),
+    // Financial: cost per user
+    prisma.tokenLog.groupBy({
+      by: ["userId"],
+      where: { createdAt: { gte: since } },
+      _sum: { cost: true },
+      orderBy: { _sum: { cost: "desc" } },
+      take: 10,
+    }),
+    // Total cost
+    prisma.tokenLog.aggregate({
+      where: { createdAt: { gte: since } },
+      _sum: { cost: true },
+    }),
+  ]);
 
   const regsByDay: Record<string, number> = {};
   for (const row of regRows) {
     regsByDay[row.day] = Number(row.count);
   }
 
-  // Top 10 users by token usage
-  const topUsers = await prisma.dailyUsage.groupBy({
-    by: ["userId"],
-    where: { date: { gte: since } },
-    _sum: { tokenCount: true, messageCount: true },
-    orderBy: { _sum: { tokenCount: "desc" } },
-    take: 10,
-  });
-
-  const topUserIds = topUsers.map((u) => u.userId);
-  const userNames = await prisma.user.findMany({
-    where: { id: { in: topUserIds } },
+  // Fetch user names for top users and cost users in a single query
+  const allUserIds = [...new Set([...topUsers.map((u) => u.userId), ...userCosts.map((u) => u.userId)])];
+  const allUserNames = await prisma.user.findMany({
+    where: { id: { in: allUserIds } },
     select: { id: true, name: true, email: true },
   });
-  const nameMap = Object.fromEntries(userNames.map((u) => [u.id, u.name || u.email]));
+  const nameMap = Object.fromEntries(allUserNames.map((u) => [u.id, u.name || u.email]));
 
   const topUsersWithNames = topUsers.map((u) => ({
     userId: u.userId,
@@ -64,14 +85,6 @@ export async function GET(req: Request) {
     messages: u._sum.messageCount || 0,
   }));
 
-  // Provider distribution
-  const providerDist = await prisma.tokenLog.groupBy({
-    by: ["provider"],
-    where: { createdAt: { gte: since } },
-    _count: true,
-    _sum: { inputTokens: true, outputTokens: true, cost: true },
-  });
-
   const providerDistribution = providerDist.map((p) => ({
     provider: p.provider,
     requests: p._count,
@@ -79,33 +92,11 @@ export async function GET(req: Request) {
     cost: p._sum.cost || 0,
   }));
 
-  // Financial: cost per user
-  const userCosts = await prisma.tokenLog.groupBy({
-    by: ["userId"],
-    where: { createdAt: { gte: since } },
-    _sum: { cost: true },
-    orderBy: { _sum: { cost: "desc" } },
-    take: 10,
-  });
-
-  const costUserIds = userCosts.map((u) => u.userId);
-  const costUserNames = await prisma.user.findMany({
-    where: { id: { in: costUserIds } },
-    select: { id: true, name: true, email: true },
-  });
-  const costNameMap = Object.fromEntries(costUserNames.map((u) => [u.id, u.name || u.email]));
-
   const costPerUser = userCosts.map((u) => ({
     userId: u.userId,
-    name: costNameMap[u.userId] || u.userId,
+    name: nameMap[u.userId] || u.userId,
     cost: u._sum.cost || 0,
   }));
-
-  // Total cost
-  const totalCostAgg = await prisma.tokenLog.aggregate({
-    where: { createdAt: { gte: since } },
-    _sum: { cost: true },
-  });
 
   // Anomaly: users with cost > 3x average
   const avgCost = costPerUser.length > 0

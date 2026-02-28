@@ -13,7 +13,7 @@ const cspValue = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https: ${cdnHost}`.trim(),
   `font-src 'self' data: ${cdnHost}`.trim(),
-  `connect-src 'self' https: ${cspExtraSrc}`.trim(),
+  `connect-src 'self' https://*.sentry.io https://*.cloudflare.com https://static.cloudflareinsights.com https://api.moonshot.cn https://api.deepinfra.com https://api.stripe.com wss: ${cspExtraSrc}`.trim(),
   "media-src 'self' blob: https:",
   "frame-src 'self' blob: data:",
   "frame-ancestors 'none'",

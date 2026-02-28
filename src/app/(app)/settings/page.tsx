@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { resetAllStores } from "@/stores/resetStores";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { UsageBar } from "@/components/billing/UsageBar";
@@ -308,7 +309,7 @@ function SettingsContent() {
         <section className="pt-4 border-t border-border pb-8">
           <Button
             variant="ghost"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => { resetAllStores(); signOut({ callbackUrl: "/login" }); }}
             className="text-error hover:text-error hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />

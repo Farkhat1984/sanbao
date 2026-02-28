@@ -4,9 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { invalidatePlanCache } from "@/lib/usage";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
+
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10) || 100, 500);
 
   const [subscriptions, plans, payments] = await Promise.all([
     prisma.subscription.findMany({
@@ -15,7 +19,8 @@ export async function GET() {
         plan: { select: { name: true, price: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 500,
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     }),
     prisma.plan.findMany({ select: { id: true, name: true, price: true } }),
     prisma.payment.findMany({
@@ -25,9 +30,13 @@ export async function GET() {
     }),
   ]);
 
+  const hasMore = subscriptions.length > limit;
+  const subItems = hasMore ? subscriptions.slice(0, limit) : subscriptions;
+  const nextCursor = hasMore && subItems.length > 0 ? subItems[subItems.length - 1].id : null;
+
   // Plan distribution
   const planCount: Record<string, number> = {};
-  for (const s of subscriptions) {
+  for (const s of subItems) {
     const name = s.plan.name;
     planCount[name] = (planCount[name] || 0) + 1;
   }
@@ -36,13 +45,13 @@ export async function GET() {
 
   // Monthly revenue estimate (parse price from plan)
   let monthlyRevenue = 0;
-  for (const s of subscriptions) {
+  for (const s of subItems) {
     const priceNum = parseInt(s.plan.price.replace(/\D/g, ""), 10);
     if (!isNaN(priceNum)) monthlyRevenue += priceNum;
   }
 
   // Recent subscriptions as "payments"
-  const recentPayments = subscriptions.slice(0, 20).map((s) => ({
+  const recentPayments = subItems.slice(0, 20).map((s) => ({
     id: s.id,
     userId: s.userId,
     userName: s.user.name || s.user.email,
@@ -62,7 +71,7 @@ export async function GET() {
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const subscriptionsList = subscriptions.map((s) => ({
+  const subscriptionsList = subItems.map((s) => ({
     userId: s.userId,
     userName: s.user.name || s.user.email,
     planId: s.planId,
@@ -72,13 +81,14 @@ export async function GET() {
   }));
 
   return NextResponse.json({
-    totalSubscriptions: subscriptions.length,
+    totalSubscriptions: subItems.length,
     planDistribution,
     recentPayments,
     payments: paymentsList,
     monthlyRevenue,
     plans,
     subscriptions: subscriptionsList,
+    nextCursor,
   });
 }
 
@@ -87,7 +97,11 @@ export async function POST(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const { userId, planId, action } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const { userId, planId, action } = body;
 
   if (action === "assign" && userId && planId) {
     // Check if plan has trial days

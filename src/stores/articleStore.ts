@@ -32,7 +32,11 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
     const cached = get().cache.get(key);
 
     if (cached) {
-      set({ activeArticle: cached, error: null, loading: false, _lastRequest: { code, article } });
+      // LRU: move accessed entry to end of Map so it's evicted last
+      const newCache = new Map(get().cache);
+      newCache.delete(key);
+      newCache.set(key, cached);
+      set({ activeArticle: cached, error: null, loading: false, cache: newCache, _lastRequest: { code, article } });
       return;
     }
 
@@ -52,10 +56,10 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
       const newCache = new Map(get().cache);
       newCache.set(key, data);
 
-      // Cap cache to 50 entries to prevent unbounded memory growth
+      // LRU eviction: cap cache to 50 entries, remove least recently used (first in Map)
       if (newCache.size > 50) {
-        const oldest = newCache.keys().next().value;
-        if (oldest) newCache.delete(oldest);
+        const lru = newCache.keys().next().value;
+        if (lru) newCache.delete(lru);
       }
 
       set({ activeArticle: data, loading: false, cache: newCache });

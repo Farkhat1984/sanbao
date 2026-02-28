@@ -15,4 +15,7 @@ EXPOSE 8097
 ENV DEEPINFRA_API_KEY=""
 ENV DEEPINFRA_MODEL="Qwen/Qwen3-Embedding-8B"
 
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 CMD ["python", "embedding_service.py", "--port", "8097"]

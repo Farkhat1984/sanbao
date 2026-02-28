@@ -408,6 +408,8 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
   // Listen for postMessage from iframe
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
+      // Origin check: accept same-origin or "null" (srcdoc iframes)
+      if (e.origin !== "null" && e.origin !== window.location.origin) return;
       if (!e.data || typeof e.data !== "object") return;
       if (e.data.type === "preview-error") {
         setHasError(true);

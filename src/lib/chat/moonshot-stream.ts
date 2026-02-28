@@ -52,6 +52,8 @@ export interface MoonshotStreamOptions {
   };
   textModel?: ResolvedModel | null;
   onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
+  /** AbortSignal from the incoming request — used to cancel upstream fetches on client disconnect */
+  signal?: AbortSignal;
 }
 
 // ─── SSE Parser ──────────────────────────────────────────
@@ -108,6 +110,7 @@ export function streamMoonshot(
     contextInfo,
     textModel,
     onUsage,
+    signal: incomingSignal,
   } = options;
   const nativeToolDefs = getNativeToolDefinitions();
 
@@ -117,6 +120,18 @@ export function streamMoonshot(
   const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
   const apiKey = textModel.provider.apiKey;
   const modelId = textModel.modelId;
+
+  // Create an AbortController so we can abort upstream fetches
+  // when the client disconnects (cancel() on ReadableStream).
+  const upstreamAbort = new AbortController();
+  // If the incoming request signal is already provided, forward its abort.
+  if (incomingSignal) {
+    if (incomingSignal.aborted) {
+      upstreamAbort.abort();
+    } else {
+      incomingSignal.addEventListener("abort", () => upstreamAbort.abort(), { once: true });
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -179,6 +194,7 @@ export function streamMoonshot(
                 ? { thinking: { type: "disabled" } }
                 : {}),
             }),
+            signal: upstreamAbort.signal,
           });
 
           if (!response.ok) {
@@ -446,8 +462,8 @@ export function streamMoonshot(
                       mcpDef.originalName || tc.function.name,
                       args
                     ),
-                    new Promise<{ error: string }>((_, reject) =>
-                      setTimeout(() => reject(new Error("MCP tool timeout")), MCP_TOOL_TIMEOUT_MS)
+                    new Promise<{ error: string }>((resolve) =>
+                      setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${MCP_TOOL_TIMEOUT_MS / 1000}s` }), MCP_TOOL_TIMEOUT_MS)
                     ),
                   ]);
                 } catch {
@@ -524,6 +540,10 @@ export function streamMoonshot(
       } finally {
         controller.close();
       }
+    },
+    cancel() {
+      // Client disconnected — abort any in-flight upstream API requests
+      upstreamAbort.abort();
     },
   });
 

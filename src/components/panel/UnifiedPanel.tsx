@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowLeft } from "lucide-react";
+import { X, ArrowLeft, AlertTriangle } from "lucide-react";
 import { usePanelStore } from "@/stores/panelStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { PanelTabBar } from "./PanelTabBar";
@@ -10,6 +10,51 @@ import { ArtifactContent } from "./ArtifactContent";
 import { ArticleContentView } from "./ArticleContentView";
 
 const springTransition = { type: "spring" as const, damping: 25, stiffness: 300 };
+
+// ─── Error boundary for panel content ────────────────────
+
+interface PanelErrorBoundaryState {
+  hasError: boolean;
+}
+
+class PanelErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  PanelErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): PanelErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="h-5 w-5 text-error" />
+          </div>
+          <p className="text-sm text-text-primary font-medium">
+            Не удалось отобразить содержимое
+          </p>
+          <p className="text-xs text-text-muted max-w-[240px]">
+            Произошла ошибка при загрузке панели. Попробуйте снова.
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="mt-1 px-4 py-2 text-sm font-medium rounded-xl bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer"
+          >
+            Попробовать снова
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function UnifiedPanel() {
   const {
@@ -119,7 +164,9 @@ export function UnifiedPanel() {
 
             {/* Content */}
             <div className="flex-1 min-h-0 overflow-hidden">
-              {renderContent()}
+              <PanelErrorBoundary>
+                {renderContent()}
+              </PanelErrorBoundary>
             </div>
           </motion.div>
         )}
@@ -161,7 +208,9 @@ export function UnifiedPanel() {
 
             {/* Content */}
             <div className="flex-1 min-h-0 overflow-hidden">
-              {renderContent()}
+              <PanelErrorBoundary>
+                {renderContent()}
+              </PanelErrorBoundary>
             </div>
           </div>
         </motion.div>

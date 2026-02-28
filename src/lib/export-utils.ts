@@ -93,8 +93,16 @@ function markdownToHtmlString(md: string): string {
   // Inline code
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Links (sanitize: block javascript: URLs, HTML-encode link text)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, text: string, url: string) => {
+    const trimmedUrl = url.trim().toLowerCase();
+    if (trimmedUrl.startsWith("javascript:") || trimmedUrl.startsWith("data:")) {
+      return text;
+    }
+    const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    return `<a href="${safeUrl}">${safeText}</a>`;
+  });
 
   // Paragraphs: wrap remaining non-empty lines not already in tags
   html = html

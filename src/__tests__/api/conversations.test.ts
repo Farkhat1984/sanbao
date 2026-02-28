@@ -44,7 +44,7 @@ describe("Conversations API", () => {
   describe("GET /api/conversations", () => {
     it("should return 401 if not authenticated", async () => {
       vi.mocked(authMock).mockResolvedValueOnce(null);
-      const res = await GET();
+      const res = await GET(new Request("http://localhost/api/conversations"));
       expect(res.status).toBe(401);
     });
 
@@ -64,14 +64,15 @@ describe("Conversations API", () => {
         },
       ] as never);
 
-      const res = await GET();
+      const res = await GET(new Request("http://localhost/api/conversations"));
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body).toHaveLength(1);
-      expect(body[0].id).toBe("conv-1");
-      expect(body[0].title).toBe("Test chat");
-      expect(body[0].lastMessage).toBe("Last message");
-      expect(body[0].agentId).toBeNull();
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].id).toBe("conv-1");
+      expect(body.items[0].title).toBe("Test chat");
+      expect(body.items[0].lastMessage).toBe("Last message");
+      expect(body.items[0].agentId).toBeNull();
+      expect(body.nextCursor).toBeNull();
     });
 
     it("should include agent info when available", async () => {
@@ -90,17 +91,18 @@ describe("Conversations API", () => {
         },
       ] as never);
 
-      const res = await GET();
+      const res = await GET(new Request("http://localhost/api/conversations"));
       const body = await res.json();
-      expect(body[0].agentName).toBe("Femida");
-      expect(body[0].isSystemAgent).toBe(true);
+      expect(body.items[0].agentName).toBe("Femida");
+      expect(body.items[0].isSystemAgent).toBe(true);
     });
 
     it("should return empty array if no conversations", async () => {
       vi.mocked(prisma.conversation.findMany).mockResolvedValueOnce([]);
-      const res = await GET();
+      const res = await GET(new Request("http://localhost/api/conversations"));
       const body = await res.json();
-      expect(body).toEqual([]);
+      expect(body.items).toEqual([]);
+      expect(body.nextCursor).toBeNull();
     });
   });
 

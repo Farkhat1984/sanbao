@@ -25,4 +25,7 @@ ENV AI_CORTEX_AUTH_TOKEN=""
 ENV DEEPINFRA_API_KEY=""
 ENV ANTHROPIC_API_KEY=""
 
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 CMD ["python", "-m", "orchestrator", "--http"]

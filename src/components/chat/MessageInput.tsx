@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useTaskStore } from "@/stores/taskStore";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { AlertModal } from "@/components/ui/AlertModal";
@@ -126,6 +127,7 @@ export function MessageInput() {
   const { addTask } = useTaskStore();
   const { agentTools } = useAgentStore();
   const isMobile = useIsMobile();
+  const router = useRouter();
 
   // Detect speech support on client only (avoid hydration mismatch)
   const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
@@ -341,7 +343,7 @@ export function MessageInput() {
           convId = conv.id;
           addConversation(conv);
           setActiveConversation(conv.id);
-          window.history.replaceState(null, "", `/chat/${conv.id}`);
+          router.replace(`/chat/${conv.id}`);
         } else if (convRes.status === 403) {
           const err = await convRes.json().catch(() => ({ error: "Лимит диалогов" }));
           addMessage({
@@ -944,6 +946,7 @@ export function MessageInput() {
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
+            aria-label="Введите сообщение"
             placeholder={
               isRecording
                 ? "Говорите..."
@@ -965,6 +968,7 @@ export function MessageInput() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={handleStop}
+                aria-label="Остановить генерацию"
                 className="h-9 w-9 rounded-full bg-error text-white flex items-center justify-center hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
               >
                 <StopCircle className="h-4 w-4" />
@@ -976,6 +980,7 @@ export function MessageInput() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={stopRecording}
+                aria-label="Остановить запись"
                 className="relative h-9 w-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
               >
                 <motion.div
@@ -993,6 +998,7 @@ export function MessageInput() {
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={handleSubmit}
                 disabled={hasParsing}
+                aria-label="Отправить сообщение"
                 className={cn(
                   "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer",
                   hasParsing
@@ -1013,6 +1019,7 @@ export function MessageInput() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={startRecording}
+                aria-label="Начать запись голоса"
                 className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer bg-surface-alt text-text-muted hover:text-text-primary hover:bg-surface-alt/80"
               >
                 <Mic className="h-4 w-4" />

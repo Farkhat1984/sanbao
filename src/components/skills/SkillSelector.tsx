@@ -16,9 +16,10 @@ export function SkillSelector() {
     if (skills.length === 0) {
       setLoading(true);
       fetch("/api/skills")
-        .then((r) => (r.ok ? r.json() : []))
+        .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((data) => {
-          if (Array.isArray(data)) setSkills(data);
+          const list = Array.isArray(data) ? data : data.items ?? [];
+          setSkills(list);
         })
         .finally(() => setLoading(false));
     }

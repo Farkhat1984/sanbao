@@ -50,7 +50,10 @@ export function verifySignature(
   const { pg_sig, ...rest } = params;
   if (!pg_sig) return false;
   const expected = generateSignature(scriptName, rest, secretKey);
-  return pg_sig === expected;
+  const sigBuf = Buffer.from(pg_sig);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 // ─── Init Payment ───────────────────────────────────────

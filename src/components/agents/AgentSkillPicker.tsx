@@ -25,7 +25,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
   useEffect(() => {
     fetch("/api/skills")
       .then((r) => r.json())
-      .then((data) => setSkills(data))
+      .then((data) => setSkills(Array.isArray(data) ? data : data.items ?? []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

@@ -23,16 +23,24 @@ export async function POST(req: Request) {
     return jsonError("Тарифный план не найден или бесплатный", 400);
   }
 
-  // Apply promo code discount
+  // Apply promo code discount (atomic increment to prevent unlimited reuse)
   let finalAmount = priceNum;
   let appliedPromo: string | null = null;
   if (promoCode && typeof promoCode === "string") {
-    const promo = await prisma.promoCode.findUnique({
-      where: { code: promoCode.toUpperCase().trim() },
-    });
-    if (promo && promo.isActive && promo.discount > 0) {
-      // Validate plan restriction
-      if (!promo.planId || promo.planId === planId) {
+    const upperCode = promoCode.toUpperCase().trim();
+    const now = new Date();
+    const claimed = await prisma.$executeRaw`
+      UPDATE "PromoCode"
+      SET "usedCount" = "usedCount" + 1
+      WHERE code = ${upperCode}
+        AND "isActive" = true
+        AND ("validUntil" IS NULL OR "validUntil" >= ${now})
+        AND ("maxUses" = 0 OR "usedCount" < "maxUses")
+        AND ("planId" IS NULL OR "planId" = ${planId})
+    `;
+    if (claimed > 0) {
+      const promo = await prisma.promoCode.findUnique({ where: { code: upperCode } });
+      if (promo && promo.discount > 0) {
         finalAmount = Math.round(priceNum * (1 - promo.discount / 100));
         appliedPromo = promo.code;
       }

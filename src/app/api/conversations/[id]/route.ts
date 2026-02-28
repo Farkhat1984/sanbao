@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { conversationUpdateSchema } from "@/lib/validation";
@@ -27,7 +26,6 @@ export async function GET(
           artifacts: true,
         },
       },
-      artifacts: true,
     },
   });
 

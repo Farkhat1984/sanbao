@@ -3,8 +3,16 @@ import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 
 // ─── Context management utilities for autocompact & planning ───
 
+// Cyrillic characters typically take 1-2 chars/token vs 3-4 for Latin.
+// We detect predominant script and adjust the divisor accordingly.
+const CYRILLIC_RE = /[\u0400-\u04FF]/g;
+
 export function estimateTokens(text: string): number {
-  return Math.max(1, Math.ceil(text.length / 3));
+  const cyrillicCount = (text.match(CYRILLIC_RE) || []).length;
+  const ratio = text.length > 0 ? cyrillicCount / text.length : 0;
+  // Blend: pure Latin ≈ /3, pure Cyrillic ≈ /1.5
+  const divisor = 3 - ratio * 1.5;
+  return Math.max(1, Math.ceil(text.length / divisor));
 }
 
 export function estimateMessagesTokens(

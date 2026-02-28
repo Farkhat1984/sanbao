@@ -48,7 +48,8 @@ export async function PUT(
   const { userId } = result.auth;
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
   const parsed = agentUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
