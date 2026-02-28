@@ -85,29 +85,29 @@ export function SanbaoFact({ isVisible, messageCount }: SanbaoFactProps) {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="fixed bottom-24 right-4 z-40 max-w-xs md:max-w-sm"
         >
-          <div className="bg-[var(--bg-secondary)]/95 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-4 shadow-lg">
+          <div className="bg-surface-alt/95 backdrop-blur-sm border border-border rounded-2xl p-4 shadow-lg">
             <div className="flex items-start gap-3">
               <div className="shrink-0 mt-0.5">
-                <Compass className="w-5 h-5 text-[var(--accent)]" />
+                <Compass className="w-5 h-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[var(--text-primary)] mb-1">
+                <p className="text-xs font-semibold text-text-primary mb-1">
                   {fact.title}
                 </p>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                <p className="text-xs text-text-secondary leading-relaxed">
                   {fact.text}
                 </p>
               </div>
               <button
                 onClick={handleDismiss}
-                className="shrink-0 p-1 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                className="shrink-0 p-1 rounded-lg hover:bg-surface-hover transition-colors"
                 aria-label="Закрыть"
               >
-                <X className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <X className="w-3.5 h-3.5 text-text-muted" />
               </button>
             </div>
-            <div className="mt-2 pt-2 border-t border-[var(--border)]">
-              <p className="text-[10px] text-[var(--text-muted)] italic">
+            <div className="mt-2 pt-2 border-t border-border">
+              <p className="text-[10px] text-text-muted italic">
                 Чжэн Хэ (Ma Sanbao) — великий мореплаватель XV века
               </p>
             </div>

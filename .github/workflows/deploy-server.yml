@@ -40,7 +40,7 @@ jobs:
             git reset --hard origin/main
 
             echo "=== Rebuilding sanbao container ==="
-            docker compose -f docker-compose.prod.yml build --no-cache app
+            docker compose -f docker-compose.prod.yml build app
             docker compose -f docker-compose.prod.yml up -d app
 
             echo "=== Waiting for health check ==="

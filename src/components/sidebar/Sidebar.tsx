@@ -21,8 +21,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 export function Sidebar() {
-  const { close, searchQuery, setSearchQuery } = useSidebarStore();
-  const { setActiveConversation, setActiveAgentId, setMessages, setConversations, isStreaming } = useChatStore();
+  const close = useSidebarStore((s) => s.close);
+  const searchQuery = useSidebarStore((s) => s.searchQuery);
+  const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const setActiveAgentId = useChatStore((s) => s.setActiveAgentId);
+  const setMessages = useChatStore((s) => s.setMessages);
+  const setConversations = useChatStore((s) => s.setConversations);
+  const isStreaming = useChatStore((s) => s.isStreaming);
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -40,7 +46,10 @@ export function Sidebar() {
       .catch(console.error);
   }, [session?.user, setConversations]);
 
-  // Auto-close sidebar on route change (mobile only) — skip initial mount
+  // Auto-close sidebar on route change (mobile only) — skip initial mount.
+  // `isMobile` is intentionally excluded: this effect should only fire when
+  // the pathname changes, not when the viewport crosses the mobile breakpoint.
+  // `close` is a stable zustand action.
   const prevPathname = useRef(pathname);
   useEffect(() => {
     if (prevPathname.current !== pathname) {
@@ -50,7 +59,7 @@ export function Sidebar() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, close]);
 
   const handleNewChat = () => {
     setActiveConversation(null);

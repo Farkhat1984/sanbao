@@ -62,6 +62,8 @@ export interface McpToolContext {
   originalName?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** MCP server ID from DB — used for tool call logging */
+  mcpServerId?: string;
 }
 
 export interface ResolvedAgentContext {
@@ -236,6 +238,7 @@ export async function resolveAgentContext(
         name: tool.name,
         description: tool.description || "",
         inputSchema: tool.inputSchema || {},
+        mcpServerId: srv.id,
       });
     }
   };

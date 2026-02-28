@@ -69,6 +69,10 @@ export function UnifiedPanel() {
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseBtnRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const prevOpenRef = useRef(false);
 
   // Escape key to close
   useEffect(() => {
@@ -78,6 +82,23 @@ export function UnifiedPanel() {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closePanel]);
+
+  // Focus management: focus close button on open, restore focus on close
+  useEffect(() => {
+    if (isOpen && !prevOpenRef.current) {
+      // Panel just opened — capture trigger and focus close button
+      triggerRef.current = document.activeElement as HTMLElement;
+      requestAnimationFrame(() => {
+        const btn = isMobile ? mobileCloseBtnRef.current : closeBtnRef.current;
+        btn?.focus();
+      });
+    } else if (!isOpen && prevOpenRef.current) {
+      // Panel just closed — restore focus to trigger
+      triggerRef.current?.focus();
+      triggerRef.current = null;
+    }
+    prevOpenRef.current = isOpen;
+  }, [isOpen, isMobile]);
 
   // Resize handle for desktop
   const handleMouseDown = useCallback(
@@ -152,6 +173,7 @@ export function UnifiedPanel() {
             {/* Mobile header */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
               <button
+                ref={mobileCloseBtnRef}
                 onClick={closePanel}
                 className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
               >
@@ -198,6 +220,7 @@ export function UnifiedPanel() {
                 <PanelTabBar />
               </div>
               <button
+                ref={closeBtnRef}
                 onClick={closePanel}
                 className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
                 title="Закрыть"

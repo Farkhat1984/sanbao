@@ -14,6 +14,7 @@ import {
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
   NATIVE_TOOL_MAX_TURNS,
+  MAX_REQUEST_TOKENS,
 } from "@/lib/constants";
 
 // ─── Moonshot built-in web search tool ───────────────────
@@ -34,6 +35,8 @@ export interface McpToolContext {
   originalName?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** MCP server ID from DB — used for tool call logging */
+  mcpServerId?: string;
 }
 
 // ─── Stream options ──────────────────────────────────────
@@ -54,6 +57,8 @@ export interface MoonshotStreamOptions {
   onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
   /** AbortSignal from the incoming request — used to cancel upstream fetches on client disconnect */
   signal?: AbortSignal;
+  /** Context for MCP tool call logging (userId, conversationId) */
+  mcpCallContext?: { userId: string; conversationId?: string };
 }
 
 // ─── SSE Parser ──────────────────────────────────────────
@@ -111,6 +116,7 @@ export function streamMoonshot(
     textModel,
     onUsage,
     signal: incomingSignal,
+    mcpCallContext,
   } = options;
   const nativeToolDefs = getNativeToolDefinitions();
 
@@ -411,6 +417,19 @@ export function streamMoonshot(
             planBuffer = "";
           }
 
+          // ─── Token budget check ──────────────────────────────
+          // Break the tool-call loop if cumulative tokens exceed the per-request budget.
+          // This prevents runaway loops from consuming unbounded resources.
+          const cumulativeTokens = totalInputTokens + totalOutputTokens;
+          if (cumulativeTokens > MAX_REQUEST_TOKENS) {
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ t: "e", v: "Token budget exceeded" }) + "\n"
+              )
+            );
+            break;
+          }
+
           // If model finished with tool_calls, send results back and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
@@ -460,7 +479,12 @@ export function streamMoonshot(
                       mcpDef.transport,
                       mcpDef.apiKey,
                       mcpDef.originalName || tc.function.name,
-                      args
+                      args,
+                      {
+                        mcpServerId: mcpDef.mcpServerId,
+                        userId: mcpCallContext?.userId,
+                        conversationId: mcpCallContext?.conversationId,
+                      }
                     ),
                     new Promise<{ error: string }>((resolve) =>
                       setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${MCP_TOOL_TIMEOUT_MS / 1000}s` }), MCP_TOOL_TIMEOUT_MS)

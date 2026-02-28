@@ -32,6 +32,15 @@ export async function DELETE(req: Request) {
   const body = await req.json();
 
   if (body.all) {
+    // Require explicit confirmation for bulk delete to prevent accidental mass session termination
+    const url = new URL(req.url);
+    if (url.searchParams.get("confirm") !== "true") {
+      return NextResponse.json(
+        { error: "Bulk delete requires ?confirm=true query parameter" },
+        { status: 400 }
+      );
+    }
+
     // Exclude the current admin's session to prevent self-lockout
     await prisma.session.deleteMany({
       where: { userId: { not: result.userId } },

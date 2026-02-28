@@ -33,6 +33,18 @@ import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
 import { getPrompt, PROMPT_REGISTRY } from "@/lib/prompts";
 import { getRedis } from "@/lib/redis";
 
+// ─── Retry helper ────────────────────────────────────────
+
+/** Retry a function once after a short delay if the first attempt fails. */
+async function retryOnce<T>(fn: () => Promise<T>, delayMs = 500): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    await new Promise((r) => setTimeout(r, delayMs));
+    return fn();
+  }
+}
+
 // ─── Background compaction ───────────────────────────────
 
 async function compactInBackground(
@@ -270,6 +282,7 @@ export async function POST(req: Request) {
           name: tool.name,
           description: tool.description || "",
           inputSchema: tool.inputSchema || {},
+          mcpServerId: srv.id,
         });
       }
     }
@@ -278,7 +291,7 @@ export async function POST(req: Request) {
   // Also load user's own connected MCP servers
   const userOwnMcps = await prisma.mcpServer.findMany({
     where: { userId: session.user.id, status: "CONNECTED", isGlobal: false },
-    select: { url: true, transport: true, apiKey: true, discoveredTools: true },
+    select: { id: true, url: true, transport: true, apiKey: true, discoveredTools: true },
   });
   for (const srv of userOwnMcps) {
     if (!Array.isArray(srv.discoveredTools)) continue;
@@ -292,6 +305,7 @@ export async function POST(req: Request) {
           name: tool.name,
           description: tool.description || "",
           inputSchema: tool.inputSchema || {},
+          mcpServerId: srv.id,
         });
       }
     }
@@ -521,15 +535,16 @@ export async function POST(req: Request) {
 
   const onUsage = (usage: { inputTokens: number; outputTokens: number }) => {
     const totalTokens = usage.inputTokens + usage.outputTokens;
-    // Correct DailyUsage with real tokens (subtract initial estimate)
+    // Correct DailyUsage with real tokens (subtract initial estimate).
+    // Retry once after 500ms if the DB write fails (transient connection issues).
     fireAndForget(
-      incrementTokens(session.user.id, Math.max(0, totalTokens - estimatedTokens)),
+      retryOnce(() => incrementTokens(session.user.id, Math.max(0, totalTokens - estimatedTokens))),
       "post-stream token correction"
     );
-    // Record to TokenLog for analytics
+    // Record to TokenLog for analytics (with retry)
     if (textModel) {
       fireAndForget(
-        logTokenUsage({
+        retryOnce(() => logTokenUsage({
           userId: session.user.id,
           conversationId: reqConvId || undefined,
           provider: textModel.provider.slug,
@@ -538,7 +553,7 @@ export async function POST(req: Request) {
           outputTokens: usage.outputTokens,
           costPer1kInput: textModel.costPer1kInput,
           costPer1kOutput: textModel.costPer1kOutput,
-        }),
+        })),
         "logTokenUsage"
       );
     }
@@ -571,6 +586,7 @@ export async function POST(req: Request) {
       textModel,
       onUsage,
       signal: req.signal,
+      mcpCallContext: { userId: session.user.id, conversationId: reqConvId || undefined },
     });
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);

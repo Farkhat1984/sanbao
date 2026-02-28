@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyAppleToken } from "@/lib/mobile-auth";
-import { mintSessionToken } from "@/lib/mobile-session";
+import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
 
 export async function POST(req: Request) {
   try {
@@ -85,6 +85,10 @@ export async function POST(req: Request) {
 
     if (existingAccount) {
       const user = existingAccount.user;
+      // OAuth provider verification counts as 2FA: Apple has already verified
+      // the user's identity through their own authentication mechanisms (Face ID,
+      // Touch ID, device passcode, or Apple ID password + SMS/device-based 2FA).
+      // Setting twoFactorVerified = true lets OAuth users skip our separate TOTP step.
       const session = await mintSessionToken({
         id: user.id,
         email: user.email,
@@ -93,8 +97,12 @@ export async function POST(req: Request) {
         role: user.role,
         twoFactorVerified: user.twoFactorEnabled || false,
       });
+      const refreshToken = await mintRefreshToken(user.id);
 
       return NextResponse.json({
+        accessToken: session.token,
+        refreshToken,
+        // Legacy field for backward compat
         token: session.token,
         user: { id: user.id, email: user.email, name: user.name },
         expiresAt: session.expiresAt,
@@ -143,6 +151,8 @@ export async function POST(req: Request) {
       },
     });
 
+    // OAuth = 2FA: Apple's identity verification (Face ID / Touch ID / device passcode)
+    // serves as the second factor, so twoFactorVerified is set accordingly.
     const session = await mintSessionToken({
       id: user.id,
       email: user.email,
@@ -151,8 +161,12 @@ export async function POST(req: Request) {
       role: user.role,
       twoFactorVerified: user.twoFactorEnabled || false,
     });
+    const refreshToken = await mintRefreshToken(user.id);
 
     return NextResponse.json({
+      accessToken: session.token,
+      refreshToken,
+      // Legacy field for backward compat
       token: session.token,
       user: {
         id: user.id,

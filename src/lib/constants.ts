@@ -113,6 +113,10 @@ export const BCRYPT_SALT_ROUNDS = 12;
 export const PASSWORD_MIN_LENGTH = 8;
 export const DEFAULT_SESSION_TTL_HOURS = 720;
 
+// ─── Mobile Auth (JWT rotation) ───
+export const MOBILE_ACCESS_TOKEN_EXPIRY = 60 * 60; // 1 hour (seconds)
+export const REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60; // 30 days (seconds)
+
 // ─── Email ───
 export const DEFAULT_SMTP_PORT = 587;
 export const DEFAULT_EMAIL_FROM = "noreply@sanbao.ai";
@@ -135,6 +139,8 @@ export const NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES = 50 * 1024; // 50KB
 export const NATIVE_TOOL_CSV_MAX_BYTES = 100 * 1024; // 100KB
 export const NATIVE_TOOL_CSV_MAX_ROWS = 10_000;
 export const NATIVE_TOOL_MAX_TURNS = 50;
+/** Max cumulative tokens per request across all tool-call loop iterations */
+export const MAX_REQUEST_TOKENS = 200_000;
 
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;

@@ -38,7 +38,11 @@ export async function GET() {
     data: { twoFactorSecret: encrypt(secret) },
   });
 
-  return NextResponse.json({ secret, qrCodeUrl, enabled: false });
+  // Security: do NOT return the raw TOTP secret in the response.
+  // The QR code data URL encodes the otpauth:// URI which contains the secret,
+  // but only in a form that authenticator apps can scan — not easily copy-pasted.
+  // Exposing the raw secret makes it trivial to clone the TOTP generator.
+  return NextResponse.json({ qrCodeUrl, enabled: false });
 }
 
 /** POST — verify TOTP code and enable/disable 2FA */

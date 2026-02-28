@@ -8,8 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare } from "lucide-react";
 
 export function ConversationList() {
-  const { conversations, activeConversationId } = useChatStore();
-  const { searchQuery } = useSidebarStore();
+  const conversations = useChatStore((s) => s.conversations);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const searchQuery = useSidebarStore((s) => s.searchQuery);
 
   const filtered = conversations.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())

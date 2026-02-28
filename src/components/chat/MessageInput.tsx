@@ -1,29 +1,21 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   Send,
   StopCircle,
-  Plus,
-  Paperclip,
-  Wrench,
   Globe,
   Brain,
   Mic,
   X,
   FileText,
-  Image as ImageIcon,
   Loader2,
-  Camera,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
-import { useTaskStore } from "@/stores/taskStore";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { AlertModal } from "@/components/ui/AlertModal";
-import { openArtifactInPanel } from "@/lib/panel-actions";
+import { PlusMenu } from "@/components/chat/PlusMenu";
 
 const ImageGenerateModal = dynamic(
   () => import("@/components/image-edit/ImageGenerateModal").then((m) => m.ImageGenerateModal),
@@ -32,57 +24,9 @@ const ImageGenerateModal = dynamic(
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/stores/agentStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
-
-const CHAT_ACCEPTED_EXTENSIONS =
-  ".png,.jpg,.jpeg,.webp,.txt,.md,.pdf,.docx,.doc,.xlsx,.xls,.csv,.html,.htm,.pptx,.rtf";
-const CHAT_MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
-
-interface AttachedFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  base64?: string;
-  preview?: string;
-  textContent?: string;
-  isParsing?: boolean;
-}
-
-// ─── SpeechRecognition type for TS ──────────────────────
-
-type SpeechRecognitionType = typeof window extends { SpeechRecognition: infer T }
-  ? T
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any;
-
-function getSpeechRecognition(): SpeechRecognitionType | null {
-  if (typeof window === "undefined") return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
-}
-
-// ─── Document type helpers ──────────────────────────────
-
-const DOCUMENT_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/rtf",
-  "text/html",
-];
-
-const DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".pptx", ".rtf", ".html", ".htm"];
-
-function isDocumentFile(file: File): boolean {
-  if (DOCUMENT_TYPES.includes(file.type)) return true;
-  return DOCUMENT_EXTENSIONS.some((ext) =>
-    file.name.toLowerCase().endsWith(ext)
-  );
-}
+import { useFileAttachment } from "@/hooks/useFileAttachment";
+import { useVoiceRecording } from "@/hooks/useVoiceRecording";
+import { useStreamChat } from "@/hooks/useStreamChat";
 
 export function MessageInput() {
   const [input, setInput] = useState("");
@@ -90,544 +34,53 @@ export function MessageInput() {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [imageGenOpen, setImageGenOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<{ title: string; description?: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
 
   const {
-    messages,
     isStreaming,
-    activeConversationId,
-    activeAgentId,
     thinkingEnabled,
     webSearchEnabled,
-    planningEnabled,
-    pendingInput,
-    addMessage,
-    addConversation,
-    setActiveConversation,
-    updateLastAssistantMessage,
-    setStreaming,
-    setStreamingPhase,
     toggleThinking,
     toggleWebSearch,
-    updateCurrentPlan,
-    setCurrentPlan,
-    setContextUsage,
-    setPendingInput,
-    setClarifyQuestions,
   } = useChatStore();
 
-  const { addTask } = useTaskStore();
   const { agentTools } = useAgentStore();
   const isMobile = useIsMobile();
-  const router = useRouter();
 
-  // Detect speech support on client only (avoid hydration mismatch)
-  const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
-  useEffect(() => {
-    setHasSpeechSupport(!!getSpeechRecognition());
-  }, []);
+  // ─── Extracted hooks ────────────────────────────────────
 
-  // Cleanup recognition on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
+  const {
+    files: attachedFiles,
+    addFiles: handleFileSelect,
+    removeFile,
+    clearFiles,
+    fileInputRef,
+    cameraInputRef,
+    alertMessage,
+    setAlertMessage,
+    acceptedExtensions,
+  } = useFileAttachment();
 
-  // ─── Voice recording ──────────────────────────────────────
+  const {
+    isRecording,
+    hasSpeechSupport,
+    startRecording,
+    stopRecording,
+  } = useVoiceRecording({ setInput, textareaRef });
 
-  const startRecording = useCallback(() => {
-    const SpeechRecognition = getSpeechRecognition();
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "ru-RU";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    let finalTranscript = "";
-
-    recognition.onresult = (event: { resultIndex: number; results: { length: number; [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } } }) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interim = transcript;
-        }
-      }
-      setInput(finalTranscript + interim);
-    };
-
-    recognition.onerror = () => {
-      setIsRecording(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-      recognitionRef.current = null;
-      // Auto-resize textarea
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height =
-          Math.min(textareaRef.current.scrollHeight, 200) + "px";
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-  }, []);
-
-  // ─── File handling ───────────────────────────────────────
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-
-      for (const file of Array.from(files)) {
-        if (file.size > CHAT_MAX_FILE_SIZE) {
-          setAlertMessage({ title: "Файл слишком большой", description: `«${file.name}» превышает лимит 20 МБ` });
-          continue;
-        }
-
-        const isImage = file.type.startsWith("image/");
-        const isText =
-          file.type === "text/plain" || file.type === "text/csv" ||
-          file.name.endsWith(".md") || file.name.endsWith(".csv");
-        const isDocument = isDocumentFile(file);
-
-        if (!isImage && !isText && !isDocument) {
-          setAlertMessage({ title: "Формат не поддерживается", description: `«${file.name}» — поддерживаются PNG, JPG, WebP, TXT, MD, CSV, PDF, DOCX, XLSX, PPTX, RTF, HTML` });
-          continue;
-        }
-
-        const attached: AttachedFile = {
-          id: crypto.randomUUID(),
-          name: file.name,
-          type: file.type || (file.name.endsWith(".md") ? "text/plain" : file.name.endsWith(".csv") ? "text/csv" : ""),
-          size: file.size,
-        };
-
-        if (isImage) {
-          const dataUrl = await readFileAsDataUrl(file);
-          attached.preview = dataUrl;
-          attached.base64 = dataUrl.split(",")[1];
-          setAttachedFiles((prev) => [...prev, attached]);
-        } else if (isText) {
-          attached.textContent = await readFileAsText(file);
-          setAttachedFiles((prev) => [...prev, attached]);
-        } else if (isDocument) {
-          // Parse document server-side
-          attached.isParsing = true;
-          setAttachedFiles((prev) => [...prev, attached]);
-
-          try {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const response = await fetch("/api/files/parse", {
-              method: "POST",
-              body: formData,
-            });
-
-            if (!response.ok) {
-              const err = await response.json().catch(() => ({ error: "Ошибка" }));
-              throw new Error(err.error || "Не удалось обработать файл");
-            }
-
-            const { text } = await response.json();
-            setAttachedFiles((prev) =>
-              prev.map((f) =>
-                f.id === attached.id
-                  ? { ...f, textContent: text, isParsing: false }
-                  : f
-              )
-            );
-          } catch (err) {
-            setAlertMessage({ title: "Ошибка обработки файла", description: `«${file.name}»: ${err instanceof Error ? err.message : "Неизвестная ошибка"}` });
-            setAttachedFiles((prev) => prev.filter((f) => f.id !== attached.id));
-          }
-        }
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    },
-    []
-  );
-
-  const removeFile = useCallback((id: string) => {
-    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
-
-  // ─── Auto-submit from tools/templates ────────────────────
-
-  const pendingSubmitRef = useRef(false);
-  useEffect(() => {
-    if (pendingInput && !isStreaming && !pendingSubmitRef.current) {
-      pendingSubmitRef.current = true;
-      const input = pendingInput;
-      setPendingInput(null);
-      // Defer to next tick so setPendingInput(null) settles first
-      queueMicrotask(() => {
-        doSubmit(input);
-        pendingSubmitRef.current = false;
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingInput]);
-
-  // ─── Submit ──────────────────────────────────────────────
-
-  const doSubmit = useCallback(async (overrideInput?: string) => {
-    const trimmed = (overrideInput ?? input).trim();
-    if ((!trimmed && attachedFiles.length === 0) || isStreaming) return;
-    // Don't submit while files are parsing
-    if (attachedFiles.some((f) => f.isParsing)) return;
-
-    const userMessage = {
-      id: crypto.randomUUID(),
-      role: "USER" as const,
-      content: trimmed,
-      createdAt: new Date().toISOString(),
-    };
-
-    addMessage(userMessage);
-    setInput("");
-    const filesToSend = [...attachedFiles];
-    setAttachedFiles([]);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-
-    setStreaming(true);
-    setCurrentPlan(null);
-    // Phase is null — will be determined by the first stream chunk
-
-    // Ensure we have a conversation for persistence
-    let convId = activeConversationId;
-    if (!convId) {
-      try {
-        const convRes = await fetch("/api/conversations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: trimmed.slice(0, 60) || "Новый чат",
-            agentId: activeAgentId || undefined,
-          }),
-        });
-        if (convRes.ok) {
-          const conv = await convRes.json();
-          convId = conv.id;
-          addConversation(conv);
-          setActiveConversation(conv.id);
-          router.replace(`/chat/${conv.id}`);
-        } else if (convRes.status === 403) {
-          const err = await convRes.json().catch(() => ({ error: "Лимит диалогов" }));
-          addMessage({
-            id: crypto.randomUUID(),
-            role: "ASSISTANT",
-            content: `Ошибка: ${err.error}`,
-            createdAt: new Date().toISOString(),
-          });
-          setStreaming(false);
-          return;
-        }
-      } catch {
-        // Continue without persistence if conversation creation fails
-      }
-    }
-
-    let fullContent = "";
-    let fullPlan = "";
-
-    try {
-      const apiMessages = [...messages, userMessage]
-        .filter((m) => m.content.trim() !== "")
-        .map((m) => ({
-          role: m.role.toLowerCase(),
-          content: m.content,
-        }));
-
-      const attachmentsPayload = filesToSend.map((f) => ({
-        name: f.name,
-        type: f.type,
-        ...(f.base64 ? { base64: f.base64 } : {}),
-        ...(f.textContent ? { textContent: f.textContent } : {}),
-      }));
-
-      abortRef.current = new AbortController();
-
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: apiMessages,
-          agentId: activeAgentId,
-          conversationId: convId,
-          thinkingEnabled,
-          webSearchEnabled,
-          planningEnabled,
-          attachments: attachmentsPayload,
-        }),
-        signal: abortRef.current.signal,
-      });
-
-      if (!response.ok) {
-        const error = await response
-          .json()
-          .catch(() => ({ error: "Неизвестная ошибка" }));
-        addMessage({
-          id: crypto.randomUUID(),
-          role: "ASSISTANT",
-          content: `Ошибка: ${error.error || "Не удалось получить ответ"}`,
-          createdAt: new Date().toISOString(),
-        });
-        setStreaming(false);
-        return;
-      }
-
-      addMessage({
-        id: crypto.randomUUID(),
-        role: "ASSISTANT",
-        content: "",
-        createdAt: new Date().toISOString(),
-      });
-
-      // Parse NDJSON stream
-      if (!response.body) {
-        setStreaming(false);
-        return;
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullReasoning = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split("\n");
-        buffer = lines.pop()!;
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            switch (data.t) {
-              case "r": // reasoning
-                setStreamingPhase("thinking");
-                fullReasoning += data.v;
-                updateLastAssistantMessage(fullContent, fullReasoning);
-                break;
-              case "s": // status (searching / using_tool)
-                setStreamingPhase(
-                  data.v === "using_tool" ? "using_tool" : "searching",
-                  data.n || null
-                );
-                break;
-              case "c": // content
-                setStreamingPhase("answering");
-                fullContent += data.v;
-                updateLastAssistantMessage(
-                  fullContent,
-                  fullReasoning || undefined
-                );
-                break;
-              case "p": // plan content
-                setStreamingPhase("planning");
-                fullPlan += data.v;
-                updateCurrentPlan(data.v);
-                updateLastAssistantMessage(
-                  fullContent,
-                  fullReasoning || undefined,
-                  fullPlan
-                );
-                break;
-              case "x": // context info
-                try {
-                  const info = JSON.parse(data.v);
-                  if (info.action === "context_info") {
-                    setContextUsage({
-                      usagePercent: info.usagePercent,
-                      totalTokens: info.totalTokens,
-                      contextWindowSize: info.contextWindowSize,
-                      isCompacting: info.compacting,
-                    });
-                  }
-                } catch {
-                  // ignore malformed context info
-                }
-                break;
-              case "e": // error
-                if (!fullContent) {
-                  fullContent = `Ошибка: ${data.v}`;
-                } else {
-                  fullContent += `\n\n_Ошибка: ${data.v}_`;
-                }
-                updateLastAssistantMessage(fullContent);
-                break;
-            }
-          } catch {
-            // Skip malformed lines
-          }
-        }
-      }
-
-      // Save messages to DB after stream completes
-      if (convId && fullContent) {
-        fetch(`/api/conversations/${convId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [
-              { role: "USER", content: trimmed },
-              { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
-            ],
-          }),
-        }).catch(console.error);
-      }
-
-      // Detect and create tasks from <sanbao-task> tags
-      const taskRegex = /<sanbao-task\s+title="([^"]+)">([\s\S]*?)<\/sanbao-task>/g;
-      let taskMatch;
-      while ((taskMatch = taskRegex.exec(fullContent)) !== null) {
-        const taskTitle = taskMatch[1];
-        const taskBody = taskMatch[2];
-        const steps = taskBody
-          .split("\n")
-          .map((line) => line.trim())
-          .filter((line) => line.startsWith("- ["))
-          .map((line) => ({
-            text: line.replace(/^- \[[ x]\]\s*/, ""),
-            done: line.includes("[x]"),
-          }));
-
-        if (steps.length > 0) {
-          fetch("/api/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: taskTitle,
-              steps,
-              conversationId: convId,
-            }),
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((task) => {
-              if (task) addTask(task);
-            })
-            .catch(console.error);
-        }
-      }
-
-      // Auto-open first artifact
-      const docMatch = /<sanbao-doc\s+type="([^"]+)"\s+title="([^"]+)">([\s\S]*?)<\/sanbao-doc>/.exec(fullContent);
-      if (docMatch) {
-        openArtifactInPanel({
-          id: crypto.randomUUID(),
-          type: docMatch[1] as import("@/types/chat").ArtifactType,
-          title: docMatch[2],
-          content: docMatch[3].trim(),
-          version: 1,
-        });
-      }
-
-      // Detect clarify questions from <sanbao-clarify> tag
-      const clarifyMatch = /<sanbao-clarify>([\s\S]*?)<\/sanbao-clarify>/.exec(fullContent);
-      if (clarifyMatch) {
-        try {
-          const questions = JSON.parse(clarifyMatch[1]);
-          if (Array.isArray(questions) && questions.length > 0) {
-            setClarifyQuestions(questions);
-          }
-        } catch {
-          // Skip malformed clarify JSON
-        }
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // User stopped the stream — save partial content if available
-        if (convId && fullContent) {
-          fetch(`/api/conversations/${convId}/messages`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              messages: [
-                { role: "USER", content: trimmed },
-                { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
-              ],
-            }),
-          }).catch(console.error);
-        }
-      } else {
-        addMessage({
-          id: crypto.randomUUID(),
-          role: "ASSISTANT",
-          content: "Ошибка подключения. Попробуйте позже.",
-          createdAt: new Date().toISOString(),
-        });
-      }
-    } finally {
-      abortRef.current = null;
-      setStreaming(false);
-    }
-  }, [
+  const { doSubmit, handleStop } = useStreamChat({
     input,
+    setInput,
     attachedFiles,
-    isStreaming,
-    messages,
-    activeConversationId,
-    activeAgentId,
-    thinkingEnabled,
-    webSearchEnabled,
-    planningEnabled,
-    addMessage,
-    addConversation,
-    setActiveConversation,
-    updateLastAssistantMessage,
-    setStreaming,
-    setStreamingPhase,
-    updateCurrentPlan,
-    setCurrentPlan,
-    setContextUsage,
-    addTask,
-    setPendingInput,
-    setClarifyQuestions,
-  ]);
+    clearFiles,
+    textareaRef,
+  });
+
+  // ─── Handlers ───────────────────────────────────────────
 
   const handleSubmit = useCallback(() => {
     doSubmit();
   }, [doSubmit]);
-
-  const handleStop = () => {
-    abortRef.current?.abort();
-    setStreaming(false);
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -643,21 +96,6 @@ export function MessageInput() {
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
-  const handleOpenTools = () => {
-    setMenuOpen(false);
-    setToolsOpen(true);
-  };
-
-  const handleAttachClick = () => {
-    setMenuOpen(false);
-    fileInputRef.current?.click();
-  };
-
-  const handleCameraClick = () => {
-    setMenuOpen(false);
-    cameraInputRef.current?.click();
-  };
-
   const hasContent = input.trim() || attachedFiles.length > 0;
   const hasParsing = attachedFiles.some((f) => f.isParsing);
 
@@ -668,7 +106,7 @@ export function MessageInput() {
         ref={fileInputRef}
         type="file"
         multiple
-        accept={CHAT_ACCEPTED_EXTENSIONS}
+        accept={acceptedExtensions}
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -761,183 +199,21 @@ export function MessageInput() {
         )}
 
         <div className="flex items-end gap-2 px-4 py-3">
-          {/* Plus menu button */}
-          <div className="relative" data-tour="plus-menu">
-            <button
-              onClick={() => {
-                setMenuOpen(!menuOpen);
-                setToolsOpen(false);
-              }}
-              className={cn(
-                "h-8 w-8 rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer",
-                menuOpen
-                  ? "text-accent bg-accent-light rotate-45"
-                  : "text-text-muted hover:text-text-primary hover:bg-surface-alt"
-              )}
-              title="Функции"
-            >
-              <Plus className="h-4.5 w-4.5 transition-transform" />
-            </button>
-
-            {/* Plus menu popover */}
-            <AnimatePresence>
-              {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{
-                      type: "spring",
-                      damping: 25,
-                      stiffness: 300,
-                    }}
-                    className="absolute bottom-full left-0 mb-2 z-40 w-[220px] bg-surface border border-border rounded-2xl shadow-xl overflow-hidden"
-                  >
-                    <div className="py-1.5">
-                      {/* Attach file */}
-                      <button
-                        onClick={handleAttachClick}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div className="h-7 w-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
-                          <Paperclip className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <span>Прикрепить файл</span>
-                          <p className="text-[10px] text-text-muted mt-0.5">
-                            PDF, DOCX, XLSX, PPTX, CSV, HTML, RTF, PNG
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* Camera */}
-                      <button
-                        onClick={handleCameraClick}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div className="h-7 w-7 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
-                          <Camera className="h-3.5 w-3.5" />
-                        </div>
-                        <span>Сделать фото</span>
-                      </button>
-
-                      {/* Agent tools (shown when agent has PROMPT_TEMPLATE tools) */}
-                      {agentTools.length > 0 && (
-                        <button
-                          onClick={handleOpenTools}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                        >
-                          <div className="h-7 w-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
-                            <Wrench className="h-3.5 w-3.5" />
-                          </div>
-                          <span>Инструменты</span>
-                        </button>
-                      )}
-
-                      {/* Image generation */}
-                      <button
-                        onClick={() => {
-                          setMenuOpen(false);
-                          setImageGenOpen(true);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div className="h-7 w-7 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
-                          <ImageIcon className="h-3.5 w-3.5" />
-                        </div>
-                        <span>Генерация картинок</span>
-                      </button>
-
-                      <div className="h-px bg-border mx-3 my-1" />
-
-                      {/* Web Search toggle */}
-                      <button
-                        onClick={() => {
-                          toggleWebSearch();
-                          setMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div
-                          className={cn(
-                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
-                            webSearchEnabled
-                              ? "bg-emerald-500 text-white"
-                              : "bg-emerald-50 text-emerald-500"
-                          )}
-                        >
-                          <Globe className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <span>Веб-поиск</span>
-                        </div>
-                        <div
-                          className={cn(
-                            "w-8 h-4.5 rounded-full transition-colors relative",
-                            webSearchEnabled ? "bg-emerald-500" : "bg-border"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
-                              webSearchEnabled ? "left-[18px]" : "left-0.5"
-                            )}
-                          />
-                        </div>
-                      </button>
-
-                      {/* Thinking toggle */}
-                      <button
-                        onClick={() => {
-                          toggleThinking();
-                          setMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                      >
-                        <div
-                          className={cn(
-                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
-                            thinkingEnabled
-                              ? "bg-violet-500 text-white"
-                              : "bg-violet-50 text-violet-500"
-                          )}
-                        >
-                          <Brain className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <span>Thinking</span>
-                        </div>
-                        <div
-                          className={cn(
-                            "w-8 h-4.5 rounded-full transition-colors relative",
-                            thinkingEnabled ? "bg-violet-500" : "bg-border"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
-                              thinkingEnabled ? "left-[18px]" : "left-0.5"
-                            )}
-                          />
-                        </div>
-                      </button>
-                    </div>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-
-            {/* Legal tools panel (separate popover) */}
-            <ToolsPanel
-              isOpen={toolsOpen}
-              onClose={() => setToolsOpen(false)}
-            />
-          </div>
+          {/* Plus menu */}
+          <PlusMenu
+            menuOpen={menuOpen}
+            setMenuOpen={setMenuOpen}
+            toolsOpen={toolsOpen}
+            setToolsOpen={setToolsOpen}
+            onAttachClick={() => fileInputRef.current?.click()}
+            onCameraClick={() => cameraInputRef.current?.click()}
+            onImageGenOpen={() => setImageGenOpen(true)}
+            hasAgentTools={agentTools.length > 0}
+            webSearchEnabled={webSearchEnabled}
+            thinkingEnabled={thinkingEnabled}
+            toggleWebSearch={toggleWebSearch}
+            toggleThinking={toggleThinking}
+          />
 
           <textarea
             ref={textareaRef}
@@ -1069,24 +345,4 @@ export function MessageInput() {
       />
     </div>
   );
-}
-
-// ─── File reading helpers ─────────────────────────────────
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
 }

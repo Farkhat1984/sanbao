@@ -278,6 +278,9 @@ model Plan {
   slug                String   @unique
   name                String
   description         String?  @db.Text
+  // TODO: migrate price from String to Int @default(0) — store in tenge as integer.
+  // Affects 15+ files: billingStore, PlanCard, PlanForm, checkout routes, admin billing.
+  // Requires coordinated migration of seed data, display logic, and parseInt() call sites.
   price               String   @default("0")
   messagesPerDay      Int      @default(20)
   tokensPerMessage    Int      @default(4096)

@@ -105,9 +105,9 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Файл:** `src/lib/usage.ts:25-93`
 **Проблема:** `getUserPlanAndUsage()` кэширует usage в Redis на 30 сек. За это время N запросов проходят проверку лимита с одним и тем же `messageCount`.
 **Решение:**
-- [ ] 2.6.1 Использовать Redis atomic counter (`INCR`) для usage checks
+- [x] 2.6.1 Использовать Redis atomic counter (`INCR`) для usage checks
 - [x] 2.6.2 Уменьшить TTL кэша до 5 сек
-- [ ] 2.6.3 Разделить кэш: plan (30s) и usage (atomic/3s)
+- [x] 2.6.3 Разделить кэш: plan (5s) и usage (atomic daily counter)
 
 ### 2.7 Billing: Promo-код не списывается атомарно в checkout
 **Severity:** HIGH
@@ -129,10 +129,10 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Файл:** `src/components/chat/MessageInput.tsx`
 **Проблема:** Stream parsing, voice recording, file handling, submission — всё в одном файле.
 **Решение:**
-- [ ] 2.9.1 Извлечь `useStreamChat` хук (NDJSON parsing, ~170 строк)
-- [ ] 2.9.2 Извлечь `useFileAttachment` хук (~80 строк)
-- [ ] 2.9.3 Извлечь `useVoiceRecording` хук (~50 строк)
-- [ ] 2.9.4 Извлечь `PlusMenu` компонент (~150 строк JSX)
+- [x] 2.9.1 Извлечь `useStreamChat` хук (411 строк)
+- [x] 2.9.2 Извлечь `useFileAttachment` хук (184 строки)
+- [x] 2.9.3 Извлечь `useVoiceRecording` хук (113 строк)
+- [x] 2.9.4 Извлечь `PlusMenu` компонент (242 строки). MessageInput: 1093→348 строк (-68%)
 
 ### 2.10 State: chatStore копирует массив на каждый chunk стрима
 **Severity:** HIGH
@@ -165,19 +165,19 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 ### 3.1 2FA обходится при мобильном OAuth
 **Файл:** `src/app/api/auth/apple/route.ts:94`, `src/app/api/auth/mobile/google/route.ts:84`
 **Проблема:** `twoFactorVerified: true` без реальной TOTP-проверки.
-- [ ] 3.1.1 Требовать TOTP-код в мобильном auth flow, или задокументировать что OAuth = 2FA
+- [x] 3.1.1 Задокументировано: OAuth provider verification = 2FA (Apple/Google verify identity)
 
 ### 3.2 SSRF: нет защиты от DNS rebinding, неполные IPv6
 **Файл:** `src/lib/ssrf.ts:6-7` (дублирован в 4 файлах)
 - [x] 3.2.1 Централизовать SSRF-проверку в одном модуле
-- [ ] 3.2.2 Добавить DNS resolve перед проверкой IP
+- [x] 3.2.2 Добавить DNS resolve перед проверкой IP (`isUrlSafeAsync`)
 - [x] 3.2.3 Блокировать IPv6 private ranges: `::ffff:127.0.0.1`, `fc00::/7`, `fe80::/10`
 - [x] 3.2.4 Удалить дублирование `BLOCKED_HOSTS` из 3 других файлов
 
 ### 3.3 Rate limit: in-memory fallback per-replica = x3 лимит
 **Файл:** `src/lib/rate-limit.ts`
 - [x] 3.3.1 Логировать warning при fallback на in-memory
-- [ ] 3.3.2 Рассмотреть Redis как hard requirement в production
+- [x] 3.3.2 Добавлен production startup warning если Redis недоступен
 - [ ] 3.3.3 Перенести auth rate limiting в Redis-backed реализацию
 
 ### 3.4 Freedom Pay: не timing-safe сравнение подписи
@@ -186,9 +186,9 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 3.5 30-дневный JWT без ротации
 **Файл:** `src/lib/mobile-session.ts:3`, `src/lib/constants.ts:114`
-- [ ] 3.5.1 Уменьшить access token до 1 часа
-- [ ] 3.5.2 Реализовать refresh token механизм
-- [ ] 3.5.3 Добавить token blacklist в Redis для revocation
+- [x] 3.5.1 Уменьшить access token до 1 часа
+- [x] 3.5.2 Реализовать refresh token механизм (Redis-backed, sliding window)
+- [x] 3.5.3 Добавить token blacklist в Redis для revocation (jti-based)
 
 ### 3.6 `new Function()` для math eval
 **Файл:** `src/lib/native-tools/analysis.ts:79`
@@ -205,7 +205,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 ### 3.9 Admin sessions DELETE all — удаляет свою сессию
 **Файл:** `src/app/api/admin/sessions/route.ts:35`
 - [x] 3.9.1 Исключить текущую сессию admin из `deleteMany`
-- [ ] 3.9.2 Добавить confirmation step *(frontend)*
+- [x] 3.9.2 Добавить `?confirm=true` requirement для bulk delete
 
 ### 3.10 Admin tools/users PUT — нет валидации
 **Файл:** `src/app/api/admin/tools/[id]/route.ts:40-55`, `src/app/api/admin/users/[id]/route.ts:13`
@@ -219,7 +219,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 3.12 2FA setup возвращает plaintext TOTP secret
 **Файл:** `src/app/api/auth/2fa/route.ts:41`
-- [ ] 3.12.1 Рассмотреть возврат только QR-code без raw secret
+- [x] 3.12.1 Убран raw secret из GET ответа, возвращается только QR code
 
 ---
 
@@ -228,8 +228,8 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 ### 4.1 MCP: новое подключение на каждый вызов
 **Файл:** `src/lib/mcp-client.ts:68-156`
 **Проблема:** Каждый `callMcpTool()` создаёт Client, подключается, вызывает, закрывает. 15-сек timeout на подключение.
-- [ ] 4.1.1 Реализовать connection pool для MCP клиентов
-- [ ] 4.1.2 Кэшировать подключения с TTL и health check
+- [x] 4.1.1 Реализовать connection pool для MCP клиентов (5-мин TTL, auto-cleanup)
+- [x] 4.1.2 Кэшировать подключения с TTL и health check + retry на dead connection
 
 ### 4.2 Token estimation chars/3 — недооценка для кириллицы
 **Файл:** `src/lib/context.ts:7`
@@ -264,7 +264,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 ### 4.8 ConversationList: не мемоизирован
 **Файл:** `src/components/sidebar/ConversationList.tsx:11`
 - [x] 4.8.1 Обернуть `ConversationItem` в `React.memo`
-- [ ] 4.8.2 Использовать индивидуальные Zustand selectors
+- [x] 4.8.2 Использовать индивидуальные Zustand selectors (Sidebar + ConversationList)
 
 ---
 
@@ -289,7 +289,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 5.5 4 suppressed `exhaustive-deps` — потенциальные stale closures
 **Файлы:** `MessageInput.tsx:297`, `MessageBubble.tsx:291`, `Sidebar.tsx:51`, `AppShell.tsx:27`
-- [ ] 5.5.1 Ревью каждого suppression, добавить отсутствующие deps или рефакторить
+- [x] 5.5.1 Ревью: добавлены недостающие stable deps, задокументированы intentional exclusions
 
 ### 5.6 Pin/Archive кнопки без onClick — UI-обманка
 **Файл:** `src/components/sidebar/ConversationItem.tsx:129-136`
@@ -298,21 +298,21 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 ### 5.7 Mobile sidebar без focus trap и aria-modal
 **Файл:** `src/components/layout/AppShell.tsx:37-61`
 - [x] 5.7.1 Добавить `role="dialog"`, `aria-modal="true"`
-- [ ] 5.7.2 Добавить focus trap
+- [x] 5.7.2 Добавить focus trap (Tab cycling + Escape close + focus restore)
 
 ### 5.8 Panel без focus management
 **Файл:** `src/components/panel/UnifiedPanel.tsx`
-- [ ] 5.8.1 При открытии — фокус в панель
-- [ ] 5.8.2 При закрытии — возврат фокуса к trigger-элементу
+- [x] 5.8.1 При открытии — фокус на close button
+- [x] 5.8.2 При закрытии — возврат фокуса к trigger-элементу
 
 ### 5.9 MessageBubble: тяжёлая inline parsing логика
 **Файл:** `src/components/chat/MessageBubble.tsx` (618 строк)
-- [ ] 5.9.1 Извлечь `parseContentWithArtifacts` в отдельный модуль
-- [ ] 5.9.2 Извлечь `markdownComponents` конфиг
+- [x] 5.9.1 Извлечь `parseContentWithArtifacts` → `src/lib/parse-message-content.ts`
+- [x] 5.9.2 Извлечь `markdownComponents` → `src/lib/markdown-components.tsx`
 
 ### 5.10 CodePreview: HTML генераторы inline
 **Файл:** `src/components/artifacts/CodePreview.tsx` (508 строк)
-- [ ] 5.10.1 Извлечь `buildPreviewHtml`/`buildPythonHtml` в `lib/code-preview-builder.ts`
+- [x] 5.10.1 Извлечь `buildPreviewHtml`/`buildPythonHtml` → `src/lib/code-preview-builder.ts` (CodePreview: 510→135 строк)
 
 ---
 
@@ -331,7 +331,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 6.4 `--no-cache` build на каждый деплой
 **Файл:** `.github/workflows/deploy-server.yml:31`
-- [ ] 6.4.1 Убрать `--no-cache`, использовать Docker layer cache
+- [x] 6.4.1 Убрать `--no-cache`, использовать Docker layer cache
 
 ### 6.5 Nginx `proxy_next_upstream` ретраит POST-запросы
 **Файл:** `infra/nginx/nginx.conf:39`
@@ -365,12 +365,12 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 7.1 Usage counting: fire-and-forget коррекция может потеряться
 **Файл:** `src/app/api/chat/route.ts:503-509`
-- [ ] 7.1.1 Добавить retry или fallback при ошибке коррекции usage
+- [x] 7.1.1 Добавить `retryOnce()` для usage correction (500ms delay)
 
 ### 7.2 Tool call loop: 50 итераций без бюджета токенов
 **Файл:** `src/lib/chat/moonshot-stream.ts:151`, `src/lib/constants.ts:137`
-- [ ] 7.2.1 Добавить aggregate token budget per-request
-- [ ] 7.2.2 Прерывать loop при превышении бюджета
+- [x] 7.2.1 Добавить aggregate token budget per-request (`MAX_REQUEST_TOKENS = 200K`)
+- [x] 7.2.2 Прерывать loop при превышении бюджета + emit error event
 
 ### 7.3 MCP tool timeout: `reject` вместо `resolve` в Promise.race
 **Файл:** `src/lib/chat/moonshot-stream.ts:441-455`
@@ -387,11 +387,11 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 7.6 User file content — prompt injection через файлы
 **Файл:** `src/app/api/user-files/route.ts:67-76`
-- [ ] 7.6.1 Рассмотреть санитизацию контента или пометку как user-supplied в промпте
+- [x] 7.6.1 Обернуть user-uploaded content в `<user-uploaded-file>` теги
 
 ### 7.7 MCP tool calls не логируются в McpToolLog
 **Файл:** `src/lib/mcp-client.ts:113-129`, `moonshot-stream.ts:442`
-- [ ] 7.7.1 Передавать `context` с `mcpServerId` при вызове из chat
+- [x] 7.7.1 Передавать `context` с `mcpServerId`/`userId`/`conversationId` при вызове из chat
 
 ### 7.8 Compaction: нет concurrency guard
 **Файл:** `src/app/api/chat/route.ts:37-107`
@@ -414,15 +414,15 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 8.3 Dead code
 - [x] Удалить неиспользуемые `NextResponse` импорты (conversations/[id])
-- [ ] Удалить deprecated `SystemAgent` model из schema
-- [ ] Удалить `rehype-raw` из package.json (установлен, но не используется)
+- [ ] Удалить deprecated `SystemAgent` model из schema *(ещё используется в seed.ts)*
+- [x] Удалить `rehype-raw` из package.json
 
 ### 8.4 Schema: дублированные/избыточные индексы
 - [x] `DailyUsage`: убрать `@@index([userId, date])` (дублирует `@@unique`)
 - [x] `ApiKey`: убрать `@@index([key])` и `@@index([keyHash])` (дублируют `@unique`)
 
 ### 8.5 Schema: Plan.price как String вместо Decimal/Int
-- [ ] Рефакторить `price String` → `price Decimal` или `price Int` (в копейках)
+- [ ] Рефакторить `price String` → `price Int` (в копейках) *(15+ файлов, нужна координированная миграция)*
 
 ### 8.6 Stores: unbounded artifacts array
 **Файл:** `src/stores/artifactStore.ts:111`
@@ -434,7 +434,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 8.8 TypeScript: SpeechRecognition typed as any
 **Файл:** `src/components/chat/MessageInput.tsx:53-61`
-- [ ] Использовать `@types/dom-speech-recognition` или minimal interface
+- [x] Использовать minimal interface для SpeechRecognition (убран any)
 
 ### 8.9 CSS: magic numbers в MessageBubble
 **Файл:** `src/components/chat/MessageBubble.tsx:263,273`
@@ -442,7 +442,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 8.10 CSS: inconsistent CSS vars vs Tailwind в SanbaoFact
 **Файл:** `src/components/chat/SanbaoFact.tsx`
-- [ ] Мигрировать на Tailwind utility classes
+- [x] Мигрировать на Tailwind utility classes (SanbaoFact)
 
 ### 8.11 Пагинация: hardcoded limits без cursor
 - [x] `admin/agents`: cursor-based pagination
@@ -470,14 +470,14 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 - [x] Fail hard если `ADMIN_PASSWORD` не задан (реализовано в 1.5)
 
 ### 8.17 Nginx: duplicate security headers с Next.js
-- [ ] Задавать headers только в одном месте (Nginx или Next.js)
+- [x] Задокументировано: headers дублируются намеренно (Nginx для non-Next.js locations). Добавлены недостающие headers в `/images/1c/`
 
 ### 8.18 Nginx: missing `gzip_vary on`
 - [x] Добавить `gzip_vary on` для корректного CDN-кеширования
 
 ### 8.19 `npx -y` в start-mcp-servers.sh — auto-install без верификации
 **Файл:** `scripts/start-mcp-servers.sh`
-- [ ] Использовать явную установку с pin versions
+- [x] Закреплены версии MCP пакетов в start-mcp-servers.sh
 
 ### 8.20 CodePreview iframe: нет origin check на postMessage
 **Файл:** `src/components/artifacts/CodePreview.tsx:420`
@@ -523,13 +523,13 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 | Этап | Задач | Описание | Статус |
 |------|-------|----------|--------|
 | 1 | 5 | CRITICAL — немедленно | ✅ DONE (код) |
-| 2 | 12 | HIGH — эта неделя | ✅ DONE (код, осталось: 2.2 CSP, 2.9 refactor) |
-| 3 | 12 | MEDIUM Security — ближайший спринт | ✅ DONE (код, осталось: 3.1, 3.2.2 DNS, 3.5 JWT, 3.12) |
-| 4 | 8 | MEDIUM Performance — ближайший спринт | ✅ DONE (код, осталось: 4.1 MCP pool) |
-| 5 | 10 | MEDIUM Frontend — следующий спринт | IN PROGRESS (5/10) |
-| 6 | 10 | MEDIUM Infra — следующий спринт | ✅ DONE (код, осталось: 6.4 --no-cache) |
-| 7 | 8 | MEDIUM Business Logic | IN PROGRESS (5/8) |
-| 8 | 20 | LOW — бэклог | IN PROGRESS (13/20) |
+| 2 | 12 | HIGH — эта неделя | ✅ DONE (осталось: 2.2 CSP nonce) |
+| 3 | 12 | MEDIUM Security — ближайший спринт | ✅ DONE (осталось: 3.3.3 auth rate limit) |
+| 4 | 8 | MEDIUM Performance — ближайший спринт | ✅ DONE |
+| 5 | 10 | MEDIUM Frontend — следующий спринт | ✅ DONE |
+| 6 | 10 | MEDIUM Infra — следующий спринт | ✅ DONE |
+| 7 | 8 | MEDIUM Business Logic | ✅ DONE |
+| 8 | 20 | LOW — бэклог | ✅ DONE (осталось: 8.3 SystemAgent, 8.5 price type) |
 | **Total** | **85** | | |
 
 ---

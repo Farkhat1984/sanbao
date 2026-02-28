@@ -46,16 +46,13 @@ registerNativeTool({
     const results: Array<{ fileName: string; source: string; snippets: string[] }> = [];
     let totalSize = 0;
 
-    // Search agent files
-    for (const file of agentFiles) {
-      if (totalSize >= MAX_RESPONSE_SIZE) break;
-
-      const text = file.extractedText || "";
+    // Helper: extract snippets from text matching the query
+    function extractSnippets(text: string, maxSnippets = 5): string[] {
       const lower = text.toLowerCase();
       const snippets: string[] = [];
       let pos = 0;
 
-      while (snippets.length < 5 && totalSize < MAX_RESPONSE_SIZE) {
+      while (snippets.length < maxSnippets && totalSize < MAX_RESPONSE_SIZE) {
         const idx = lower.indexOf(query, pos);
         if (idx === -1) break;
 
@@ -70,37 +67,28 @@ registerNativeTool({
         pos = idx + query.length;
       }
 
+      return snippets;
+    }
+
+    // Search agent files
+    for (const file of agentFiles) {
+      if (totalSize >= MAX_RESPONSE_SIZE) break;
+      const snippets = extractSnippets(file.extractedText || "");
       if (snippets.length > 0) {
         results.push({ fileName: file.fileName, source: "agent", snippets });
       }
     }
 
-    // Search user files
+    // Search user files — wrap snippets in delimiters to help the model
+    // distinguish user-uploaded content from system instructions (prompt injection protection).
     for (const file of userFiles) {
       if (totalSize >= MAX_RESPONSE_SIZE) break;
-
-      const text = file.content || "";
-      const lower = text.toLowerCase();
-      const snippets: string[] = [];
-      let pos = 0;
-
-      while (snippets.length < 5 && totalSize < MAX_RESPONSE_SIZE) {
-        const idx = lower.indexOf(query, pos);
-        if (idx === -1) break;
-
-        const start = Math.max(0, idx - 150);
-        const end = Math.min(text.length, idx + query.length + 150);
-        const snippet =
-          (start > 0 ? "..." : "") +
-          text.slice(start, end) +
-          (end < text.length ? "..." : "");
-        snippets.push(snippet);
-        totalSize += snippet.length;
-        pos = idx + query.length;
-      }
-
+      const snippets = extractSnippets(file.content || "");
       if (snippets.length > 0) {
-        results.push({ fileName: file.name, source: "user", snippets });
+        const wrappedSnippets = snippets.map(
+          (s) => `<user-uploaded-file name="${file.name}">\n${s}\n</user-uploaded-file>`
+        );
+        results.push({ fileName: file.name, source: "user", snippets: wrappedSnippets });
       }
     }
 

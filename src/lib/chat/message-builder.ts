@@ -35,10 +35,11 @@ export function buildApiMessages(
 
       let textContent = msg.content;
 
-      // Prepend text file contents
+      // Prepend text file contents wrapped in delimiters to help the model
+      // distinguish user-uploaded content from system instructions (prompt injection protection).
       if (textAttachments.length > 0) {
         const textParts = textAttachments
-          .map((a) => `--- Файл: ${a.name} ---\n${a.textContent}`)
+          .map((a) => `<user-uploaded-file name="${a.name}">\n${a.textContent}\n</user-uploaded-file>`)
           .join("\n\n");
         textContent = `${textParts}\n\n${textContent}`;
       }

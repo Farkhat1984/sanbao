@@ -35,18 +35,18 @@ describe("mobile-session", () => {
     expect(result.token).toBe("encrypted-jwe-token");
     expect(result.expiresAt).toBeDefined();
 
-    // Verify expiresAt is ~30 days from now
+    // Verify expiresAt is ~1 hour from now (access token)
     const expiresAt = new Date(result.expiresAt).getTime();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    const oneHourMs = 60 * 60 * 1000;
     const now = Date.now();
-    expect(expiresAt).toBeGreaterThan(now + thirtyDaysMs - 5000);
-    expect(expiresAt).toBeLessThan(now + thirtyDaysMs + 5000);
+    expect(expiresAt).toBeGreaterThan(now + oneHourMs - 5000);
+    expect(expiresAt).toBeLessThan(now + oneHourMs + 5000);
 
     // Verify encode was called with correct params
     expect(mockEncode).toHaveBeenCalledWith(
       expect.objectContaining({
         secret: "test-secret-key-32chars!!",
-        maxAge: 30 * 24 * 60 * 60,
+        maxAge: 60 * 60,
         token: expect.objectContaining({
           id: "user-123",
           sub: "user-123",

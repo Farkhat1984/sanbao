@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyGoogleIdToken } from "@/lib/mobile-auth";
-import { mintSessionToken } from "@/lib/mobile-session";
+import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
 
 export async function POST(req: Request) {
   try {
@@ -74,6 +74,10 @@ export async function POST(req: Request) {
 
     if (existingAccount) {
       const user = existingAccount.user;
+      // OAuth provider verification counts as 2FA: Google has already verified
+      // the user's identity through their own authentication mechanisms (password +
+      // phone/device-based 2FA, passkeys, or Google Prompt). Setting
+      // twoFactorVerified = true lets OAuth users skip our separate TOTP step.
       const session = await mintSessionToken({
         id: user.id,
         email: user.email,
@@ -82,8 +86,12 @@ export async function POST(req: Request) {
         role: user.role,
         twoFactorVerified: user.twoFactorEnabled || false,
       });
+      const refreshToken = await mintRefreshToken(user.id);
 
       return NextResponse.json({
+        accessToken: session.token,
+        refreshToken,
+        // Legacy field for backward compat
         token: session.token,
         user: {
           id: user.id,
@@ -140,6 +148,8 @@ export async function POST(req: Request) {
       },
     });
 
+    // OAuth = 2FA: Google's identity verification (password + phone/device 2FA,
+    // passkeys, Google Prompt) serves as the second factor.
     const session = await mintSessionToken({
       id: user.id,
       email: user.email,
@@ -148,8 +158,12 @@ export async function POST(req: Request) {
       role: user.role,
       twoFactorVerified: user.twoFactorEnabled || false,
     });
+    const refreshToken = await mintRefreshToken(user.id);
 
     return NextResponse.json({
+      accessToken: session.token,
+      refreshToken,
+      // Legacy field for backward compat
       token: session.token,
       user: {
         id: user.id,

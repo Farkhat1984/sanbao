@@ -10,23 +10,24 @@ import {
   FileText,
   ExternalLink,
   Pencil,
-  Image,
 } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
-import { ArticleLink } from "./ArticleLink";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useChatStore } from "@/stores/chatStore";
-import { openArtifactInPanel, openImageInPanel } from "@/lib/panel-actions";
+import { openArtifactInPanel } from "@/lib/panel-actions";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
+import { parseContentWithArtifacts, CLARIFY_REGEX } from "@/lib/parse-message-content";
+import type { ParsedPart } from "@/lib/parse-message-content";
+import { markdownComponents, urlTransform } from "@/lib/markdown-components";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Constants ────────────────────────────────────────────
@@ -36,183 +37,6 @@ const ASSISTANT_COLLAPSE_HEIGHT = 500;
 
 /** Height threshold (px) above which user messages are collapsed */
 const USER_COLLAPSE_HEIGHT = 400;
-
-// ─── Artifact parsing ────────────────────────────────────
-
-const CLARIFY_REGEX = /<sanbao-clarify>[\s\S]*?<\/sanbao-clarify>/g;
-
-const ARTIFACT_REGEX =
-  /<sanbao-doc\s+type="(\w+)"\s+title="([^"]*)">([\s\S]*?)<\/sanbao-doc>/g;
-
-const EDIT_REGEX =
-  /<sanbao-edit\s+target="([^"]*)">([\s\S]*?)<\/sanbao-edit>/g;
-
-const REPLACE_REGEX =
-  /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/replace>/g;
-
-interface ParsedPart {
-  type: "text" | "artifact" | "edit";
-  content: string;
-  artifactType?: string;
-  title?: string;
-  edits?: Array<{ old: string; new: string }>;
-}
-
-function parseContentWithArtifacts(rawContent: string): ParsedPart[] {
-  const content = rawContent.replace(CLARIFY_REGEX, "").trim();
-  const parts: ParsedPart[] = [];
-  let lastIndex = 0;
-
-  // Combine both regexes — find all matches sorted by position
-  const allMatches: Array<{
-    index: number;
-    end: number;
-    part: ParsedPart;
-  }> = [];
-
-  // Find artifacts
-  ARTIFACT_REGEX.lastIndex = 0;
-  let match;
-  while ((match = ARTIFACT_REGEX.exec(content)) !== null) {
-    allMatches.push({
-      index: match.index,
-      end: ARTIFACT_REGEX.lastIndex,
-      part: {
-        type: "artifact",
-        artifactType: match[1],
-        title: match[2],
-        content: match[3].trim(),
-      },
-    });
-  }
-
-  // Find edits
-  EDIT_REGEX.lastIndex = 0;
-  while ((match = EDIT_REGEX.exec(content)) !== null) {
-    const target = match[1];
-    const editBody = match[2];
-    const edits: Array<{ old: string; new: string }> = [];
-
-    REPLACE_REGEX.lastIndex = 0;
-    let replaceMatch;
-    while ((replaceMatch = REPLACE_REGEX.exec(editBody)) !== null) {
-      edits.push({ old: replaceMatch[1].trim(), new: replaceMatch[2].trim() });
-    }
-
-    if (edits.length > 0) {
-      allMatches.push({
-        index: match.index,
-        end: EDIT_REGEX.lastIndex,
-        part: {
-          type: "edit",
-          title: target,
-          content: "",
-          edits,
-        },
-      });
-    }
-  }
-
-  // Sort by position
-  allMatches.sort((a, b) => a.index - b.index);
-
-  for (const m of allMatches) {
-    if (m.index > lastIndex) {
-      parts.push({ type: "text", content: content.slice(lastIndex, m.index) });
-    }
-    parts.push(m.part);
-    lastIndex = m.end;
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({ type: "text", content: content.slice(lastIndex) });
-  }
-
-  return parts;
-}
-
-// ─── Markdown renderer ───────────────────────────────────
-
-/** Allow article:// protocol through URL sanitization */
-function urlTransform(url: string): string {
-  if (url.startsWith("article://")) return url;
-  return defaultUrlTransform(url);
-}
-
-const markdownComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="mb-2 last:mb-0">{children}</p>
-  ),
-  table: ({ children }: { children?: React.ReactNode }) => (
-    <div className="table-wrapper">
-      <table>{children}</table>
-    </div>
-  ),
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
-    // article://criminal_code/188 → clickable ArticleLink (internal panel)
-    if (href?.startsWith("article://")) {
-      const raw = href.replace("article://", "").replace(/\/+$/, ""); // strip trailing slashes
-      const slashIdx = raw.indexOf("/");
-      const code = slashIdx > 0 ? raw.slice(0, slashIdx) : raw;
-      const article = slashIdx > 0 ? raw.slice(slashIdx + 1) : "";
-      if (code && article) {
-        return <ArticleLink code={code} article={article}>{children}</ArticleLink>;
-      }
-      // Malformed article:// (no article number) — render as plain text, never <a>
-      return <span className="text-legal-ref font-medium">§ {children}</span>;
-    }
-    // External links → open in new browser tab
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-accent hover:underline inline-flex items-center gap-0.5"
-      >
-        {children}
-        <ExternalLink className="h-3 w-3 inline shrink-0 opacity-40" />
-      </a>
-    );
-  },
-  img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <button
-      type="button"
-      onClick={() => typeof props.src === "string" && openImageInPanel(props.src, String(props.alt || ""))}
-      className="my-2 flex items-center gap-3 p-2.5 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/img"
-    >
-      <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-        <Image className="h-5 w-5 text-accent" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-text-primary truncate">{props.alt || "Изображение"}</p>
-        <p className="text-xs text-text-muted">Нажмите чтобы открыть</p>
-      </div>
-      <ExternalLink className="h-4 w-4 text-text-muted group-hover/img:text-accent transition-colors shrink-0" />
-    </button>
-  ),
-  code: ({
-    className,
-    children,
-    ...props
-  }: {
-    className?: string;
-    children?: React.ReactNode;
-  }) => {
-    const isInline = !className;
-    if (isInline) {
-      return (
-        <code className="bg-black/10 rounded px-1 py-0.5 text-[13px] font-mono">
-          {children}
-        </code>
-      );
-    }
-    return (
-      <code className={cn("text-[13px]", className)} {...props}>
-        {children}
-      </code>
-    );
-  },
-};
 
 // ─── Component ───────────────────────────────────────────
 
@@ -293,7 +117,10 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
     });
   }, [displayContent, isUser, isUserExpanded]);
 
-  // Auto-apply edits to existing artifacts (run once per message)
+  // Auto-apply edits to existing artifacts (run once per message).
+  // `parts` is derived from `displayContent` so it does not need to be a dep.
+  // `isAssistant` is derived from `message.role` which is stable per message instance.
+  // `appliedEditsRef` guards against re-application even if deps re-fire.
   useEffect(() => {
     if (!isAssistant) return;
 
@@ -309,7 +136,7 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.id, displayContent]);
+  }, [message.id, displayContent, findByTitle, applyEdits]);
 
   const handleOpenArtifact = (part: ParsedPart) => {
     // Reuse existing artifact if already tracked (prevents version increment on re-click)

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { WEBHOOK_MAX_ATTEMPTS, WEBHOOK_TIMEOUT_MS } from "@/lib/constants";
-import { isUrlSafe } from "@/lib/ssrf";
+import { isUrlSafeAsync } from "@/lib/ssrf";
 
 export async function dispatchWebhook(event: string, payload: Record<string, unknown>) {
   const webhooks = await prisma.webhook.findMany({
@@ -13,7 +13,7 @@ export async function dispatchWebhook(event: string, payload: Record<string, unk
   });
 
   for (const webhook of webhooks) {
-    if (!isUrlSafe(webhook.url)) {
+    if (!(await isUrlSafeAsync(webhook.url))) {
       await prisma.webhookLog.create({
         data: {
           webhookId: webhook.id,

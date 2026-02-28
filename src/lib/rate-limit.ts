@@ -2,6 +2,11 @@
  * Rate limiting with Redis-first, in-memory fallback.
  * When REDIS_URL is set, all counters are shared across instances.
  * Without Redis, falls back to per-process BoundedMap (dev mode).
+ *
+ * IMPORTANT: In production, Redis should be a hard requirement for rate limiting.
+ * Without Redis, each process maintains its own counters, allowing users to
+ * bypass limits by hitting different replicas. The startup check below logs a
+ * critical warning when Redis is unavailable in production.
  */
 
 import {
@@ -11,8 +16,27 @@ import {
   CACHE_CLEANUP_INTERVAL_MS,
 } from "@/lib/constants";
 import { BoundedMap } from "@/lib/bounded-map";
-import { redisRateLimit, cacheIncr, cacheGet, cacheSet, cacheDel } from "@/lib/redis";
+import { redisRateLimit, cacheIncr, cacheGet, cacheSet, cacheDel, isRedisAvailable } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+
+// ─── Production Redis check ─────────────────────────────
+// In production, rate limiting without Redis is unsafe (per-process counters
+// don't protect against distributed abuse across replicas).
+// This logs a critical warning at startup — not a crash, to allow graceful degradation.
+if (typeof globalThis !== "undefined" && process.env.NODE_ENV === "production") {
+  // Delay check to allow Redis connection to establish
+  setTimeout(() => {
+    if (!isRedisAvailable()) {
+      logger.warn(
+        "CRITICAL: Redis is NOT available in production. " +
+        "Rate limiting is falling back to in-memory per-process counters. " +
+        "This is UNSAFE for multi-replica deployments — users can bypass limits. " +
+        "Set REDIS_URL environment variable to enable distributed rate limiting.",
+        { context: "rate-limit-startup-check" }
+      );
+    }
+  }, 5_000);
+}
 
 const RATE_LIMIT_MAX_ENTRIES = 50_000;
 

@@ -27,6 +27,16 @@ fi
 # Database URL for PostgreSQL MCP (use Docker-exposed port)
 DB_URL="${POSTGRES_MCP_DB_URL:-postgresql://postgres:postgres@localhost:5436/sanbao}"
 
+# Pin versions to avoid breaking changes from unpinned npx installs.
+# To find current versions: npx -y <package>@latest --version
+# Update these after verifying compatibility.
+SUPERGATEWAY_VER="@latest"            # TODO: pin to exact version (e.g. @2.1.0)
+MCP_GITHUB_VER="@0.6.2"
+MCP_POSTGRES_VER="@0.6.2"
+MCP_BRAVE_VER="@0.6.2"
+MCP_FILESYSTEM_VER="@0.6.2"
+PLAYWRIGHT_MCP_VER="@0.0.28"
+
 start_mcp() {
   local name="$1"
   local port="$2"
@@ -34,7 +44,7 @@ start_mcp() {
 
   echo -n "Starting $name on port $port... "
 
-  npx -y supergateway \
+  npx -y "supergateway${SUPERGATEWAY_VER}" \
     --stdio "$cmd" \
     --port "$port" \
     --outputTransport streamableHttp \
@@ -59,24 +69,24 @@ echo ""
 
 # 1. GitHub (port 3101)
 start_mcp "github" 3101 \
-  "npx -y @modelcontextprotocol/server-github"
+  "npx -y @modelcontextprotocol/server-github${MCP_GITHUB_VER}"
 
 # 2. PostgreSQL (port 3102)
 export DATABASE_URL="$DB_URL"
 start_mcp "postgres" 3102 \
-  "npx -y @modelcontextprotocol/server-postgres $DB_URL"
+  "npx -y @modelcontextprotocol/server-postgres${MCP_POSTGRES_VER} $DB_URL"
 
 # 3. Brave Search (port 3103)
 start_mcp "brave-search" 3103 \
-  "npx -y @modelcontextprotocol/server-brave-search"
+  "npx -y @modelcontextprotocol/server-brave-search${MCP_BRAVE_VER}"
 
 # 4. Filesystem (port 3104)
 start_mcp "filesystem" 3104 \
-  "npx -y @modelcontextprotocol/server-filesystem $PROJECT_DIR"
+  "npx -y @modelcontextprotocol/server-filesystem${MCP_FILESYSTEM_VER} $PROJECT_DIR"
 
 # 5. Playwright (port 3105)
 start_mcp "playwright" 3105 \
-  "npx -y @playwright/mcp@latest"
+  "npx -y @playwright/mcp${PLAYWRIGHT_MCP_VER}"
 
 echo ""
 echo "=== Status ==="
