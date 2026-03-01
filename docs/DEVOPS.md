@@ -170,7 +170,7 @@ AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orc
 
 **Стек:**
 - `embedding-proxy` — DeepInfra embedding service (порт 8097)
-- `fragmentdb` — векторная БД (внутренний порт 8080, хост порт 8110), bind mount `ai_cortex/nexuscore_data`
+- `fragmentdb` — векторная БД (внутренний порт 8080, хост порт 8110), bind mount `ai_cortex/fragmentdb_data`
 - `orchestrator` — MCP сервер (порт 8120), depends on fragmentdb + embedding-proxy
 
 **FragmentDB коллекции:**
@@ -223,7 +223,7 @@ AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orc
 DNS все домены (`sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai`, `api.sanbao.ai`) → CNAME → `222e9fb5-...cfargotunnel.com` (proxied). Трафик идёт **через Cloudflare Tunnel**, НЕ напрямую на origin:443.
 
 **Server 1** — системный сервис `cloudflared` (`/etc/cloudflared/config.yml`):
-- Маршруты: `sanbao.ai` → `http://localhost:3004`, `leema.kz` → `:3100`, `mcp.sanbao.ai` → `:8120`, и др.
+- Маршруты: `sanbao.ai` → `http://localhost:3004`, `mcp.sanbao.ai` → `:8120`, `rexor.kz` → `:3003`
 - Обновить конфиг: `sudo nano /etc/cloudflared/config.yml && sudo systemctl restart cloudflared`
 
 **Server 2** — Docker контейнер `deploy-cloudflared-1` (profile `failover`):
