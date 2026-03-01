@@ -505,7 +505,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 | Правовой справочник | 18 строк | 1.2 KB | — | DuckDB in-memory |
 | Embedding кеш | 242,709 | 17 GB | — | — |
 
-### FragmentDB (nexuscore_data/) — 15 GB
+### FragmentDB (fragmentdb_data/) — 15 GB
 
 | Коллекция | Dim | Доки (chunks) | Размер |
 |-----------|-----|---------------|--------|

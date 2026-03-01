@@ -14,7 +14,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <span className="text-sm">Назад</span>
           </Link>
           <Link href="/login" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
               <SanbaoCompass size={18} className="text-white" />
             </div>
             <span className="text-sm font-semibold text-text-primary">Sanbao</span>

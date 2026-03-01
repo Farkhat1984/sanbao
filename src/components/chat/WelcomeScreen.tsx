@@ -77,7 +77,7 @@ export function WelcomeScreen() {
           );
         })() : (
           <>
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
               <SanbaoCompass size={32} className="text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">

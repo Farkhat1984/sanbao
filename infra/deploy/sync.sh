@@ -183,7 +183,7 @@ fdb_sync() {
         if sudo rsync -az --delete \
             --timeout=30 \
             -e "ssh ${SSH_OPTS} -i ${HOME}/.ssh/id_ed25519" \
-            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/nexuscore_data/" \
+            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/fragmentdb_data/" \
             "${VOLUME_PATH}/" 2>>"${LOG_FILE}"; then
             log "FragmentDB data sync completed (attempt ${attempt})."
             return 0

@@ -85,7 +85,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0 text-white">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0 text-white">
             <SanbaoCompass size={20} state={isStreaming ? "loading" : "idle"} />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight">

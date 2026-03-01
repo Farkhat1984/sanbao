@@ -179,7 +179,7 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
         return (
           <div
             className={cn(
-              "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+              "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
               isUser
                 ? "bg-accent text-white"
                 : !agentIconColor && "bg-gradient-to-br from-accent to-legal-ref text-white"

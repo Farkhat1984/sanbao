@@ -210,9 +210,9 @@ log "Backing up FragmentDB data..."
 # Check possible locations (ordered by likelihood)
 FDB_DATA=""
 for path in \
-    "/home/metadmin/faragj/ai_cortex/nexuscore_data" \
-    "/home/faragj/faragj/fragmentdb/nexuscore_data" \
-    "/home/metadmin/faragj/fragmentdb/nexuscore_data"; do
+    "/home/metadmin/faragj/ai_cortex/fragmentdb_data" \
+    "/home/faragj/faragj/fragmentdb/fragmentdb_data" \
+    "/home/metadmin/faragj/fragmentdb/fragmentdb_data"; do
     if [ -d "${path}" ] && [ "$(ls -A "${path}" 2>/dev/null)" ]; then
         FDB_DATA="${path}"
         break

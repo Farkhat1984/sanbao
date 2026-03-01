@@ -3,11 +3,11 @@ import { auth } from "@/lib/auth";
 import { callMcpTool } from "@/lib/mcp-client";
 
 const LAWYER_URL =
-  process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer";
+  process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer";
 const CONSULTANT_1C_URL =
-  process.env.CONSULTANT_1C_MCP_URL || "http://172.28.0.1:8120/consultant_1c";
+  process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c";
 const ACCOUNTANT_URL =
-  process.env.ACCOUNTINGDB_MCP_URL || "http://172.28.0.1:8120/accountant";
+  process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant";
 const CORTEX_TOKEN = process.env.AI_CORTEX_AUTH_TOKEN || null;
 
 const LEGAL_CODES = new Set([

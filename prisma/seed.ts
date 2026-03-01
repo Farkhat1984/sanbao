@@ -872,7 +872,7 @@ async function main() {
     where: { id: "mcp-lawyer" },
     update: {
       name: "Юрист",
-      url: process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer",
+      url: process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -881,7 +881,7 @@ async function main() {
     create: {
       id: "mcp-lawyer",
       name: "Юрист",
-      url: process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer",
+      url: process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -890,7 +890,7 @@ async function main() {
   });
 
   // Auto-discover tools from Lawyer MCP server
-  const lawyerMcpUrl = process.env.LAWYER_MCP_URL || "http://172.28.0.1:8120/lawyer";
+  const lawyerMcpUrl = process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer";
   const lawyerMcpToken = process.env.AI_CORTEX_AUTH_TOKEN || null;
   try {
     console.log(`Connecting to Lawyer MCP at ${lawyerMcpUrl}...`);
@@ -917,7 +917,7 @@ async function main() {
     where: { id: "mcp-broker" },
     update: {
       name: "Брокер",
-      url: process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker",
+      url: process.env.BROKER_MCP_URL || "http://orchestrator:8120/broker",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -926,7 +926,7 @@ async function main() {
     create: {
       id: "mcp-broker",
       name: "Брокер",
-      url: process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker",
+      url: process.env.BROKER_MCP_URL || "http://orchestrator:8120/broker",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -935,7 +935,7 @@ async function main() {
   });
 
   // Auto-discover tools from Broker MCP server
-  const brokerMcpUrl = process.env.BROKER_MCP_URL || "http://172.28.0.1:8120/broker";
+  const brokerMcpUrl = process.env.BROKER_MCP_URL || "http://orchestrator:8120/broker";
   const brokerMcpToken = process.env.AI_CORTEX_AUTH_TOKEN || null;
   try {
     console.log(`Connecting to Broker MCP at ${brokerMcpUrl}...`);
@@ -1297,7 +1297,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
     where: { id: "mcp-accountingdb" },
     update: {
       name: "AccountingDB",
-      url: process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant",
+      url: process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
       isGlobal: true,
@@ -1306,7 +1306,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
     create: {
       id: "mcp-accountingdb",
       name: "AccountingDB",
-      url: process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant",
+      url: process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
       isGlobal: true,
@@ -1315,7 +1315,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
   });
 
   // Auto-discover tools from AccountingDB MCP server
-  const accountingMcpUrl = process.env.ACCOUNTINGDB_MCP_URL || "https://mcp.sanbao.ai/accountant";
+  const accountingMcpUrl = process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant";
   const accountingMcpToken = process.env.ACCOUNTINGDB_MCP_TOKEN || null;
   try {
     console.log(`Connecting to AccountingDB MCP at ${accountingMcpUrl}...`);
@@ -1368,7 +1368,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
     where: { id: "mcp-consultant-1c" },
     update: {
       name: "1С Консультант",
-      url: process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c",
+      url: process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -1377,7 +1377,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
     create: {
       id: "mcp-consultant-1c",
       name: "1С Консультант",
-      url: process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c",
+      url: process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
       isGlobal: true,
@@ -1386,7 +1386,7 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
   });
 
   // Auto-discover tools from 1С Консультант MCP server
-  const consultant1cMcpUrl = process.env.CONSULTANT_1C_MCP_URL || "https://mcp.sanbao.ai/consultant_1c";
+  const consultant1cMcpUrl = process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c";
   const consultant1cMcpToken = process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null;
   try {
     console.log(`Connecting to 1С Консультант MCP at ${consultant1cMcpUrl}...`);

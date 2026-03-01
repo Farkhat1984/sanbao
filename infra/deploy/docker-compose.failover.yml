@@ -43,7 +43,7 @@ services:
     volumes:
       - fragmentdb-data:/home/fragmentdb/data
     environment:
-      - RUST_LOG=nexus=info
+      - RUST_LOG=fdb=info
     command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]

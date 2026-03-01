@@ -8,6 +8,14 @@
 
 import dns from "dns";
 
+/** Docker-internal service hostnames trusted by the platform (admin-configured, not user-supplied). */
+const TRUSTED_HOSTS = new Set(
+  (process.env.TRUSTED_INTERNAL_HOSTS || "orchestrator,fragmentdb,embedding-proxy,db,redis,pgbouncer")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+);
+
 const BLOCKED_HOSTS =
   /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|\[::1?\]|metadata\.google|169\.254\.\d+\.\d+)/i;
 
@@ -28,6 +36,7 @@ export function isUrlSafe(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    if (TRUSTED_HOSTS.has(parsed.hostname.toLowerCase())) return true;
     if (BLOCKED_HOSTS.test(parsed.hostname)) return false;
     // Strip brackets from IPv6 hostnames for regex matching
     const bare = parsed.hostname.replace(/^\[|\]$/g, "");
@@ -50,6 +59,9 @@ export async function isUrlSafeAsync(url: string): Promise<boolean> {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
+
+    // Trusted internal hosts skip DNS resolution check
+    if (TRUSTED_HOSTS.has(hostname.toLowerCase())) return true;
 
     // If hostname is already an IP literal, the sync check was sufficient
     if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return true;

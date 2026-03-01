@@ -86,7 +86,7 @@ if [ "${SKIP_SYNC}" = false ]; then
         sudo rsync -az \
             -e "ssh -o StrictHostKeyChecking=no" \
             "${VOLUME_PATH}/" \
-            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/nexuscore_data/" 2>/dev/null \
+            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/fragmentdb_data/" 2>/dev/null \
             && log "FragmentDB data synced back to primary." \
             || warn "FragmentDB reverse sync failed."
     else

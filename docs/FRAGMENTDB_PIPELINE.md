@@ -4,7 +4,7 @@
 
 ## Обзор
 
-**FragmentDB** (NexusCore v0.5.0) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
+**FragmentDB** (FragmentDB v0.5.0) — AI-native vector-graph database (Rust). Сочетает семантический поиск (HNSW/DiskANN), полнотекстовый поиск (BM25), граф знаний и аналитику (DuckDB/FQL).
 
 **AI Cortex Orchestrator** (v0.8.0) — Python MCP-сервер (aiohttp) с 4 endpoint'ами:
 - `POST /lawyer` — правовая база РК (18 кодексов + ~199K законов, графы ссылок, sql_query → legal_ref_kz)
