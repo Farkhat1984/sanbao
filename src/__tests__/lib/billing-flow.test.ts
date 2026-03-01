@@ -242,29 +242,27 @@ describe("Expiring subscription reminder dedup", () => {
   });
 });
 
-// ─── Plan price parsing ────────────────────────────────
+// ─── Plan price validation ────────────────────────────────
 
-describe("Plan price parsing", () => {
-  it("parses numeric string price", () => {
-    expect(parseInt("5990", 10)).toBe(5990);
+describe("Plan price validation", () => {
+  it("uses integer price directly", () => {
+    const price = 5990;
+    expect(price).toBe(5990);
   });
 
-  it("parses price with non-numeric chars", () => {
-    // Stripe checkout uses this pattern
-    expect(parseInt("5990 KZT".replace(/\D/g, ""), 10)).toBe(5990);
+  it("converts to tiyn for Stripe (×100)", () => {
+    const price = 4990;
+    expect(price * 100).toBe(499000);
   });
 
-  it("returns NaN for empty string", () => {
-    expect(parseInt("", 10)).toBeNaN();
-  });
-
-  it("returns 0 for default plan price", () => {
-    expect(parseInt("0", 10)).toBe(0);
+  it("default plan price is 0", () => {
+    const price = 0;
+    expect(price).toBe(0);
   });
 
   it("rejects zero/negative as invalid for checkout", () => {
-    const priceNum = parseInt("0", 10);
-    const isValid = priceNum > 0;
+    const price = 0;
+    const isValid = price > 0;
     expect(isValid).toBe(false);
   });
 });

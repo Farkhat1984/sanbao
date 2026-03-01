@@ -278,10 +278,7 @@ model Plan {
   slug                String   @unique
   name                String
   description         String?  @db.Text
-  // TODO: migrate price from String to Int @default(0) — store in tenge as integer.
-  // Affects 15+ files: billingStore, PlanCard, PlanForm, checkout routes, admin billing.
-  // Requires coordinated migration of seed data, display logic, and parseInt() call sites.
-  price               String   @default("0")
+  price               Int      @default(0)
   messagesPerDay      Int      @default(20)
   tokensPerMessage    Int      @default(4096)
   tokensPerMonth      Int      @default(60000)
@@ -741,25 +738,6 @@ model EmailLog {
   @@index([type, status])
 }
 
-// ─── System Agents ────────────────────────────────────────
-
-/// @deprecated Use Agent with isSystem=true instead. Kept for backward compatibility.
-model SystemAgent {
-  id             String   @id @default(cuid())
-  name           String   @unique
-  description    String?  @db.Text
-  systemPrompt   String   @db.Text
-  icon           String   @default("Bot")
-  iconColor      String   @default("#4F6EF7")
-  model          String   @default("default")
-  starterPrompts String[] @default([])
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 // ─── Token Logging ────────────────────────────────────────
 
 model TokenLog {
@@ -870,8 +848,8 @@ model ApiKey {
   userId    String
   name      String
   key       String    @unique
-  keyHash   String?   @unique // SHA-256 hash for secure lookup
-  keyPrefix String?   // First 12 chars for display (e.g. "lma_abc12345")
+  keyHash   String    @unique // SHA-256 hash for secure lookup (run scripts/migrate-api-keys.ts first)
+  keyPrefix String    // First 12 chars for display (e.g. "lma_abc12345")
   lastUsed  DateTime?
   expiresAt DateTime?
   isActive  Boolean   @default(true)

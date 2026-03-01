@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const cfIp = req.headers.get("cf-connecting-ip");
     const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
 
-    const rateCheck = checkAuthRateLimit(`reg:${ip}`);
+    const rateCheck = await checkAuthRateLimit(`reg:${ip}`);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: "Слишком много попыток. Попробуйте позже." },

@@ -54,19 +54,19 @@ describe("rate-limit (in-memory fallback)", () => {
   });
 
   describe("checkAuthRateLimit", () => {
-    it("allows auth requests under limit", () => {
+    it("allows auth requests under limit", async () => {
       const ip = `192.168.1.${++testId}`;
-      const result = checkAuthRateLimit(ip);
+      const result = await checkAuthRateLimit(ip);
       expect(result.allowed).toBe(true);
     });
 
-    it("blocks IP after exceeding limit", () => {
+    it("blocks IP after exceeding limit", async () => {
       const ip = `10.0.0.${++testId}`;
       // Default AUTH_MAX_PER_MINUTE is 5
       for (let i = 0; i < 5; i++) {
-        checkAuthRateLimit(ip);
+        await checkAuthRateLimit(ip);
       }
-      const result = checkAuthRateLimit(ip);
+      const result = await checkAuthRateLimit(ip);
       expect(result.allowed).toBe(false);
       expect(result.retryAfterSeconds).toBeGreaterThan(0);
     });

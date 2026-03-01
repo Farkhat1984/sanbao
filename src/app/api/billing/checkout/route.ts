@@ -36,13 +36,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "План не найден" }, { status: 404 });
   }
 
-  const priceNum = parseInt(plan.price.replace(/\D/g, ""), 10);
-  if (!priceNum || priceNum <= 0) {
+  if (!plan.price || plan.price <= 0) {
     return NextResponse.json({ error: "Бесплатный план не требует оплаты" }, { status: 400 });
   }
 
   // Apply promo code discount (atomic increment to prevent unlimited reuse)
-  let finalAmount = priceNum * 100; // convert to tiyn/cents
+  let finalAmount = plan.price * 100; // convert to tiyn/cents
   if (promoCode) {
     const upperCode = (promoCode as string).toUpperCase().trim();
     const now = new Date();

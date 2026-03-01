@@ -10,7 +10,7 @@ interface PlanData {
   slug: string;
   name: string;
   description: string | null;
-  price: string;
+  price: number;
   messagesPerDay: number;
   tokensPerMessage: number;
   tokensPerMonth: number;
@@ -155,12 +155,12 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         </div>
         <div>
           <label className="text-xs font-medium text-text-secondary block mb-1">
-            Цена
+            Цена (₸)
           </label>
           <input
-            type="text"
+            type="number"
             value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            onChange={(e) => setForm({ ...form, price: parseInt(e.target.value) || 0 })}
             disabled={!editing}
             className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary disabled:opacity-60 focus:outline-none focus:border-accent transition-colors"
           />

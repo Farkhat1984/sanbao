@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const cfIp = req.headers.get("cf-connecting-ip");
     const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
 
-    const rateCheck = checkAuthRateLimit(`google-mobile:${ip}`);
+    const rateCheck = await checkAuthRateLimit(`google-mobile:${ip}`);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: "Too many attempts. Try again later." },

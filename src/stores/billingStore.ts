@@ -4,7 +4,7 @@ interface PlanInfo {
   slug: string;
   name: string;
   description: string | null;
-  price: string;
+  price: number;
   messagesPerDay: number;
   tokensPerMessage: number;
   tokensPerMonth: number;

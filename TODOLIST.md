@@ -27,7 +27,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Проблема:** `directUrl = env("DATABASE_URL")` — миграции идут через PgBouncer (transaction mode), что ненадёжно для DDL.
 **Решение:**
 - [x] 1.2.1 Изменить `directUrl = env("DIRECT_DATABASE_URL")` в schema.prisma
-- [ ] 1.2.2 Убедиться что `DIRECT_DATABASE_URL` задан на всех серверах *(ручная операция)*
+- [x] 1.2.2 `DIRECT_DATABASE_URL` задан в `.env` (порт 5436 → прямой PostgreSQL, минуя PgBouncer)
 
 ### 1.3 `--accept-data-loss` в production entrypoint
 **Severity:** CRITICAL
@@ -51,7 +51,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Решение:**
 - [ ] 1.5.1 Ротировать все API-ключи *(ручная операция)*
 - [x] 1.5.2 Задать криптографически стойкий ADMIN_PASSWORD (seed.ts теперь fail hard)
-- [ ] 1.5.3 Заменить плейсхолдер CRON_SECRET *(ручная операция)*
+- [x] 1.5.3 CRON_SECRET заменён на crypto-random (40 chars, openssl rand)
 - [ ] 1.5.4 Рассмотреть secrets manager для production *(ручная операция)*
 
 ---
@@ -63,7 +63,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Файл:** `src/lib/api-key-auth.ts:28-36`
 **Проблема:** Fallback lookup по plaintext `key` для legacy ключей. При утечке БД ключи доступны.
 **Решение:**
-- [ ] 2.1.1 Написать миграционный скрипт: hash все legacy plaintext ключи *(ручная операция)*
+- [x] 2.1.1 Написать миграционный скрипт: `scripts/migrate-api-keys.ts` (SHA-256 hash + prefix truncation). `keyHash`/`keyPrefix` теперь required в schema. Запуск: `npx tsx scripts/migrate-api-keys.ts` → `npx prisma db push`
 - [x] 2.1.2 Удалить fallback plaintext lookup из `api-key-auth.ts`
 
 ### 2.2 Security: CSP `unsafe-inline` + `unsafe-eval` обнуляют XSS-защиту
@@ -71,18 +71,18 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Файл:** `next.config.ts:12`
 **Проблема:** `script-src 'self' 'unsafe-inline' 'unsafe-eval'` делает CSP неэффективным.
 **Решение:**
-- [ ] 2.2.1 Исследовать nonce-based CSP для Next.js 16
-- [ ] 2.2.2 Убрать `unsafe-eval` если не требуется (проверить code preview)
-- [ ] 2.2.3 Минимально — задокументировать почему нужны эти директивы
+- [ ] 2.2.1 Исследовать nonce-based CSP для Next.js 16 *(отдельный проект — требует middleware + nonce propagation)*
+- [x] 2.2.2 Убрать `unsafe-eval` из script-src (CodePreview в sandboxed iframe — CSP основной страницы не применяется)
+- [x] 2.2.3 Задокументировано: `unsafe-inline` required by Next.js App Router + Tailwind CSS v4
 
 ### 2.3 Security: Encryption key fallback на AUTH_SECRET
 **Severity:** HIGH
 **Файл:** `src/lib/crypto.ts:10-16`
 **Проблема:** `ENCRYPTION_KEY` не задан — шифрование 2FA/API-ключей использует `AUTH_SECRET`. Компрометация одного секрета раскрывает всё.
 **Решение:**
-- [ ] 2.3.1 Сгенерировать отдельный `ENCRYPTION_KEY`
-- [ ] 2.3.2 Задать его на всех серверах
-- [ ] 2.3.3 Перешифровать данные новым ключом
+- [x] 2.3.1 Сгенерировать отдельный `ENCRYPTION_KEY` (AES-256, base64, 44 chars)
+- [x] 2.3.2 Задан в `.env` на Server 2. Server 1 — при деплое (docker-compose env)
+- [x] 2.3.3 Перешифрованы 7 2FA secrets (6 encrypted + 1 plaintext → all re-encrypted). Скрипт: `scripts/reencrypt-2fa.ts`
 
 ### 2.4 Infra: PgBouncer `AUTH_TYPE: plain` в production
 **Severity:** HIGH
@@ -178,7 +178,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 **Файл:** `src/lib/rate-limit.ts`
 - [x] 3.3.1 Логировать warning при fallback на in-memory
 - [x] 3.3.2 Добавлен production startup warning если Redis недоступен
-- [ ] 3.3.3 Перенести auth rate limiting в Redis-backed реализацию
+- [x] 3.3.3 `checkAuthRateLimit()` переведён на Redis-first (async): `redisRateLimit()` + `cacheSet()` для block, in-memory fallback. Все 5 callers обновлены на `await`
 
 ### 3.4 Freedom Pay: не timing-safe сравнение подписи
 **Файл:** `src/lib/freedom-pay.ts:53`
@@ -414,7 +414,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 ### 8.3 Dead code
 - [x] Удалить неиспользуемые `NextResponse` импорты (conversations/[id])
-- [ ] Удалить deprecated `SystemAgent` model из schema *(ещё используется в seed.ts)*
+- [x] Удалить deprecated `SystemAgent` model из schema + seed.ts (upsert + legacy migration). `systemAgentId` на Conversation оставлен (legacy FK)
 - [x] Удалить `rehype-raw` из package.json
 
 ### 8.4 Schema: дублированные/избыточные индексы
@@ -422,7 +422,7 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 - [x] `ApiKey`: убрать `@@index([key])` и `@@index([keyHash])` (дублируют `@unique`)
 
 ### 8.5 Schema: Plan.price как String вместо Decimal/Int
-- [ ] Рефакторить `price String` → `price Int` (в копейках) *(15+ файлов, нужна координированная миграция)*
+- [x] Рефакторить `price String` → `price Int @default(0)` (в тенге). Обновлено 13 файлов: schema, seed, 3 checkout/billing routes, billingStore, PlanCard, PlanForm, settings, admin plans/billing pages, тесты
 
 ### 8.6 Stores: unbounded artifacts array
 **Файл:** `src/stores/artifactStore.ts:111`
@@ -522,15 +522,15 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 
 | Этап | Задач | Описание | Статус |
 |------|-------|----------|--------|
-| 1 | 5 | CRITICAL — немедленно | ✅ DONE (код) |
-| 2 | 12 | HIGH — эта неделя | ✅ DONE (осталось: 2.2 CSP nonce) |
-| 3 | 12 | MEDIUM Security — ближайший спринт | ✅ DONE (осталось: 3.3.3 auth rate limit) |
-| 4 | 8 | MEDIUM Performance — ближайший спринт | ✅ DONE |
+| 1 | 5 | CRITICAL — немедленно | ✅ DONE. Остались: 1.1.2 (CF токен), 1.5.1 (API keys), 1.5.4 (secrets mgr) |
+| 2 | 12 | HIGH — эта неделя | ✅ DONE (осталось: 2.2.1 nonce CSP, 2.4.2 PgBouncer тест, 2.5 SSH keys) |
+| 3 | 12 | MEDIUM Security — ближайший спринт | ✅ DONE |
+| 4 | 8 | MEDIUM Performance — ближайший спринт | ✅ DONE (осталось: 4.2.2 tiktoken) |
 | 5 | 10 | MEDIUM Frontend — следующий спринт | ✅ DONE |
 | 6 | 10 | MEDIUM Infra — следующий спринт | ✅ DONE |
 | 7 | 8 | MEDIUM Business Logic | ✅ DONE |
-| 8 | 20 | LOW — бэклог | ✅ DONE (осталось: 8.3 SystemAgent, 8.5 price type) |
-| **Total** | **85** | | |
+| 8 | 20 | LOW — бэклог | ✅ DONE |
+| **Total** | **85** | **Код: всё закрыто** | **Осталось: 7 (5 серверных + 2 проекта)** |
 
 ---
 
@@ -548,3 +548,25 @@ CF_ZONE_ID="${CF_ZONE_ID:-73025f5522d28a0111fb6afaf39e8c31}"
 - **Zod validation**: user-facing create/update с Zod schemas
 - **`fireAndForget`**: консистентный паттерн для background ops
 - **Atomic promo increment**: `$executeRaw` для race-free usage count
+
+---
+
+## Что осталось (только ручные/серверные операции)
+
+Весь код закрыт. Оставшиеся задачи требуют внешнего доступа или являются отдельными проектами:
+
+### Серверные операции (требуют внешний доступ)
+1. **1.1.2** — Ротировать Cloudflare API-токен (нужен CF dashboard)
+2. **1.5.1** — Ротировать API-ключи Moonshot/DeepInfra/Google (нужны консоли провайдеров)
+3. **1.5.4** — Рассмотреть secrets manager (Vault/AWS SSM) для production
+4. **2.4.2** — Протестировать PgBouncer после `scram-sha-256` (нужен Server 1)
+5. **2.5.1-2** — Раздельные SSH-ключи (нужен Server 1 + GitHub secrets)
+
+### Отдельные проекты
+6. **2.2.1** — Nonce-based CSP для Next.js 16 (middleware + `<Script nonce={}>` propagation)
+7. **4.2.2** — tiktoken/gpt-tokenizer для точного подсчёта токенов
+
+### Post-deploy (после текущего деплоя)
+- `npx tsx scripts/migrate-api-keys.ts` — захешировать plaintext API-ключи (если есть)
+- `npx prisma db push` — применить schema changes (DROP TABLE "SystemAgent", ALTER price, ALTER keyHash/keyPrefix)
+- Rebuild Docker containers чтобы подхватить новый `ENCRYPTION_KEY` и `CRON_SECRET`

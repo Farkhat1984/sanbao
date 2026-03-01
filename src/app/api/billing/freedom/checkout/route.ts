@@ -18,13 +18,12 @@ export async function POST(req: Request) {
   if (!planId) return jsonError("Не указан тарифный план", 400);
 
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
-  const priceNum = plan ? parseInt(plan.price, 10) : 0;
-  if (!plan || !priceNum || priceNum <= 0) {
+  if (!plan || !plan.price || plan.price <= 0) {
     return jsonError("Тарифный план не найден или бесплатный", 400);
   }
 
   // Apply promo code discount (atomic increment to prevent unlimited reuse)
-  let finalAmount = priceNum;
+  let finalAmount = plan.price;
   let appliedPromo: string | null = null;
   if (promoCode && typeof promoCode === "string") {
     const upperCode = promoCode.toUpperCase().trim();
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
     if (claimed > 0) {
       const promo = await prisma.promoCode.findUnique({ where: { code: upperCode } });
       if (promo && promo.discount > 0) {
-        finalAmount = Math.round(priceNum * (1 - promo.discount / 100));
+        finalAmount = Math.round(plan.price * (1 - promo.discount / 100));
         appliedPromo = promo.code;
       }
     }
@@ -64,7 +63,7 @@ export async function POST(req: Request) {
       currency: "KZT",
       status: "PENDING",
       provider: "freedom",
-      metadata: { planId: plan.id, planName: plan.name, promoCode: appliedPromo, originalAmount: priceNum },
+      metadata: { planId: plan.id, planName: plan.name, promoCode: appliedPromo, originalAmount: plan.price },
     },
   });
 

@@ -8,10 +8,10 @@ import { CreditCard, DollarSign, TrendingUp, Users, RotateCcw, UserPlus, XCircle
 interface BillingStats {
   totalSubscriptions: number;
   planDistribution: { planName: string; count: number }[];
-  recentPayments: { id: string; userId: string; userName: string; planName: string; amount: string; createdAt: string }[];
+  recentPayments: { id: string; userId: string; userName: string; planName: string; amount: number; currency: string; createdAt: string }[];
   payments: { id: string; userId: string; userName: string; amount: number; currency: string; status: string; provider: string; createdAt: string }[];
   monthlyRevenue: number;
-  plans?: { id: string; name: string; price: string }[];
+  plans?: { id: string; name: string; price: number }[];
   subscriptions?: { userId: string; userName: string; planId: string; planName: string; expiresAt: string | null; grantedBy: string | null }[];
 }
 
@@ -182,7 +182,7 @@ export default function AdminBillingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="default">{p.planName}</Badge>
-                <span className="text-sm font-medium text-accent">{p.amount}</span>
+                <span className="text-sm font-medium text-accent">{p.amount.toLocaleString("ru-RU")} {p.currency}</span>
                 <Button
                   variant="secondary"
                   size="sm"

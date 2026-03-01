@@ -10,7 +10,7 @@ const {
 } = vi.hoisted(() => ({
   mockVerifyAppleToken: vi.fn(),
   mockMintSessionToken: vi.fn(),
-  mockCheckAuthRateLimit: vi.fn().mockReturnValue({ allowed: true }),
+  mockCheckAuthRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
   mockPrisma: {
     account: { findUnique: vi.fn(), create: vi.fn() },
     user: { findUnique: vi.fn(), create: vi.fn() },

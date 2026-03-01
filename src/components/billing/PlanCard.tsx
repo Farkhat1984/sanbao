@@ -7,7 +7,7 @@ interface PlanCardProps {
     slug: string;
     name: string;
     description: string | null;
-    price: string;
+    price: number;
     messagesPerDay: number;
     tokensPerMessage: number;
     tokensPerMonth: number;
@@ -109,7 +109,7 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
       <div className="mb-4">
         <h3 className="text-lg font-bold text-text-primary">{plan.name}</h3>
         <p className="text-2xl font-bold text-text-primary mt-1">
-          {plan.price}
+          {plan.price > 0 ? `${plan.price.toLocaleString("ru-RU")} ₸/мес` : "Бесплатно"}
         </p>
         {plan.description && (
           <p className="text-xs text-text-muted mt-2">{plan.description}</p>

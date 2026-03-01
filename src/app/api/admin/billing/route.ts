@@ -46,8 +46,7 @@ export async function GET(req: Request) {
   // Monthly revenue estimate (parse price from plan)
   let monthlyRevenue = 0;
   for (const s of subItems) {
-    const priceNum = parseInt(s.plan.price.replace(/\D/g, ""), 10);
-    if (!isNaN(priceNum)) monthlyRevenue += priceNum;
+    monthlyRevenue += s.plan.price;
   }
 
   // Recent subscriptions as "payments"
@@ -57,6 +56,7 @@ export async function GET(req: Request) {
     userName: s.user.name || s.user.email,
     planName: s.plan.name,
     amount: s.plan.price,
+    currency: "KZT",
     createdAt: s.createdAt.toISOString(),
   }));
 

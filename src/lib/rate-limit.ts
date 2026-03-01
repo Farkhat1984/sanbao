@@ -162,11 +162,39 @@ const ipBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES);
 
 const AUTH_MAX_PER_MINUTE = CONST_AUTH_MAX_PER_MINUTE;
 const AUTH_BLOCK_DURATION_MS = CONST_AUTH_BLOCK_DURATION_MS;
+const AUTH_BLOCK_SECONDS = Math.ceil(AUTH_BLOCK_DURATION_MS / 1000);
 
-export function checkAuthRateLimit(ip: string): {
+/**
+ * Rate-limit auth endpoints (login, register) by IP.
+ * Redis-first for cross-replica consistency, in-memory fallback for dev/single-instance.
+ */
+export async function checkAuthRateLimit(ip: string): Promise<{
   allowed: boolean;
   retryAfterSeconds?: number;
-} {
+}> {
+  // 1. Check Redis block first
+  const blockKey = `rl:authblock:${ip}`;
+  const blocked = await cacheGet(blockKey);
+  if (blocked) {
+    return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
+  }
+
+  // 2. Try Redis rate limit
+  const rlKey = `rl:auth:${ip}`;
+  const redisResult = await redisRateLimit(rlKey, AUTH_MAX_PER_MINUTE, 60);
+
+  if (redisResult !== null) {
+    // Redis is available
+    if (!redisResult) {
+      // Rate exceeded — block in Redis for sharing across replicas
+      await cacheSet(blockKey, "1", AUTH_BLOCK_SECONDS);
+      return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
+    }
+    return { allowed: true };
+  }
+
+  // 3. Fallback to in-memory (dev mode / Redis unavailable)
+  warnInMemoryFallback("checkAuthRateLimit");
   const now = Date.now();
 
   const blockedUntil = ipBlocklist.get(ip);
@@ -182,7 +210,7 @@ export function checkAuthRateLimit(ip: string): {
   if (recent.length >= AUTH_MAX_PER_MINUTE) {
     ipBlocklist.set(ip, now + AUTH_BLOCK_DURATION_MS);
     ipTimestamps.delete(ip);
-    return { allowed: false, retryAfterSeconds: Math.ceil(AUTH_BLOCK_DURATION_MS / 1000) };
+    return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
   }
 
   recent.push(now);

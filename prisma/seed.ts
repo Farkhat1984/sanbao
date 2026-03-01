@@ -77,7 +77,7 @@ async function main() {
       slug: "free",
       name: "Free",
       description: "Базовый доступ к AI-ассистенту",
-      price: "0",
+      price: 0,
       messagesPerDay: 50,
       tokensPerMessage: 65536,
       tokensPerMonth: 1000000,
@@ -102,7 +102,7 @@ async function main() {
       name: "Pro",
       description:
         "Расширенные возможности: reasoning, RAG, продвинутые инструменты",
-      price: "4990",
+      price: 4990,
       messagesPerDay: 300,
       tokensPerMessage: 65536,
       tokensPerMonth: 10000000,
@@ -127,7 +127,7 @@ async function main() {
       name: "Business",
       description:
         "Максимум: все модели, graph, безлимит диалогов и агентов",
-      price: "24990",
+      price: 24990,
       messagesPerDay: 1000,
       tokensPerMessage: 65536,
       tokensPerMonth: 100000000,
@@ -191,24 +191,7 @@ async function main() {
 
   console.log(`Admin user seeded: ${adminEmail}`);
 
-  // ─── System Agent: Sanbao ──────────────────────────────
-  // Legacy SystemAgent table — keep for backward compat
-  await prisma.systemAgent.upsert({
-    where: { name: "Sanbao" },
-    update: {},
-    create: {
-      name: "Sanbao",
-      description: "универсальный AI-ассистент",
-      systemPrompt: "Ты — Sanbao, универсальный AI-ассистент.",
-      icon: "Bot",
-      iconColor: "#4F6EF7",
-      model: "default",
-      isActive: true,
-      sortOrder: 0,
-    },
-  });
-
-  // ─── System Agents (new Agent table) ─────────────────────
+  // ─── System Agents (Agent table with isSystem=true) ─────────────────────
 
   const FEMIDA_SYSTEM_PROMPT = `Ты — Юрист, профессиональный юридический AI-ассистент для Республики Казахстан.
 
@@ -2433,19 +2416,6 @@ MCP "1С Платформа" (/consultant_1c) — платформа 1С:Пре�
   }
 
   console.log(`Cross-MCP links created: ${crossMcpLinks.length} additional links`);
-
-  // ─── Migrate existing conversations to new agent IDs ─────
-  try {
-    const updated = await prisma.conversation.updateMany({
-      where: { systemAgentId: "system-femida", agentId: null },
-      data: { agentId: femidaAgent.id },
-    });
-    if (updated.count > 0) {
-      console.log(`Migrated ${updated.count} Femida conversations to new agent ID`);
-    }
-  } catch {
-    // Table may not have data yet
-  }
 
   // ─── AI Providers ──────────────────────────────────────
 
