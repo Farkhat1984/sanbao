@@ -168,13 +168,9 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 ### MCP Integration
 
 - `src/lib/mcp-client.ts` — connects to MCP servers via `@modelcontextprotocol/sdk`
-- **AI Cortex** (external): Orchestrator v0.8.0 at `:8120` — 4 MCP endpoints:
-  - `/lawyer` — legal RK (18 codes + ~199K laws). Tools: search, get_article, get_law, lookup, graph_traverse, list_domains, get_exchange_rate
-  - `/broker` — customs EAEU (13K TNVED codes). Tools: search, sql_query, classify_goods, calculate_duties, get_required_docs, list_domains, generate_declaration, get_exchange_rate
-  - `/accountant` — 1C accounting KZ (~20.7K chunks + tabular ref data). Tools: search, get_1c_article, sql_query, list_domains, get_exchange_rate
-  - `/consultant_1c` — 1C platform (~40K chunks). Tools: search, get_1c_article, list_domains, get_exchange_rate
-- **Env:** `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL`, `AI_CORTEX_AUTH_TOKEN`
-- **FragmentDB collections:** legal_kz (7,463 articles), laws_kz (~199K laws), tnved_rates (13,279 codes), accounting_1c (~20.7K chunks), platform_1c (~39K chunks)
+- **AI Cortex** — sibling project at `../ai_cortex` (FragmentDB + Orchestrator). See cross-project section below.
+- **Env:** `LAWYER_MCP_URL`, `BROKER_MCP_URL`, `ACCOUNTINGDB_MCP_URL`, `CONSULTANT_1C_MCP_URL` (all default to `http://orchestrator:8120/...` in seed.ts)
+- **FragmentDB collections:** legal_kz (7,463 articles), laws_kz (~344K laws), tnved_rates (13,279 codes), accounting_1c (~20.7K chunks), platform_1c (~39K chunks)
 - **article:// protocol:** `[label](article://{code}/{id})` — opens articles in UnifiedPanel. Supports: 18 legal codes, laws (doc_code), 1c/1c_buh (article_id)
 - **Admin toggle:** `McpServer.isEnabled` controls user visibility
 - **User toggle:** `UserMcpServer` junction table — users opt in/out of global MCPs
@@ -182,6 +178,70 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 - User pages: `/mcp` for managing personal MCP connections
 - **MCP tool namespace dedup:** when multiple MCP servers expose tools with identical names (e.g. `search`), `route.ts` auto-prefixes them with URL path segment (`accountant_search`, `lawyer_search`). `McpToolContext.originalName` stores the original name for dispatch via `callMcpTool()`
 - **SSRF protection** on MCP server URL registration
+
+### Cross-Project: AI Cortex Integration
+
+Sanbao and AI Cortex (`/home/faragj/faragj/ai_cortex`) are **two sibling repos** that run in the **same Docker Compose project**. The `docker-compose.prod.yml` in this repo builds and manages both stacks.
+
+**Repo layout:**
+```
+/home/faragj/faragj/
+├── sanbao/                  ← this repo (Next.js app)
+│   └── docker-compose.prod.yml  ← manages ALL containers (sanbao + ai_cortex)
+└── ai_cortex/               ← FragmentDB + Orchestrator (Rust + Python)
+    ├── fragmentdb_data/     ← persistent data dir (mounted into container)
+    └── data/                ← ingested knowledge bases, images
+```
+
+**All containers — single compose project `sanbao`, network `sanbao_default`:**
+
+| Container | Service | Internal Port | Host Port | Docker DNS |
+|---|---|---|---|---|
+| `sanbao-nginx-1` | nginx | 80 | **3004** | `nginx` |
+| `sanbao-app-{4,5,6}` | app (×3 replicas) | 3004 | — | `app` |
+| `sanbao-db-1` | db (PostgreSQL 16) | 5432 | — | `db` |
+| `sanbao-pgbouncer-1` | pgbouncer | 5432 | — | `pgbouncer` |
+| `sanbao-redis-1` | redis | 6379 | — | `redis` |
+| `sanbao-embedding-proxy-1` | embedding-proxy | 8097 | **8097** | `embedding-proxy` |
+| `sanbao-fragmentdb-1` | fragmentdb | **8080** | **8110** | `fragmentdb` |
+| `sanbao-orchestrator-1` | orchestrator | **8120** | **8120** | `orchestrator` |
+
+**CRITICAL port mapping: FragmentDB listens on 8080 inside Docker, mapped to 8110 on host.** Orchestrator connects via Docker DNS: `http://fragmentdb:8080` (NOT 8110). App connects to orchestrator via: `http://orchestrator:8120/lawyer` etc.
+
+**Never run FragmentDB as a standalone container or bare process** — it must be in the `sanbao_default` network for the orchestrator to resolve it. Always use `docker compose -f docker-compose.prod.yml up -d fragmentdb`.
+
+**4 MCP endpoints (Orchestrator v0.9.0):**
+
+| Endpoint | Agent | DB records |
+|---|---|---|
+| `http://orchestrator:8120/lawyer` | Юрист — Kazakhstan Legal | `mcp-lawyer` |
+| `http://orchestrator:8120/broker` | Брокер — Customs/TNVED | `mcp-broker` |
+| `http://orchestrator:8120/accountant` | Бухгалтер — 1С Accounting KZ | `mcp-accountingdb` |
+| `http://orchestrator:8120/consultant_1c` | 1С Консультант — Platform | `mcp-consultant-1c` |
+
+**Dependency chain:** `embedding-proxy` → `fragmentdb` (healthy) → `orchestrator` (healthy) → `app` (healthy) → `nginx`
+
+**Restart commands:**
+```bash
+# Restart just AI Cortex stack:
+docker compose -f docker-compose.prod.yml restart fragmentdb
+docker compose -f docker-compose.prod.yml restart orchestrator
+
+# Rebuild AI Cortex (after code changes in ../ai_cortex):
+docker compose -f docker-compose.prod.yml up -d --build fragmentdb orchestrator
+
+# Full stack restart:
+docker compose -f docker-compose.prod.yml up -d
+
+# Check connectivity:
+docker exec sanbao-orchestrator-1 curl -sf http://fragmentdb:8080/health
+docker exec sanbao-app-4 wget -qO- http://orchestrator:8120/health
+```
+
+**Health checks:**
+- FragmentDB: `curl http://localhost:8110/health` → `FragmentDB v0.5.0 — OK`
+- Orchestrator: `curl http://localhost:8120/health` → `{"status":"ok","version":"0.9.0",...}`
+- App → Orchestrator: `docker exec sanbao-app-4 wget -qO- http://orchestrator:8120/health`
 
 ### Export System
 
@@ -211,7 +271,7 @@ Built-in tools executed server-side without external calls. Dispatch order in `r
 ### Infrastructure
 
 - **Docker:** Multi-stage Dockerfile (deps → build → prisma-cli → runner), port 3004
-- **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas)
+- **Docker Compose:** dev (db + pgbouncer + redis + app), prod (+ nginx + 3 replicas + AI Cortex stack). See "Cross-Project: AI Cortex Integration" section for full container map.
 - **Nginx:** `infra/nginx/nginx.conf` — least_conn LB, rate limiting (30r/s general, 10r/s chat), SSE support, static caching, `X-Forwarded-Proto: https` (hardcoded — behind Cloudflare SSL)
 - **Kubernetes:** full manifests in `infra/k8s/` — deployment, HPA (3-20 pods), PDB, ingress, network policies (6 rules)
 - **Canary:** Argo Rollouts manifest (`infra/k8s/canary-rollout.yml`) — 10→30→60→100% with pauses
