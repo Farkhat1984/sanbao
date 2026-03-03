@@ -5,7 +5,7 @@ import {
   MessageSquare,
   Globe,
   ListChecks,
-  Database,
+  DatabaseZap,
   Calculator,
   Bookmark,
   ClipboardList,
@@ -42,9 +42,9 @@ const TOOL_VISUALS: Record<
     dot: "bg-emerald-500",
   },
   knowledge: {
-    Icon: Database,
+    Icon: DatabaseZap,
     label: "Ищет в базе знаний",
-    gradient: "from-indigo-500 to-blue-600",
+    gradient: "from-indigo-500 to-violet-600",
     dot: "bg-indigo-500",
   },
   calculation: {
@@ -117,8 +117,8 @@ const ICON_ANIMATIONS: Record<
     duration: 2,
   },
   knowledge: {
-    animate: { y: [0, -3, 0], scale: [1, 1.08, 1] },
-    duration: 1.6,
+    animate: { scale: [1, 1.15, 0.95, 1.1, 1], opacity: [0.85, 1, 0.9, 1, 0.85] },
+    duration: 1.4,
   },
   calculation: {
     animate: { rotateZ: [0, -10, 10, -5, 5, 0] },

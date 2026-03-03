@@ -158,7 +158,7 @@ export async function POST(req: Request) {
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
     return NextResponse.json({ error: "Некорректный JSON в теле запроса" }, { status: 400 });
   }
-  const {
+  let {
     messages,
     agentId,
     skillId,
@@ -223,6 +223,11 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
+  }
+
+  // Auto-enable web search for eligible plans
+  if (!webSearchEnabled && plan.canUseAdvancedTools) {
+    webSearchEnabled = true;
   }
 
   // ─── Content filter ─────────────────────────────────────

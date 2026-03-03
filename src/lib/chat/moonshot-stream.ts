@@ -292,9 +292,16 @@ export function streamMoonshot(
 
               if (!searchNotified) {
                 searchNotified = true;
+                // Determine first known tool name to pick correct status icon
+                const firstToolName = Object.values(toolCallMap).find(t => t.function.name)?.function.name || "";
+                const isWebSearch = !firstToolName || firstToolName === "$web_search";
                 controller.enqueue(
                   encoder.encode(
-                    JSON.stringify({ t: "s", v: "searching" }) + "\n"
+                    JSON.stringify(
+                      isWebSearch
+                        ? { t: "s", v: "searching" }
+                        : { t: "s", v: "using_tool", n: firstToolName }
+                    ) + "\n"
                   )
                 );
               }

@@ -9,6 +9,22 @@ export type ToolCategory = "web_search" | "knowledge" | "calculation" | "memory"
 const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
   read_knowledge: "knowledge",
   search_knowledge: "knowledge",
+  // MCP search tools → "Ищет в базе знаний"
+  lawyer_search: "knowledge",
+  accountant_search: "knowledge",
+  consultant_1c_search: "knowledge",
+  broker_search: "knowledge",
+  search: "knowledge",
+  // MCP article/law retrieval tools
+  get_article: "knowledge",
+  get_law: "knowledge",
+  accountant_get_1c_article: "knowledge",
+  consultant_1c_get_1c_article: "knowledge",
+  graph_traverse: "knowledge",
+  lookup: "knowledge",
+  // MCP SQL/query tools
+  sql_query: "calculation",
+  accountant_sql_query: "calculation",
   calculate: "calculation",
   analyze_csv: "calculation",
   generate_chart_data: "chart",
