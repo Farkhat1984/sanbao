@@ -225,11 +225,6 @@ export async function POST(req: Request) {
     }
   }
 
-  // Auto-enable web search for eligible plans
-  if (!webSearchEnabled && plan.canUseAdvancedTools) {
-    webSearchEnabled = true;
-  }
-
   // ─── Content filter ─────────────────────────────────────
 
   const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
@@ -363,6 +358,12 @@ export async function POST(req: Request) {
   const MAX_MCP_TOOLS = 100;
   if (agentMcpTools.length > MAX_MCP_TOOLS) {
     agentMcpTools.length = MAX_MCP_TOOLS;
+  }
+
+  // Auto-enable web search for eligible plans, but only when the agent
+  // has no MCP tools — agents with MCP should rely on their knowledge bases first.
+  if (!webSearchEnabled && plan.canUseAdvancedTools && agentMcpTools.length === 0) {
+    webSearchEnabled = true;
   }
 
   // ─── Load skill ─────────────────────────────────────────

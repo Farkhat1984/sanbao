@@ -345,21 +345,24 @@ export function useStreamChat({
         }
       }
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // User stopped the stream — save partial content if available
-        if (convId && fullContent) {
-          fetch(`/api/conversations/${convId}/messages`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              messages: [
-                { role: "USER", content: trimmed },
-                { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
-              ],
-            }),
-          }).catch(console.error);
-        }
-      } else {
+      // Save partial content on any interruption (user stop, network error,
+      // mobile browser suspending the tab, etc.)
+      if (convId && fullContent) {
+        fetch(`/api/conversations/${convId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [
+              { role: "USER", content: trimmed },
+              { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
+            ],
+          }),
+        }).catch(console.error);
+      }
+
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
+      if (!isAbort && !fullContent) {
+        // Only show error if we have no partial content at all
         addMessage({
           id: crypto.randomUUID(),
           role: "ASSISTANT",
