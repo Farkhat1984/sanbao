@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { connectAndDiscoverTools } from "@/lib/mcp-client";
+import type { Prisma } from "@prisma/client";
 
-/** POST — run health check for all global MCP servers (or specific id). */
+/** POST — run health check + tool discovery for all global MCP servers (or specific id). */
 export async function POST(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
@@ -18,53 +20,36 @@ export async function POST(req: Request) {
     servers.map(async (server) => {
       const start = Date.now();
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
-        const headers: Record<string, string> = {};
-        if (server.apiKey) headers["Authorization"] = `Bearer ${server.apiKey}`;
-
-        let res: Response;
-
-        if (server.transport === "STREAMABLE_HTTP") {
-          // Streamable HTTP: send JSON-RPC initialize request
-          headers["Content-Type"] = "application/json";
-          res = await fetch(server.url, {
-            method: "POST",
-            signal: controller.signal,
-            headers,
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "initialize",
-              params: {
-                protocolVersion: "2024-11-05",
-                capabilities: {},
-                clientInfo: { name: "sanbao-healthcheck", version: "1.0.0" },
-              },
-            }),
-          });
-        } else {
-          // SSE: simple GET to check endpoint is alive
-          res = await fetch(server.url, {
-            method: "GET",
-            signal: controller.signal,
-            headers,
-          });
-        }
-        clearTimeout(timeout);
+        const { tools, error } = await connectAndDiscoverTools(
+          server.url,
+          server.transport,
+          server.apiKey
+        );
 
         const latency = Date.now() - start;
-        const newStatus = res.ok ? "CONNECTED" : "ERROR";
+
+        if (error) {
+          await prisma.mcpServer.update({
+            where: { id: server.id },
+            data: {
+              status: "ERROR",
+              lastHealthCheck: new Date(),
+            },
+          });
+
+          return { id: server.id, name: server.name, status: "ERROR", latency, error, toolCount: 0 };
+        }
 
         await prisma.mcpServer.update({
           where: { id: server.id },
           data: {
-            status: newStatus as "CONNECTED" | "ERROR",
+            status: "CONNECTED",
+            discoveredTools: tools as unknown as Prisma.InputJsonValue,
             lastHealthCheck: new Date(),
           },
         });
 
-        return { id: server.id, name: server.name, status: newStatus, latency, statusCode: res.status };
+        return { id: server.id, name: server.name, status: "CONNECTED", latency, toolCount: tools.length };
       } catch (err) {
         const latency = Date.now() - start;
         await prisma.mcpServer.update({
@@ -81,6 +66,7 @@ export async function POST(req: Request) {
           status: "ERROR",
           latency,
           error: err instanceof Error ? err.message : String(err),
+          toolCount: 0,
         };
       }
     })

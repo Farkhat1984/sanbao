@@ -24,6 +24,7 @@ export default function ConversationPage() {
   const { setActiveConversation, setActiveAgentId, setMessages } = useChatStore();
   const isStreaming = useChatStore((s) => s.isStreaming);
   const wasStreamingRef = useRef(false);
+  const hasLoadedRef = useRef(false);
 
   // Track streaming state for visibilitychange handler
   useEffect(() => {
@@ -49,13 +50,24 @@ export default function ConversationPage() {
       });
   }, [id, setActiveAgentId, setMessages]);
 
-  // Load messages on mount (skip if streaming)
+  // Load messages on mount only — NOT when isStreaming changes.
+  // This prevents a race where fetchMessages() runs before the
+  // fire-and-forget DB save completes, overwriting the streamed message.
   useEffect(() => {
     if (!id) return;
     setActiveConversation(id);
     if (isStreaming) return;
-    fetchMessages();
+    // Only fetch on initial mount, not after streaming ends
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      fetchMessages();
+    }
   }, [id, isStreaming, setActiveConversation, fetchMessages]);
+
+  // Reset loaded flag when conversation changes
+  useEffect(() => {
+    hasLoadedRef.current = false;
+  }, [id]);
 
   // Recover after mobile browser suspends the tab:
   // when the user returns and the stream was interrupted, re-fetch messages from DB.

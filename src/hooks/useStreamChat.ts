@@ -273,9 +273,10 @@ export function useStreamChat({
         }
       }
 
-      // Save messages to DB after stream completes
+      // Save messages to DB after stream completes (awaited so data is
+      // persisted before setStreaming(false) triggers any re-fetch)
       if (convId && fullContent) {
-        fetch(`/api/conversations/${convId}/messages`, {
+        await fetch(`/api/conversations/${convId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

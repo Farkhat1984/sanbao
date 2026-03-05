@@ -148,6 +148,7 @@ services:
       - "${ORCHESTRATOR_PORT:-8120}:8120"
     volumes:
       - ../ai_cortex/data/1c_knowledge/images:/app/data/1c_knowledge/images:ro
+      - orchestrator_projects:/app/config/projects
     environment:
       - FRAGMENTDB_URL=http://fragmentdb:8080
       - AI_CORTEX_PORT=8120
@@ -171,9 +172,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 4G
         reservations:
-          memory: 256M
+          memory: 512M
 
   ai-cortex-web:
     build:
@@ -259,3 +260,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  orchestrator_projects:

@@ -332,14 +332,23 @@ export async function POST(req: Request) {
       }
     };
 
-    // 3. Deduplicate: namespace colliding tools, keep unique ones as-is
+    // 3. Sanitize tool name for LLM API compatibility:
+    //    must start with a letter, contain only [a-zA-Z0-9_-]
+    const sanitizeToolName = (name: string): string => {
+      let s = name.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+      if (!s || !/^[a-zA-Z]/.test(s)) s = "t_" + s;
+      return s;
+    };
+
+    // 4. Deduplicate: namespace colliding tools, keep unique ones as-is
     const seen = new Set<string>();
     const deduped: McpToolContext[] = [];
     for (const tool of agentMcpTools) {
       const isCollision = (nameCount.get(tool.name) || 0) > 1;
-      const finalName = isCollision
+      const rawName = isCollision
         ? `${urlNamespace(tool.url)}_${tool.name}`
         : tool.name;
+      const finalName = sanitizeToolName(rawName);
 
       if (!seen.has(finalName)) {
         seen.add(finalName);

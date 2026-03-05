@@ -106,6 +106,7 @@ export default function AdminMcpPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [tab, setTab] = useState<"servers" | "logs" | "catalog">("servers");
   const [toolLogs, setToolLogs] = useState<ToolLog[]>([]);
   const [newServer, setNewServer] = useState({ name: "", url: "", transport: "STREAMABLE_HTTP", apiKey: "" });
@@ -173,6 +174,13 @@ export default function AdminMcpPage() {
     setChecking(false);
   };
 
+  const handleHealthCheckSingle = async (serverId: string) => {
+    setCheckingId(serverId);
+    await fetch("/api/admin/mcp/health-check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ serverId }) });
+    await fetchServers();
+    setCheckingId(null);
+  };
+
   const handleCreate = async () => {
     const res = await fetch("/api/admin/mcp", {
       method: "POST",
@@ -180,9 +188,12 @@ export default function AdminMcpPage() {
       body: JSON.stringify(newServer),
     });
     if (res.ok) {
+      const created = await res.json();
       setAdding(false);
       setNewServer({ name: "", url: "", transport: "STREAMABLE_HTTP", apiKey: "" });
-      fetchServers();
+      await fetchServers();
+      // Auto-discover tools for the newly created server
+      handleHealthCheckSingle(created.id);
     }
   };
 
@@ -427,6 +438,14 @@ export default function AdminMcpPage() {
                     {Array.isArray(s.discoveredTools) && (
                       <span className="text-xs text-text-muted">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
                     )}
+                    <button
+                      onClick={() => handleHealthCheckSingle(s.id)}
+                      disabled={checkingId === s.id}
+                      title="Подключить и обнаружить инструменты"
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {checkingId === s.id ? <span className="h-3.5 w-3.5 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <HeartPulse className="h-3.5 w-3.5" />}
+                    </button>
                     <button
                       onClick={() => handleToggleEnabled(s.id, s.isEnabled)}
                       title={s.isEnabled ? "Отключить для пользователей" : "Включить для пользователей"}
