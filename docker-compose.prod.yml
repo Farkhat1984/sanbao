@@ -152,6 +152,7 @@ services:
       - FRAGMENTDB_URL=http://fragmentdb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
+      - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:-Ckdshfh231161}
       - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -172,6 +173,29 @@ services:
         limits:
           memory: 1G
         reservations:
+          memory: 256M
+
+  ai-cortex-web:
+    build:
+      context: ../ai_cortex/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${AI_CORTEX_WEB_PORT:-5173}:80"
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+      fragmentdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
           memory: 256M
 
   # =========================================================================

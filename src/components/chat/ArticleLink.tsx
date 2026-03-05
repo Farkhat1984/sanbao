@@ -1,9 +1,10 @@
 "use client";
 
 import { openArticleInPanel } from "@/lib/panel-actions";
+import { useLinkRegistry } from "@/hooks/useLinkRegistry";
 
-const CODE_LABELS: Record<string, string> = {
-  // 18 кодексов РК
+/** Fallback labels used before registry loads (instant render, no flash). */
+const FALLBACK_LABELS: Record<string, string> = {
   constitution: "Конституция РК",
   criminal_code: "УК РК",
   criminal_procedure: "УПК РК",
@@ -22,22 +23,11 @@ const CODE_LABELS: Record<string, string> = {
   family_code: "КоБС РК",
   social_code: "СК РК",
   water_code: "ВК РК",
-  // Законы и НПА
   law: "Закон РК",
-  // 1С
   "1c": "1С",
   "1c_buh": "1С Бухгалтерия",
+  tnved: "ТН ВЭД",
 };
-
-/** Codes that use "ст. N" prefix (legal codes) */
-const LEGAL_CODES = new Set([
-  "constitution", "criminal_code", "criminal_procedure",
-  "civil_code_general", "civil_code_special", "civil_procedure",
-  "admin_offenses", "admin_procedure", "tax_code",
-  "labor_code", "land_code", "ecological_code",
-  "entrepreneurship", "budget_code", "customs_code",
-  "family_code", "social_code", "water_code",
-]);
 
 interface ArticleLinkProps {
   code: string;
@@ -46,24 +36,33 @@ interface ArticleLinkProps {
 }
 
 export function ArticleLink({ code, article, children }: ArticleLinkProps) {
-  const isLegal = LEGAL_CODES.has(code);
-  const isLaw = code === "law";
-  const is1c = code === "1c" || code === "1c_buh";
+  const { registry, getLabel, getIcon } = useLinkRegistry();
+
+  const iconType = Object.keys(registry).length > 0
+    ? getIcon(code)
+    : "legal";
+
+  const codeLabel = Object.keys(registry).length > 0
+    ? getLabel(code)
+    : (FALLBACK_LABELS[code] || code);
+
+  const isLegal = iconType === "legal";
+  const isDoc = iconType === "doc";
 
   let label: React.ReactNode = children;
   if (!label) {
-    if (isLegal) {
-      label = `ст. ${article} ${CODE_LABELS[code] || code}`;
-    } else if (isLaw) {
-      label = `${CODE_LABELS[code]} ${article}`;
-    } else if (is1c) {
+    if (isLegal && code !== "law") {
+      label = `ст. ${article} ${codeLabel}`;
+    } else if (code === "law") {
+      label = `${codeLabel} ${article}`;
+    } else if (isDoc) {
       label = children || article;
     } else {
-      label = `${article} ${CODE_LABELS[code] || code}`;
+      label = `${article} ${codeLabel}`;
     }
   }
 
-  const icon = is1c ? "📖" : "§";
+  const icon = isDoc ? "📖" : iconType === "customs" ? "📦" : "§";
 
   return (
     <button
