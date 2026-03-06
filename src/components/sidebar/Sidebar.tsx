@@ -13,6 +13,7 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
+import { OrgAgentList } from "./OrgAgentList";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
@@ -118,6 +119,9 @@ export function Sidebar() {
 
       {/* Agents */}
       <AgentList />
+
+      {/* Organization Agents */}
+      <OrgAgentList />
 
       {/* Search */}
       <div className="px-3 py-2">

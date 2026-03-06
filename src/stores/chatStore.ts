@@ -70,6 +70,7 @@ interface ContextUsage {
 interface ChatState {
   activeConversationId: string | null;
   activeAgentId: string | null;
+  orgAgentId: string | null;
   conversations: ConversationSummary[];
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -95,6 +96,7 @@ interface ChatState {
 
   setActiveConversation: (id: string | null) => void;
   setActiveAgentId: (id: string | null) => void;
+  setOrgAgentId: (id: string | null) => void;
   setConversations: (conversations: ConversationSummary[]) => void;
   addConversation: (conversation: ConversationSummary) => void;
   removeConversation: (id: string) => void;
@@ -130,6 +132,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   activeAgentId: null,
+  orgAgentId: null,
   conversations: [],
   messages: [],
   isStreaming: false,
@@ -154,6 +157,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       : { activeConversationId }),
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
+  setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
 
   setConversations: (conversations) => set({ conversations }),
 

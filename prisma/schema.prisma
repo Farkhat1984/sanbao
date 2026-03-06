@@ -85,6 +85,9 @@ model User {
   tools         Tool[]
   plugins       Plugin[]
   userFiles     UserFile[]
+  ownedOrgs      Organization[] @relation("OrgOwner")
+  orgMembers     OrgMember[]
+  orgAgentAccess OrgAgentMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,8 +102,11 @@ model Conversation {
   agentId       String?
   systemAgentId String?
 
+  orgAgentId    String?
+
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   agent       Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  orgAgent    OrgAgent?             @relation(fields: [orgAgentId], references: [id], onDelete: SetNull)
   messages    Message[]
   artifacts   Artifact[]
   attachments Attachment[]
@@ -115,6 +121,7 @@ model Conversation {
   @@index([userId, updatedAt])
   @@index([userId, archived, updatedAt])
   @@index([agentId])
+  @@index([orgAgentId])
 }
 
 model Message {
@@ -297,6 +304,12 @@ model Plan {
   highlighted         Boolean  @default(false)
   trialDays           Int      @default(0)
   maxStorageMb        Int      @default(0) // 0 = без лимита
+  maxOrganizations    Int      @default(1)
+  maxOrgMembers       Int      @default(3)
+  maxOrgAgents        Int      @default(1)
+  maxOrgFilesPerAgent Int      @default(5)
+  maxOrgFileSizeMb    Int      @default(10)
+  maxOrgStorageMb     Int      @default(50)
 
   subscriptions Subscription[]
   planModels    PlanModel[]
@@ -594,6 +607,7 @@ model McpServer {
   toolLogs McpToolLog[]
   plugins  PluginMcpServer[]
   userLinks UserMcpServer[]
+  orgAgents OrgAgent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1029,6 +1043,134 @@ enum ReportStatus {
   DISMISSED
 }
 
+// ─── Organizations ──────────────────────────────────────
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum OrgAgentStatus {
+  CREATING
+  PROCESSING
+  READY
+  PUBLISHED
+  ERROR
+}
+
+enum OrgAgentAccess {
+  ALL_MEMBERS
+  SPECIFIC
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  avatar    String?  @db.Text
+  namespace String   @unique
+  nsApiKey  String?  @db.Text
+
+  owner   User         @relation("OrgOwner", fields: [ownerId], references: [id])
+  members OrgMember[]
+  agents  OrgAgent[]
+  invites OrgInvite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model OrgMember {
+  id     String  @id @default(cuid())
+  orgId  String
+  userId String
+  role   OrgRole @default(MEMBER)
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+model OrgInvite {
+  id        String       @id @default(cuid())
+  orgId     String
+  email     String
+  role      OrgRole      @default(MEMBER)
+  status    InviteStatus @default(PENDING)
+  token     String       @unique @default(cuid())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([email])
+  @@index([orgId])
+}
+
+model OrgAgent {
+  id          String         @id @default(cuid())
+  orgId       String
+  name        String
+  description String?        @db.Text
+  projectId   String?
+  mcpServerId String?
+  status      OrgAgentStatus @default(CREATING)
+  accessMode  OrgAgentAccess @default(ALL_MEMBERS)
+
+  org           Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  mcpServer     McpServer?       @relation(fields: [mcpServerId], references: [id])
+  files         OrgAgentFile[]
+  members       OrgAgentMember[]
+  conversations Conversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model OrgAgentFile {
+  id         String  @id @default(cuid())
+  orgAgentId String
+  fileName   String
+  fileType   String
+  fileSize   Int
+  fileUrl    String
+  storageKey String?
+
+  orgAgent OrgAgent @relation(fields: [orgAgentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([orgAgentId])
+}
+
+model OrgAgentMember {
+  id         String @id @default(cuid())
+  orgAgentId String
+  userId     String
+
+  orgAgent OrgAgent @relation(fields: [orgAgentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgAgentId, userId])
+}
+
 // ─── Enums ───────────────────────────────────────────────
 
 enum UserRole {
@@ -1087,6 +1229,7 @@ enum EmailType {
   PAYMENT_FAILED
   PASSWORD_RESET
   EMAIL_VERIFICATION
+  ORG_INVITE
 }
 
 enum EmailStatus {

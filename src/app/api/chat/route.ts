@@ -162,6 +162,7 @@ export async function POST(req: Request) {
     messages,
     agentId,
     skillId,
+    orgAgentId,
     thinkingEnabled = true,
     webSearchEnabled = false,
     planningEnabled = false,
@@ -255,6 +256,65 @@ export async function POST(req: Request) {
       // Custom (non-system) agents: suppress artifact creation unless explicitly requested
       if (!ctx.isSystem) {
         systemPrompt += "\n\n⚠ ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО ДЛЯ ЭТОГО АГЕНТА: Ты работаешь как специализированный агент. НЕ создавай документы (<sanbao-doc>) без явной просьбы пользователя. Отвечай обычным текстом. Создавай документ ТОЛЬКО если пользователь прямо попросил: «создай», «составь», «оформи», «подготовь документ».";
+      }
+    }
+  }
+
+  // ─── Load org agent MCP tools (if orgAgentId provided) ──
+
+  if (orgAgentId && !agentId) {
+    const orgAgent = await prisma.orgAgent.findUnique({
+      where: { id: orgAgentId },
+      include: {
+        org: { select: { id: true, name: true } },
+        mcpServer: {
+          select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true },
+        },
+      },
+    });
+
+    if (orgAgent && orgAgent.mcpServer) {
+      // Verify user is a member of the org
+      const membership = await prisma.orgMember.findUnique({
+        where: { orgId_userId: { orgId: orgAgent.orgId, userId: session.user.id } },
+      });
+      if (!membership) {
+        return NextResponse.json({ error: "Нет доступа к этому агенту" }, { status: 403 });
+      }
+
+      // Check access mode
+      if (orgAgent.accessMode === "SPECIFIC" && membership.role === "MEMBER") {
+        const access = await prisma.orgAgentMember.findUnique({
+          where: { orgAgentId_userId: { orgAgentId: orgAgent.id, userId: session.user.id } },
+        });
+        if (!access) {
+          return NextResponse.json({ error: "Нет доступа к этому агенту" }, { status: 403 });
+        }
+      }
+
+      // Add system prompt for org agent
+      systemPrompt += `\n\nТы — AI-агент организации "${orgAgent.org.name}": ${orgAgent.name}.`;
+      if (orgAgent.description) {
+        systemPrompt += ` ${orgAgent.description}`;
+      }
+      systemPrompt += "\nИспользуй доступные инструменты для поиска в базе знаний организации.";
+      systemPrompt += "\n\n⚠ ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО ДЛЯ ЭТОГО АГЕНТА: Ты работаешь как специализированный агент. НЕ создавай документы (<sanbao-doc>) без явной просьбы пользователя. Отвечай обычным текстом. Создавай документ ТОЛЬКО если пользователь прямо попросил: «создай», «составь», «оформи», «подготовь документ».";
+
+      // Load MCP tools from org agent's server
+      const srv = orgAgent.mcpServer;
+      if (srv.status === "CONNECTED" && Array.isArray(srv.discoveredTools)) {
+        const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+        for (const tool of tools) {
+          agentMcpTools.push({
+            url: srv.url,
+            transport: srv.transport,
+            apiKey: srv.apiKey,
+            mcpServerId: srv.id,
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+          });
+        }
       }
     }
   }

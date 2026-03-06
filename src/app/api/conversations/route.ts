@@ -105,7 +105,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return jsonError("Неверный JSON", 400);
 
-  const { title, agentId } = body;
+  const { title, agentId, orgAgentId } = body;
 
   // Check maxConversations limit (admins bypass)
   const { plan } = await getUserPlanAndUsage(userId);
@@ -140,6 +140,7 @@ export async function POST(req: Request) {
       title: title || "Новый чат",
       userId,
       agentId: resolvedId,
+      orgAgentId: orgAgentId || null,
     },
   });
 

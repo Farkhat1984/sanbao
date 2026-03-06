@@ -263,6 +263,37 @@ export async function subscriptionExpiringEmail(data: {
   };
 }
 
+export async function orgInviteEmail(data: {
+  orgName: string;
+  inviterName: string;
+  role: string;
+  inviteUrl: string;
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("ORG_INVITE");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
+  const roleLabel = data.role === "ADMIN" ? "администратором" : "участником";
+  return {
+    subject: `Приглашение в организацию "${data.orgName}" — Sanbao`,
+    html: baseLayout(`
+      <h2 style="margin:0 0 16px;color:#1a1f36;">Приглашение в организацию</h2>
+      <p style="color:#4a5568;line-height:1.6;"><strong>${data.inviterName}</strong> приглашает вас стать ${roleLabel} организации <strong>${data.orgName}</strong>.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${data.inviteUrl}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#4F6EF7,#7C3AED);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Принять приглашение</a>
+      </p>
+      <p style="color:#8892a4;font-size:13px;line-height:1.6;">Ссылка действительна 7 дней. Если вы не ожидали это приглашение — просто проигнорируйте письмо.</p>
+    `),
+  };
+}
+
 export async function paymentFailedEmail(data: {
   userName: string;
   planName: string;

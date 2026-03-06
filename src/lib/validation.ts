@@ -106,6 +106,28 @@ export const pluginUpdateSchema = z.object({
   isActive: z.boolean(),
 }).partial();
 
+// ─── Organization ───────────────────────────────────────
+
+export const orgCreateSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  avatar: z.string().max(2000).optional().nullable(),
+});
+
+export const orgUpdateSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  avatar: z.string().max(2000).nullable(),
+}).partial();
+
+export const orgInviteSchema = z.object({
+  email: z.string().email().max(254).transform((s) => s.trim().toLowerCase()),
+  role: z.enum(["ADMIN", "MEMBER"]).default("MEMBER"),
+});
+
+export const orgAgentCreateSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  description: z.string().max(2000).optional().nullable().transform((s) => s?.trim() || null),
+});
+
 // ─── Conversation update (whitelist fields) ──────────────
 
 export const conversationUpdateSchema = z.object({
