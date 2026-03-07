@@ -71,55 +71,25 @@ function isCsrfExempt(pathname: string): boolean {
   return CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
 }
 
-// ─── P3-41: CSP Nonce Generation ───
+// ─── CSP ───
+// Next.js injects inline scripts without nonce support in the App Router,
+// so we must allow 'unsafe-inline' for scripts. 'strict-dynamic' + nonce
+// would block all Next.js-generated scripts.
 
-function generateNonce(): string {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  let binary = "";
-  for (const byte of array) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function buildCsp(nonce: string): string {
-  const cdnHost = process.env.CDN_URL
-    ? (() => {
-        try {
-          return new URL(process.env.CDN_URL).origin;
-        } catch {
-          return "";
-        }
-      })()
-    : "";
-  const sentryDsn = process.env.SENTRY_DSN ?? "";
-  const sentryHost = sentryDsn
-    ? (() => {
-        try {
-          return new URL(sentryDsn).origin;
-        } catch {
-          return "";
-        }
-      })()
-    : "";
-  const cspExtraSrc = [cdnHost, sentryHost].filter(Boolean).join(" ");
-
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' https://static.cloudflareinsights.com ${cspExtraSrc}`.trim(),
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: https: ${cdnHost}`.trim(),
-    `font-src 'self' data: ${cdnHost}`.trim(),
-    `connect-src 'self' https://*.sentry.io https://*.cloudflare.com https://static.cloudflareinsights.com https://api.moonshot.cn https://api.deepinfra.com https://api.stripe.com wss: ${cspExtraSrc}`.trim(),
-    "media-src 'self' blob: https:",
-    "frame-src 'self' blob: data:",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self' https://accounts.google.com",
-    "object-src 'none'",
-  ].join("; ");
-}
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.sentry.io https://*.cloudflare.com https://static.cloudflareinsights.com https://api.moonshot.cn https://api.deepinfra.com https://api.stripe.com wss:",
+  "media-src 'self' blob: https:",
+  "frame-src 'self' blob: data:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://accounts.google.com",
+  "object-src 'none'",
+].join("; ");
 
 // ─── Main proxy ───
 
@@ -174,20 +144,14 @@ const withAuth = auth((req) => {
   // Generate / propagate correlation ID
   const requestId = getOrCreateRequestId(req);
 
-  // CSP nonce
-  const nonce = generateNonce();
-  const csp = buildCsp(nonce);
-
   // Forward headers to API routes
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set(CORRELATION_HEADER, requestId);
-  requestHeaders.set("x-nonce", nonce);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   response.headers.set(CORRELATION_HEADER, requestId);
-  response.headers.set("Content-Security-Policy", csp);
-  response.headers.set("x-nonce", nonce);
+  response.headers.set("Content-Security-Policy", CSP);
 
   addSecurityHeaders(response);
   return response;
