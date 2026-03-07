@@ -1,7 +1,13 @@
 /**
- * Simple in-memory rate limiter for API keys.
- * For production, replace with Redis-backed limiter.
+ * Distributed rate limiter — Redis-backed with in-memory fallback.
+ *
+ * Uses Redis INCR+EXPIRE for distributed rate limiting across 3 app replicas.
+ * Falls back to in-memory Map when Redis is unavailable (dev environment).
  */
+
+import { redisRateLimit } from "@/lib/redis";
+
+// ─── In-memory fallback ──────────────────────────────────
 
 interface RateLimitEntry {
   count: number;
@@ -18,23 +24,7 @@ setInterval(() => {
   }
 }, 300_000);
 
-export interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-  resetAt: number;
-}
-
-/**
- * Check rate limit for a given key.
- * @param key - unique identifier (API key, user ID, IP)
- * @param limit - max requests per window
- * @param windowMs - window duration in milliseconds (default 60s)
- */
-export function checkRateLimit(
-  key: string,
-  limit: number = 60,
-  windowMs: number = 60_000
-): RateLimitResult {
+function inMemoryCheck(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   const entry = store.get(key);
 
@@ -52,19 +42,82 @@ export function checkRateLimit(
   };
 }
 
+// ─── Public API ──────────────────────────────────────────
+
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+}
+
 /**
- * Apply rate limiting to a request using API key.
- * Returns null if allowed, or a Response if rate-limited.
+ * Check rate limit for a given key.
+ * Tries Redis first (distributed), falls back to in-memory.
+ *
+ * @param key - unique identifier (API key, user ID, IP)
+ * @param limit - max requests per window
+ * @param windowMs - window duration in milliseconds (default 60s)
  */
-export function rateLimitByApiKey(
+export async function checkRateLimitAsync(
+  key: string,
+  limit: number = 60,
+  windowMs: number = 60_000
+): Promise<RateLimitResult> {
+  const windowSeconds = Math.ceil(windowMs / 1000);
+  const redisKey = `rl:${key}`;
+
+  // Try Redis first (shared across replicas)
+  const redisResult = await redisRateLimit(redisKey, limit, windowSeconds);
+  if (redisResult !== null) {
+    const now = Date.now();
+    return {
+      allowed: redisResult,
+      remaining: redisResult ? Math.max(0, limit - 1) : 0,
+      resetAt: now + windowMs,
+    };
+  }
+
+  // Fallback to in-memory (single-instance)
+  return inMemoryCheck(key, limit, windowMs);
+}
+
+/**
+ * Synchronous rate limit check (in-memory only).
+ * Use when async is not possible (e.g., middleware edge cases).
+ */
+export function checkRateLimit(
+  key: string,
+  limit: number = 60,
+  windowMs: number = 60_000
+): RateLimitResult {
+  return inMemoryCheck(key, limit, windowMs);
+}
+
+/**
+ * Apply rate limiting by API key.
+ * Returns headers for rate limit info.
+ */
+export async function rateLimitByApiKey(
   apiKey: string,
   limit: number = 60
-): { allowed: boolean; headers: Record<string, string> } {
-  const result = checkRateLimit(`apikey:${apiKey}`, limit, 60_000);
+): Promise<{ allowed: boolean; headers: Record<string, string> }> {
+  const result = await checkRateLimitAsync(`apikey:${apiKey}`, limit, 60_000);
   const headers: Record<string, string> = {
     "X-RateLimit-Limit": String(limit),
     "X-RateLimit-Remaining": String(result.remaining),
     "X-RateLimit-Reset": String(Math.ceil(result.resetAt / 1000)),
   };
   return { allowed: result.allowed, headers };
+}
+
+/**
+ * Apply rate limiting by user ID.
+ * Use for per-user limits (e.g., chat API).
+ */
+export async function rateLimitByUser(
+  userId: string,
+  limit: number = 30,
+  windowMs: number = 60_000
+): Promise<RateLimitResult> {
+  return checkRateLimitAsync(`user:${userId}`, limit, windowMs);
 }

@@ -149,11 +149,12 @@ services:
     volumes:
       - ../ai_cortex/data/1c_knowledge/images:/app/data/1c_knowledge/images:ro
       - orchestrator_projects:/app/config/projects
+      - orchestrator_data:/app/data
     environment:
       - FRAGMENTDB_URL=http://fragmentdb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
-      - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:-Ckdshfh231161}
+      - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:?AI_CORTEX_ADMIN_PASSWORD must be set in .env}
       - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -261,3 +262,4 @@ volumes:
   pgdata:
   redisdata:
   orchestrator_projects:
+  orchestrator_data:

@@ -168,12 +168,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.iat = Math.floor(Date.now() / 1000);
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id as string },
-          select: { role: true, twoFactorEnabled: true },
+          select: { role: true, twoFactorEnabled: true, securityStamp: true },
         });
         if (dbUser) {
           token.role = dbUser.role;
           // If user has 2FA enabled and reached this point, they passed verification
           token.twoFactorVerified = dbUser.twoFactorEnabled || false;
+          // Store security stamp so we can detect 2FA changes mid-session
+          token.securityStamp = dbUser.securityStamp?.toISOString() ?? null;
+        }
+      }
+
+      // Check if security stamp changed (e.g. 2FA enabled/disabled) — invalidate session.
+      // Throttled: only check every 60s to avoid a DB query on every request.
+      if (token.id && token.securityStamp) {
+        const lastStampCheck = (token.securityStampCheckedAt as number) || 0;
+        const now = Math.floor(Date.now() / 1000);
+        if (now - lastStampCheck > 60) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { securityStamp: true },
+          });
+          token.securityStampCheckedAt = now;
+          if (dbUser?.securityStamp && dbUser.securityStamp.toISOString() !== token.securityStamp) {
+            return { ...token, expired: true };
+          }
         }
       }
 

@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { ChatMessage, ConversationSummary } from "@/types/chat";
 
+/** Maximum conversations kept in memory to prevent unbounded growth */
+const MAX_CONVERSATIONS = 500;
+
 export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | null;
 
 /** Tool categories for granular status icons */
@@ -159,10 +162,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
   setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
 
-  setConversations: (conversations) => set({ conversations }),
+  setConversations: (conversations) =>
+    set({ conversations: conversations.slice(0, MAX_CONVERSATIONS) }),
 
   addConversation: (conversation) =>
-    set((s) => ({ conversations: [conversation, ...s.conversations] })),
+    set((s) => {
+      const updated = [conversation, ...s.conversations];
+      return { conversations: updated.length > MAX_CONVERSATIONS ? updated.slice(0, MAX_CONVERSATIONS) : updated };
+    }),
 
   removeConversation: (id) =>
     set((s) => ({

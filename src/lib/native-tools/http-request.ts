@@ -4,6 +4,7 @@ import {
   NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS,
   NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES,
 } from "../constants";
+import dns from "node:dns/promises";
 
 // ─── SSRF Protection ───────────────────────────────────
 
@@ -47,6 +48,61 @@ function isBlockedUrl(url: string): string | null {
     if (pattern.test(hostname)) {
       return `Хост ${hostname} заблокирован (приватная сеть)`;
     }
+  }
+
+  return null;
+}
+
+/**
+ * DNS rebinding protection: resolve hostname and verify the IP is not private/internal.
+ * Prevents attacks where a public domain resolves to an internal IP after initial URL check.
+ */
+function isPrivateIp(ip: string): boolean {
+  // IPv4 private ranges
+  if (/^127\./.test(ip)) return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  if (ip === "0.0.0.0") return true;
+  if (/^169\.254\./.test(ip)) return true; // link-local
+
+  // IPv6 private/local
+  if (ip === "::1" || ip === "[::1]") return true;
+  if (/^fe80:/i.test(ip)) return true;   // link-local
+  if (/^fc00:/i.test(ip)) return true;   // unique local
+  if (/^fd/i.test(ip)) return true;      // unique local
+
+  // IPv4-mapped IPv6 (::ffff:127.0.0.1, ::ffff:10.x.x.x, etc.)
+  const mappedMatch = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mappedMatch) {
+    return isPrivateIp(mappedMatch[1]);
+  }
+
+  return false;
+}
+
+async function checkDnsRebinding(url: string): Promise<string | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "Некорректный URL";
+  }
+
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+
+  // Skip DNS lookup for raw IP addresses — already checked by isBlockedUrl
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes(":")) {
+    return null;
+  }
+
+  try {
+    const { address } = await dns.lookup(hostname);
+    if (isPrivateIp(address)) {
+      return `DNS для ${parsed.hostname} разрешился в приватный IP ${address}`;
+    }
+  } catch {
+    return `Не удалось разрешить DNS для ${parsed.hostname}`;
   }
 
   return null;
@@ -120,6 +176,12 @@ registerNativeTool({
     const blocked = isBlockedUrl(url);
     if (blocked) {
       return JSON.stringify({ error: blocked });
+    }
+
+    // DNS rebinding protection: verify resolved IP is not private/internal
+    const dnsBlocked = await checkDnsRebinding(url);
+    if (dnsBlocked) {
+      return JSON.stringify({ error: dnsBlocked });
     }
 
     const controller = new AbortController();

@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { twoFactorEnabled: true },
+      data: { twoFactorEnabled: true, securityStamp: new Date() },
     });
 
     return NextResponse.json({ success: true, enabled: true });
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { twoFactorEnabled: false, twoFactorSecret: null },
+      data: { twoFactorEnabled: false, twoFactorSecret: null, securityStamp: new Date() },
     });
 
     return NextResponse.json({ success: true, enabled: false });

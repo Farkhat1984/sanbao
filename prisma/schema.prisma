@@ -65,6 +65,7 @@ model User {
   locale             String   @default("ru")
   twoFactorSecret    String?
   twoFactorEnabled   Boolean  @default(false)
+  securityStamp      DateTime @default(now()) // bumped on 2FA change to invalidate existing JWTs
 
   accounts      Account[]
   sessions      Session[]
@@ -161,6 +162,7 @@ model Artifact {
   updatedAt DateTime @updatedAt
 
   @@index([conversationId])
+  @@index([messageId]) // FK: load artifacts for a specific message
   @@index([type])
 }
 
@@ -226,6 +228,7 @@ model ConversationPlan {
   updatedAt DateTime @updatedAt
 
   @@index([conversationId, isActive])
+  @@index([messageId]) // FK: find plans linked to a specific message
 }
 
 // ─── Agent models ───────────────────────────────────────
@@ -806,6 +809,7 @@ model ErrorLog {
   createdAt DateTime @default(now())
 
   @@index([route, createdAt])
+  @@index([userId, createdAt]) // Admin: filter error logs by user
   @@index([createdAt])
 }
 
@@ -930,6 +934,7 @@ model Payment {
 
   @@index([userId, createdAt])
   @@index([status])
+  @@index([externalId]) // Stripe/Freedom webhook reconciliation by payment intent ID
 }
 
 model PromoCode {
@@ -1033,6 +1038,7 @@ model ContentReport {
   updatedAt DateTime @updatedAt
 
   @@index([targetType, targetId])
+  @@index([reporterId]) // List reports filed by a specific user
   @@index([status])
 }
 
@@ -1142,6 +1148,7 @@ model OrgAgent {
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
+  @@index([mcpServerId]) // FK: avoid full scan on McpServer cascade/lookup
 }
 
 model OrgAgentFile {

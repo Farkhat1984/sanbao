@@ -4,7 +4,11 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
+let _cachedKey: Buffer | null = null;
+
 function getKey(): Buffer {
+  if (_cachedKey) return _cachedKey;
+
   const secret = process.env.ENCRYPTION_KEY;
   if (!secret) {
     // Fallback for dev/migration only — log warning
@@ -13,9 +17,26 @@ function getKey(): Buffer {
     if (process.env.NODE_ENV === "production") {
       console.warn("[CRYPTO] Using NEXTAUTH_SECRET/AUTH_SECRET as encryption key fallback — set ENCRYPTION_KEY for production!");
     }
-    return crypto.createHash("sha256").update(fallback).digest();
+    _cachedKey = crypto.createHash("sha256").update(fallback).digest();
+    return _cachedKey;
   }
-  return crypto.createHash("sha256").update(secret).digest();
+
+  // If ENCRYPTION_KEY is already 32 bytes of hex (64 hex chars), use directly
+  if (/^[0-9a-f]{64}$/i.test(secret)) {
+    _cachedKey = Buffer.from(secret, "hex");
+    return _cachedKey;
+  }
+
+  // If ENCRYPTION_KEY is base64-encoded 32 bytes (44 chars with padding)
+  const b64 = Buffer.from(secret, "base64");
+  if (b64.length === 32 && secret.length >= 40) {
+    _cachedKey = b64;
+    return _cachedKey;
+  }
+
+  // Fallback: derive via SHA-256 (backward compat for non-raw keys)
+  _cachedKey = crypto.createHash("sha256").update(secret).digest();
+  return _cachedKey;
 }
 
 export function encrypt(plaintext: string): string {
