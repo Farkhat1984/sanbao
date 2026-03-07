@@ -70,7 +70,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-[11px] text-text-muted mt-4 leading-relaxed">
+          <p className="text-center text-[11px] text-text-secondary mt-4 leading-relaxed">
             Входя в систему, вы принимаете{" "}
             <Link href="/offer" className="text-accent hover:text-accent-hover transition-colors">
               публичную оферту
@@ -83,7 +83,7 @@ export default function LoginPage() {
         </div>
 
         {/* Register link */}
-        <p className="text-center text-xs text-text-muted mt-6">
+        <p className="text-center text-xs text-text-secondary mt-6">
           Нет аккаунта?{" "}
           <Link href="/register" className="text-accent hover:text-accent-hover transition-colors">
             Зарегистрироваться

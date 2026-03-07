@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Обзор</h1>
-      <p className="text-sm text-text-muted mb-6">Статистика сервиса</p>
+      <p className="text-sm text-text-secondary mb-6">Статистика сервиса</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatsCard
           icon={Users}

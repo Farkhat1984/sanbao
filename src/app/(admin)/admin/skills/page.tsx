@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Shield, Globe, CheckCircle, XCircle, BarChart3 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Save, Trash2, Shield, Globe, CheckCircle, XCircle, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
@@ -24,7 +24,7 @@ interface Skill {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: "Черновик", color: "text-text-muted" },
+  DRAFT: { label: "Черновик", color: "text-text-secondary" },
   PENDING: { label: "На модерации", color: "text-warning" },
   APPROVED: { label: "Одобрен", color: "text-success" },
   REJECTED: { label: "Отклонён", color: "text-error" },
@@ -41,15 +41,28 @@ export default function AdminSkillsPage() {
     name: "", description: "", systemPrompt: "", citationRules: "", jurisdiction: "RU", icon: DEFAULT_SKILL_ICON, iconColor: DEFAULT_ICON_COLOR,
   });
 
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const SKILLS_PER_PAGE = 30;
+
   const [stats, setStats] = useState<{ totalSkills: number; activeSkills: number; pendingSkills: number } | null>(null);
 
-  const fetchSkills = async () => {
-    const res = await fetch(`/api/admin/skills?type=${filter}`);
-    setSkills(await res.json());
+  const fetchSkills = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({
+      type: filter,
+      page: String(page),
+      limit: String(SKILLS_PER_PAGE),
+    });
+    const res = await fetch(`/api/admin/skills?${params}`);
+    const data = await res.json();
+    setSkills(data.skills || []);
+    setTotal(data.total || 0);
     setLoading(false);
-  };
+  }, [filter, page]);
 
-  useEffect(() => { fetchSkills(); }, [filter]);
+  useEffect(() => { fetchSkills(); }, [fetchSkills]);
+  useEffect(() => { setPage(1); }, [filter]);
   useEffect(() => {
     fetch("/api/admin/skills/stats").then((r) => r.json()).then(setStats).catch(console.error);
   }, []);
@@ -98,7 +111,7 @@ export default function AdminSkillsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Скиллы</h1>
-          <p className="text-sm text-text-muted mt-1">Системные и пользовательские скиллы</p>
+          <p className="text-sm text-text-secondary mt-1">Системные и пользовательские скиллы</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
           <Plus className="h-4 w-4" /> Добавить
@@ -109,15 +122,15 @@ export default function AdminSkillsPage() {
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-text-primary">{stats.totalSkills}</p>
-            <p className="text-xs text-text-muted">Всего</p>
+            <p className="text-xs text-text-secondary">Всего</p>
           </div>
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-success">{stats.activeSkills}</p>
-            <p className="text-xs text-text-muted">Активных</p>
+            <p className="text-xs text-text-secondary">Активных</p>
           </div>
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-warning">{stats.pendingSkills}</p>
-            <p className="text-xs text-text-muted">На модерации</p>
+            <p className="text-xs text-text-secondary">На модерации</p>
           </div>
         </div>
       )}
@@ -149,9 +162,9 @@ export default function AdminSkillsPage() {
             {editId === s.id ? (
               <div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
-                  <div><label className="text-xs text-text-muted block mb-1">Название</label><input value={editForm.name ?? s.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
-                  <div><label className="text-xs text-text-muted block mb-1">Юрисдикция</label><input value={editForm.jurisdiction ?? s.jurisdiction ?? ""} onChange={(e) => setEditForm({ ...editForm, jurisdiction: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
-                  <div><label className="text-xs text-text-muted block mb-1">Иконка</label><input value={editForm.icon ?? s.icon} onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
+                  <div><label className="text-xs text-text-secondary block mb-1">Название</label><input value={editForm.name ?? s.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
+                  <div><label className="text-xs text-text-secondary block mb-1">Юрисдикция</label><input value={editForm.jurisdiction ?? s.jurisdiction ?? ""} onChange={(e) => setEditForm({ ...editForm, jurisdiction: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
+                  <div><label className="text-xs text-text-secondary block mb-1">Иконка</label><input value={editForm.icon ?? s.icon} onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })} className="w-full h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" /></div>
                 </div>
                 <textarea value={editForm.systemPrompt ?? s.systemPrompt} onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })} className="w-full h-32 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
                 <textarea value={editForm.citationRules ?? s.citationRules ?? ""} onChange={(e) => setEditForm({ ...editForm, citationRules: e.target.value })} placeholder="Правила цитирования" className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
@@ -170,12 +183,12 @@ export default function AdminSkillsPage() {
                       {s.isBuiltIn && <Badge variant="accent"><Shield className="h-3 w-3" /> Системный</Badge>}
                       {s.isPublic && <Badge variant="default"><Globe className="h-3 w-3" /> Публичный</Badge>}
                       {!s.isBuiltIn && s.status && (
-                        <span className={`text-xs font-medium ${STATUS_LABELS[s.status]?.color || "text-text-muted"}`}>
+                        <span className={`text-xs font-medium ${STATUS_LABELS[s.status]?.color || "text-text-secondary"}`}>
                           {STATUS_LABELS[s.status]?.label || s.status}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-xs text-text-secondary mt-0.5">
                       {s.jurisdiction} &middot; {s._count?.agents || 0} агентов
                       {s.user && <> &middot; {s.user.name || s.user.email}</>}
                     </p>
@@ -203,13 +216,41 @@ export default function AdminSkillsPage() {
                     </Button>
                   )}
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(s.id); setEditForm({}); }}>Изменить</Button>
-                  <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             )}
           </div>
         ))}
-        {skills.length === 0 && <p className="text-sm text-text-muted text-center py-8">Скиллы не найдены</p>}
+        {skills.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Скиллы не найдены</p>}
+
+        {/* Pagination */}
+        {(() => {
+          const totalPages = Math.ceil(total / SKILLS_PER_PAGE);
+          if (totalPages <= 1) return null;
+          return (
+            <div className="flex items-center justify-between pt-4">
+              <span className="text-xs text-text-secondary">{total} скиллов</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

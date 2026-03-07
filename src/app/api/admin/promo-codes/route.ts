@@ -1,17 +1,26 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const codes = await prisma.promoCode.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
 
-  return jsonOk(codes);
+  const [codes, total] = await Promise.all([
+    prisma.promoCode.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.promoCode.count(),
+  ]);
+
+  return jsonOk({ codes, total, page, limit });
 }
 
 export async function POST(req: Request) {

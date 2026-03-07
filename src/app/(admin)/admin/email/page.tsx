@@ -123,7 +123,7 @@ export default function AdminEmailPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Email</h1>
-      <p className="text-sm text-text-muted mb-6">Логи отправки, шаблоны и SMTP-конфигурация</p>
+      <p className="text-sm text-text-secondary mb-6">Логи отправки, шаблоны и SMTP-конфигурация</p>
 
       <div className="flex gap-1 mb-4">
         <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>Логи</button>
@@ -143,10 +143,10 @@ export default function AdminEmailPage() {
                   <Button variant="secondary" size="sm" onClick={() => setEditType(null)}>Отмена</Button>
                 </div>
               </div>
-              <p className="text-xs text-text-muted mb-3">Переменные: <code className="text-accent">{TYPE_VARS[editType] || ""}</code></p>
+              <p className="text-xs text-text-secondary mb-3">Переменные: <code className="text-accent">{TYPE_VARS[editType] || ""}</code></p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-text-muted block mb-1">Тема письма</label>
+                  <label className="text-xs text-text-secondary block mb-1">Тема письма</label>
                   <input
                     value={editForm.subject}
                     onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
@@ -154,7 +154,7 @@ export default function AdminEmailPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-text-muted block mb-1">HTML-содержимое</label>
+                  <label className="text-xs text-text-secondary block mb-1">HTML-содержимое</label>
                   <textarea
                     value={editForm.html}
                     onChange={(e) => setEditForm({ ...editForm, html: e.target.value })}
@@ -174,8 +174,8 @@ export default function AdminEmailPage() {
                   <div className={`h-2.5 w-2.5 rounded-full ${t.isActive && t.html ? "bg-success" : "bg-text-muted"}`} />
                   <div>
                     <span className="text-sm font-medium text-text-primary">{TYPE_LABELS[t.type] || t.type}</span>
-                    {t.subject && <span className="text-xs text-text-muted ml-2">&middot; {t.subject}</span>}
-                    {!t.html && <span className="text-xs text-text-muted ml-2">(стандартный)</span>}
+                    {t.subject && <span className="text-xs text-text-secondary ml-2">&middot; {t.subject}</span>}
+                    {!t.html && <span className="text-xs text-text-secondary ml-2">(стандартный)</span>}
                   </div>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => { setEditType(t.type); setEditForm({ subject: t.subject, html: t.html, isActive: t.isActive }); }}>
@@ -242,7 +242,7 @@ export default function AdminEmailPage() {
             {logs.map((log) => (
               <div key={log.id} className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-text-muted" />
+                  <Mail className="h-4 w-4 text-text-secondary" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-text-primary">{log.to}</span>
@@ -251,17 +251,17 @@ export default function AdminEmailPage() {
                       </Badge>
                       <Badge variant="default">{log.type}</Badge>
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-xs text-text-secondary mt-0.5">
                       {log.subject}
                       {log.error && <span className="text-error ml-2">{log.error}</span>}
                     </p>
                   </div>
                 </div>
-                <span className="text-xs text-text-muted">{formatDate(log.createdAt)}</span>
+                <span className="text-xs text-text-secondary">{formatDate(log.createdAt)}</span>
               </div>
             ))}
             {logs.length === 0 && (
-              <p className="text-sm text-text-muted text-center py-8">Нет записей</p>
+              <p className="text-sm text-text-secondary text-center py-8">Нет записей</p>
             )}
           </div>
 
@@ -270,7 +270,7 @@ export default function AdminEmailPage() {
               <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>
                 Назад
               </Button>
-              <span className="text-sm text-text-muted">{page} / {totalPages}</span>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
                 Далее
               </Button>

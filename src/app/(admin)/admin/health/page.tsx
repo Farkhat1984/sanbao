@@ -34,7 +34,7 @@ export default function AdminHealthPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Health Check</h1>
-          <p className="text-sm text-text-muted mt-1">Статус сервисов</p>
+          <p className="text-sm text-text-secondary mt-1">Статус сервисов</p>
         </div>
         <Button variant="secondary" size="sm" onClick={fetchHealth} isLoading={loading}>
           <RefreshCw className="h-3.5 w-3.5" /> Обновить
@@ -50,7 +50,7 @@ export default function AdminHealthPage() {
               {health.status === "healthy" ? <CheckCircle className="h-6 w-6 text-success" /> : <XCircle className="h-6 w-6 text-error" />}
               <div>
                 <p className="text-sm font-semibold text-text-primary">{health.status === "healthy" ? "Все сервисы работают" : "Есть проблемы"}</p>
-                <p className="text-xs text-text-muted">Обновлено: {new Date(health.timestamp).toLocaleString("ru-RU")}</p>
+                <p className="text-xs text-text-secondary">Обновлено: {new Date(health.timestamp).toLocaleString("ru-RU")}</p>
               </div>
             </div>
           </div>
@@ -66,7 +66,7 @@ export default function AdminHealthPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {check.latency !== undefined && <span className="text-xs text-text-muted">{check.latency}ms</span>}
+                  {check.latency !== undefined && <span className="text-xs text-text-secondary">{check.latency}ms</span>}
                   <span className={`text-xs font-medium px-2 py-1 rounded-lg ${check.status === "ok" ? "bg-success/10 text-success" : check.status === "error" ? "bg-error/10 text-error" : "bg-warning/10 text-warning"}`}>{check.status}</span>
                 </div>
               </div>

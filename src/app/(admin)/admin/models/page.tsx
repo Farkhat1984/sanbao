@@ -127,7 +127,7 @@ export default function AdminModelsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-модели</h1>
-          <p className="text-sm text-text-muted mt-1">Настройки моделей, температура, токены, стоимость</p>
+          <p className="text-sm text-text-secondary mt-1">Настройки моделей, температура, токены, стоимость</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/admin/models/matrix">
@@ -295,7 +295,7 @@ export default function AdminModelsPage() {
               <div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Название</label>
+                    <label className="text-xs text-text-secondary block mb-1">Название</label>
                     <input
                       value={editForm.displayName ?? m.displayName}
                       onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
@@ -303,7 +303,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Temperature</label>
+                    <label className="text-xs text-text-secondary block mb-1">Temperature</label>
                     <input
                       type="number"
                       step="0.1"
@@ -313,7 +313,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Top P</label>
+                    <label className="text-xs text-text-secondary block mb-1">Top P</label>
                     <input
                       type="number"
                       step="0.1"
@@ -323,7 +323,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Max Tokens</label>
+                    <label className="text-xs text-text-secondary block mb-1">Max Tokens</label>
                     <input
                       type="number"
                       value={editForm.maxTokens ?? m.maxTokens ?? ""}
@@ -332,7 +332,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Context Window</label>
+                    <label className="text-xs text-text-secondary block mb-1">Context Window</label>
                     <input
                       type="number"
                       value={editForm.contextWindow ?? m.contextWindow ?? ""}
@@ -341,7 +341,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">$/1k input</label>
+                    <label className="text-xs text-text-secondary block mb-1">$/1k input</label>
                     <input
                       type="number"
                       step="0.001"
@@ -351,7 +351,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">$/1k output</label>
+                    <label className="text-xs text-text-secondary block mb-1">$/1k output</label>
                     <input
                       type="number"
                       step="0.001"
@@ -361,7 +361,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Продажа/1k вх</label>
+                    <label className="text-xs text-text-secondary block mb-1">Продажа/1k вх</label>
                     <input
                       type="number"
                       step="0.001"
@@ -371,7 +371,7 @@ export default function AdminModelsPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-text-muted block mb-1">Продажа/1k вых</label>
+                    <label className="text-xs text-text-secondary block mb-1">Продажа/1k вых</label>
                     <input
                       type="number"
                       step="0.001"
@@ -393,7 +393,7 @@ export default function AdminModelsPage() {
                   </label>
                   {(editForm.supportsThinking ?? m.supportsThinking) && (
                     <div>
-                      <label className="text-xs text-text-muted block mb-1">Max Thinking Tokens</label>
+                      <label className="text-xs text-text-secondary block mb-1">Max Thinking Tokens</label>
                       <input
                         type="number"
                         value={editForm.maxThinkingTokens ?? m.maxThinkingTokens ?? ""}
@@ -422,7 +422,7 @@ export default function AdminModelsPage() {
                       {m.supportsThinking && <Badge variant="default"><Brain className="h-3 w-3 inline" /> Thinking</Badge>}
                       {m.isDefault && <Badge variant="accent">По умолчанию</Badge>}
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-xs text-text-secondary mt-0.5">
                       {m.provider.name} &middot; <span className="font-mono">{m.modelId}</span>
                       {m.temperature !== null && <> &middot; temp: {m.temperature}</>}
                       {m.maxTokens !== null && <> &middot; max: {m.maxTokens.toLocaleString()}</>}
@@ -450,7 +450,7 @@ export default function AdminModelsPage() {
                   </Button>
                   <button
                     onClick={() => handleDelete(m.id)}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -460,7 +460,7 @@ export default function AdminModelsPage() {
           </div>
         ))}
         {models.length === 0 && (
-          <p className="text-sm text-text-muted text-center py-8">Модели не найдены</p>
+          <p className="text-sm text-text-secondary text-center py-8">Модели не найдены</p>
         )}
       </div>
     </div>

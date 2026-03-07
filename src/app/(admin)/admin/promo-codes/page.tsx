@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Save, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -17,19 +17,30 @@ interface PromoCode {
   createdAt: string;
 }
 
+const CODES_PER_PAGE = 30;
+
 export default function AdminPromoCodesPage() {
   const [codes, setCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [adding, setAdding] = useState(false);
   const [newCode, setNewCode] = useState({ code: "", description: "", discount: 10, maxUses: 0, validUntil: "" });
 
-  const fetchCodes = async () => {
-    const res = await fetch("/api/admin/promo-codes");
-    setCodes(await res.json());
+  const fetchCodes = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(CODES_PER_PAGE),
+    });
+    const res = await fetch(`/api/admin/promo-codes?${params}`);
+    const data = await res.json();
+    setCodes(data.codes || []);
+    setTotal(data.total || 0);
     setLoading(false);
-  };
+  }, [page]);
 
-  useEffect(() => { fetchCodes(); }, []);
+  useEffect(() => { fetchCodes(); }, [fetchCodes]);
 
   const handleCreate = async () => {
     const res = await fetch("/api/admin/promo-codes", {
@@ -63,12 +74,14 @@ export default function AdminPromoCodesPage() {
     return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-16" />)}</div>;
   }
 
+  const totalPages = Math.ceil(total / CODES_PER_PAGE);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Промокоды</h1>
-          <p className="text-sm text-text-muted mt-1">Скидки и промо-акции</p>
+          <p className="text-sm text-text-secondary mt-1">Скидки и промо-акции ({total})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
           <Plus className="h-4 w-4" /> Создать
@@ -99,9 +112,9 @@ export default function AdminPromoCodesPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-accent font-mono">{c.code}</span>
                   <Badge variant="default">-{c.discount}%</Badge>
-                  {c.maxUses > 0 && <span className="text-xs text-text-muted">{c.usedCount}/{c.maxUses}</span>}
+                  {c.maxUses > 0 && <span className="text-xs text-text-secondary">{c.usedCount}/{c.maxUses}</span>}
                 </div>
-                <p className="text-xs text-text-muted mt-0.5">
+                <p className="text-xs text-text-secondary mt-0.5">
                   {c.description || "Без описания"}
                   {c.validUntil && <> &middot; до {new Date(c.validUntil).toLocaleDateString("ru-RU")}</>}
                 </p>
@@ -111,13 +124,37 @@ export default function AdminPromoCodesPage() {
               <Button variant="secondary" size="sm" onClick={() => handleToggle(c.id, c.isActive)}>
                 {c.isActive ? "Откл." : "Вкл."}
               </Button>
-              <button onClick={() => handleDelete(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
+              <button onClick={() => handleDelete(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
         ))}
-        {codes.length === 0 && <p className="text-sm text-text-muted text-center py-8">Промокоды не созданы</p>}
+        {codes.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Промокоды не созданы</p>}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-xs text-text-secondary">{total} промокодов</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

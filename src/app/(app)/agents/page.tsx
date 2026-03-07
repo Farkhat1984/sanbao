@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Bot, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Search, Bot, Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAgentStore } from "@/stores/agentStore";
 import { AgentCard } from "@/components/agents/AgentCard";
@@ -17,6 +17,8 @@ interface SystemAgentInfo {
   isSystem: boolean;
 }
 
+const USER_AGENTS_LIMIT = 20;
+
 export default function AgentsPage() {
   const router = useRouter();
   const { agents, setAgents, isLoading, setLoading } = useAgentStore();
@@ -24,13 +26,22 @@ export default function AgentsPage() {
   const [systemAgents, setSystemAgents] = useState<SystemAgentInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Infinite scroll state for user agents
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Initial fetch
   useEffect(() => {
     setLoading(true);
-    fetch("/api/agents")
+    fetch(`/api/agents?limit=${USER_AGENTS_LIMIT}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.systemAgents) setSystemAgents(data.systemAgents);
         if (data.userAgents) setAgents(data.userAgents);
+        setNextCursor(data.nextCursor ?? null);
+        setHasMore(data.hasMore ?? false);
       })
       .catch(console.error)
       .finally(() => {
@@ -38,6 +49,40 @@ export default function AgentsPage() {
         setLoaded(true);
       });
   }, [setAgents, setLoading]);
+
+  // Load more user agents
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    setLoadingMore(true);
+    fetch(`/api/agents?type=user&limit=${USER_AGENTS_LIMIT}&cursor=${nextCursor}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.userAgents) {
+          setAgents([...agents, ...data.userAgents]);
+        }
+        setNextCursor(data.nextCursor ?? null);
+        setHasMore(data.hasMore ?? false);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMore(false));
+  }, [loadingMore, hasMore, nextCursor, agents, setAgents]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   const normalizedQuery = searchQuery.toLowerCase().trim();
 
@@ -78,7 +123,7 @@ export default function AgentsPage() {
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">
               Агенты
             </h1>
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               Системные и персональные AI-ассистенты
             </p>
           </div>
@@ -93,7 +138,7 @@ export default function AgentsPage() {
 
         {/* Search */}
         <div className="relative mb-8">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -137,7 +182,7 @@ export default function AgentsPage() {
                   <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
                     Системные
                   </h2>
-                  <span className="text-xs text-text-muted tabular-nums">
+                  <span className="text-xs text-text-secondary tabular-nums">
                     {filteredSystemAgents.length}
                   </span>
                   <div className="flex-1 h-px bg-border ml-2" />
@@ -157,7 +202,7 @@ export default function AgentsPage() {
                 <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
                   Мои агенты
                 </h2>
-                <span className="text-xs text-text-muted tabular-nums">
+                <span className="text-xs text-text-secondary tabular-nums">
                   {filteredUserAgents.length}
                 </span>
                 <div className="flex-1 h-px bg-border ml-2" />
@@ -178,11 +223,23 @@ export default function AgentsPage() {
                     <p className="text-sm font-medium text-text-primary mb-1">
                       У вас пока нет агентов
                     </p>
-                    <p className="text-sm text-text-muted text-center max-w-xs">
+                    <p className="text-sm text-text-secondary text-center max-w-xs">
                       Создайте персонального агента с уникальными инструкциями и файлами знаний
                     </p>
                   </div>
                 )
+              )}
+
+              {/* Infinite scroll sentinel + loading indicator */}
+              {hasMore && !normalizedQuery && (
+                <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                  {loadingMore && (
+                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Загрузка...</span>
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 
@@ -190,12 +247,12 @@ export default function AgentsPage() {
             {hasNoResults && (
               <div className="flex flex-col items-center justify-center py-12 px-4">
                 <div className="h-12 w-12 rounded-xl bg-surface flex items-center justify-center mb-4 border border-border">
-                  <Search className="h-6 w-6 text-text-muted" />
+                  <Search className="h-6 w-6 text-text-secondary" />
                 </div>
                 <p className="text-sm font-medium text-text-primary mb-1">
                   Ничего не найдено
                 </p>
-                <p className="text-sm text-text-muted">
+                <p className="text-sm text-text-secondary">
                   Попробуйте изменить поисковый запрос
                 </p>
               </div>

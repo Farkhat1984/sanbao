@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
@@ -9,6 +10,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // builtin | public | all
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
   if (type === "builtin") where.isBuiltIn = true;
@@ -17,17 +20,21 @@ export async function GET(req: Request) {
   if (type === "approved") where.status = "APPROVED";
   if (type === "rejected") where.status = "REJECTED";
 
-  const skills = await prisma.skill.findMany({
-    where,
-    include: {
-      user: { select: { id: true, name: true, email: true } },
-      _count: { select: { agents: true } },
-    },
-    orderBy: [{ isBuiltIn: "desc" }, { createdAt: "desc" }],
-    take: 500,
-  });
+  const [skills, total] = await Promise.all([
+    prisma.skill.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { agents: true } },
+      },
+      orderBy: [{ isBuiltIn: "desc" }, { createdAt: "desc" }],
+      skip,
+      take: limit,
+    }),
+    prisma.skill.count({ where }),
+  ]);
 
-  return jsonOk(skills);
+  return jsonOk({ skills, total, page, limit });
 }
 
 export async function POST(req: Request) {

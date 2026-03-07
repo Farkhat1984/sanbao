@@ -50,7 +50,7 @@ export default function AdminLogsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Аудит-лог</h1>
-          <p className="text-sm text-text-muted">Все действия администраторов</p>
+          <p className="text-sm text-text-secondary">Все действия администраторов</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => {
           const params = new URLSearchParams({ format: "csv", limit: "10000" });
@@ -78,23 +78,23 @@ export default function AdminLogsPage() {
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-medium ${actionColor(l.action)}`}>{l.action}</span>
                       <Badge variant="default">{l.target}</Badge>
-                      {l.targetId && <span className="text-xs text-text-muted font-mono">{l.targetId.slice(0, 8)}...</span>}
+                      {l.targetId && <span className="text-xs text-text-secondary font-mono">{l.targetId.slice(0, 8)}...</span>}
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-xs text-text-secondary mt-0.5">
                       Актор: {l.actorId.slice(0, 8)}...
                       {l.ip && <> &middot; IP: {l.ip}</>}
                     </p>
                   </div>
                 </div>
-                <span className="text-xs text-text-muted">{new Date(l.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="text-xs text-text-secondary">{new Date(l.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             ))}
-            {logs.length === 0 && <p className="text-sm text-text-muted text-center py-8">Нет записей</p>}
+            {logs.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет записей</p>}
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>Назад</Button>
-              <span className="text-sm text-text-muted">{page} / {totalPages}</span>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Далее</Button>
             </div>
           )}

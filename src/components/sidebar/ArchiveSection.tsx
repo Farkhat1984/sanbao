@@ -49,14 +49,14 @@ export function ArchiveSection() {
           onClick={toggleExpand}
           className={cn(
             "w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs",
-            "text-text-muted hover:text-text-secondary hover:bg-surface-hover",
+            "text-text-secondary hover:text-text-secondary hover:bg-surface-hover",
             "transition-colors duration-150 cursor-pointer"
           )}
         >
           <Archive className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">Архив</span>
           {count !== null && count > 0 && (
-            <span className="ml-auto mr-1 text-[10px] bg-surface-alt text-text-muted rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+            <span className="ml-auto mr-1 text-[10px] bg-surface-alt text-text-secondary rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
               {count}
             </span>
           )}
@@ -87,7 +87,7 @@ export function ArchiveSection() {
               )}
 
               {!loading && archivedConversations.length === 0 && loaded && (
-                <p className="text-xs text-text-muted px-2.5 py-3 text-center">
+                <p className="text-xs text-text-secondary px-2.5 py-3 text-center">
                   Нет архивных чатов
                 </p>
               )}

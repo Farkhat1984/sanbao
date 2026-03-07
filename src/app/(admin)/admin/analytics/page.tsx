@@ -37,7 +37,7 @@ export default function AdminAnalyticsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Аналитика</h1>
-          <p className="text-sm text-text-muted mt-1">Статистика использования за период</p>
+          <p className="text-sm text-text-secondary mt-1">Статистика использования за период</p>
         </div>
         <div className="flex gap-1">
           {["7d", "30d", "90d"].map((p) => (
@@ -49,15 +49,15 @@ export default function AdminAnalyticsPage() {
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Новых пользователей</p>
+          <p className="text-xs text-text-secondary">Новых пользователей</p>
           <p className="text-2xl font-bold text-text-primary mt-1">{data.newUsersTotal}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Сообщений за период</p>
+          <p className="text-xs text-text-secondary">Сообщений за период</p>
           <p className="text-2xl font-bold text-text-primary mt-1">{data.dailyMessages.reduce((s, d) => s + d.messages, 0).toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Токенов за период</p>
+          <p className="text-xs text-text-secondary">Токенов за период</p>
           <p className="text-2xl font-bold text-text-primary mt-1">{data.dailyMessages.reduce((s, d) => s + d.tokens, 0).toLocaleString()}</p>
         </div>
       </div>
@@ -100,10 +100,10 @@ export default function AdminAnalyticsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left px-3 py-2 text-xs text-text-muted font-medium">Провайдер</th>
-                  <th className="text-right px-3 py-2 text-xs text-text-muted font-medium">Запросов</th>
-                  <th className="text-right px-3 py-2 text-xs text-text-muted font-medium">Токенов</th>
-                  <th className="text-right px-3 py-2 text-xs text-text-muted font-medium">Стоимость</th>
+                  <th className="text-left px-3 py-2 text-xs text-text-secondary font-medium">Провайдер</th>
+                  <th className="text-right px-3 py-2 text-xs text-text-secondary font-medium">Запросов</th>
+                  <th className="text-right px-3 py-2 text-xs text-text-secondary font-medium">Токенов</th>
+                  <th className="text-right px-3 py-2 text-xs text-text-secondary font-medium">Стоимость</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,7 +125,7 @@ export default function AdminAnalyticsPage() {
       {data.totalCost !== undefined && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-surface border border-border rounded-2xl p-5">
-            <p className="text-xs text-text-muted">Общая стоимость за период</p>
+            <p className="text-xs text-text-secondary">Общая стоимость за период</p>
             <p className="text-2xl font-bold text-accent mt-1">${data.totalCost.toFixed(4)}</p>
           </div>
           {data.anomalies && data.anomalies.length > 0 && (
@@ -149,7 +149,7 @@ export default function AdminAnalyticsPage() {
           {data.topUsers.map((u, i) => (
             <div key={u.userId} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <div className="flex items-center gap-3">
-                <span className="text-xs text-text-muted w-5">{i + 1}.</span>
+                <span className="text-xs text-text-secondary w-5">{i + 1}.</span>
                 <span className="text-sm text-text-primary">{u.name}</span>
               </div>
               <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           ))}
-          {data.topUsers.length === 0 && <p className="text-sm text-text-muted text-center py-4">Нет данных</p>}
+          {data.topUsers.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет данных</p>}
         </div>
       </div>
     </div>

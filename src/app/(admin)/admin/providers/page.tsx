@@ -103,7 +103,7 @@ export default function AdminProvidersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-провайдеры</h1>
-          <p className="text-sm text-text-muted mt-1">Управление подключениями к AI API</p>
+          <p className="text-sm text-text-secondary mt-1">Управление подключениями к AI API</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
           <Plus className="h-4 w-4" />
@@ -171,12 +171,12 @@ export default function AdminProvidersPage() {
                 <div className={`h-2.5 w-2.5 rounded-full ${p.isActive ? "bg-success" : "bg-text-muted"}`} />
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary">{p.name}</h3>
-                  <p className="text-xs text-text-muted">{p.slug} &middot; {p._count?.models || 0} моделей</p>
+                  <p className="text-xs text-text-secondary">{p.slug} &middot; {p._count?.models || 0} моделей</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-text-muted font-mono">{p.apiKey}</span>
-                <span className="text-xs text-text-muted">Приоритет: {p.priority}</span>
+                <span className="text-xs text-text-secondary font-mono">{p.apiKey}</span>
+                <span className="text-xs text-text-secondary">Приоритет: {p.priority}</span>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -196,7 +196,7 @@ export default function AdminProvidersPage() {
                 </Button>
                 <button
                   onClick={() => handleDelete(p.id)}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -204,7 +204,7 @@ export default function AdminProvidersPage() {
             </div>
             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-3">
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-text-secondary">
                   <span className="text-text-secondary">Base URL:</span> {p.baseUrl}
                 </p>
                 <select
@@ -223,7 +223,7 @@ export default function AdminProvidersPage() {
                       <Badge variant="default">OK</Badge>
                       <span className="text-xs text-success">{testResult[p.id].latency}ms</span>
                       {testResult[p.id].modelCount !== undefined && (
-                        <span className="text-xs text-text-muted">{testResult[p.id].modelCount} моделей</span>
+                        <span className="text-xs text-text-secondary">{testResult[p.id].modelCount} моделей</span>
                       )}
                     </>
                   ) : (
@@ -238,7 +238,7 @@ export default function AdminProvidersPage() {
           </div>
         ))}
         {providers.length === 0 && (
-          <p className="text-sm text-text-muted text-center py-8">Провайдеры не добавлены</p>
+          <p className="text-sm text-text-secondary text-center py-8">Провайдеры не добавлены</p>
         )}
       </div>
     </div>

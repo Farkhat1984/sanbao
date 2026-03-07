@@ -161,7 +161,7 @@ export function McpServerManager() {
 
   const statusColor: Record<string, string> = {
     CONNECTED: "text-success",
-    DISCONNECTED: "text-text-muted",
+    DISCONNECTED: "text-text-secondary",
     ERROR: "text-error",
   };
 
@@ -191,7 +191,7 @@ export function McpServerManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-text-muted text-xs py-4">
+      <div className="flex items-center gap-2 text-text-secondary text-xs py-4">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         Загрузка...
       </div>
@@ -213,7 +213,7 @@ export function McpServerManager() {
             <Globe className="h-3.5 w-3.5 text-accent shrink-0" />
             <div className="min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
-              <p className="text-xs text-text-muted truncate">
+              <p className="text-xs text-text-secondary truncate">
                 {tools.length > 0 ? `${tools.length} инструментов` : srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}
               </p>
             </div>
@@ -222,7 +222,7 @@ export function McpServerManager() {
             {isActive && tools.length > 0 && (
               <button
                 onClick={() => setExpandedId(isExpanded ? null : srv.id)}
-                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
               >
                 <Wrench className="h-3 w-3" />
                 {tools.length}
@@ -237,7 +237,7 @@ export function McpServerManager() {
                 "h-9 w-9 sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 flex items-center justify-center gap-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50",
                 isActive
                   ? "text-success hover:text-warning hover:bg-warning-light"
-                  : "text-text-muted hover:text-success hover:bg-success-light"
+                  : "text-text-secondary hover:text-success hover:bg-success-light"
               )}
             >
               {togglingId === srv.id ? (
@@ -256,11 +256,11 @@ export function McpServerManager() {
           <div className="border-t border-border px-3 py-2 space-y-1">
             {tools.map((tool) => (
               <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-muted mt-0.5 shrink-0" />
+                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-text-primary">{tool.name}</span>
                   {tool.description && (
-                    <p className="text-[11px] text-text-muted">{tool.description}</p>
+                    <p className="text-[11px] text-text-secondary">{tool.description}</p>
                   )}
                 </div>
               </div>
@@ -285,7 +285,7 @@ export function McpServerManager() {
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
-              <p className="text-xs text-text-muted truncate">
+              <p className="text-xs text-text-secondary truncate">
                 {srv.url}
                 <span className="ml-2 opacity-60">{srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</span>
               </p>
@@ -295,7 +295,7 @@ export function McpServerManager() {
             {tools.length > 0 && (
               <button
                 onClick={() => setExpandedId(isExpanded ? null : srv.id)}
-                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
+                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
               >
                 <Wrench className="h-3 w-3" />
                 {tools.length}
@@ -310,7 +310,7 @@ export function McpServerManager() {
                 onClick={() => handleDisconnect(srv.id)}
                 disabled={disconnectingId === srv.id}
                 title="Отключить"
-                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-warning-light text-text-muted hover:text-warning cursor-pointer transition-colors disabled:opacity-50"
+                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-warning-light text-text-secondary hover:text-warning cursor-pointer transition-colors disabled:opacity-50"
               >
                 {disconnectingId === srv.id ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -323,7 +323,7 @@ export function McpServerManager() {
                 onClick={() => handleConnect(srv.id)}
                 disabled={connectingId === srv.id}
                 title="Подключить"
-                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-success-light text-text-muted hover:text-success cursor-pointer transition-colors disabled:opacity-50"
+                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-success-light text-text-secondary hover:text-success cursor-pointer transition-colors disabled:opacity-50"
               >
                 {connectingId === srv.id ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -336,7 +336,7 @@ export function McpServerManager() {
               onClick={() => handleConnect(srv.id)}
               disabled={connectingId === srv.id}
               title="Переподключить"
-              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-muted hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
+              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-secondary hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
             >
               {connectingId === srv.id ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -347,7 +347,7 @@ export function McpServerManager() {
             <button
               onClick={() => handleRemove(srv.id)}
               title="Удалить"
-              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-error-light text-text-muted hover:text-error cursor-pointer transition-colors"
+              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-error-light text-text-secondary hover:text-error cursor-pointer transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -358,11 +358,11 @@ export function McpServerManager() {
           <div className="border-t border-border px-3 py-2 space-y-1">
             {tools.map((tool) => (
               <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-muted mt-0.5 shrink-0" />
+                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-text-primary">{tool.name}</span>
                   {tool.description && (
-                    <p className="text-[11px] text-text-muted">{tool.description}</p>
+                    <p className="text-[11px] text-text-secondary">{tool.description}</p>
                   )}
                 </div>
               </div>
@@ -375,7 +375,7 @@ export function McpServerManager() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-text-muted">
+      <p className="text-xs text-text-secondary">
         MCP-серверы предоставляют AI дополнительные инструменты: поиск по базе
         законов, работа с API, файловые операции и другие функции.
       </p>
@@ -384,7 +384,7 @@ export function McpServerManager() {
       {hasServers && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -411,10 +411,10 @@ export function McpServerManager() {
 
       {filteredSystem.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-[11px] text-text-secondary uppercase tracking-wider">
             <Globe className="h-3 w-3" />
             Системные серверы
-            <span className="text-text-muted/60">({filteredSystem.length})</span>
+            <span className="text-text-secondary/60">({filteredSystem.length})</span>
           </div>
           {filteredSystem.map(renderSystemServer)}
         </div>
@@ -423,9 +423,9 @@ export function McpServerManager() {
       {filteredUser.length > 0 && (
         <div className="space-y-2">
           {filteredSystem.length > 0 && (
-            <div className="flex items-center gap-1.5 text-[11px] text-text-muted uppercase tracking-wider mt-2">
+            <div className="flex items-center gap-1.5 text-[11px] text-text-secondary uppercase tracking-wider mt-2">
               Пользовательские серверы
-              <span className="text-text-muted/60">({filteredUser.length})</span>
+              <span className="text-text-secondary/60">({filteredUser.length})</span>
             </div>
           )}
           {filteredUser.map(renderUserServer)}
@@ -433,13 +433,13 @@ export function McpServerManager() {
       )}
 
       {hasServers && !hasResults && (
-        <div className="text-center py-6 text-text-muted text-xs">
+        <div className="text-center py-6 text-text-secondary text-xs">
           Ничего не найдено
         </div>
       )}
 
       {!hasServers && !showForm && (
-        <div className="text-center py-6 text-text-muted text-xs">
+        <div className="text-center py-6 text-text-secondary text-xs">
           Нет подключённых MCP-серверов
         </div>
       )}

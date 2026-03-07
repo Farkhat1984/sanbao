@@ -97,14 +97,30 @@ interface ChatState {
   // Autocompact
   contextUsage: ContextUsage | null;
 
+  // Conversation pagination
+  conversationsCursor: string | null;
+  hasMoreConversations: boolean;
+  isLoadingMoreConversations: boolean;
+
+  // Message pagination
+  messagesCursor: string | null;
+  hasMoreMessages: boolean;
+  isLoadingMoreMessages: boolean;
+
   setActiveConversation: (id: string | null) => void;
   setActiveAgentId: (id: string | null) => void;
   setOrgAgentId: (id: string | null) => void;
-  setConversations: (conversations: ConversationSummary[]) => void;
+  setConversations: (conversations: ConversationSummary[], nextCursor?: string | null) => void;
+  appendConversations: (conversations: ConversationSummary[], nextCursor: string | null) => void;
   addConversation: (conversation: ConversationSummary) => void;
   removeConversation: (id: string) => void;
+  setIsLoadingMoreConversations: (loading: boolean) => void;
   setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: ChatMessage) => void;
+  /** Prepend older messages to the beginning of the list */
+  prependMessages: (messages: ChatMessage[], nextCursor: string | null) => void;
+  setIsLoadingMoreMessages: (loading: boolean) => void;
+  setMessagesPagination: (cursor: string | null, hasMore: boolean) => void;
   updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   /** Get the latest content for the last assistant message (streaming or committed) */
   getLastAssistantContent: () => { content: string; reasoning?: string; planContent?: string } | null;
@@ -154,16 +170,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
   pendingInput: null,
   clarifyQuestions: null,
 
+  conversationsCursor: null,
+  hasMoreConversations: false,
+  isLoadingMoreConversations: false,
+
+  messagesCursor: null,
+  hasMoreMessages: false,
+  isLoadingMoreMessages: false,
+
   setActiveConversation: (activeConversationId) =>
     set(activeConversationId === null
-      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null }
+      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null, messagesCursor: null, hasMoreMessages: false }
       : { activeConversationId }),
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
   setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
 
-  setConversations: (conversations) =>
-    set({ conversations: conversations.slice(0, MAX_CONVERSATIONS) }),
+  setConversations: (conversations, nextCursor) =>
+    set({
+      conversations: conversations.slice(0, MAX_CONVERSATIONS),
+      conversationsCursor: nextCursor ?? null,
+      hasMoreConversations: !!nextCursor,
+    }),
+
+  appendConversations: (conversations, nextCursor) =>
+    set((s) => {
+      const updated = [...s.conversations, ...conversations];
+      return {
+        conversations: updated.length > MAX_CONVERSATIONS ? updated.slice(0, MAX_CONVERSATIONS) : updated,
+        conversationsCursor: nextCursor,
+        hasMoreConversations: !!nextCursor,
+        isLoadingMoreConversations: false,
+      };
+    }),
 
   addConversation: (conversation) =>
     set((s) => {
@@ -178,10 +217,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
         s.activeConversationId === id ? null : s.activeConversationId,
     })),
 
+  setIsLoadingMoreConversations: (isLoadingMoreConversations) =>
+    set({ isLoadingMoreConversations }),
+
   setMessages: (messages) => set({ messages }),
 
   addMessage: (message) =>
     set((s) => ({ messages: [...s.messages, message] })),
+
+  prependMessages: (olderMessages, nextCursor) =>
+    set((s) => ({
+      messages: [...olderMessages, ...s.messages],
+      messagesCursor: nextCursor,
+      hasMoreMessages: !!nextCursor,
+      isLoadingMoreMessages: false,
+    })),
+
+  setIsLoadingMoreMessages: (isLoadingMoreMessages) =>
+    set({ isLoadingMoreMessages }),
+
+  setMessagesPagination: (messagesCursor, hasMoreMessages) =>
+    set({ messagesCursor, hasMoreMessages }),
 
   updateLastAssistantMessage: (content, reasoning, planContent) =>
     set({

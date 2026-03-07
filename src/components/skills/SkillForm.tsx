@@ -97,7 +97,7 @@ export function SkillForm({ initial }: SkillFormProps) {
             <Sparkles className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -127,7 +127,7 @@ export function SkillForm({ initial }: SkillFormProps) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -145,7 +145,7 @@ export function SkillForm({ initial }: SkillFormProps) {
         />
 
         <div>
-          <label className="text-xs font-medium text-text-muted mb-1.5 block">
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
             Название *
           </label>
           <input
@@ -158,7 +158,7 @@ export function SkillForm({ initial }: SkillFormProps) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-text-muted mb-1.5 block">
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
             Описание
           </label>
           <input
@@ -170,7 +170,7 @@ export function SkillForm({ initial }: SkillFormProps) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-text-muted mb-1.5 block">
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
             Системный промпт *
           </label>
           <textarea
@@ -184,7 +184,7 @@ export function SkillForm({ initial }: SkillFormProps) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-text-muted mb-1.5 block">
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
             Правила цитирования
           </label>
           <textarea

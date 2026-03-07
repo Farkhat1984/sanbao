@@ -4,50 +4,60 @@ import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { agentCreateSchema } from "@/lib/validation";
 
-export async function GET() {
+const AGENT_SELECT = {
+  id: true,
+  name: true,
+  description: true,
+  icon: true,
+  iconColor: true,
+  model: true,
+  avatar: true,
+  isSystem: true,
+  updatedAt: true,
+  _count: { select: { conversations: true, files: true } },
+} as const;
+
+export async function GET(req: Request) {
   const result = await requireAuth();
   if ("error" in result) return result.error;
   const { userId } = result.auth;
 
-  // Parallel fetch: system agents + user agents
-  const [systemAgents, userAgents] = await Promise.all([
-    prisma.agent.findMany({
-      where: { isSystem: true, status: "APPROVED" },
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        icon: true,
-        iconColor: true,
-        model: true,
-        avatar: true,
-        isSystem: true,
-        updatedAt: true,
-        _count: { select: { conversations: true, files: true } },
-      },
-    }),
-    prisma.agent.findMany({
-      where: { userId, isSystem: false },
-      orderBy: { updatedAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        icon: true,
-        iconColor: true,
-        model: true,
-        avatar: true,
-        isSystem: true,
-        updatedAt: true,
-        _count: { select: { conversations: true, files: true } },
-      },
-    }),
-  ]);
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 100);
+  const type = searchParams.get("type"); // "system" | "user" | null (both)
+
+  // System agents: always returned in full (typically < 10 total, no pagination needed)
+  const systemAgents = type !== "user"
+    ? await prisma.agent.findMany({
+        where: { isSystem: true, status: "APPROVED" },
+        orderBy: { sortOrder: "asc" },
+        select: AGENT_SELECT,
+      })
+    : [];
+
+  // User agents: cursor-based pagination
+  const userAgents = type !== "system"
+    ? await prisma.agent.findMany({
+        where: { userId, isSystem: false },
+        orderBy: { updatedAt: "desc" },
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: AGENT_SELECT,
+      })
+    : [];
+
+  const hasMore = type !== "system" && userAgents.length > limit;
+  if (hasMore) userAgents.pop();
+  const nextCursor = hasMore && userAgents.length > 0
+    ? userAgents[userAgents.length - 1].id
+    : null;
 
   return jsonOk({
     systemAgents: systemAgents.map(serializeDates),
     userAgents: userAgents.map(serializeDates),
+    nextCursor,
+    hasMore,
   });
 }
 

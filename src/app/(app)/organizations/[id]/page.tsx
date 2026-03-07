@@ -64,7 +64,7 @@ export default function OrganizationDetailPage({
   if (error || !org) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 text-center">
-        <p className="text-text-muted">{error || "Организация не найдена"}</p>
+        <p className="text-text-secondary">{error || "Организация не найдена"}</p>
       </div>
     );
   }
@@ -77,7 +77,7 @@ export default function OrganizationDetailPage({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <button
           onClick={() => router.push("/organizations")}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           Организации
@@ -86,7 +86,7 @@ export default function OrganizationDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">{org.name as string}</h1>
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               {(org.memberCount as number)} участник(ов) · {(org.agentCount as number)} агент(ов)
             </p>
           </div>
@@ -146,7 +146,7 @@ function NavCard({
       <h3 className="font-semibold text-text-primary group-hover:text-accent transition-colors">
         {title}
       </h3>
-      <p className="text-sm text-text-muted mt-1">{description}</p>
+      <p className="text-sm text-text-secondary mt-1">{description}</p>
     </button>
   );
 }

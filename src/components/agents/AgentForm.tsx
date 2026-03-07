@@ -36,6 +36,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
   const [starterPrompts, setStarterPrompts] = useState<string[]>(
     agent?.starterPrompts || []
   );
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,43 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
         throw new Error(data.error || "Ошибка сохранения");
       }
 
-      router.push(backUrl);
+      const created = await res.json();
+
+      // Upload pending files after agent creation
+      if (!isEdit && pendingFiles.length > 0 && created?.id) {
+        if (orgId) {
+          // Org agent: upload to S3 + AI Cortex, then auto-process
+          const formData = new FormData();
+          pendingFiles.forEach((f) => formData.append("files", f));
+          const uploadRes = await fetch(
+            `/api/organizations/${orgId}/agents/${created.id}/upload`,
+            { method: "POST", body: formData }
+          );
+          if (uploadRes.ok) {
+            await fetch(
+              `/api/organizations/${orgId}/agents/${created.id}/process`,
+              { method: "POST" }
+            );
+          }
+        } else {
+          // User agent: upload files one by one
+          for (const file of pendingFiles) {
+            const formData = new FormData();
+            formData.append("file", file);
+            await fetch(`/api/agents/${created.id}/files`, {
+              method: "POST",
+              body: formData,
+            });
+          }
+        }
+      }
+
+      // Redirect to detail page if org agent with files, otherwise to list
+      if (!isEdit && pendingFiles.length > 0 && created?.id && orgId) {
+        router.push(`/organizations/${orgId}/agents/${created.id}`);
+      } else {
+        router.push(backUrl);
+      }
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
@@ -131,7 +168,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
       {/* Back link */}
       <button
         onClick={() => router.push(backUrl)}
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
         {orgId ? "Назад" : "Назад к агентам"}
@@ -152,7 +189,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             <Sparkles className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -245,7 +282,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 rows={8}
                 className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
               />
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 Системные инструкции определяют поведение агента в каждом чате
               </p>
             </div>
@@ -255,7 +292,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 <span className="flex items-center gap-1.5">
-                  <MessageSquare className="h-4 w-4 text-text-muted" />
+                  <MessageSquare className="h-4 w-4 text-text-secondary" />
                   Стартовые подсказки
                 </span>
               </label>
@@ -277,7 +314,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                     <button
                       type="button"
                       onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
-                      className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
+                      className="h-9 w-9 rounded-xl flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -294,7 +331,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
               </p>
             </div>
@@ -318,12 +355,8 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 onFileAdded={(f) => setFiles((prev) => [...prev, f])}
                 onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
                 onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
+                onQueuedFilesChange={!isEdit ? setPendingFiles : undefined}
               />
-              {!isEdit && (
-                <p className="text-xs text-text-muted mt-2">
-                  Файлы можно будет загрузить после создания агента
-                </p>
-              )}
             </div>
 
             {/* Skills */}
@@ -336,7 +369,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 selectedIds={selectedSkillIds}
                 onChange={setSelectedSkillIds}
               />
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 Скиллы добавляют специализированные инструкции к системному промпту агента
               </p>
             </div>
@@ -352,7 +385,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 selectedIds={selectedMcpIds}
                 onChange={setSelectedMcpIds}
               />
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 MCP-серверы предоставляют агенту дополнительные инструменты
               </p>
             </div>
@@ -387,7 +420,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
           <button
             type="button"
             onClick={() => router.push(backUrl)}
-            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             Отмена
           </button>

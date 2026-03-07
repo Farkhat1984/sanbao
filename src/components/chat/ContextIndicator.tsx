@@ -25,7 +25,7 @@ export function ContextIndicator({ usagePercent, isCompacting }: ContextIndicato
           style={{ width: `${Math.min(100, usagePercent)}%` }}
         />
       </div>
-      <span className="text-[10px] text-text-muted whitespace-nowrap">
+      <span className="text-[10px] text-text-secondary whitespace-nowrap">
         {isCompacting ? (
           <span className="flex items-center gap-1">
             <Loader2 className="h-2.5 w-2.5 animate-spin" />

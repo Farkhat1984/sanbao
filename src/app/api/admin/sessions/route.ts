@@ -1,28 +1,40 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const sessions = await prisma.session.findMany({
-    include: {
-      user: { select: { name: true, email: true } },
-    },
-    orderBy: { expires: "desc" },
-    take: 500,
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
 
-  return jsonOk(
-    sessions.map((s) => ({
+  const [sessions, total] = await Promise.all([
+    prisma.session.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { expires: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.session.count(),
+  ]);
+
+  return jsonOk({
+    sessions: sessions.map((s) => ({
       id: s.id,
       userId: s.userId,
       userName: s.user.name,
       userEmail: s.user.email,
       expires: s.expires.toISOString(),
-    }))
-  );
+    })),
+    total,
+    page,
+    limit,
+  });
 }
 
 export async function DELETE(req: Request) {

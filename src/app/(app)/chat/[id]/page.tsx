@@ -21,7 +21,7 @@ function mapMessages(raw: any[]): ChatMessage[] {
 
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
-  const { setActiveConversation, setActiveAgentId, setMessages } = useChatStore();
+  const { setActiveConversation, setActiveAgentId, setMessages, setMessagesPagination } = useChatStore();
   const isStreaming = useChatStore((s) => s.isStreaming);
   const wasStreamingRef = useRef(false);
   const hasLoadedRef = useRef(false);
@@ -33,7 +33,7 @@ export default function ConversationPage() {
 
   const fetchMessages = useCallback(() => {
     if (!id) return;
-    fetch(`/api/conversations/${id}`)
+    fetch(`/api/conversations/${id}?limit=50`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
@@ -43,12 +43,15 @@ export default function ConversationPage() {
         if (data.messages && Array.isArray(data.messages)) {
           setMessages(mapMessages(data.messages));
         }
+        // Store pagination state for "load older" functionality
+        setMessagesPagination(data.nextCursor ?? null, data.hasMore ?? false);
       })
       .catch(() => {
         setActiveAgentId(null);
         setMessages([]);
+        setMessagesPagination(null, false);
       });
-  }, [id, setActiveAgentId, setMessages]);
+  }, [id, setActiveAgentId, setMessages, setMessagesPagination]);
 
   // Load messages on mount only — NOT when isStreaming changes.
   // This prevents a race where fetchMessages() runs before the

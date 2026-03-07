@@ -57,9 +57,9 @@ export function TaskItem({ task }: TaskItemProps) {
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-surface-alt transition-colors cursor-pointer"
       >
         {isExpanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-text-muted shrink-0" />
+          <ChevronDown className="h-3.5 w-3.5 text-text-secondary shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-text-muted shrink-0" />
+          <ChevronRight className="h-3.5 w-3.5 text-text-secondary shrink-0" />
         )}
         <div className="flex-1 min-w-0 text-left">
           <p className="text-xs font-medium text-text-primary truncate">
@@ -94,7 +94,7 @@ export function TaskItem({ task }: TaskItemProps) {
             {task.conversationId && (
               <button
                 onClick={() => router.push(`/chat/${task.conversationId}`)}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-text-muted hover:text-accent transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-text-secondary hover:text-accent transition-colors cursor-pointer"
               >
                 <ExternalLink className="h-3 w-3" />
                 Перейти к чату
@@ -103,7 +103,7 @@ export function TaskItem({ task }: TaskItemProps) {
             <div className="flex-1" />
             <button
               onClick={handleDelete}
-              className="p-1 rounded text-text-muted hover:text-error transition-colors cursor-pointer"
+              className="p-1 rounded text-text-secondary hover:text-error transition-colors cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
             </button>

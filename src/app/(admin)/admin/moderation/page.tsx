@@ -83,7 +83,7 @@ export default function AdminModerationPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Модерация</h1>
-      <p className="text-sm text-text-muted mb-6">Просмотр разговоров и управление контентом</p>
+      <p className="text-sm text-text-secondary mb-6">Просмотр разговоров и управление контентом</p>
 
       <div className="flex gap-2 mb-4">
         <input placeholder="Поиск по пользователю или заголовку" value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 flex-1 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -105,30 +105,30 @@ export default function AdminModerationPage() {
                         <span className="text-sm font-medium text-text-primary truncate">{c.title}</span>
                         {c.flagged && <Badge variant="default">Флаг</Badge>}
                       </div>
-                      <p className="text-xs text-text-muted mt-0.5">
+                      <p className="text-xs text-text-secondary mt-0.5">
                         {c.userName || c.userEmail} &middot; {c.messageCount} сообщ.
                         &middot; {new Date(c.updatedAt).toLocaleDateString("ru-RU")}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleView(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer" title="Просмотр">
+                      <button onClick={() => handleView(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer" title="Просмотр">
                         <Eye className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => handleFlag(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer" title="Пометить">
+                      <button onClick={() => handleFlag(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer" title="Пометить">
                         <Flag className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={() => handleBanUser(c.userId)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer" title="Бан">
+                      <button onClick={() => handleBanUser(c.userId)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer" title="Бан">
                         <Ban className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
-              {conversations.length === 0 && <p className="text-sm text-text-muted text-center py-8">Разговоры не найдены</p>}
+              {conversations.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Разговоры не найдены</p>}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>Назад</Button>
-                  <span className="text-xs text-text-muted">{page}/{totalPages}</span>
+                  <span className="text-xs text-text-secondary">{page}/{totalPages}</span>
                   <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Далее</Button>
                 </div>
               )}
@@ -139,7 +139,7 @@ export default function AdminModerationPage() {
         {/* Message viewer */}
         <div className="bg-surface border border-border rounded-2xl p-5 min-h-[400px]">
           {!selectedId ? (
-            <div className="flex flex-col items-center justify-center h-full text-text-muted">
+            <div className="flex flex-col items-center justify-center h-full text-text-secondary">
               <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
               <p className="text-sm">Выберите разговор для просмотра</p>
             </div>
@@ -151,12 +151,12 @@ export default function AdminModerationPage() {
                 <div key={m.id} className={`p-3 rounded-lg text-sm ${m.role === "USER" ? "bg-accent/5 border border-accent/20" : "bg-surface-alt"}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant="default">{m.role === "USER" ? "Пользователь" : m.role === "ASSISTANT" ? "AI" : m.role}</Badge>
-                    <span className="text-xs text-text-muted">{new Date(m.createdAt).toLocaleString("ru-RU")}</span>
+                    <span className="text-xs text-text-secondary">{new Date(m.createdAt).toLocaleString("ru-RU")}</span>
                   </div>
                   <p className="text-text-primary whitespace-pre-wrap break-words">{m.content.slice(0, 2000)}{m.content.length > 2000 ? "..." : ""}</p>
                 </div>
               ))}
-              {messages.length === 0 && <p className="text-sm text-text-muted text-center py-8">Нет сообщений</p>}
+              {messages.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет сообщений</p>}
             </div>
           )}
         </div>

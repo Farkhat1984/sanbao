@@ -143,7 +143,7 @@ describe("GET /api/agents", () => {
 
   it("should return 401 if not authenticated", async () => {
     vi.mocked(authMock).mockResolvedValueOnce(null);
-    const res = await listAgents();
+    const res = await listAgents(new Request("http://localhost/api/agents"));
     expect(res.status).toBe(401);
   });
 
@@ -155,7 +155,7 @@ describe("GET /api/agents", () => {
       .mockResolvedValueOnce([systemAgent])
       .mockResolvedValueOnce([userAgent]);
 
-    const res = await listAgents();
+    const res = await listAgents(new Request("http://localhost/api/agents"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveProperty("systemAgents");
@@ -173,7 +173,7 @@ describe("GET /api/agents", () => {
       .mockResolvedValueOnce(agents)
       .mockResolvedValueOnce([]);
 
-    const res = await listAgents();
+    const res = await listAgents(new Request("http://localhost/api/agents"));
     const data = await res.json();
 
     expect(data.systemAgents).toHaveLength(9);
@@ -187,7 +187,7 @@ describe("GET /api/agents", () => {
     const agent = makeFakeAgent({ isSystem: true, status: "APPROVED" });
     mockAgent.findMany.mockResolvedValueOnce([agent]).mockResolvedValueOnce([]);
 
-    const res = await listAgents();
+    const res = await listAgents(new Request("http://localhost/api/agents"));
     const data = await res.json();
     expect(data.systemAgents[0].updatedAt).toBe(now.toISOString());
   });

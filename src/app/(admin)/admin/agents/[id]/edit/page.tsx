@@ -190,7 +190,7 @@ export default function AdminAgentEditPage({
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/agents")}
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
         Назад к агентам
@@ -221,7 +221,7 @@ export default function AdminAgentEditPage({
             <Sparkles className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -302,7 +302,7 @@ export default function AdminAgentEditPage({
             rows={8}
             className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Системные инструкции определяют поведение агента в каждом чате
           </p>
         </div>
@@ -311,7 +311,7 @@ export default function AdminAgentEditPage({
         <div>
           <label className="text-sm font-medium text-text-primary mb-2 block">
             <span className="flex items-center gap-1.5">
-              <MessageSquare className="h-4 w-4 text-text-muted" />
+              <MessageSquare className="h-4 w-4 text-text-secondary" />
               Стартовые подсказки
             </span>
           </label>
@@ -333,7 +333,7 @@ export default function AdminAgentEditPage({
                 <button
                   type="button"
                   onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -350,7 +350,7 @@ export default function AdminAgentEditPage({
               </button>
             )}
           </div>
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
           </p>
         </div>
@@ -380,7 +380,7 @@ export default function AdminAgentEditPage({
             selectedIds={selectedSkillIds}
             onChange={setSelectedSkillIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Скиллы добавляют специализированные инструкции к системному промпту агента
           </p>
         </div>
@@ -394,7 +394,7 @@ export default function AdminAgentEditPage({
             selectedIds={selectedMcpIds}
             onChange={setSelectedMcpIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             MCP-серверы предоставляют агенту дополнительные инструменты
           </p>
         </div>
@@ -408,7 +408,7 @@ export default function AdminAgentEditPage({
             selectedIds={selectedToolIds}
             onChange={setSelectedToolIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Инструменты добавляют быстрые действия и шаблоны к чату с агентом
           </p>
         </div>
@@ -434,7 +434,7 @@ export default function AdminAgentEditPage({
           <button
             type="button"
             onClick={() => router.push("/admin/agents")}
-            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             Отмена
           </button>
@@ -450,16 +450,16 @@ export default function AdminAgentEditPage({
                 <div className="h-9 w-9 rounded-xl flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: iconColor }}>{icon.charAt(0)}</div>
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary">{name || "Без имени"}</h3>
-                  <p className="text-xs text-text-muted">Предпросмотр агента</p>
+                  <p className="text-xs text-text-secondary">Предпросмотр агента</p>
                 </div>
               </div>
-              <button onClick={() => setShowPreview(false)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer">
+              <button onClick={() => setShowPreview(false)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
               {previewMessages.length === 0 && (
-                <p className="text-xs text-text-muted text-center py-8">Напишите сообщение, чтобы протестировать агента</p>
+                <p className="text-xs text-text-secondary text-center py-8">Напишите сообщение, чтобы протестировать агента</p>
               )}
               {previewMessages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -470,7 +470,7 @@ export default function AdminAgentEditPage({
               ))}
               {previewLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-surface-alt border border-border rounded-xl px-3 py-2 text-sm text-text-muted animate-pulse">Думает...</div>
+                  <div className="bg-surface-alt border border-border rounded-xl px-3 py-2 text-sm text-text-secondary animate-pulse">Думает...</div>
                 </div>
               )}
             </div>

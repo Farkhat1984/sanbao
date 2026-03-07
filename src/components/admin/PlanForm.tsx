@@ -84,7 +84,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         disabled={!editing}
         className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary disabled:opacity-60 focus:outline-none focus:border-accent transition-colors"
       />
-      {hint && <p className="text-xs text-text-muted mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-text-secondary mt-0.5">{hint}</p>}
     </div>
   );
 
@@ -115,7 +115,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
           {plan.isDefault && <Badge variant="default">По умолчанию</Badge>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-text-muted">
+          <span className="text-xs text-text-secondary">
             {plan._count?.subscriptions || 0} подписчиков
           </span>
           {editing ? (

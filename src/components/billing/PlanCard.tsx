@@ -112,14 +112,14 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
           {plan.price > 0 ? `${plan.price.toLocaleString("ru-RU")} ₸/мес` : "Бесплатно"}
         </p>
         {plan.description && (
-          <p className="text-xs text-text-muted mt-2">{plan.description}</p>
+          <p className="text-xs text-text-secondary mt-2">{plan.description}</p>
         )}
       </div>
 
       <div className="space-y-2 flex-1">
         {limits.map((f, i) => (
           <div key={i} className="flex items-center gap-2">
-            <f.icon className="h-3.5 w-3.5 text-text-muted shrink-0" />
+            <f.icon className="h-3.5 w-3.5 text-text-secondary shrink-0" />
             <span className="text-sm text-text-secondary">{f.label}</span>
           </div>
         ))}
@@ -129,12 +129,12 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
             {f.enabled ? (
               <Check className="h-3.5 w-3.5 text-success shrink-0" />
             ) : (
-              <X className="h-3.5 w-3.5 text-text-muted opacity-40 shrink-0" />
+              <X className="h-3.5 w-3.5 text-text-secondary opacity-40 shrink-0" />
             )}
             <span
               className={cn(
                 "text-sm",
-                f.enabled ? "text-text-secondary" : "text-text-muted line-through"
+                f.enabled ? "text-text-secondary" : "text-text-secondary line-through"
               )}
             >
               {f.label}

@@ -113,7 +113,7 @@ export default function AdminPromptsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Управление промптами</h1>
-        <p className="text-sm text-text-muted mt-1">
+        <p className="text-sm text-text-secondary mt-1">
           Редактирование всех системных промптов с версионированием
         </p>
       </div>
@@ -136,7 +136,7 @@ export default function AdminPromptsPage() {
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                         prompt.isDefault
-                          ? "bg-surface-alt text-text-muted"
+                          ? "bg-surface-alt text-text-secondary"
                           : "bg-accent/10 text-accent"
                       }`}
                     >
@@ -148,12 +148,12 @@ export default function AdminPromptsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-text-muted mt-0.5 truncate">{prompt.description}</p>
+                  <p className="text-xs text-text-secondary mt-0.5 truncate">{prompt.description}</p>
                 </div>
                 {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-text-muted shrink-0 ml-3" />
+                  <ChevronUp className="h-4 w-4 text-text-secondary shrink-0 ml-3" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-text-muted shrink-0 ml-3" />
+                  <ChevronDown className="h-4 w-4 text-text-secondary shrink-0 ml-3" />
                 )}
               </button>
 
@@ -161,7 +161,7 @@ export default function AdminPromptsPage() {
               {isExpanded && (
                 <div className="border-t border-border p-5 space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-text-muted block mb-1.5">
+                    <label className="text-xs font-medium text-text-secondary block mb-1.5">
                       Содержимое промпта
                     </label>
                     <textarea
@@ -174,7 +174,7 @@ export default function AdminPromptsPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-text-muted block mb-1.5">
+                    <label className="text-xs font-medium text-text-secondary block mb-1.5">
                       Changelog (опционально)
                     </label>
                     <input
@@ -212,7 +212,7 @@ export default function AdminPromptsPage() {
                   <div className="border-t border-border pt-3">
                     <button
                       onClick={() => toggleVersions(prompt.key)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
                     >
                       <Clock className="h-3.5 w-3.5" />
                       История версий
@@ -226,7 +226,7 @@ export default function AdminPromptsPage() {
                     {showVersions[prompt.key] && (
                       <div className="mt-2 space-y-1.5 max-h-60 overflow-y-auto">
                         {(versions[prompt.key] || []).length === 0 ? (
-                          <p className="text-xs text-text-muted py-2">Нет истории версий</p>
+                          <p className="text-xs text-text-secondary py-2">Нет истории версий</p>
                         ) : (
                           (versions[prompt.key] || []).map((v) => (
                             <button
@@ -238,12 +238,12 @@ export default function AdminPromptsPage() {
                                 <span className="text-xs font-medium text-text-primary">
                                   v{v.version}
                                 </span>
-                                <span className="text-[10px] text-text-muted">
+                                <span className="text-[10px] text-text-secondary">
                                   {new Date(v.createdAt).toLocaleString("ru-RU")}
                                 </span>
                               </div>
                               {v.changelog && (
-                                <p className="text-[11px] text-text-muted mt-0.5">{v.changelog}</p>
+                                <p className="text-[11px] text-text-secondary mt-0.5">{v.changelog}</p>
                               )}
                             </button>
                           ))

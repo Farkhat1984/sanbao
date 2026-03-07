@@ -8,19 +8,36 @@ export async function GET(req: Request) {
   if (result.error) return result.error;
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 100);
 
-  const [notifications, total] = await Promise.all([
-    prisma.notification.findMany({
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.notification.count(),
-  ]);
+  // Backward compatible: if `page` param is present, fall back to offset pagination
+  const pageParam = searchParams.get("page");
+  if (pageParam && !cursor) {
+    const page = parseInt(pageParam, 10) || 1;
+    const [notifications, total] = await Promise.all([
+      prisma.notification.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.notification.count(),
+    ]);
+    return jsonOk({ notifications, total, page, limit });
+  }
 
-  return jsonOk({ notifications, total, page, limit });
+  // Cursor-based pagination (preferred)
+  const notifications = await prisma.notification.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  });
+
+  const hasMore = notifications.length > limit;
+  const items = hasMore ? notifications.slice(0, limit) : notifications;
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
+  return jsonOk({ notifications: items, nextCursor, hasMore });
 }
 
 export async function POST(req: Request) {

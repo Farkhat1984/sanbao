@@ -205,7 +205,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
         )}
       >
         {/* Name */}
-        <span className="text-[11px] font-medium text-text-muted mb-1 block">
+        <span className="text-[11px] font-medium text-text-secondary mb-1 block">
           {isUser ? "Вы" : (agentName || "Sanbao")}
         </span>
 
@@ -304,13 +304,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                             <p className="text-sm font-medium text-text-primary truncate">
                               {part.title}
                             </p>
-                            <p className="text-xs text-text-muted">
+                            <p className="text-xs text-text-secondary">
                               {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
                                 part.artifactType}{" "}
                               &middot; Открыть в панели
                             </p>
                           </div>
-                          <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
+                          <ExternalLink className="h-4 w-4 text-text-secondary group-hover/artifact:text-accent transition-colors shrink-0" />
                         </button>
                       </div>
                     );
@@ -337,7 +337,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                             {" "}&middot; Нажмите чтобы открыть
                           </p>
                         </div>
-                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/edit:text-success transition-colors shrink-0" />
+                        <ExternalLink className="h-4 w-4 text-text-secondary group-hover/edit:text-success transition-colors shrink-0" />
                       </button>
                     );
                   }
@@ -430,7 +430,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onClick={handleCopy}
               aria-label="Копировать сообщение"
               className={cn(
-                "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                 isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
               )}
             >
@@ -446,7 +446,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                 onClick={() => onRetry(message.id)}
                 aria-label="Повторить запрос"
                 className={cn(
-                  "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                  "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                   isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
                 )}
               >
@@ -467,7 +467,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onClick={handleCopy}
               aria-label="Копировать сообщение"
               className={cn(
-                "rounded-md text-text-muted hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
+                "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
                 isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
               )}
             >

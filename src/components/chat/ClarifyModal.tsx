@@ -140,7 +140,7 @@ export function ClarifyModal() {
       <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-border">
         <button
           onClick={handleClose}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <X className="h-3.5 w-3.5" />
           Пропустить
@@ -152,7 +152,7 @@ export function ClarifyModal() {
             "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
             hasAnyAnswer
               ? "bg-accent text-white hover:bg-accent/90"
-              : "bg-surface-alt text-text-muted"
+              : "bg-surface-alt text-text-secondary"
           )}
         >
           <Send className="h-3.5 w-3.5" />

@@ -41,7 +41,7 @@ class PanelErrorBoundary extends React.Component<
           <p className="text-sm text-text-primary font-medium">
             Не удалось отобразить содержимое
           </p>
-          <p className="text-xs text-text-muted max-w-[240px]">
+          <p className="text-xs text-text-secondary max-w-[240px]">
             Произошла ошибка при загрузке панели. Попробуйте снова.
           </p>
           <button
@@ -177,7 +177,7 @@ export function UnifiedPanel() {
               <button
                 ref={mobileCloseBtnRef}
                 onClick={closePanel}
-                className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
+                className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
@@ -224,7 +224,7 @@ export function UnifiedPanel() {
               <button
                 ref={closeBtnRef}
                 onClick={closePanel}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
                 title="Закрыть"
               >
                 <X className="h-3.5 w-3.5" />

@@ -63,7 +63,7 @@ export function TemplateModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={template.name}>
-      <p className="text-xs text-text-muted mb-4">{template.description}</p>
+      <p className="text-xs text-text-secondary mb-4">{template.description}</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {template.fields.map((field) => (

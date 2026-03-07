@@ -64,7 +64,7 @@ export default function InviteAcceptPage({
             <h1 className="text-lg font-semibold text-text-primary mb-2">
               Вы присоединились{orgName ? ` к "${orgName}"` : ""}!
             </h1>
-            <p className="text-sm text-text-muted">Перенаправляем...</p>
+            <p className="text-sm text-text-secondary">Перенаправляем...</p>
           </>
         )}
 
@@ -76,7 +76,7 @@ export default function InviteAcceptPage({
             <h1 className="text-lg font-semibold text-text-primary mb-2">
               Ошибка
             </h1>
-            <p className="text-sm text-text-muted mb-6">{message}</p>
+            <p className="text-sm text-text-secondary mb-6">{message}</p>
             <button
               onClick={() => router.push("/organizations")}
               className="h-10 px-6 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer"

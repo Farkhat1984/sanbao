@@ -35,7 +35,7 @@ export default function MarketplacePage() {
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => router.back()}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -44,7 +44,7 @@ export default function MarketplacePage() {
               <Store className="h-5 w-5" />
               Маркетплейс скиллов
             </h1>
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               Клонируйте публичные скиллы в свою коллекцию
             </p>
           </div>
@@ -78,8 +78,8 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Store className="h-12 w-12 text-text-muted mx-auto mb-4" />
-            <p className="text-text-muted">Пока нет публичных скиллов</p>
+            <Store className="h-12 w-12 text-text-secondary mx-auto mb-4" />
+            <p className="text-text-secondary">Пока нет публичных скиллов</p>
           </div>
         )}
       </div>

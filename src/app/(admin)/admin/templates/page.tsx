@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Save, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -14,21 +14,32 @@ interface Template {
   isActive: boolean;
 }
 
+const TEMPLATES_PER_PAGE = 30;
+
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Template>>({});
   const [newTpl, setNewTpl] = useState({ name: "", type: "CONTRACT", content: "", jurisdiction: "RU" });
 
-  const fetchData = async () => {
-    const res = await fetch("/api/admin/templates");
-    setTemplates(await res.json());
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(TEMPLATES_PER_PAGE),
+    });
+    const res = await fetch(`/api/admin/templates?${params}`);
+    const data = await res.json();
+    setTemplates(data.templates || []);
+    setTotal(data.total || 0);
     setLoading(false);
-  };
+  }, [page]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCreate = async () => {
     const res = await fetch("/api/admin/templates", {
@@ -53,12 +64,14 @@ export default function AdminTemplatesPage() {
 
   if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-20" />)}</div>;
 
+  const totalPages = Math.ceil(total / TEMPLATES_PER_PAGE);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Шаблоны документов</h1>
-          <p className="text-sm text-text-muted mt-1">Юридические шаблоны для генерации</p>
+          <p className="text-sm text-text-secondary mt-1">Юридические шаблоны для генерации ({total})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Добавить</Button>
       </div>
@@ -105,17 +118,41 @@ export default function AdminTemplatesPage() {
                     <Badge variant="default">{t.jurisdiction}</Badge>
                     {!t.isActive && <Badge variant="default">Неактивен</Badge>}
                   </div>
-                  <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{t.content.slice(0, 100)}...</p>
+                  <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{t.content.slice(0, 100)}...</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(t.id); setEditForm({}); }}>Изменить</Button>
-                  <button onClick={() => handleDelete(t.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDelete(t.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             )}
           </div>
         ))}
-        {templates.length === 0 && <p className="text-sm text-text-muted text-center py-8">Шаблоны не найдены</p>}
+        {templates.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Шаблоны не найдены</p>}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-xs text-text-secondary">{total} шаблонов</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -205,7 +205,7 @@ export function ArtifactContent() {
               <div className="relative">
                 <button
                   onClick={() => setVersionMenuOpen(!versionMenuOpen)}
-                  className="flex items-center gap-0.5 text-[10px] text-text-muted hover:text-accent transition-colors cursor-pointer"
+                  className="flex items-center gap-0.5 text-[10px] text-text-secondary hover:text-accent transition-colors cursor-pointer"
                 >
                   v{activeArtifact.version}
                   <ChevronDown className="h-2.5 w-2.5" />
@@ -241,7 +241,7 @@ export function ArtifactContent() {
                 )}
               </div>
             ) : (
-              <span className="text-[10px] text-text-muted">
+              <span className="text-[10px] text-text-secondary">
                 v{activeArtifact.version}
               </span>
             )}
@@ -252,7 +252,7 @@ export function ArtifactContent() {
         <div className="flex items-center gap-1">
           <button
             onClick={handleCopy}
-            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
+            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
             {copied ? (
               <Check className={cn(iconSize, "text-success")} />
@@ -266,7 +266,7 @@ export function ArtifactContent() {
             <button
               onClick={handleDownload}
               disabled={isExporting}
-              className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]")}
+              className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]")}
             >
               {isExporting ? (
                 <Loader2 className={cn(iconSize, "animate-spin")} />
@@ -281,12 +281,12 @@ export function ArtifactContent() {
                 className={cn(isMobile ? "h-9" : "h-7", "pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer")}
               >
                 {FORMAT_LABELS[downloadFormat]}
-                <ChevronDown className="h-3 w-3 text-text-muted" />
+                <ChevronDown className="h-3 w-3 text-text-secondary" />
               </button>
               <button
                 onClick={handleDownload}
                 disabled={isExporting}
-                className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50")}
+                className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50")}
               >
                 {isExporting ? (
                   <Loader2 className={cn(iconSize, "animate-spin")} />
@@ -334,7 +334,7 @@ export function ArtifactContent() {
 
           <button
             onClick={handlePrint}
-            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
+            className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
             <Printer className={iconSize} />
           </button>

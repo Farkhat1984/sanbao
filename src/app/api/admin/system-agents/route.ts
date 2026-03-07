@@ -1,39 +1,55 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const agents = await prisma.agent.findMany({
-    where: { isSystem: true },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-      mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
-      tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-    },
-    take: 500,
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
+
+  const where = { isSystem: true as const };
+
+  const [agents, total] = await Promise.all([
+    prisma.agent.findMany({
+      where,
+      orderBy: { sortOrder: "asc" },
+      include: {
+        skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+        mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+        tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+      },
+      skip,
+      take: limit,
+    }),
+    prisma.agent.count({ where }),
+  ]);
 
   // Map to compatible format for admin page
-  return jsonOk(agents.map((a) => ({
-    id: a.id,
-    name: a.name,
-    description: a.description,
-    systemPrompt: a.instructions,
-    icon: a.icon,
-    iconColor: a.iconColor,
-    model: a.model,
-    isActive: a.status === "APPROVED",
-    sortOrder: a.sortOrder,
-    starterPrompts: a.starterPrompts || [],
-    skills: a.skills.map((s) => s.skill),
-    mcpServers: a.mcpServers.map((m) => m.mcpServer),
-    tools: a.tools.map((t) => t.tool),
-  })));
+  return jsonOk({
+    agents: agents.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      systemPrompt: a.instructions,
+      icon: a.icon,
+      iconColor: a.iconColor,
+      model: a.model,
+      isActive: a.status === "APPROVED",
+      sortOrder: a.sortOrder,
+      starterPrompts: a.starterPrompts || [],
+      skills: a.skills.map((s) => s.skill),
+      mcpServers: a.mcpServers.map((m) => m.mcpServer),
+      tools: a.tools.map((t) => t.tool),
+    })),
+    total,
+    page,
+    limit,
+  });
 }
 
 export async function POST(req: Request) {

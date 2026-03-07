@@ -29,7 +29,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
 
   const btnClass = (active: boolean) =>
     cn(
-      "h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+      "h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
       active && "text-accent bg-accent-light"
     );
 

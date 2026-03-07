@@ -63,8 +63,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
 
       <div className="flex items-start gap-3 mb-3">
         <div
-          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-md"
-          style={{ backgroundColor: agent.iconColor }}
+          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-accent"
         >
           <Icon className="h-5 w-5 text-white" />
         </div>
@@ -78,12 +77,12 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
         </div>
       </div>
 
-      <p className="text-xs text-text-muted leading-relaxed line-clamp-2 mb-4">
+      <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-4">
         {agent.description}
       </p>
 
       <div className="flex items-center justify-between pt-3 border-t border-legal-ref/20">
-        <div className="flex items-center gap-1 text-[10px] text-text-muted">
+        <div className="flex items-center gap-1 text-[10px] text-text-secondary">
           <Shield className="h-3 w-3" />
           Доступен всем
         </div>

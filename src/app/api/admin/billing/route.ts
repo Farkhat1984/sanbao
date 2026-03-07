@@ -9,54 +9,53 @@ export async function GET(req: Request) {
   if (result.error) return result.error;
 
   const { searchParams } = new URL(req.url);
-  const cursor = searchParams.get("cursor");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10) || 100, 500);
+  const subPage = Math.max(1, parseInt(searchParams.get("subPage") || "1", 10) || 1);
+  const subLimit = Math.min(Math.max(1, parseInt(searchParams.get("subLimit") || "25", 10) || 25), 100);
+  const payPage = Math.max(1, parseInt(searchParams.get("payPage") || "1", 10) || 1);
+  const payLimit = Math.min(Math.max(1, parseInt(searchParams.get("payLimit") || "25", 10) || 25), 100);
 
-  const [subscriptions, plans, payments] = await Promise.all([
+  const [subscriptions, totalSubscriptions, plans, payments, totalPayments, allSubs] = await Promise.all([
     prisma.subscription.findMany({
       include: {
         user: { select: { name: true, email: true } },
         plan: { select: { name: true, price: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      skip: (subPage - 1) * subLimit,
+      take: subLimit,
     }),
+    prisma.subscription.count(),
     prisma.plan.findMany({ select: { id: true, name: true, price: true } }),
     prisma.payment.findMany({
       include: { user: { select: { name: true, email: true } } },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      skip: (payPage - 1) * payLimit,
+      take: payLimit,
+    }),
+    prisma.payment.count(),
+    // For plan distribution and MRR, we need all subscriptions
+    prisma.subscription.findMany({
+      select: { plan: { select: { name: true, price: true } } },
     }),
   ]);
 
-  const hasMore = subscriptions.length > limit;
-  const subItems = hasMore ? subscriptions.slice(0, limit) : subscriptions;
-  const nextCursor = hasMore && subItems.length > 0 ? subItems[subItems.length - 1].id : null;
-
-  // Plan distribution
+  // Plan distribution (from all subscriptions)
   const planCount: Record<string, number> = {};
-  for (const s of subItems) {
-    const name = s.plan.name;
-    planCount[name] = (planCount[name] || 0) + 1;
-  }
-
-  const planDistribution = Object.entries(planCount).map(([planName, count]) => ({ planName, count }));
-
-  // Monthly revenue estimate (parse price from plan)
   let monthlyRevenue = 0;
-  for (const s of subItems) {
+  for (const s of allSubs) {
+    planCount[s.plan.name] = (planCount[s.plan.name] || 0) + 1;
     monthlyRevenue += s.plan.price;
   }
+  const planDistribution = Object.entries(planCount).map(([planName, count]) => ({ planName, count }));
 
-  // Recent subscriptions as "payments"
-  const recentPayments = subItems.slice(0, 20).map((s) => ({
-    id: s.id,
+  const subscriptionsList = subscriptions.map((s) => ({
     userId: s.userId,
     userName: s.user.name || s.user.email,
+    planId: s.planId,
     planName: s.plan.name,
     amount: s.plan.price,
-    currency: "KZT",
+    expiresAt: s.expiresAt?.toISOString() || null,
+    grantedBy: s.grantedBy,
     createdAt: s.createdAt.toISOString(),
   }));
 
@@ -71,24 +70,18 @@ export async function GET(req: Request) {
     createdAt: p.createdAt.toISOString(),
   }));
 
-  const subscriptionsList = subItems.map((s) => ({
-    userId: s.userId,
-    userName: s.user.name || s.user.email,
-    planId: s.planId,
-    planName: s.plan.name,
-    expiresAt: s.expiresAt?.toISOString() || null,
-    grantedBy: s.grantedBy,
-  }));
-
   return jsonOk({
-    totalSubscriptions: subItems.length,
+    totalSubscriptions,
     planDistribution,
-    recentPayments,
+    subscriptions: subscriptionsList,
+    subPage,
+    subLimit,
     payments: paymentsList,
+    totalPayments,
+    payPage,
+    payLimit,
     monthlyRevenue,
     plans,
-    subscriptions: subscriptionsList,
-    nextCursor,
   });
 }
 

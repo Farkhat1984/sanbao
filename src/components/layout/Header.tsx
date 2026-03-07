@@ -28,7 +28,7 @@ export function Header() {
             data-tour="sidebar-toggle"
             onClick={open}
             aria-label="Открыть боковую панель"
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
             <PanelLeftOpen className="h-4.5 w-4.5" />
           </button>

@@ -41,7 +41,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-text-muted text-xs py-3">
+      <div className="flex items-center gap-2 text-text-secondary text-xs py-3">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         Загрузка инструментов...
       </div>
@@ -50,7 +50,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
 
   if (tools.length === 0) {
     return (
-      <p className="text-xs text-text-muted py-2">
+      <p className="text-xs text-text-secondary py-2">
         Нет доступных инструментов. Создайте инструмент в админ-панели.
       </p>
     );
@@ -70,7 +70,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
               "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border",
               selected
                 ? "border-accent bg-accent/10 text-accent"
-                : "border-border bg-surface-alt text-text-muted hover:text-text-primary hover:border-border-hover"
+                : "border-border bg-surface-alt text-text-secondary hover:text-text-primary hover:border-border-hover"
             )}
           >
             <Icon className="h-3.5 w-3.5" style={{ color: selected ? undefined : tool.iconColor }} />

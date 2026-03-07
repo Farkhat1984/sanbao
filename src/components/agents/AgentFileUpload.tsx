@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, FileText, Loader2, BookOpen, Archive } from "lucide-react";
+import { Upload, X, FileText, Loader2, BookOpen, Archive, CheckCircle2, ImageIcon, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentFile } from "@/types/agent";
 import { MAX_FILE_SIZE } from "@/lib/constants";
@@ -12,6 +12,7 @@ interface AgentFileUploadProps {
   onFileAdded: (file: AgentFile) => void;
   onFileRemoved: (fileId: string) => void;
   onFileUpdated?: (file: AgentFile) => void;
+  onQueuedFilesChange?: (files: File[]) => void;
 }
 
 export function AgentFileUpload({
@@ -20,16 +21,42 @@ export function AgentFileUpload({
   onFileAdded,
   onFileRemoved,
   onFileUpdated,
+  onQueuedFilesChange,
 }: AgentFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const queueFile = useCallback(
+    (file: File) => {
+      if (file.size > MAX_FILE_SIZE) {
+        setError("Файл слишком большой (макс. 10MB)");
+        return;
+      }
+      setError(null);
+      setQueuedFiles((prev) => {
+        const next = [...prev, file];
+        onQueuedFilesChange?.(next);
+        return next;
+      });
+    },
+    [onQueuedFilesChange]
+  );
+
+  const removeQueuedFile = (index: number) => {
+    setQueuedFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      onQueuedFilesChange?.(next);
+      return next;
+    });
+  };
 
   const uploadFile = useCallback(
     async (file: File) => {
       if (!agentId) {
-        setError("Сначала сохраните агента, затем загрузите файлы");
+        queueFile(file);
         return;
       }
 
@@ -63,7 +90,7 @@ export function AgentFileUpload({
         setUploading(false);
       }
     },
-    [agentId, onFileAdded]
+    [agentId, onFileAdded, queueFile]
   );
 
   const handleDelete = async (fileId: string) => {
@@ -152,17 +179,22 @@ export function AgentFileUpload({
         {uploading ? (
           <Loader2 className="h-8 w-8 text-accent mx-auto mb-2 animate-spin" />
         ) : (
-          <Upload className="h-8 w-8 text-text-muted mx-auto mb-2" />
+          <Upload className="h-8 w-8 text-text-secondary mx-auto mb-2" />
         )}
-        <p className="text-sm text-text-muted">
+        <p className="text-sm text-text-secondary">
           {uploading
             ? "Загрузка..."
             : "Перетащите файл или нажмите для выбора"}
         </p>
-        <p className="text-xs text-text-muted mt-1">
+        <p className="text-xs text-text-secondary mt-1">
           PDF, DOCX, XLSX, TXT, MD, изображения до 10MB
         </p>
       </div>
+      {agentId && (
+        <p className="text-xs text-text-muted">
+          Текст из файлов автоматически извлекается и используется агентом в чате как база знаний
+        </p>
+      )}
 
       {error && (
         <p className="text-xs text-error">{error}</p>
@@ -181,14 +213,27 @@ export function AgentFileUpload({
                   !isInContext && "opacity-60"
                 )}
               >
-                <FileText className="h-4 w-4 text-text-muted shrink-0" />
+                <FileText className="h-4 w-4 text-text-secondary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary truncate">
                     {file.fileName}
                   </p>
-                  <p className="text-xs text-text-muted">
+                  <p className="text-xs text-text-secondary flex items-center gap-1.5">
                     {formatSize(file.fileSize)}
                     {!isInContext && " · по запросу"}
+                    {file.fileType?.startsWith("image/") ? (
+                      <span className="inline-flex items-center gap-0.5 text-text-muted">
+                        · <ImageIcon className="h-3 w-3" /> изображение
+                      </span>
+                    ) : file.extractedText ? (
+                      <span className="inline-flex items-center gap-0.5 text-success">
+                        · <CheckCircle2 className="h-3 w-3" /> текст извлечён
+                      </span>
+                    ) : file.extractedText === null && file.id ? (
+                      <span className="inline-flex items-center gap-0.5 text-warning">
+                        · <AlertCircle className="h-3 w-3" /> текст не извлечён
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <button
@@ -201,8 +246,8 @@ export function AgentFileUpload({
                   className={cn(
                     "h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer",
                     isInContext
-                      ? "text-accent hover:text-text-muted hover:bg-surface-hover"
-                      : "text-text-muted hover:text-accent hover:bg-accent/10"
+                      ? "text-accent hover:text-text-secondary hover:bg-surface-hover"
+                      : "text-text-secondary hover:text-accent hover:bg-accent/10"
                   )}
                 >
                   {isInContext ? <BookOpen className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
@@ -213,13 +258,40 @@ export function AgentFileUpload({
                     e.stopPropagation();
                     handleDelete(file.id);
                   }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                  className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Queued files (pending upload after agent creation) */}
+      {queuedFiles.length > 0 && (
+        <div className="space-y-2">
+          {queuedFiles.map((file, i) => (
+            <div
+              key={`queued-${i}`}
+              className="flex items-center gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20"
+            >
+              <FileText className="h-4 w-4 text-warning shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-primary truncate">{file.name}</p>
+                <p className="text-xs text-warning">
+                  {formatSize(file.size)} · загрузится после создания
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeQueuedFile(i)}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>

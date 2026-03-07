@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
@@ -7,6 +8,8 @@ export async function GET(req: Request) {
   if (result.error) return result.error;
 
   const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
   const type = searchParams.get("type");
   const jurisdiction = searchParams.get("jurisdiction");
 
@@ -14,13 +17,17 @@ export async function GET(req: Request) {
   if (type) where.type = type;
   if (jurisdiction) where.jurisdiction = jurisdiction;
 
-  const templates = await prisma.documentTemplate.findMany({
-    where,
-    orderBy: { name: "asc" },
-    take: 500,
-  });
+  const [templates, total] = await Promise.all([
+    prisma.documentTemplate.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip,
+      take: limit,
+    }),
+    prisma.documentTemplate.count({ where }),
+  ]);
 
-  return jsonOk(templates);
+  return jsonOk({ templates, total, page, limit });
 }
 
 export async function POST(req: Request) {

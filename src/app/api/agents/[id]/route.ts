@@ -9,6 +9,18 @@ const AGENT_INCLUDE = {
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
 };
 
+/** Strip heavy extractedText from files, replace with boolean hasText */
+function stripFileText(agent: Record<string, unknown>) {
+  if (!agent || !Array.isArray(agent.files)) return agent;
+  return {
+    ...agent,
+    files: (agent.files as Record<string, unknown>[]).map((f) => {
+      const { extractedText, ...rest } = f;
+      return { ...rest, extractedText: extractedText ? "1" : null };
+    }),
+  };
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -35,7 +47,7 @@ export async function GET(
     return jsonError("Агент не найден", 404);
   }
 
-  return jsonOk(serializeDates(agent));
+  return jsonOk(serializeDates(stripFileText(agent as unknown as Record<string, unknown>)));
 }
 
 export async function PUT(
@@ -114,10 +126,10 @@ export async function PUT(
   // Refetch with relations if associations were updated
   if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds)) {
     const updated = await prisma.agent.findUnique({ where: { id }, include: AGENT_INCLUDE });
-    return jsonOk(serializeDates(updated!));
+    return jsonOk(serializeDates(stripFileText(updated as unknown as Record<string, unknown>)));
   }
 
-  return jsonOk(serializeDates(agent));
+  return jsonOk(serializeDates(stripFileText(agent as unknown as Record<string, unknown>)));
 }
 
 export async function DELETE(

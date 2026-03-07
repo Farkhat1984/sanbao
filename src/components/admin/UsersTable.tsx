@@ -85,7 +85,7 @@ export function UsersTable() {
     <div>
       {/* Search */}
       <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
         <input
           type="text"
           placeholder="Поиск по имени или email..."
@@ -103,19 +103,19 @@ export function UsersTable() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-surface-alt">
-              <th className="text-left text-xs font-medium text-text-muted px-4 py-3">
+              <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                 Пользователь
               </th>
-              <th className="text-left text-xs font-medium text-text-muted px-4 py-3">
+              <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                 Роль
               </th>
-              <th className="text-left text-xs font-medium text-text-muted px-4 py-3">
+              <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                 Тариф
               </th>
-              <th className="text-left text-xs font-medium text-text-muted px-4 py-3">
+              <th className="text-left text-xs font-medium text-text-secondary px-4 py-3">
                 Дата регистрации
               </th>
-              <th className="text-right text-xs font-medium text-text-muted px-4 py-3">
+              <th className="text-right text-xs font-medium text-text-secondary px-4 py-3">
                 Действия
               </th>
             </tr>
@@ -123,13 +123,13 @@ export function UsersTable() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-text-muted text-sm">
+                <td colSpan={5} className="text-center py-8 text-text-secondary text-sm">
                   Загрузка...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-text-muted text-sm">
+                <td colSpan={5} className="text-center py-8 text-text-secondary text-sm">
                   Пользователи не найдены
                 </td>
               </tr>
@@ -144,7 +144,7 @@ export function UsersTable() {
                       <p className="text-sm font-medium text-text-primary">
                         {user.name || "—"}
                       </p>
-                      <p className="text-xs text-text-muted">{user.email}</p>
+                      <p className="text-xs text-text-secondary">{user.email}</p>
                     </div>
                   </td>
                   <td className="px-4 py-3">{roleBadge(user.role)}</td>
@@ -176,14 +176,14 @@ export function UsersTable() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <span className="text-xs text-text-muted">
+          <span className="text-xs text-text-secondary">
             {total} пользователей
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -193,7 +193,7 @@ export function UsersTable() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

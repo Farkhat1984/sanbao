@@ -67,7 +67,7 @@ export function MemoryManager() {
   return (
     <div className="space-y-3">
       {memories.length === 0 && !addingKey && (
-        <p className="text-sm text-text-muted py-2">
+        <p className="text-sm text-text-secondary py-2">
           Память пуста. AI будет запоминать ваши предпочтения в процессе работы.
         </p>
       )}
@@ -78,14 +78,14 @@ export function MemoryManager() {
           className="flex items-start gap-3 p-3 rounded-xl bg-surface-alt border border-border group"
         >
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-text-muted mb-0.5">
+            <p className="text-xs font-medium text-text-secondary mb-0.5">
               {MEMORY_KEYS[m.key as MemoryKey] || m.key}
             </p>
             <p className="text-sm text-text-primary break-words">{m.content}</p>
           </div>
           <button
             onClick={() => handleDelete(m.id)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-all cursor-pointer"
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-secondary hover:text-error hover:bg-error-light transition-all cursor-pointer"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -136,7 +136,7 @@ export function MemoryManager() {
                 onClick={() => setAddingKey(key)}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
-                  "text-text-muted border border-dashed border-border",
+                  "text-text-secondary border border-dashed border-border",
                   "hover:border-accent hover:text-accent transition-colors cursor-pointer"
                 )}
               >

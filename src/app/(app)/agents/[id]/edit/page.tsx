@@ -41,7 +41,7 @@ export default function EditAgentPage() {
   if (error || !agent) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-text-muted">{error || "Агент не найден"}</p>
+        <p className="text-text-secondary">{error || "Агент не найден"}</p>
       </div>
     );
   }

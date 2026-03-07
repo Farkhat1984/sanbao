@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, BookOpen } from "lucide-react";
+import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
@@ -22,19 +22,30 @@ interface SystemAgent {
   tools: Array<{ id: string; name: string }>;
 }
 
+const AGENTS_PER_PAGE = 25;
+
 export default function AdminAgentsPage() {
   const router = useRouter();
   const [agents, setAgents] = useState<SystemAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchAgents = async () => {
-    const res = await fetch("/api/admin/system-agents");
-    setAgents(await res.json());
+  const fetchAgents = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(AGENTS_PER_PAGE),
+    });
+    const res = await fetch(`/api/admin/system-agents?${params}`);
+    const data = await res.json();
+    setAgents(data.agents || []);
+    setTotal(data.total || 0);
     setLoading(false);
-  };
+  }, [page]);
 
-  useEffect(() => { fetchAgents(); }, []);
+  useEffect(() => { fetchAgents(); }, [fetchAgents]);
 
   const handleToggle = async (id: string, isActive: boolean) => {
     await fetch(`/api/admin/system-agents/${id}`, {
@@ -61,7 +72,7 @@ export default function AdminAgentsPage() {
     if (fromIdx < 0 || toIdx < 0) { setDragId(null); return; }
     const [moved] = items.splice(fromIdx, 1);
     items.splice(toIdx, 0, moved);
-    const reordered = items.map((a, i) => ({ ...a, sortOrder: i }));
+    const reordered = items.map((a, i) => ({ ...a, sortOrder: (page - 1) * AGENTS_PER_PAGE + i }));
     setAgents(reordered);
     setDragId(null);
     await fetch("/api/admin/system-agents/reorder", {
@@ -81,12 +92,14 @@ export default function AdminAgentsPage() {
     );
   }
 
+  const totalPages = Math.ceil(total / AGENTS_PER_PAGE);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Системные агенты</h1>
-          <p className="text-sm text-text-muted mt-1">Управление встроенными агентами</p>
+          <p className="text-sm text-text-secondary mt-1">Управление встроенными агентами ({total})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => router.push("/admin/agents/new")}>
           <Plus className="h-4 w-4" />
@@ -111,7 +124,7 @@ export default function AdminAgentsPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <GripVertical className="h-4 w-4 text-text-muted cursor-grab active:cursor-grabbing shrink-0" />
+                  <GripVertical className="h-4 w-4 text-text-secondary cursor-grab active:cursor-grabbing shrink-0" />
                   <div
                     className="h-9 w-9 rounded-xl flex items-center justify-center text-white shrink-0"
                     style={{ backgroundColor: a.iconColor }}
@@ -123,7 +136,7 @@ export default function AdminAgentsPage() {
                       <span className="text-sm font-semibold text-text-primary">{a.name}</span>
                       <span className={`h-2 w-2 rounded-full shrink-0 ${a.isActive ? "bg-success" : "bg-text-muted"}`} />
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{a.description || "Без описания"}</p>
+                    <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{a.description || "Без описания"}</p>
                     {/* Attachment badges */}
                     {attachmentCount > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
@@ -157,7 +170,7 @@ export default function AdminAgentsPage() {
                     <Pencil className="h-3.5 w-3.5" />
                     Изменить
                   </Button>
-                  <button onClick={() => handleDelete(a.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
+                  <button onClick={() => handleDelete(a.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -165,7 +178,31 @@ export default function AdminAgentsPage() {
             </div>
           );
         })}
-        {agents.length === 0 && <p className="text-sm text-text-muted text-center py-8">Системные агенты не найдены</p>}
+        {agents.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Системные агенты не найдены</p>}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-xs text-text-secondary">{total} агентов</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

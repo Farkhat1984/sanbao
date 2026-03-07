@@ -110,7 +110,7 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
-        <Lock className="h-4 w-4 text-text-muted" />
+        <Lock className="h-4 w-4 text-text-secondary" />
         <h2 className="text-sm font-semibold text-text-primary">Двухфакторная аутентификация</h2>
       </div>
       <div className="p-4 rounded-xl bg-surface-alt border border-border space-y-3">
@@ -123,13 +123,13 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
                 <Button variant="secondary" size="sm" onClick={handleDisable} isLoading={loading2fa}>Отключить</Button>
               </div>
             )}
-            {isAdmin && <p className="text-xs text-text-muted">Для администраторов 2FA обязательна и не может быть отключена</p>}
+            {isAdmin && <p className="text-xs text-text-secondary">Для администраторов 2FA обязательна и не может быть отключена</p>}
           </>
         ) : twoFa?.qrCodeUrl ? (
           <>
             <p className="text-sm text-text-primary">Отсканируйте QR-код в Google Authenticator:</p>
             <img src={twoFa.qrCodeUrl} alt="QR Code" className="w-48 h-48 rounded-lg" />
-            <p className="text-xs text-text-muted font-mono break-all">Секрет: {twoFa.secret}</p>
+            <p className="text-xs text-text-secondary font-mono break-all">Секрет: {twoFa.secret}</p>
             <div className="flex gap-2">
               <input placeholder="6-значный код" value={code} onChange={(e) => setCode(e.target.value)} className="h-9 px-3 rounded-lg bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent w-40 font-mono" />
               <Button variant="gradient" size="sm" onClick={handleEnable} isLoading={loading2fa}>Подтвердить</Button>
@@ -138,7 +138,7 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
         ) : (
           <Button variant="secondary" size="sm" onClick={handleSetup}>Настроить 2FA</Button>
         )}
-        {msg && <p className="text-xs text-text-muted">{msg}</p>}
+        {msg && <p className="text-xs text-text-secondary">{msg}</p>}
       </div>
     </section>
   );
@@ -192,7 +192,7 @@ function SettingsContent() {
         {/* Profile */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <User className="h-4 w-4 text-text-muted" />
+            <User className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Профиль</h2>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5">
@@ -212,7 +212,7 @@ function SettingsContent() {
                 <p className="text-base font-semibold text-text-primary">
                   {session?.user?.name || "Пользователь"}
                 </p>
-                <p className="text-sm text-text-muted">
+                <p className="text-sm text-text-secondary">
                   {session?.user?.email}
                 </p>
               </div>
@@ -223,7 +223,7 @@ function SettingsContent() {
         {/* Usage */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="h-4 w-4 text-text-muted" />
+            <BarChart3 className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Использование</h2>
           </div>
           {loadingBilling ? (
@@ -266,7 +266,7 @@ function SettingsContent() {
         {/* Billing / Plans */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <CreditCard className="h-4 w-4 text-text-muted" />
+            <CreditCard className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Тарифы</h2>
           </div>
           {loadingBilling ? (
@@ -291,11 +291,11 @@ function SettingsContent() {
         {/* Memory */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-4 w-4 text-text-muted" />
+            <Brain className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Память</h2>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5">
-            <p className="text-xs text-text-muted mb-3">
+            <p className="text-xs text-text-secondary mb-3">
               AI запоминает ваши предпочтения и использует их в каждом разговоре.
             </p>
             <MemoryManager />

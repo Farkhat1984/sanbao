@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Bell, Send } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Bell, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -17,24 +17,69 @@ interface Notification {
 }
 
 const TYPES = ["INFO", "WARNING", "ERROR", "MAINTENANCE", "UPDATE", "BILLING"];
+const NOTIFICATIONS_LIMIT = 20;
 
 export default function AdminNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState({ title: "", message: "", type: "INFO", isGlobal: true });
 
-  const fetchData = async () => {
-    const res = await fetch(`/api/admin/notifications?page=${page}&limit=20`);
-    const data = await res.json();
-    setNotifications(data.notifications || []);
-    setTotal(data.total || 0);
-    setLoading(false);
+  // Cursor-based infinite scroll state
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const fetchInitial = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}`);
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+      setNextCursor(data.nextCursor ?? null);
+      setHasMore(data.hasMore ?? false);
+    } catch {
+      /* network error — keep empty state */
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchData(); }, [page]);
+  useEffect(() => { fetchInitial(); }, []);
+
+  // Load more notifications
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    setLoadingMore(true);
+    fetch(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}&cursor=${nextCursor}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const newItems = data.notifications || [];
+        setNotifications((prev) => [...prev, ...newItems]);
+        setNextCursor(data.nextCursor ?? null);
+        setHasMore(data.hasMore ?? false);
+      })
+      .catch(() => { /* silently handle */ })
+      .finally(() => setLoadingMore(false));
+  }, [loadingMore, hasMore, nextCursor]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
 
   const handleSend = async () => {
     if (!form.title || !form.message) return;
@@ -46,10 +91,12 @@ export default function AdminNotificationsPage() {
     });
     setSending(false);
     setForm({ title: "", message: "", type: "INFO", isGlobal: true });
-    fetchData();
+    // Reset and re-fetch from the beginning to show new notification at top
+    setNotifications([]);
+    setNextCursor(null);
+    setHasMore(false);
+    fetchInitial();
   };
-
-  const totalPages = Math.ceil(total / 20);
 
   const typeColor = (t: string) => {
     if (t === "ERROR") return "text-error";
@@ -61,7 +108,7 @@ export default function AdminNotificationsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Уведомления</h1>
-      <p className="text-sm text-text-muted mb-6">Массовые и глобальные уведомления</p>
+      <p className="text-sm text-text-secondary mb-6">Массовые и глобальные уведомления</p>
 
       {/* Send form */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
@@ -96,19 +143,24 @@ export default function AdminNotificationsPage() {
                       <Badge variant="default">{n.type}</Badge>
                       {n.isGlobal && <Badge variant="accent">Глобальное</Badge>}
                     </div>
-                    <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{n.message}</p>
+                    <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{n.message}</p>
                   </div>
                 </div>
-                <span className="text-xs text-text-muted">{new Date(n.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="text-xs text-text-secondary">{new Date(n.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             ))}
-            {notifications.length === 0 && <p className="text-sm text-text-muted text-center py-8">Нет уведомлений</p>}
+            {notifications.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет уведомлений</p>}
           </div>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>Назад</Button>
-              <span className="text-sm text-text-muted">{page} / {totalPages}</span>
-              <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Далее</Button>
+
+          {/* Infinite scroll sentinel */}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex items-center justify-center py-6">
+              {loadingMore && (
+                <div className="flex items-center gap-2 text-sm text-text-secondary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Загрузка...</span>
+                </div>
+              )}
             </div>
           )}
         </>

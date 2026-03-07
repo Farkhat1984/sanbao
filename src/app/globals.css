@@ -541,6 +541,28 @@ body {
   margin: 1em 0;
 }
 
+/* Document preview on white paper — force dark text in any theme */
+.prose-legal-print {
+  color: #1C2B3A;
+}
+
+.prose-legal-print blockquote {
+  color: #4A6778;
+}
+
+.prose-legal-print th {
+  background: #F4EFE6;
+}
+
+.prose-legal-print th,
+.prose-legal-print td {
+  border-color: #D5CFC5;
+}
+
+.prose-legal-print hr {
+  border-color: #D5CFC5;
+}
+
 /* ─── Tiptap Editor Table Styles ─────────────────────── */
 
 .ProseMirror table {

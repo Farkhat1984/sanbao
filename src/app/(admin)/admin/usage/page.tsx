@@ -47,7 +47,7 @@ export default function AdminUsagePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Расход токенов</h1>
-          <p className="text-sm text-text-muted">Детальная статистика использования AI</p>
+          <p className="text-sm text-text-secondary">Детальная статистика использования AI</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => {
           const params = new URLSearchParams({ format: "csv", limit: "10000" });
@@ -61,23 +61,23 @@ export default function AdminUsagePage() {
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Input токенов</p>
+          <p className="text-xs text-text-secondary">Input токенов</p>
           <p className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mt-1">{totals.inputTokens.toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Output токенов</p>
+          <p className="text-xs text-text-secondary">Output токенов</p>
           <p className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mt-1">{totals.outputTokens.toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Себестоимость</p>
+          <p className="text-xs text-text-secondary">Себестоимость</p>
           <p className="text-xl font-bold text-accent mt-1">${totals.cost.toFixed(4)}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Выручка</p>
+          <p className="text-xs text-text-secondary">Выручка</p>
           <p className="text-xl font-bold text-success mt-1">${totals.revenue.toFixed(4)}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <p className="text-xs text-text-muted">Прибыль</p>
+          <p className="text-xs text-text-secondary">Прибыль</p>
           <p className={`text-xl font-bold mt-1 ${totals.profit >= 0 ? "text-success" : "text-error"}`}>
             ${totals.profit.toFixed(4)}
           </p>
@@ -99,14 +99,14 @@ export default function AdminUsagePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-alt">
-                  <th className="text-left px-4 py-3 text-xs text-text-muted font-medium">Дата</th>
-                  <th className="text-left px-4 py-3 text-xs text-text-muted font-medium">Провайдер</th>
-                  <th className="text-left px-4 py-3 text-xs text-text-muted font-medium">Модель</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Input</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Output</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Себест.</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Выручка</th>
-                  <th className="text-right px-4 py-3 text-xs text-text-muted font-medium">Прибыль</th>
+                  <th className="text-left px-4 py-3 text-xs text-text-secondary font-medium">Дата</th>
+                  <th className="text-left px-4 py-3 text-xs text-text-secondary font-medium">Провайдер</th>
+                  <th className="text-left px-4 py-3 text-xs text-text-secondary font-medium">Модель</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-secondary font-medium">Input</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-secondary font-medium">Output</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-secondary font-medium">Себест.</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-secondary font-medium">Выручка</th>
+                  <th className="text-right px-4 py-3 text-xs text-text-secondary font-medium">Прибыль</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,7 +128,7 @@ export default function AdminUsagePage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>Назад</Button>
-              <span className="text-sm text-text-muted">{page} / {totalPages}</span>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Далее</Button>
             </div>
           )}

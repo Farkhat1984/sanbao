@@ -2,25 +2,36 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-/** GET — user's notifications */
-export async function GET() {
+/** GET — user's notifications with cursor-based pagination */
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return jsonError("Unauthorized", 401);
   }
 
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 100);
+
+  const where = {
+    OR: [
+      { userId: session.user.id },
+      { isGlobal: true },
+    ],
+  };
+
   const notifications = await prisma.notification.findMany({
-    where: {
-      OR: [
-        { userId: session.user.id },
-        { isGlobal: true },
-      ],
-    },
+    where,
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
 
-  return jsonOk(notifications);
+  const hasMore = notifications.length > limit;
+  const items = hasMore ? notifications.slice(0, limit) : notifications;
+  const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
+  return jsonOk({ notifications: items, nextCursor, hasMore });
 }
 
 /** PUT — mark notifications as read */

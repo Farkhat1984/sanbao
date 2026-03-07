@@ -39,7 +39,7 @@ export default function EditSkillPage() {
   if (!skill) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-text-muted">Скилл не найден</p>
+        <p className="text-text-secondary">Скилл не найден</p>
       </div>
     );
   }

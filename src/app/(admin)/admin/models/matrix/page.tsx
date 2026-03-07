@@ -67,7 +67,7 @@ export default function ModelMatrixPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Матрица моделей</h1>
-          <p className="text-sm text-text-muted mt-1">Доступность моделей по тарифам</p>
+          <p className="text-sm text-text-secondary mt-1">Доступность моделей по тарифам</p>
         </div>
         <Link href="/admin/models" className="text-sm text-accent hover:underline">&larr; К списку моделей</Link>
       </div>
@@ -76,7 +76,7 @@ export default function ModelMatrixPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-text-muted font-medium sticky left-0 bg-surface z-10">Модель</th>
+              <th className="text-left px-4 py-3 text-text-secondary font-medium sticky left-0 bg-surface z-10">Модель</th>
               {plans.map((plan) => (
                 <th key={plan.id} className="px-4 py-3 text-center text-text-primary font-medium min-w-[100px]">
                   {plan.name}
@@ -98,7 +98,7 @@ export default function ModelMatrixPage() {
                     <tr key={model.id} className="border-b border-border/50 hover:bg-surface-alt/50 transition-colors">
                       <td className="px-4 py-2.5 sticky left-0 bg-surface z-10">
                         <div className="text-text-primary font-medium">{model.displayName}</div>
-                        <div className="text-xs text-text-muted">{model.provider.name}</div>
+                        <div className="text-xs text-text-secondary">{model.provider.name}</div>
                       </td>
                       {plans.map((plan) => {
                         const linked = isLinked(plan.id, model.id);
@@ -111,7 +111,7 @@ export default function ModelMatrixPage() {
                                 className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                                   linked
                                     ? "bg-accent/15 text-accent hover:bg-accent/25"
-                                    : "bg-surface-alt text-text-muted hover:bg-surface-alt/80"
+                                    : "bg-surface-alt text-text-secondary hover:bg-surface-alt/80"
                                 }`}
                               >
                                 {linked && <Check className="h-3.5 w-3.5" />}
@@ -122,7 +122,7 @@ export default function ModelMatrixPage() {
                                   className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                                     def
                                       ? "bg-warning/15 text-warning"
-                                      : "text-text-muted hover:text-warning hover:bg-warning/10"
+                                      : "text-text-secondary hover:text-warning hover:bg-warning/10"
                                   }`}
                                   title="По умолчанию для этого плана"
                                 >
@@ -141,7 +141,7 @@ export default function ModelMatrixPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center gap-4 text-xs text-text-muted">
+      <div className="mt-4 flex items-center gap-4 text-xs text-text-secondary">
         <div className="flex items-center gap-1.5">
           <div className="h-5 w-5 rounded bg-accent/15 flex items-center justify-center"><Check className="h-3 w-3 text-accent" /></div>
           Доступна

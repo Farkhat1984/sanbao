@@ -119,7 +119,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                 <button
                   onClick={onClose}
                   className={cn(
-                    "rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                    "rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
                     isMobile ? "h-8 w-8" : "h-6 w-6"
                   )}
                 >
@@ -133,7 +133,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                 isMobile ? "grid-cols-1" : "grid-cols-2"
               )}>
                 {agentTools.length === 0 && (
-                  <p className="col-span-2 text-xs text-text-muted text-center py-4">
+                  <p className="col-span-2 text-xs text-text-secondary text-center py-4">
                     Нет доступных инструментов
                   </p>
                 )}
@@ -172,13 +172,13 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                               {hasTemplates && (
                                 <ChevronRight
                                   className={cn(
-                                    "h-3 w-3 text-text-muted transition-transform",
+                                    "h-3 w-3 text-text-secondary transition-transform",
                                     isExpanded && "rotate-90"
                                   )}
                                 />
                               )}
                             </div>
-                            <p className="text-[10px] text-text-muted leading-snug">
+                            <p className="text-[10px] text-text-secondary leading-snug">
                               {tool.description}
                             </p>
                           </div>
@@ -207,7 +207,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                                     <span className="font-medium">
                                       {tmpl.name}
                                     </span>
-                                    <p className="text-[10px] text-text-muted truncate">
+                                    <p className="text-[10px] text-text-secondary truncate">
                                       {tmpl.description}
                                     </p>
                                   </div>
@@ -215,7 +215,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                               ))}
                               <button
                                 onClick={() => sendPrompt(getPrompt(tool))}
-                                className="w-full text-left px-3 py-2 rounded-lg text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-alt transition-colors cursor-pointer"
+                                className="w-full text-left px-3 py-2 rounded-lg text-[11px] text-text-secondary hover:text-text-secondary hover:bg-surface-alt transition-colors cursor-pointer"
                               >
                                 Без шаблона — свободная форма
                               </button>

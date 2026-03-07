@@ -70,7 +70,7 @@ export function AdminShell({ children }: AdminShellProps) {
           <div className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border bg-surface/95 backdrop-blur-sm">
             <button
               onClick={() => setDrawerOpen(true)}
-              className="h-9 w-9 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+              className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
             >
               <Menu className="h-5 w-5" />
             </button>

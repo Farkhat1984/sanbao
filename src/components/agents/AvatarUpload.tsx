@@ -51,7 +51,7 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
           {avatar ? (
             <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
-            <span className="text-2xl text-text-muted">👤</span>
+            <span className="text-2xl text-text-secondary">👤</span>
           )}
         </div>
         {avatar && (
@@ -78,7 +78,7 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-muted hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-secondary hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <Upload className="h-3.5 w-3.5" />
             Загрузить

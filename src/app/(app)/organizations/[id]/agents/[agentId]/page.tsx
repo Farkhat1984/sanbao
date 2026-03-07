@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare } from "lucide-react";
+import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare, Upload, AlertTriangle } from "lucide-react";
 import { AgentProgressBar } from "@/components/organizations/AgentProgressBar";
+import { FileUploader } from "@/components/organizations/FileUploader";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 
 interface AgentDetail {
@@ -30,6 +32,9 @@ export default function OrgAgentDetailPage({
   const [processing, setProcessing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
+  const [showUploader, setShowUploader] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ids, setIds] = useState({ id: "", agentId: "" });
 
@@ -113,14 +118,37 @@ export default function OrgAgentDetailPage({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Удалить агента? Все данные будут потеряны.")) return;
+    setDeleting(true);
     try {
       const res = await fetch(`/api/organizations/${ids.id}/agents/${ids.agentId}`, {
         method: "DELETE",
       });
       if (res.ok) router.push(`/organizations/${ids.id}/agents`);
     } catch {
-      // ignore
+      setError("Ошибка удаления");
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleUploadComplete = async () => {
+    setShowUploader(false);
+    // Fetch fresh agent data to get current status
+    const { id, agentId } = await params;
+    try {
+      const res = await fetch(`/api/organizations/${id}/agents/${agentId}`);
+      const fresh = await res.json();
+      if (res.ok) {
+        setAgent(fresh);
+        // Auto-process if agent is in CREATING or ERROR status
+        if (fresh.status === "CREATING" || fresh.status === "ERROR") {
+          handleProcess();
+        }
+      }
+    } catch {
+      // fallback: just reload
+      await loadAgent();
     }
   };
 
@@ -142,7 +170,7 @@ export default function OrgAgentDetailPage({
   if (!agent) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 text-center">
-        <p className="text-text-muted">{error || "Агент не найден"}</p>
+        <p className="text-text-secondary">{error || "Агент не найден"}</p>
       </div>
     );
   }
@@ -158,7 +186,7 @@ export default function OrgAgentDetailPage({
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <button
           onClick={() => router.push(`/organizations/${ids.id}/agents`)}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           Агенты
@@ -168,7 +196,7 @@ export default function OrgAgentDetailPage({
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">{agent.name}</h1>
             {agent.description && (
-              <p className="text-sm text-text-muted mt-1">{agent.description}</p>
+              <p className="text-sm text-text-secondary mt-1">{agent.description}</p>
             )}
           </div>
           <div className="flex gap-2 shrink-0">
@@ -182,7 +210,7 @@ export default function OrgAgentDetailPage({
               </button>
             )}
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               className="h-9 px-3 rounded-xl border border-error/20 text-error text-sm flex items-center gap-1 hover:bg-error-light transition-colors cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
@@ -253,7 +281,7 @@ export default function OrgAgentDetailPage({
                   <code className="text-xs bg-surface-alt px-1.5 py-0.5 rounded font-mono text-accent shrink-0">
                     {tool.name}
                   </code>
-                  <span className="text-xs text-text-muted">{tool.description}</span>
+                  <span className="text-xs text-text-secondary">{tool.description}</span>
                 </div>
               ))}
             </div>
@@ -262,24 +290,77 @@ export default function OrgAgentDetailPage({
 
         {/* Files */}
         <div className="p-5 rounded-2xl border border-border bg-surface">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Файлы ({agent.files.length})
-          </h2>
-          {agent.files.length === 0 ? (
-            <p className="text-sm text-text-muted">Нет загруженных файлов</p>
-          ) : (
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-text-primary">
+              Файлы ({agent.files.length})
+            </h2>
+            {["CREATING", "ERROR", "READY", "PUBLISHED"].includes(agent.status) && !showUploader && (
+              <button
+                onClick={() => setShowUploader(true)}
+                className="h-8 px-3 rounded-lg bg-accent/10 text-accent text-xs font-medium flex items-center gap-1.5 hover:bg-accent/20 transition-colors cursor-pointer"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Загрузить файлы
+              </button>
+            )}
+          </div>
+
+          {showUploader && (
+            <div className="mb-4">
+              <FileUploader
+                orgId={ids.id}
+                agentId={ids.agentId}
+                onComplete={handleUploadComplete}
+              />
+            </div>
+          )}
+
+          {agent.files.length === 0 && !showUploader ? (
+            <p className="text-sm text-text-secondary">Нет загруженных файлов</p>
+          ) : agent.files.length > 0 ? (
             <div className="space-y-2">
               {agent.files.map((file) => (
                 <div key={file.id} className="flex items-center gap-3 py-2">
-                  <FileText className="h-4 w-4 text-text-muted shrink-0" />
+                  <FileText className="h-4 w-4 text-text-secondary shrink-0" />
                   <span className="text-sm text-text-primary truncate flex-1">{file.fileName}</span>
-                  <span className="text-xs text-text-muted shrink-0">{formatSize(file.fileSize)}</span>
+                  <span className="text-xs text-text-secondary shrink-0">{formatSize(file.fileSize)}</span>
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
+
+      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Удалить агента">
+        <div className="flex items-start gap-3 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-error/10 flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-5 w-5 text-error" />
+          </div>
+          <div>
+            <p className="text-sm text-text-primary font-medium">
+              Вы уверены, что хотите удалить «{agent.name}»?
+            </p>
+            <p className="text-xs text-text-secondary mt-1">
+              Все данные агента, включая загруженные файлы и обработанные документы, будут безвозвратно удалены.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="h-9 px-4 rounded-xl border border-border text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="h-9 px-4 rounded-xl bg-error text-white text-sm font-medium hover:bg-error/90 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {deleting ? "Удаление..." : "Удалить"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

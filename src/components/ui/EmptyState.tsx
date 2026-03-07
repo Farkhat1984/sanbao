@@ -31,7 +31,7 @@ export function EmptyState({ icon: Icon, title, description, action, className, 
           compact ? "w-11 h-11" : "w-14 h-14"
         )}>
           <DisplayIcon
-            className={cn("text-text-muted/50", compact ? "h-5 w-5" : "h-7 w-7")}
+            className={cn("text-text-secondary/50", compact ? "h-5 w-5" : "h-7 w-7")}
             aria-hidden="true"
           />
         </div>
@@ -42,7 +42,7 @@ export function EmptyState({ icon: Icon, title, description, action, className, 
           {title}
         </h3>
         {description && (
-          <p className="text-sm text-text-muted max-w-sm mx-auto leading-relaxed">{description}</p>
+          <p className="text-sm text-text-secondary max-w-sm mx-auto leading-relaxed">{description}</p>
         )}
         {action && <div className="mt-4">{action}</div>}
       </div>

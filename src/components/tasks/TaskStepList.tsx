@@ -32,7 +32,7 @@ export function TaskStepList({ steps, onToggle }: TaskStepListProps) {
             className={cn(
               "text-xs leading-relaxed",
               step.done
-                ? "text-text-muted line-through"
+                ? "text-text-secondary line-through"
                 : "text-text-primary"
             )}
           >

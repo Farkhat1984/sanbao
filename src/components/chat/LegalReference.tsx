@@ -56,7 +56,7 @@ export function LegalReference({ reference }: LegalReferenceProps) {
                     <h4 className="text-sm font-semibold text-text-primary">
                       {reference.articleTitle}
                     </h4>
-                    <code className="text-[10px] text-text-muted font-mono">
+                    <code className="text-[10px] text-text-secondary font-mono">
                       {reference.articleCode}
                     </code>
                   </div>

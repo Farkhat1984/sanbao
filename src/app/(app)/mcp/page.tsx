@@ -14,7 +14,7 @@ export default function McpPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -23,7 +23,7 @@ export default function McpPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">MCP-серверы</h1>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               Подключайте внешние инструменты через Model Context Protocol
             </p>
           </div>

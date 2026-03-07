@@ -103,11 +103,11 @@ export function SanbaoFact({ isVisible, messageCount }: SanbaoFactProps) {
                 className="shrink-0 p-1 rounded-lg hover:bg-surface-hover transition-colors"
                 aria-label="Закрыть"
               >
-                <X className="w-3.5 h-3.5 text-text-muted" />
+                <X className="w-3.5 h-3.5 text-text-secondary" />
               </button>
             </div>
             <div className="mt-2 pt-2 border-t border-border">
-              <p className="text-[10px] text-text-muted italic">
+              <p className="text-[10px] text-text-secondary italic">
                 Чжэн Хэ (Ma Sanbao) — великий мореплаватель XV века
               </p>
             </div>

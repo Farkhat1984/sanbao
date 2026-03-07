@@ -99,7 +99,7 @@ export default function AdminAgentNewPage() {
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/agents")}
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
         Назад к агентам
@@ -120,7 +120,7 @@ export default function AdminAgentNewPage() {
             <Sparkles className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-muted" /> : <ChevronDown className="h-4 w-4 text-text-muted" />}
+          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -201,7 +201,7 @@ export default function AdminAgentNewPage() {
             rows={8}
             className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Системные инструкции определяют поведение агента в каждом чате
           </p>
         </div>
@@ -210,7 +210,7 @@ export default function AdminAgentNewPage() {
         <div>
           <label className="text-sm font-medium text-text-primary mb-2 block">
             <span className="flex items-center gap-1.5">
-              <MessageSquare className="h-4 w-4 text-text-muted" />
+              <MessageSquare className="h-4 w-4 text-text-secondary" />
               Стартовые подсказки
             </span>
           </label>
@@ -232,7 +232,7 @@ export default function AdminAgentNewPage() {
                 <button
                   type="button"
                   onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -249,7 +249,7 @@ export default function AdminAgentNewPage() {
               </button>
             )}
           </div>
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
           </p>
         </div>
@@ -259,7 +259,7 @@ export default function AdminAgentNewPage() {
           <label className="text-sm font-medium text-text-primary mb-2 block">
             Файлы знаний
           </label>
-          <p className="text-xs text-text-muted py-2">
+          <p className="text-xs text-text-secondary py-2">
             Файлы можно будет загрузить после создания агента
           </p>
         </div>
@@ -273,7 +273,7 @@ export default function AdminAgentNewPage() {
             selectedIds={selectedSkillIds}
             onChange={setSelectedSkillIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Скиллы добавляют специализированные инструкции к системному промпту агента
           </p>
         </div>
@@ -287,7 +287,7 @@ export default function AdminAgentNewPage() {
             selectedIds={selectedMcpIds}
             onChange={setSelectedMcpIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             MCP-серверы предоставляют агенту дополнительные инструменты
           </p>
         </div>
@@ -301,7 +301,7 @@ export default function AdminAgentNewPage() {
             selectedIds={selectedToolIds}
             onChange={setSelectedToolIds}
           />
-          <p className="text-xs text-text-muted mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Инструменты добавляют быстрые действия и шаблоны к чату с агентом
           </p>
         </div>
@@ -327,7 +327,7 @@ export default function AdminAgentNewPage() {
           <button
             type="button"
             onClick={() => router.push("/admin/agents")}
-            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             Отмена
           </button>

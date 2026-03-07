@@ -146,7 +146,7 @@ export function AgentIconPicker({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-muted hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
+          className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-secondary hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
         >
           <Upload className="h-3.5 w-3.5" />
           Загрузить иконку
@@ -155,7 +155,7 @@ export function AgentIconPicker({
 
       {/* Icon Grid */}
       <div>
-        <label className="text-xs font-medium text-text-muted mb-2 block">
+        <label className="text-xs font-medium text-text-secondary mb-2 block">
           Иконка
         </label>
         <div className="grid grid-cols-10 gap-1.5">
@@ -168,7 +168,7 @@ export function AgentIconPicker({
                 "h-9 w-9 rounded-lg flex items-center justify-center transition-all cursor-pointer",
                 !customImage && selectedIcon === name
                   ? "bg-accent text-white shadow-sm"
-                  : "bg-surface-alt text-text-muted hover:text-text-primary hover:bg-surface-hover"
+                  : "bg-surface-alt text-text-secondary hover:text-text-primary hover:bg-surface-hover"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -180,7 +180,7 @@ export function AgentIconPicker({
       {/* Color Picker (hidden when custom image is set) */}
       {!customImage && (
         <div>
-          <label className="text-xs font-medium text-text-muted mb-2 block">
+          <label className="text-xs font-medium text-text-secondary mb-2 block">
             Цвет
           </label>
           <div className="flex gap-2">

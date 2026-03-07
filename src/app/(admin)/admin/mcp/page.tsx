@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X, ToggleLeft, ToggleRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -99,7 +99,7 @@ const MCP_PRESETS: McpPreset[] = [
 ];
 
 const SERVERS_PER_PAGE = 10;
-const LOGS_PER_PAGE = 20;
+const LOGS_PER_PAGE = 50;
 
 export default function AdminMcpPage() {
   const [servers, setServers] = useState<McpServer[]>([]);
@@ -130,14 +130,22 @@ export default function AdminMcpPage() {
     setLoading(false);
   };
 
-  const fetchToolLogs = async () => {
-    const res = await fetch("/api/admin/mcp/tool-logs");
+  const [logTotal, setLogTotal] = useState(0);
+
+  const fetchToolLogs = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(logPage),
+      limit: String(LOGS_PER_PAGE),
+      ...(search && tab === "logs" ? { toolName: search } : {}),
+    });
+    const res = await fetch(`/api/admin/mcp/tool-logs?${params}`);
     const data = await res.json();
     setToolLogs(data.logs || []);
-  };
+    setLogTotal(data.total || 0);
+  }, [logPage, search, tab]);
 
   useEffect(() => { fetchServers(); }, []);
-  useEffect(() => { if (tab === "logs") fetchToolLogs(); }, [tab]);
+  useEffect(() => { if (tab === "logs") fetchToolLogs(); }, [tab, fetchToolLogs]);
 
   // Reset page on filter change
   useEffect(() => { setServerPage(1); }, [search, filterStatus, filterTransport]);
@@ -157,15 +165,7 @@ export default function AdminMcpPage() {
   const totalServerPages = Math.max(1, Math.ceil(filteredServers.length / SERVERS_PER_PAGE));
   const pagedServers = filteredServers.slice((serverPage - 1) * SERVERS_PER_PAGE, serverPage * SERVERS_PER_PAGE);
 
-  // Filtered logs (search by tool name or server name)
-  const filteredLogs = useMemo(() => {
-    if (!search) return toolLogs;
-    const q = search.toLowerCase();
-    return toolLogs.filter((l) => l.toolName.toLowerCase().includes(q) || l.mcpServer.name.toLowerCase().includes(q));
-  }, [toolLogs, search]);
-
-  const totalLogPages = Math.max(1, Math.ceil(filteredLogs.length / LOGS_PER_PAGE));
-  const pagedLogs = filteredLogs.slice((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE);
+  const totalLogPages = Math.max(1, Math.ceil(logTotal / LOGS_PER_PAGE));
 
   const handleHealthCheck = async () => {
     setChecking(true);
@@ -285,7 +285,7 @@ export default function AdminMcpPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Глобальные MCP-серверы</h1>
-          <p className="text-sm text-text-muted mt-1">Серверы доступные всем пользователям</p>
+          <p className="text-sm text-text-secondary mt-1">Серверы доступные всем пользователям</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleHealthCheck} isLoading={checking}>
@@ -308,7 +308,7 @@ export default function AdminMcpPage() {
       {(tab === "servers" || tab === "logs") && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -345,25 +345,25 @@ export default function AdminMcpPage() {
       {/* ── Tool Logs ── */}
       {tab === "logs" && (
         <div className="space-y-2">
-          {pagedLogs.map((log) => (
+          {toolLogs.map((log) => (
             <div key={log.id} className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <div className={`h-2 w-2 rounded-full ${log.success ? "bg-success" : "bg-error"}`} />
                   <span className="text-sm font-mono font-medium text-text-primary">{log.toolName}</span>
-                  <span className="text-xs text-text-muted">{log.mcpServer.name}</span>
+                  <span className="text-xs text-text-secondary">{log.mcpServer.name}</span>
                 </div>
                 {log.error && <p className="text-xs text-error mt-0.5">{log.error}</p>}
               </div>
               <div className="text-right">
-                <span className="text-xs text-text-muted">{log.durationMs}ms</span>
-                <p className="text-xs text-text-muted">{new Date(log.createdAt).toLocaleString("ru-RU")}</p>
+                <span className="text-xs text-text-secondary">{log.durationMs}ms</span>
+                <p className="text-xs text-text-secondary">{new Date(log.createdAt).toLocaleString("ru-RU")}</p>
               </div>
             </div>
           ))}
-          {filteredLogs.length === 0 && <p className="text-sm text-text-muted text-center py-8">Нет логов вызовов</p>}
+          {toolLogs.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет логов вызовов</p>}
           {totalLogPages > 1 && (
-            <Pagination page={logPage} total={totalLogPages} count={filteredLogs.length} perPage={LOGS_PER_PAGE} onChange={setLogPage} />
+            <Pagination page={logPage} total={totalLogPages} count={logTotal} perPage={LOGS_PER_PAGE} onChange={setLogPage} />
           )}
         </div>
       )}
@@ -391,7 +391,7 @@ export default function AdminMcpPage() {
       {tab === "servers" && (
         <div className="space-y-3">
           {filteredServers.length > 0 && filteredServers.length !== servers.length && (
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               Найдено: {filteredServers.length} из {servers.length}
             </p>
           )}
@@ -402,7 +402,7 @@ export default function AdminMcpPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-text-primary">Редактирование</h3>
-                    <button onClick={handleCancelEdit} className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"><X className="h-3.5 w-3.5" /></button>
+                    <button onClick={handleCancelEdit} className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"><X className="h-3.5 w-3.5" /></button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <input placeholder="Название" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -422,48 +422,48 @@ export default function AdminMcpPage() {
                 /* ── View Mode ── */
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {s.status === "CONNECTED" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-text-muted" />}
+                    {s.status === "CONNECTED" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-text-secondary" />}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-text-primary">{s.name}</span>
                         <div className={`h-2 w-2 rounded-full ${statusColor(s.status)}`} />
                         <Badge variant="default">{s.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</Badge>
                       </div>
-                      <p className="text-xs text-text-muted mt-0.5 font-mono">{s.url}
+                      <p className="text-xs text-text-secondary mt-0.5 font-mono">{s.url}
                         {s.lastHealthCheck && <span className="ml-2 font-sans">Last check: {new Date(s.lastHealthCheck).toLocaleString("ru-RU")}</span>}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {Array.isArray(s.discoveredTools) && (
-                      <span className="text-xs text-text-muted">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
+                      <span className="text-xs text-text-secondary">{String((s.discoveredTools as unknown[]).length)} инструментов</span>
                     )}
                     <button
                       onClick={() => handleHealthCheckSingle(s.id)}
                       disabled={checkingId === s.id}
                       title="Подключить и обнаружить инструменты"
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer disabled:opacity-50"
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {checkingId === s.id ? <span className="h-3.5 w-3.5 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <HeartPulse className="h-3.5 w-3.5" />}
                     </button>
                     <button
                       onClick={() => handleToggleEnabled(s.id, s.isEnabled)}
                       title={s.isEnabled ? "Отключить для пользователей" : "Включить для пользователей"}
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-warning hover:bg-warning-light" : "text-text-muted hover:text-success hover:bg-success/10"}`}
+                      className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-warning hover:bg-warning-light" : "text-text-secondary hover:text-success hover:bg-success/10"}`}
                     >
                       {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" /> : <ToggleLeft className="h-4.5 w-4.5" />}
                     </button>
-                    <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
               )}
             </div>
           ))}
           {filteredServers.length === 0 && servers.length > 0 && (
-            <p className="text-sm text-text-muted text-center py-8">Нет серверов по заданным фильтрам</p>
+            <p className="text-sm text-text-secondary text-center py-8">Нет серверов по заданным фильтрам</p>
           )}
-          {servers.length === 0 && <p className="text-sm text-text-muted text-center py-8">Глобальные MCP-серверы не добавлены</p>}
+          {servers.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Глобальные MCP-серверы не добавлены</p>}
           {totalServerPages > 1 && (
             <Pagination page={serverPage} total={totalServerPages} count={filteredServers.length} perPage={SERVERS_PER_PAGE} onChange={setServerPage} />
           )}
@@ -473,7 +473,7 @@ export default function AdminMcpPage() {
       {/* ── Catalog (Presets) ── */}
       {tab === "catalog" && (
         <div>
-          <p className="text-sm text-text-muted mb-4">
+          <p className="text-sm text-text-secondary mb-4">
             Топ-10 популярных MCP-серверов. Нажмите &laquo;Добавить&raquo; для быстрой настройки.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -497,7 +497,7 @@ export default function AdminMcpPage() {
                       href={preset.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-text-muted hover:text-accent transition-colors"
+                      className="text-text-secondary hover:text-accent transition-colors"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
@@ -507,10 +507,10 @@ export default function AdminMcpPage() {
 
                   <div className="bg-surface-alt rounded-lg p-2.5 mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Установка</span>
+                      <span className="text-[10px] font-medium text-text-secondary uppercase tracking-wider">Установка</span>
                       <button
                         onClick={() => handleCopyCommand(preset.setupCommand, idx)}
-                        className="text-text-muted hover:text-accent transition-colors cursor-pointer"
+                        className="text-text-secondary hover:text-accent transition-colors cursor-pointer"
                       >
                         {copiedIdx === idx ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                       </button>
@@ -521,7 +521,7 @@ export default function AdminMcpPage() {
                   {preset.envVars.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {preset.envVars.map((v) => (
-                        <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-alt text-text-muted border border-border">{v}</span>
+                        <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-alt text-text-secondary border border-border">{v}</span>
                       ))}
                     </div>
                   )}
@@ -554,14 +554,14 @@ function Pagination({ page, total, count, perPage, onChange }: { page: number; t
 
   return (
     <div className="flex items-center justify-between pt-3">
-      <span className="text-xs text-text-muted">
+      <span className="text-xs text-text-secondary">
         {from}&ndash;{to} из {count}
       </span>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onChange(page - 1)}
           disabled={page <= 1}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -571,7 +571,7 @@ function Pagination({ page, total, count, perPage, onChange }: { page: number; t
         <button
           onClick={() => onChange(page + 1)}
           disabled={page >= total}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

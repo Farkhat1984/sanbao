@@ -1,18 +1,27 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { parsePagination } from "@/lib/validation";
 import { randomBytes } from "crypto";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const webhooks = await prisma.webhook.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
 
-  return jsonOk(webhooks);
+  const [webhooks, total] = await Promise.all([
+    prisma.webhook.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.webhook.count(),
+  ]);
+
+  return jsonOk({ webhooks, total, page, limit });
 }
 
 export async function POST(req: Request) {

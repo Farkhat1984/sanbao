@@ -76,20 +76,20 @@ export function AgentCard({ agent }: AgentCardProps) {
             e.stopPropagation();
             router.push(`/agents/${agent.id}/edit`);
           }}
-          className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+          className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {agent.description && (
-        <p className="text-xs text-text-muted leading-relaxed line-clamp-2 mb-4">
+        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-4">
           {agent.description}
         </p>
       )}
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
-        <div className="flex items-center gap-1 text-xs text-text-muted">
+        <div className="flex items-center gap-1 text-xs text-text-secondary">
           <MessageSquare className="h-3 w-3" />
           {agent._count.conversations} чат{agent._count.conversations === 1 ? "" : "ов"}
         </div>

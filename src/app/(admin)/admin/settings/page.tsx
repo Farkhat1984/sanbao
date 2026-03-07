@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Системные настройки</h1>
-          <p className="text-sm text-text-muted mt-1">Глобальная конфигурация приложения</p>
+          <p className="text-sm text-text-secondary mt-1">Глобальная конфигурация приложения</p>
         </div>
         <Button variant="gradient" size="sm" onClick={handleSave} isLoading={saving}>
           <Save className="h-4 w-4" /> Сохранить
@@ -99,7 +99,7 @@ export default function AdminSettingsPage() {
             <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-border bg-surface-alt p-1" />
           ) : (
             <div className="h-16 w-16 rounded-lg border border-border bg-surface-alt flex items-center justify-center">
-              <Image className="h-6 w-6 text-text-muted" />
+              <Image className="h-6 w-6 text-text-secondary" />
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -112,7 +112,7 @@ export default function AdminSettingsPage() {
                 <Trash2 className="h-3.5 w-3.5" /> Удалить
               </Button>
             )}
-            <p className="text-xs text-text-muted">PNG, JPEG, SVG, WebP. Макс. 512 КБ.</p>
+            <p className="text-xs text-text-secondary">PNG, JPEG, SVG, WebP. Макс. 512 КБ.</p>
           </div>
         </div>
       </div>

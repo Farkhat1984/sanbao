@@ -42,7 +42,7 @@ export default function RegisterPage() {
           Зарегистрироваться через Google
         </button>
 
-        <p className="text-center text-[11px] text-text-muted mt-4 leading-relaxed">
+        <p className="text-center text-[11px] text-text-secondary mt-4 leading-relaxed">
           Регистрируясь, вы принимаете{" "}
           <Link href="/offer" className="text-accent hover:text-accent-hover transition-colors">
             публичную оферту
@@ -55,7 +55,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Login link */}
-      <p className="text-center text-xs text-text-muted mt-4">
+      <p className="text-center text-xs text-text-secondary mt-4">
         Уже есть аккаунт?{" "}
         <Link href="/login" className="text-accent hover:text-accent-hover transition-colors">
           Войти

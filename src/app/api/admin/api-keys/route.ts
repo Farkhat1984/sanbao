@@ -1,19 +1,28 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { randomBytes, createHash } from "crypto";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const keys = await prisma.apiKey.findMany({
-    take: 500,
-    include: {
-      user: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
+
+  const [keys, total] = await Promise.all([
+    prisma.apiKey.findMany({
+      skip,
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.apiKey.count(),
+  ]);
 
   // Mask keys in response (safe access for pre/post-migration)
   const masked = keys.map((k) => {
@@ -28,7 +37,7 @@ export async function GET() {
     };
   });
 
-  return jsonOk(masked);
+  return jsonOk({ keys: masked, total, page, limit });
 }
 
 export async function POST(req: Request) {

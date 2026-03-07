@@ -46,7 +46,7 @@ export default function ProfilePage() {
                 {user?.name || "Пользователь"}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Mail className="h-3.5 w-3.5 text-text-muted" />
+                <Mail className="h-3.5 w-3.5 text-text-secondary" />
                 <span className="text-sm text-text-secondary">
                   {user?.email || "—"}
                 </span>
@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-3 rounded-xl bg-surface-alt">
-              <div className="flex items-center gap-2 text-text-muted mb-1">
+              <div className="flex items-center gap-2 text-text-secondary mb-1">
                 <Calendar className="h-3.5 w-3.5" />
                 <span className="text-xs">Дата регистрации</span>
               </div>
@@ -69,7 +69,7 @@ export default function ProfilePage() {
               </span>
             </div>
             <div className="p-3 rounded-xl bg-surface-alt">
-              <div className="flex items-center gap-2 text-text-muted mb-1">
+              <div className="flex items-center gap-2 text-text-secondary mb-1">
                 <Shield className="h-3.5 w-3.5" />
                 <span className="text-xs">Роль</span>
               </div>

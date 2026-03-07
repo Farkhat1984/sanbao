@@ -25,7 +25,7 @@ export function StatsCard({
         >
           <Icon className="h-4.5 w-4.5" />
         </div>
-        <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
+        <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
           {label}
         </span>
       </div>

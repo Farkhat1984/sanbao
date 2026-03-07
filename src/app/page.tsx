@@ -276,7 +276,7 @@ function AgentCard({
         <Icon size={24} className={colorClass} />
       </div>
       <h3 className="mb-2 text-lg font-semibold text-text-primary">{name}</h3>
-      <p className="text-sm leading-relaxed text-text-muted">{description}</p>
+      <p className="text-sm leading-relaxed text-text-secondary">{description}</p>
     </motion.div>
   );
 }
@@ -410,7 +410,7 @@ function PricingSection() {
           Тарифы
         </motion.h2>
         <motion.p
-          className="mb-16 text-center text-text-muted"
+          className="mb-16 text-center text-text-secondary"
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
@@ -463,7 +463,7 @@ function PlanCard({
 
       <div className="mb-6">
         <span className="text-3xl font-bold text-text-primary">{price}</span>
-        <span className="text-text-muted">/{period}</span>
+        <span className="text-text-secondary">/{period}</span>
       </div>
 
       <ul className="mb-8 flex-1 space-y-3">

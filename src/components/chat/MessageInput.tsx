@@ -171,7 +171,7 @@ export function MessageInput() {
                     {file.isParsing ? (
                       <Loader2 className="h-3.5 w-3.5 text-accent shrink-0 animate-spin" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                      <FileText className="h-3.5 w-3.5 text-text-secondary shrink-0" />
                     )}
                     <span className="text-xs text-text-primary truncate max-w-[120px]">
                       {file.name}
@@ -271,7 +271,7 @@ export function MessageInput() {
                 className={cn(
                   "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer",
                   hasParsing
-                    ? "bg-surface-alt text-text-muted"
+                    ? "bg-surface-alt text-text-secondary"
                     : "bg-accent text-white shadow-md hover:shadow-lg hover:bg-accent-hover"
                 )}
               >
@@ -289,7 +289,7 @@ export function MessageInput() {
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={startRecording}
                 aria-label="Начать запись голоса"
-                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer bg-surface-alt text-text-muted hover:text-text-primary hover:bg-surface-alt/80"
+                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer bg-surface-alt text-text-secondary hover:text-text-primary hover:bg-surface-alt/80"
               >
                 <Mic className="h-4 w-4" />
               </motion.button>
@@ -300,7 +300,7 @@ export function MessageInput() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 disabled
-                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 bg-surface-alt text-text-muted"
+                className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 bg-surface-alt text-text-secondary"
               >
                 <Send className="h-4 w-4" />
               </motion.button>
@@ -311,13 +311,13 @@ export function MessageInput() {
         {/* Bottom hint */}
         <div className="px-5 pb-2 flex items-center justify-between">
           {!isMobile && (
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[10px] text-text-secondary">
               {isRecording
                 ? "Нажмите на микрофон чтобы остановить"
                 : "Enter — отправить, Shift+Enter — новая строка"}
             </span>
           )}
-          <span className={cn("text-[10px] text-text-muted", isMobile && "ml-auto")}>
+          <span className={cn("text-[10px] text-text-secondary", isMobile && "ml-auto")}>
             Sanbao AI
           </span>
         </div>

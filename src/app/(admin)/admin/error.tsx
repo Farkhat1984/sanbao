@@ -23,7 +23,7 @@ export default function AdminError({
       <h2 className="text-lg font-semibold text-text-primary">
         Ошибка в панели администратора
       </h2>
-      <p className="text-sm text-text-muted max-w-md">
+      <p className="text-sm text-text-secondary max-w-md">
         Произошла непредвиденная ошибка. Попробуйте обновить страницу.
       </p>
       <button

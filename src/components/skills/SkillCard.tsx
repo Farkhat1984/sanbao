@@ -34,7 +34,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {skill.name}
           </h3>
-          <p className="text-xs text-text-muted mt-0.5">
+          <p className="text-xs text-text-secondary mt-0.5">
             {skill.jurisdiction || "Без юрисдикции"}
             {skill.isBuiltIn && " \u00B7 Встроенный"}
           </p>
@@ -42,7 +42,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
       </div>
 
       {skill.description && (
-        <p className="text-xs text-text-muted leading-relaxed line-clamp-2 mb-4">
+        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-4">
           {skill.description}
         </p>
       )}
@@ -52,14 +52,14 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
           <>
             <button
               onClick={() => router.push(`/skills/${skill.id}/edit`)}
-              className="h-7 px-3 rounded-lg bg-surface-alt text-text-muted text-xs font-medium hover:text-text-primary transition-colors cursor-pointer flex items-center gap-1"
+              className="h-7 px-3 rounded-lg bg-surface-alt text-text-secondary text-xs font-medium hover:text-text-primary transition-colors cursor-pointer flex items-center gap-1"
             >
               <Pencil className="h-3 w-3" />
               Изменить
             </button>
             <button
               onClick={() => onDelete?.(skill.id)}
-              className="h-7 px-3 rounded-lg text-text-muted text-xs hover:text-error hover:bg-error-light transition-colors cursor-pointer flex items-center gap-1"
+              className="h-7 px-3 rounded-lg text-text-secondary text-xs hover:text-error hover:bg-error-light transition-colors cursor-pointer flex items-center gap-1"
             >
               <Trash2 className="h-3 w-3" />
             </button>

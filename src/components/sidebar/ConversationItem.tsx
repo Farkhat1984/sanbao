@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,16 +28,33 @@ export const ConversationItem = memo(function ConversationItem({
 }: ConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const { setActiveConversation, setActiveAgentId, removeConversation } = useChatStore();
   const { close: closeSidebar } = useSidebarStore();
   const router = useRouter();
   const isMobile = useIsMobile();
 
+  const openMenu = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuHeight = 120; // approximate dropdown height
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < menuHeight ? rect.top - menuHeight : rect.bottom + 4;
+      const left = Math.max(8, rect.right - 160); // 160 = w-40
+      setMenuPos({ top, left });
+    }
+    setShowMenu(true);
+  }, []);
+
   useEffect(() => {
     if (!showMenu) return;
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
         setShowMenu(false);
       }
     };
@@ -115,7 +133,7 @@ export const ConversationItem = memo(function ConversationItem({
   };
 
   return (
-    <div ref={menuRef} className="relative group">
+    <div className="relative group">
       <button
         onClick={handleClick}
         className={cn(
@@ -148,13 +166,15 @@ export const ConversationItem = memo(function ConversationItem({
 
       {/* Three-dot menu — always visible on mobile */}
       <button
+        ref={triggerRef}
         onClick={(e) => {
           e.stopPropagation();
-          setShowMenu(!showMenu);
+          if (showMenu) setShowMenu(false);
+          else openMenu();
         }}
         className={cn(
           "absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md",
-          "flex items-center justify-center text-text-muted",
+          "flex items-center justify-center text-text-secondary",
           "transition-opacity cursor-pointer",
           "hover:bg-surface-alt hover:text-text-primary",
           isMobile
@@ -166,15 +186,17 @@ export const ConversationItem = memo(function ConversationItem({
         <MoreHorizontal className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
       </button>
 
-      {/* Dropdown */}
-      <AnimatePresence>
-        {showMenu && (
+      {/* Dropdown — rendered via portal to escape overflow:hidden containers */}
+      {showMenu && menuPos && createPortal(
+        <AnimatePresence>
           <motion.div
+            ref={menuRef}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.12 }}
-            className="absolute right-0 top-full z-20 w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
+            style={{ top: menuPos.top, left: menuPos.left }}
+            className="fixed z-[100] w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
           >
             {!isArchived && (
               <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
@@ -202,8 +224,9 @@ export const ConversationItem = memo(function ConversationItem({
               Удалить
             </button>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
 
       <ConfirmModal
         isOpen={showDeleteConfirm}

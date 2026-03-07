@@ -69,7 +69,7 @@ export function PlusMenu({
           "h-8 w-8 rounded-xl flex items-center justify-center transition-all shrink-0 mb-0.5 cursor-pointer",
           menuOpen
             ? "text-accent bg-accent-light rotate-45"
-            : "text-text-muted hover:text-text-primary hover:bg-surface-alt"
+            : "text-text-secondary hover:text-text-primary hover:bg-surface-alt"
         )}
         title="Функции"
       >
@@ -106,7 +106,7 @@ export function PlusMenu({
                   </div>
                   <div className="flex-1 text-left">
                     <span>Прикрепить файл</span>
-                    <p className="text-[10px] text-text-muted mt-0.5">
+                    <p className="text-[10px] text-text-secondary mt-0.5">
                       PDF, DOCX, XLSX, PPTX, CSV, HTML, RTF, PNG
                     </p>
                   </div>

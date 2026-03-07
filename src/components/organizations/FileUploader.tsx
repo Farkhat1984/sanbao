@@ -5,12 +5,12 @@ import { Upload, FileText, X, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploaderProps {
-  params: Promise<{ id: string }>;
+  orgId: string;
   agentId: string;
   onComplete: () => void;
 }
 
-export function FileUploader({ params, agentId, onComplete }: FileUploaderProps) {
+export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
@@ -40,11 +40,10 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
     setUploadedCount(0);
 
     try {
-      const { id } = await params;
       const formData = new FormData();
       files.forEach((file) => formData.append("files", file));
 
-      const res = await fetch(`/api/organizations/${id}/agents/${agentId}/upload`, {
+      const res = await fetch(`/api/organizations/${orgId}/agents/${agentId}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -82,7 +81,7 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
         <h2 className="text-lg font-semibold text-text-primary mb-1">
           Загружено {uploadedCount} файл(ов)
         </h2>
-        <p className="text-sm text-text-muted">Переходим к обработке...</p>
+        <p className="text-sm text-text-secondary">Переходим к обработке...</p>
       </div>
     );
   }
@@ -99,11 +98,11 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
           "border-border hover:border-accent/50 hover:bg-accent/5"
         )}
       >
-        <Upload className="h-8 w-8 text-text-muted mx-auto mb-3" />
+        <Upload className="h-8 w-8 text-text-secondary mx-auto mb-3" />
         <p className="text-sm text-text-primary font-medium">
           Перетащите файлы или нажмите для выбора
         </p>
-        <p className="text-xs text-text-muted mt-1">
+        <p className="text-xs text-text-secondary mt-1">
           PDF, DOCX, XLSX, HTML, CSV, TXT
         </p>
         <input
@@ -121,12 +120,12 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
         <div className="space-y-2">
           {files.map((file, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface">
-              <FileText className="h-4 w-4 text-text-muted shrink-0" />
+              <FileText className="h-4 w-4 text-text-secondary shrink-0" />
               <span className="text-sm text-text-primary truncate flex-1">{file.name}</span>
-              <span className="text-xs text-text-muted shrink-0">{formatSize(file.size)}</span>
+              <span className="text-xs text-text-secondary shrink-0">{formatSize(file.size)}</span>
               <button
                 onClick={() => removeFile(i)}
-                className="h-6 w-6 rounded flex items-center justify-center text-text-muted hover:text-error cursor-pointer"
+                className="h-6 w-6 rounded flex items-center justify-center text-text-secondary hover:text-error cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

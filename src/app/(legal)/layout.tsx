@@ -23,7 +23,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
       <footer className="border-t border-border py-6">
-        <div className="max-w-3xl mx-auto px-6 flex flex-wrap gap-4 text-xs text-text-muted">
+        <div className="max-w-3xl mx-auto px-6 flex flex-wrap gap-4 text-xs text-text-secondary">
           <Link href="/terms" className="hover:text-text-secondary transition-colors">Пользовательское соглашение</Link>
           <Link href="/privacy" className="hover:text-text-secondary transition-colors">Политика конфиденциальности</Link>
           <Link href="/offer" className="hover:text-text-secondary transition-colors">Публичная оферта</Link>

@@ -65,7 +65,7 @@ export default function AdminErrorsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Логи ошибок</h1>
-          <p className="text-sm text-text-muted mt-1">Ошибки API и системные сбои</p>
+          <p className="text-sm text-text-secondary mt-1">Ошибки API и системные сбои</p>
         </div>
         <Button variant="secondary" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4" /> Экспорт CSV
@@ -97,22 +97,22 @@ export default function AdminErrorsPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-4">
                     {e.userId && <Badge variant="default">user</Badge>}
-                    <span className="text-xs text-text-muted">{new Date(e.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className="text-xs text-text-secondary">{new Date(e.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                 </button>
                 {expanded === e.id && (
                   <div className="border-t border-border p-4 bg-surface-alt/30">
                     <div className="space-y-2">
-                      {e.userId && <p className="text-xs text-text-muted">User ID: <span className="font-mono text-text-secondary">{e.userId}</span></p>}
+                      {e.userId && <p className="text-xs text-text-secondary">User ID: <span className="font-mono text-text-secondary">{e.userId}</span></p>}
                       {e.stack && (
                         <div>
-                          <p className="text-xs text-text-muted mb-1">Stack trace:</p>
+                          <p className="text-xs text-text-secondary mb-1">Stack trace:</p>
                           <pre className="text-xs text-error/80 bg-surface p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono max-h-48">{e.stack}</pre>
                         </div>
                       )}
                       {e.metadata != null && (
                         <div>
-                          <p className="text-xs text-text-muted mb-1">Metadata:</p>
+                          <p className="text-xs text-text-secondary mb-1">Metadata:</p>
                           <pre className="text-xs text-text-secondary bg-surface p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">{JSON.stringify(e.metadata, null, 2)}</pre>
                         </div>
                       )}
@@ -121,12 +121,12 @@ export default function AdminErrorsPage() {
                 )}
               </div>
             ))}
-            {errors.length === 0 && <p className="text-sm text-text-muted text-center py-8">Ошибок не найдено</p>}
+            {errors.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Ошибок не найдено</p>}
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <Button variant="secondary" size="sm" onClick={() => setPage(page - 1)} disabled={page <= 1}>Назад</Button>
-              <span className="text-sm text-text-muted">{page} / {totalPages}</span>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <Button variant="secondary" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Далее</Button>
             </div>
           )}

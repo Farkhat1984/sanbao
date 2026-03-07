@@ -95,7 +95,7 @@ export function WelcomeScreen() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover text-sm text-text-primary transition-all duration-200 cursor-pointer group"
             >
               <span className="line-clamp-1">{prompt}</span>
-              <ArrowRight className="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors shrink-0" />
+              <ArrowRight className="h-3.5 w-3.5 text-text-secondary group-hover:text-accent transition-colors shrink-0" />
             </motion.button>
           ))}
         </motion.div>
@@ -125,7 +125,7 @@ export function WelcomeScreen() {
               <h3 className="text-sm font-semibold text-text-primary mb-0.5">
                 {action.title}
               </h3>
-              <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
+              <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
                 {action.desc}
               </p>
             </motion.button>

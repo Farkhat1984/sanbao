@@ -136,11 +136,22 @@ export async function getProjectProgress(
   nsApiKey: string,
   projectId: string
 ): Promise<Response> {
-  return cortexFetch(`/api/projects/${projectId}/progress`, {
+  // Direct fetch without AbortController — SSE streams need to stay open
+  const res = await fetch(`${AI_CORTEX_URL}/api/projects/${projectId}/progress`, {
     method: "GET",
-    apiKey: nsApiKey,
-    timeout: TIMEOUT_PROCESS,
+    headers: {
+      Authorization: `Bearer ${nsApiKey}`,
+      Accept: "text/event-stream",
+    },
   });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new AiCortexError(
+      `AI Cortex progress failed: ${res.status} ${text}`,
+      res.status,
+    );
+  }
+  return res;
 }
 
 export async function deleteProject(

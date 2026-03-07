@@ -106,7 +106,7 @@ export function OnboardingTour() {
     return (
       <button
         onClick={startTour}
-        className="fixed bottom-4 right-4 z-50 h-9 w-9 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center text-text-muted hover:text-accent hover:border-accent/30 transition-colors cursor-pointer"
+        className="fixed bottom-4 right-4 z-50 h-9 w-9 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent/30 transition-colors cursor-pointer"
         title="Экскурсия по интерфейсу"
       >
         <HelpCircle className="h-4.5 w-4.5" />
@@ -229,12 +229,12 @@ export function OnboardingTour() {
         >
           {/* Step counter */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-text-muted font-medium">
+            <span className="text-[10px] text-text-secondary font-medium">
               {currentStep + 1} / {STEPS.length}
             </span>
             <button
               onClick={completeTour}
-              className="h-6 w-6 rounded flex items-center justify-center text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              className="h-6 w-6 rounded flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -250,7 +250,7 @@ export function OnboardingTour() {
           <div className="flex items-center justify-between">
             <button
               onClick={completeTour}
-              className={`text-text-muted hover:text-text-primary transition-colors cursor-pointer ${isMobile ? "text-sm" : "text-[11px]"}`}
+              className={`text-text-secondary hover:text-text-primary transition-colors cursor-pointer ${isMobile ? "text-sm" : "text-[11px]"}`}
             >
               Пропустить
             </button>

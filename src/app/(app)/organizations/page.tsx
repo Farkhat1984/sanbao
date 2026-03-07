@@ -44,7 +44,7 @@ function OrgCard({ org }: { org: OrgSummary }) {
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-4 text-xs text-text-muted">
+      <div className="flex items-center gap-4 text-xs text-text-secondary">
         <span className="flex items-center gap-1">
           <Users className="h-3.5 w-3.5" />
           {org.memberCount}
@@ -84,7 +84,7 @@ export default function OrganizationsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Организации</h1>
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               Управляйте командами и AI-агентами
             </p>
           </div>
@@ -125,12 +125,12 @@ export default function OrganizationsPage() {
         {loaded && organizations.length === 0 && (
           <div className="text-center py-20">
             <div className="h-16 w-16 rounded-2xl bg-surface-alt flex items-center justify-center mx-auto mb-5">
-              <Building2 className="h-8 w-8 text-text-muted" />
+              <Building2 className="h-8 w-8 text-text-secondary" />
             </div>
             <h2 className="text-lg font-semibold text-text-primary mb-2">
               Нет организаций
             </h2>
-            <p className="text-sm text-text-muted max-w-md mx-auto mb-6">
+            <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
               Создайте организацию, загрузите документы и получите AI-агента для вашей команды.
             </p>
             <button

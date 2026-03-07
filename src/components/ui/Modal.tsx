@@ -60,7 +60,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                 <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
                 <button
                   onClick={onClose}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>

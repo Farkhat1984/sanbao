@@ -8,7 +8,7 @@ export default function OfferPage() {
   return (
     <article className="prose-legal">
       <h1 className="text-2xl font-bold text-text-primary mb-2">Публичная оферта</h1>
-      <p className="text-xs text-text-muted mb-8">Дата вступления в силу: 1 февраля 2026 г.</p>
+      <p className="text-xs text-text-secondary mb-8">Дата вступления в силу: 1 февраля 2026 г.</p>
 
       <section className="space-y-4 text-sm text-text-secondary leading-relaxed">
         <h2 className="text-lg font-semibold text-text-primary mt-8">1. Предмет оферты</h2>

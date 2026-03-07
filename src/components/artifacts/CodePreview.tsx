@@ -67,7 +67,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-surface-alt shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-text-muted font-medium uppercase tracking-wide">
+          <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wide">
             Live Preview
           </span>
           {sentToChat && (
@@ -90,14 +90,14 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
           )}
           <button
             onClick={handleRefresh}
-            className="h-6 w-6 rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
+            className="h-6 w-6 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
             title="Обновить превью"
           >
             <RefreshCw className="h-3 w-3" />
           </button>
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="h-6 w-6 rounded-md flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
+            className="h-6 w-6 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
             title={isFullscreen ? "Свернуть" : "На весь экран"}
           >
             {isFullscreen ? (

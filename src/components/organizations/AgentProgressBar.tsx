@@ -57,7 +57,7 @@ export function AgentProgressBar({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-text-muted">{stage}</span>
+        <span className="text-text-secondary">{stage}</span>
         <span className="text-text-primary font-medium">{progress}%</span>
       </div>
       <div className="h-2 rounded-full bg-surface-alt overflow-hidden">

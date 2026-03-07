@@ -37,7 +37,7 @@ export function UserEditModal({
           <p className="text-sm font-medium text-text-primary">
             {user.name || "—"}
           </p>
-          <p className="text-xs text-text-muted">{user.email}</p>
+          <p className="text-xs text-text-secondary">{user.email}</p>
         </div>
 
         <div>

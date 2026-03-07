@@ -75,9 +75,9 @@ export const markdownComponents = {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate">{props.alt || "Изображение"}</p>
-        <p className="text-xs text-text-muted">Нажмите чтобы открыть</p>
+        <p className="text-xs text-text-secondary">Нажмите чтобы открыть</p>
       </div>
-      <ExternalLink className="h-4 w-4 text-text-muted group-hover/img:text-accent transition-colors shrink-0" />
+      <ExternalLink className="h-4 w-4 text-text-secondary group-hover/img:text-accent transition-colors shrink-0" />
     </button>
   ),
   code: ({

@@ -13,13 +13,23 @@ export async function GET(
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const before = searchParams.get("before"); // cursor for older messages
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200);
 
   const conversation = await prisma.conversation.findFirst({
     where: { id, userId },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      pinned: true,
+      archived: true,
+      createdAt: true,
+      updatedAt: true,
+      agentId: true,
+      systemAgentId: true,
+      orgAgentId: true,
       messages: {
         orderBy: { createdAt: "desc" },
-        take: 100,
+        take: limit + 1, // fetch one extra to determine if there are more
         ...(before ? { cursor: { id: before }, skip: 1 } : {}),
         include: {
           legalRefs: true,
@@ -33,10 +43,26 @@ export async function GET(
     return jsonError("Not found", 404);
   }
 
+  // Determine if there are older messages beyond this page
+  const hasMore = conversation.messages.length > limit;
+  if (hasMore) {
+    conversation.messages.pop(); // remove the extra item
+  }
+
+  // The oldest message in the current batch is the cursor for the next page
+  // (messages are ordered DESC, so last item = oldest)
+  const nextCursor = hasMore && conversation.messages.length > 0
+    ? conversation.messages[conversation.messages.length - 1].id
+    : null;
+
   // Reverse to chronological order for client
   conversation.messages.reverse();
 
-  return jsonOk(conversation);
+  return jsonOk({
+    ...conversation,
+    nextCursor,
+    hasMore,
+  });
 }
 
 export async function PUT(

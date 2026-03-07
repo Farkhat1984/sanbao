@@ -34,8 +34,8 @@ export function TaskPanel() {
   if (tasks.length === 0) {
     return (
       <div className="px-3 py-4 text-center">
-        <ListChecks className="h-5 w-5 text-text-muted mx-auto mb-1.5" />
-        <p className="text-xs text-text-muted">Нет задач</p>
+        <ListChecks className="h-5 w-5 text-text-secondary mx-auto mb-1.5" />
+        <p className="text-xs text-text-secondary">Нет задач</p>
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function TaskPanel() {
         <TaskItem key={task.id} task={task} />
       ))}
       {completedTasks.length > 0 && activeTasks.length > 0 && (
-        <p className="text-[10px] text-text-muted px-1 pt-1">Завершённые</p>
+        <p className="text-[10px] text-text-secondary px-1 pt-1">Завершённые</p>
       )}
       {completedTasks.map((task) => (
         <TaskItem key={task.id} task={task} />

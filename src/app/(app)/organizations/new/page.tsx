@@ -46,7 +46,7 @@ export default function NewOrganizationPage() {
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад
@@ -58,7 +58,7 @@ export default function NewOrganizationPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Новая организация</h1>
-            <p className="text-sm text-text-muted">Создайте организацию для вашей команды</p>
+            <p className="text-sm text-text-secondary">Создайте организацию для вашей команды</p>
           </div>
         </div>
 

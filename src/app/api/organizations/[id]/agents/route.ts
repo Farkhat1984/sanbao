@@ -8,7 +8,7 @@ import { encrypt, decrypt } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const result = await requireAuth();
@@ -19,11 +19,23 @@ export async function GET(
   const memberResult = await requireOrgMember(id, userId);
   if ("error" in memberResult) return memberResult.error;
 
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 100);
+
   const agents = await prisma.orgAgent.findMany({
     where: { orgId: id },
     include: { _count: { select: { files: true } } },
     orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
+
+  const hasMore = agents.length > limit;
+  if (hasMore) agents.pop();
+  const nextCursor = hasMore && agents.length > 0
+    ? agents[agents.length - 1].id
+    : null;
 
   // Filter by access
   const filtered = agents.filter((a) => {
@@ -33,10 +45,14 @@ export async function GET(
     return true; // Will be filtered on detail page
   });
 
-  return jsonOk(filtered.map((a) => serializeDates({
-    ...a,
-    fileCount: a._count.files,
-  })));
+  return jsonOk({
+    agents: filtered.map((a) => serializeDates({
+      ...a,
+      fileCount: a._count.files,
+    })),
+    nextCursor,
+    hasMore,
+  });
 }
 
 export async function POST(

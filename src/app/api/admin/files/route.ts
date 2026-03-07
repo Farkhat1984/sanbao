@@ -1,18 +1,38 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { isStorageConfigured } from "@/lib/storage";
+import { parsePagination } from "@/lib/validation";
 import { readdir, stat, unlink } from "fs/promises";
 import path from "path";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  // Attachments stats (bounded to prevent OOM on large datasets)
-  const attachments = await prisma.attachment.findMany({
+  const { searchParams } = new URL(req.url);
+  const { page, limit } = parsePagination(searchParams);
+  const skip = (page - 1) * limit;
+
+  // Count totals efficiently
+  const [totalAttachments, totalAgentFiles] = await Promise.all([
+    prisma.attachment.count(),
+    prisma.agentFile.count(),
+  ]);
+  const totalFiles = totalAttachments + totalAgentFiles;
+
+  // Total size via aggregation
+  const [attachmentSize, agentFileSize] = await Promise.all([
+    prisma.attachment.aggregate({ _sum: { fileSize: true } }),
+    prisma.agentFile.aggregate({ _sum: { fileSize: true } }),
+  ]);
+  const totalSize = (attachmentSize._sum.fileSize || 0) + (agentFileSize._sum.fileSize || 0);
+
+  // Top 20 users by usage (bounded query for stats)
+  const attachmentsForStats = await prisma.attachment.findMany({
     take: 5000,
-    include: {
+    select: {
+      fileSize: true,
       conversation: {
         select: {
           userId: true,
@@ -20,13 +40,11 @@ export async function GET() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
   });
-
-  // Agent files stats
-  const agentFiles = await prisma.agentFile.findMany({
+  const agentFilesForStats = await prisma.agentFile.findMany({
     take: 5000,
-    include: {
+    select: {
+      fileSize: true,
       agent: {
         select: {
           userId: true,
@@ -34,12 +52,59 @@ export async function GET() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
   });
 
-  // Combine all files
-  const allFiles = [
-    ...attachments.map((a) => ({
+  const userMap: Record<string, { userName: string; fileCount: number; totalSize: number }> = {};
+  for (const a of attachmentsForStats) {
+    const uid = a.conversation.userId;
+    const uname = a.conversation.user.name || a.conversation.user.email;
+    if (!userMap[uid]) userMap[uid] = { userName: uname, fileCount: 0, totalSize: 0 };
+    userMap[uid].fileCount++;
+    userMap[uid].totalSize += a.fileSize;
+  }
+  for (const f of agentFilesForStats) {
+    const uid = f.agent.userId || "system";
+    const uname = f.agent.user?.name || f.agent.user?.email || "Системный";
+    if (!userMap[uid]) userMap[uid] = { userName: uname, fileCount: 0, totalSize: 0 };
+    userMap[uid].fileCount++;
+    userMap[uid].totalSize += f.fileSize;
+  }
+
+  const byUser = Object.entries(userMap)
+    .map(([userId, data]) => ({ userId, ...data }))
+    .sort((a, b) => b.totalSize - a.totalSize)
+    .slice(0, 20);
+
+  // Recent files with server-side pagination
+  const [recentAttachments, recentAgentFiles] = await Promise.all([
+    prisma.attachment.findMany({
+      take: skip + limit,
+      include: {
+        conversation: {
+          select: {
+            userId: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.agentFile.findMany({
+      take: skip + limit,
+      include: {
+        agent: {
+          select: {
+            userId: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const allRecent = [
+    ...recentAttachments.map((a) => ({
       id: a.id,
       fileName: a.fileName,
       fileType: a.fileType,
@@ -48,7 +113,7 @@ export async function GET() {
       userName: a.conversation.user.name || a.conversation.user.email,
       createdAt: a.createdAt,
     })),
-    ...agentFiles.map((f) => ({
+    ...recentAgentFiles.map((f) => ({
       id: f.id,
       fileName: f.fileName,
       fileType: f.fileType,
@@ -57,30 +122,9 @@ export async function GET() {
       userName: f.agent.user?.name || f.agent.user?.email || "Системный",
       createdAt: f.createdAt,
     })),
-  ];
-
-  const totalFiles = allFiles.length;
-  const totalSize = allFiles.reduce((s, f) => s + f.fileSize, 0);
-
-  // Group by user
-  const userMap: Record<string, { userName: string; fileCount: number; totalSize: number }> = {};
-  for (const f of allFiles) {
-    if (!userMap[f.userId]) {
-      userMap[f.userId] = { userName: f.userName, fileCount: 0, totalSize: 0 };
-    }
-    userMap[f.userId].fileCount++;
-    userMap[f.userId].totalSize += f.fileSize;
-  }
-
-  const byUser = Object.entries(userMap)
-    .map(([userId, data]) => ({ userId, ...data }))
-    .sort((a, b) => b.totalSize - a.totalSize)
-    .slice(0, 20);
-
-  // Recent files
-  const recentFiles = allFiles
+  ]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, 30)
+    .slice(skip, skip + limit)
     .map((f) => ({
       ...f,
       createdAt: f.createdAt.toISOString(),
@@ -90,7 +134,10 @@ export async function GET() {
     totalFiles,
     totalSize,
     byUser,
-    recentFiles,
+    recentFiles: allRecent,
+    recentTotal: totalFiles,
+    page,
+    limit,
     storageConfigured: isStorageConfigured(),
   });
 }

@@ -38,16 +38,19 @@ export function Sidebar() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
 
-  // Load conversations from DB on mount
+  // Load conversations from DB on mount (paginated, 30 at a time)
   useEffect(() => {
     if (!session?.user) return;
-    fetch("/api/conversations")
+    fetch("/api/conversations?limit=30")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setConversations(data);
-        else if (data?.items) setConversations(data.items);
+        if (Array.isArray(data)) {
+          setConversations(data);
+        } else if (data?.items) {
+          setConversations(data.items, data.nextCursor);
+        }
       })
-      .catch(console.error);
+      .catch(() => { /* silent */ });
   }, [session?.user, setConversations]);
 
   // Auto-close sidebar on route change (mobile only) — skip initial mount.
@@ -102,7 +105,7 @@ export function Sidebar() {
             onClick={close}
             aria-label="Закрыть боковую панель"
             className={cn(
-              "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer",
+              "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer",
               isMobile ? "h-9 w-9" : "h-7 w-7"
             )}
           >
@@ -132,7 +135,7 @@ export function Sidebar() {
       {/* Search */}
       <div className="px-3 py-2">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
           <input
             type="text"
             placeholder="Поиск чатов..."
@@ -166,7 +169,7 @@ export function Sidebar() {
             <p className="text-sm font-medium text-text-primary truncate">
               {session?.user?.name || "Гость"}
             </p>
-            <p className="text-xs text-text-muted truncate">
+            <p className="text-xs text-text-secondary truncate">
               {session?.user?.email || "Войдите в аккаунт"}
             </p>
           </div>
@@ -175,7 +178,7 @@ export function Sidebar() {
               <button
                 onClick={() => handleNavigate("/admin")}
                 className={cn(
-                  "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                  "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
                   isMobile ? "h-10 w-10" : "h-8 w-8"
                 )}
               >
@@ -188,7 +191,7 @@ export function Sidebar() {
             <button
               onClick={() => handleNavigate("/settings")}
               className={cn(
-                "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
                 isMobile ? "h-10 w-10" : "h-8 w-8"
               )}
             >

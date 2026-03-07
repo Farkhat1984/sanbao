@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Shield, Crown, User, X } from "lucide-react";
+import { ArrowLeft, UserPlus, Shield, Crown, User, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useOrgStore, type OrgMemberInfo } from "@/stores/orgStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
+
+const MEMBERS_PER_PAGE = 20;
 
 export default function OrgMembersPage({
   params,
@@ -22,18 +24,44 @@ export default function OrgMembersPage({
   const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string>("");
 
-  useEffect(() => {
-    params.then(({ id }) => {
-      setOrgId(id);
-      fetch(`/api/organizations/${id}/members`)
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const fetchMembers = useCallback(
+    (id: string, pageNum: number) => {
+      setIsLoading(true);
+      fetch(`/api/organizations/${id}/members?page=${pageNum}&limit=${MEMBERS_PER_PAGE}`)
         .then((r) => r.json())
         .then((data) => {
-          if (Array.isArray(data)) setMembers(data);
+          if (data.members) {
+            setMembers(data.members);
+            setTotal(data.total ?? 0);
+            setTotalPages(data.totalPages ?? 1);
+            setPage(data.page ?? pageNum);
+          } else if (Array.isArray(data)) {
+            // Backward compat: old API returned plain array
+            setMembers(data);
+          }
         })
         .catch(console.error)
         .finally(() => setIsLoading(false));
+    },
+    [setMembers],
+  );
+
+  useEffect(() => {
+    params.then(({ id }) => {
+      setOrgId(id);
+      fetchMembers(id, 1);
     });
-  }, [params, setMembers]);
+  }, [params, fetchMembers]);
+
+  const goToPage = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === page) return;
+    fetchMembers(orgId, newPage);
+  };
 
   const isAdmin = activeOrg?.role === "OWNER" || activeOrg?.role === "ADMIN";
 
@@ -71,6 +99,7 @@ export default function OrgMembersPage({
       });
       if (res.ok) {
         setMembers(members.filter((m) => m.id !== member.id));
+        setTotal((prev) => prev - 1);
       }
     } catch {
       // ignore
@@ -94,14 +123,21 @@ export default function OrgMembersPage({
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
         <button
           onClick={() => router.push(`/organizations/${orgId}`)}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад
         </button>
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Участники</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Участники</h1>
+            {total > 0 && (
+              <p className="text-sm text-text-secondary mt-0.5">
+                Всего: {total}
+              </p>
+            )}
+          </div>
           {isAdmin && (
             <button
               onClick={() => setShowInvite(!showInvite)}
@@ -134,7 +170,7 @@ export default function OrgMembersPage({
               </select>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-text-muted">{inviteMsg}</span>
+              <span className="text-sm text-text-secondary">{inviteMsg}</span>
               <button
                 type="submit"
                 disabled={inviting}
@@ -168,13 +204,13 @@ export default function OrgMembersPage({
                     <p className="text-sm font-medium text-text-primary truncate">
                       {member.user.name || member.user.email}
                     </p>
-                    <p className="text-xs text-text-muted truncate">{member.user.email}</p>
+                    <p className="text-xs text-text-secondary truncate">{member.user.email}</p>
                   </div>
                   <div className={cn(
                     "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium",
                     member.role === "OWNER" ? "bg-warning/10 text-warning" :
                     member.role === "ADMIN" ? "bg-accent/10 text-accent" :
-                    "bg-surface-alt text-text-muted"
+                    "bg-surface-alt text-text-secondary"
                   )}>
                     <RoleIcon className="h-3 w-3" />
                     {roleLabel[member.role]}
@@ -182,7 +218,7 @@ export default function OrgMembersPage({
                   {isAdmin && member.role !== "OWNER" && (
                     <button
                       onClick={() => handleRemove(member)}
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error-light transition-colors cursor-pointer"
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error-light transition-colors cursor-pointer"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -190,6 +226,43 @@ export default function OrgMembersPage({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+              className={cn(
+                "h-9 px-3 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-colors cursor-pointer",
+                page <= 1
+                  ? "text-text-muted bg-surface cursor-not-allowed"
+                  : "text-text-primary bg-surface hover:bg-surface-alt border border-border"
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Назад
+            </button>
+
+            <span className="text-sm text-text-secondary tabular-nums">
+              {page} из {totalPages}
+            </span>
+
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages}
+              className={cn(
+                "h-9 px-3 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-colors cursor-pointer",
+                page >= totalPages
+                  ? "text-text-muted bg-surface cursor-not-allowed"
+                  : "text-text-primary bg-surface hover:bg-surface-alt border border-border"
+              )}
+            >
+              Далее
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>

@@ -19,7 +19,7 @@ export function PinnedSection() {
   return (
     <div className="border-b border-border shrink-0">
       <div className="px-2 py-1">
-        <p className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted uppercase tracking-wider px-2 py-1.5">
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-text-secondary uppercase tracking-wider px-2 py-1.5">
           <Pin className="h-3 w-3" />
           Закреплённые
         </p>
