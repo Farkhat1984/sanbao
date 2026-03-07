@@ -78,18 +78,12 @@ function parseResponse(code: string, article: string, result: string) {
       );
     }
 
-    // Build adilet URL for law documents
-    const adiletUrl = code === "law"
-      ? (parsed.url || `https://adilet.zan.kz/rus/docs/${article}`)
-      : undefined;
-
     return jsonOk({
       code,
       article,
       title: parsed.title || parsed.type_name || parsed.product_key || "",
       text: parsed.full_text || parsed.text || parsed.content || result,
       annotation: parsed.annotation || parsed.note || parsed.status || "",
-      ...(adiletUrl ? { adiletUrl } : {}),
     });
   } catch {
     return jsonOk({

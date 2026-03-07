@@ -254,7 +254,7 @@ orchestrator: # Python MCP, port 8120
 | Домен | Тип | Коллекция | Документов | Назначение |
 |-------|-----|-----------|-----------|------------|
 | `legal_kz` | text | `legal_kz` | 7,463 статей | 18 кодексов РК (УК, ГК, НК, ТК, КоАП и др.) |
-| `laws_kz` | text | `laws_kz` | ~199K законов | НПА РК (законы, указы, постановления с adilet.zan.kz) |
+| `laws_kz` | text | `laws_kz` | ~199K законов | НПА РК (законы, указы, постановления) |
 | `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
 | `accounting_ref_kz` | table | — | 6 таблиц | Бухгалтерские справочники (ставки, ТПС, проводки, амортизация, ФНО) |
 | `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы, DuckDB: duty_rates + required_docs) |
@@ -270,7 +270,7 @@ orchestrator: # Python MCP, port 8120
 | Коллекция | Источник | Скрипт загрузки |
 |-----------|----------|-----------------|
 | `legal_kz` | `data/legal_codes/*.txt` (17 кодексов, 30MB) | `scripts/ingestion/ingest_all_codes.py` |
-| `laws_kz` | `data/adilet/` (парсинг adilet.zan.kz, ~173K НПА) | `scripts/ingestion/ingest_adilet.py` |
+| `laws_kz` | `data/adilet/` (~173K НПА) | `scripts/ingestion/ingest_adilet.py` |
 | `tnved_rates` | `data/tnved/tnved_rates.json` (13K записей) | `scripts/ingestion/ingest_tnved.py` |
 | `accounting_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target accounting` |
 | `platform_1c` | `data/1c_knowledge/raw/{its,pro1c}/` (37K файлов) | `scripts/ingestion/ingest_1c.py --target platform` |

@@ -179,7 +179,7 @@ AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orc
 
 **FragmentDB коллекции:**
 - `legal_kz` — 7,451 статья (17 кодексов РК, BM25-only)
-- `laws_kz` — ~101K законов (НПА РК с adilet.zan.kz, BM25-only)
+- `laws_kz` — ~101K законов (НПА РК, BM25-only)
 - `tnved_rates` — 13,279 кодов (ТН ВЭД ЕАЭС, семантика + BM25)
 - `accounting_1c` — 6,736 чанков (ITS + PRO1C бухгалтерия, семантика + BM25)
 - `platform_1c` — 29,201 чанков (ITS + PRO1C платформа, семантика + BM25)

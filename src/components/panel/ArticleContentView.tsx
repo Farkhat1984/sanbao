@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookOpen, Wrench, RotateCcw, Copy, Download, Check, ExternalLink } from "lucide-react";
+import { BookOpen, Wrench, RotateCcw, Copy, Download, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useArticleStore } from "@/stores/articleStore";
@@ -72,16 +72,15 @@ function ArticleSkeleton() {
 
 function ArticleError({ error, onRetry, code, article }: { error: string; onRetry: () => void; code?: string; article?: string }) {
   const isLaw = code === "law";
-  const adiletUrl = isLaw && article ? `https://adilet.zan.kz/rus/docs/${article}` : null;
 
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center gap-3">
       <div className="h-12 w-12 rounded-xl bg-error-light flex items-center justify-center">
         <BookOpen className="h-6 w-6 text-error" />
       </div>
-      <p className="text-sm text-text-muted">{error}</p>
+      <p className="text-sm text-text-secondary">{error}</p>
       {isLaw && (
-        <p className="text-xs text-text-muted">
+        <p className="text-xs text-text-secondary">
           Документ может быть ещё не загружен в базу
         </p>
       )}
@@ -93,17 +92,6 @@ function ArticleError({ error, onRetry, code, article }: { error: string; onRetr
           <RotateCcw className="h-3 w-3" />
           Повторить
         </button>
-        {adiletUrl && (
-          <a
-            href={adiletUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-alt border border-border hover:border-accent text-text-primary transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Открыть на adilet.zan.kz
-          </a>
-        )}
       </div>
     </div>
   );
@@ -189,7 +177,7 @@ export function ArticleContentView() {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleCopy}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
             title="Копировать"
           >
             {copied ? (
@@ -200,7 +188,7 @@ export function ArticleContentView() {
           </button>
           <button
             onClick={handleDownload}
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
             title="Скачать"
           >
             <Download className="h-3.5 w-3.5" />
@@ -232,7 +220,7 @@ export function ArticleContentView() {
           {activeArticle.annotation && (
             <>
               <hr className="border-border my-4" />
-              <div className="text-xs text-text-muted leading-relaxed whitespace-pre-wrap">
+              <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
                 <span className="font-medium text-text-secondary">Примечание: </span>
                 {activeArticle.annotation}
               </div>
