@@ -13,8 +13,10 @@ import type { ResolvedModel } from "@/lib/model-router";
 import {
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
-  NATIVE_TOOL_MAX_TURNS,
+  MAX_TOOL_CALLS_PER_REQUEST,
   MAX_REQUEST_TOKENS,
+  TOOL_RESULT_MAX_CHARS,
+  TOOL_RESULT_TAIL_CHARS,
 } from "@/lib/constants";
 
 // ─── Moonshot built-in web search tool ───────────────────
@@ -64,6 +66,32 @@ export interface MoonshotStreamOptions {
 // ─── SSE Parser ──────────────────────────────────────────
 
 const SSE_MAX_BUFFER = 1024 * 1024; // 1MB max buffer for a single SSE line
+
+/**
+ * Truncate a tool result to fit within token budget.
+ * Strategy: keep head + tail (like ChatGPT/Claude), add truncation metadata.
+ * This prevents context overflow while preserving the most useful information
+ * -- beginnings typically contain structure/headers, endings contain conclusions.
+ */
+function truncateToolResult(
+  content: string,
+  maxChars: number = TOOL_RESULT_MAX_CHARS,
+  tailChars: number = TOOL_RESULT_TAIL_CHARS
+): string {
+  if (!content || content.length <= maxChars) return content ?? "";
+
+  const headChars = maxChars - tailChars - 200; // Reserve space for truncation notice
+  const head = content.slice(0, headChars);
+  const tail = content.slice(-tailChars);
+  const originalKB = (content.length / 1024).toFixed(1);
+
+  return (
+    head +
+    `\n\n[... обрезано ${originalKB}KB → ${(maxChars / 1024).toFixed(1)}KB — ` +
+    `используйте более конкретный запрос для получения нужной информации ...]\n\n` +
+    tail
+  );
+}
 
 async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
   const reader = body.getReader();
@@ -169,7 +197,7 @@ export function streamMoonshot(
         let totalOutputTokens = 0;
 
         // Tool-call loop
-        for (let turn = 0; turn < NATIVE_TOOL_MAX_TURNS; turn++) {
+        for (let turn = 0; turn < MAX_TOOL_CALLS_PER_REQUEST; turn++) {
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -431,7 +459,7 @@ export function streamMoonshot(
           if (cumulativeTokens > MAX_REQUEST_TOKENS) {
             controller.enqueue(
               encoder.encode(
-                JSON.stringify({ t: "e", v: "Token budget exceeded" }) + "\n"
+                JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
               )
             );
             break;
@@ -505,7 +533,7 @@ export function streamMoonshot(
                   tool_call_id: tc.id,
                   content: mcpResult.error
                     ? `Error: ${mcpResult.error}`
-                    : mcpResult.result,
+                    : truncateToolResult(mcpResult.result ?? ""),
                 });
               } else if (
                 isNativeTool(tc.function.name) &&
@@ -537,7 +565,7 @@ export function streamMoonshot(
                 currentMessages.push({
                   role: "tool",
                   tool_call_id: tc.id,
-                  content: result,
+                  content: truncateToolResult(result),
                 });
               } else {
                 // Built-in tool (web search) — pass arguments as content

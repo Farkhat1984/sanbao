@@ -43,7 +43,14 @@ export const WEBHOOK_SECRET_BYTES = 24;
 
 // ─── Tool Executor ───
 export const TOOL_TIMEOUT_MS = 30_000;
-export const TOOL_RESPONSE_CAP = 10 * 1024; // 10KB
+
+// ─── Tool result truncation (applied before inserting into LLM context) ───
+/** Hard cap per tool result in characters (~3K tokens) */
+export const TOOL_RESULT_MAX_CHARS = 12_000;
+/** Keep last N chars when truncating (head + tail strategy) */
+export const TOOL_RESULT_TAIL_CHARS = 1_000;
+/** Hard cap on tool call turns per request (prevents runaway loops) */
+export const MAX_TOOL_CALLS_PER_REQUEST = 15;
 
 // ─── Icon & Color palettes ───
 export const VALID_ICONS = [
