@@ -241,7 +241,7 @@ model Agent {
   instructions String  @db.Text
   model        String  @default("openai")
   icon         String  @default("Bot")
-  iconColor    String  @default("#4F6EF7")
+  iconColor    String  @default("#8FAF9F")
   avatar         String? @db.Text
   starterPrompts String[] @default([])
   isPublic       Boolean @default(false)
@@ -365,7 +365,7 @@ model Skill {
   citationRules String? @db.Text
   jurisdiction  String? @default("RU")
   icon          String  @default("Scale")
-  iconColor     String  @default("#4F6EF7")
+  iconColor     String  @default("#8FAF9F")
   isBuiltIn     Boolean     @default(false)
   isPublic      Boolean     @default(false)
   status        SkillStatus @default(DRAFT)
@@ -401,7 +401,7 @@ model Tool {
   name        String
   description String?  @db.Text
   icon        String   @default("Wrench")
-  iconColor   String   @default("#4F6EF7")
+  iconColor   String   @default("#8FAF9F")
   type        ToolType @default(PROMPT_TEMPLATE)
   config      Json     @default("{}")
   inputSchema Json?
@@ -428,7 +428,7 @@ model Plugin {
   name        String
   description String? @db.Text
   icon        String  @default("Puzzle")
-  iconColor   String  @default("#4F6EF7")
+  iconColor   String  @default("#8FAF9F")
   version     String  @default("1.0.0")
   isGlobal    Boolean @default(false)
   isActive    Boolean @default(true)

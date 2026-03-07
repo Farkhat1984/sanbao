@@ -40,7 +40,7 @@ const PLAYGROUND_ITEMS = [
     label: "MCP",
     icon: Cable,
     href: "/mcp",
-    color: "bg-success-light text-success",
+    color: "bg-accent-light text-accent",
     description: "Серверы",
   },
 ];

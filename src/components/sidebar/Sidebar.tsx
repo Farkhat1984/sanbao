@@ -14,6 +14,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
 import { OrgAgentList } from "./OrgAgentList";
+import { PinnedSection } from "./PinnedSection";
 import { ArchiveSection } from "./ArchiveSection";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -141,6 +142,9 @@ export function Sidebar() {
           />
         </div>
       </div>
+
+      {/* Pinned — static, always visible */}
+      <PinnedSection />
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">

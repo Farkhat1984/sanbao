@@ -13,7 +13,7 @@ export function ConversationList() {
   const searchQuery = useSidebarStore((s) => s.searchQuery);
 
   const filtered = conversations.filter((c) =>
-    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+    !c.pinned && c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const groups = groupByDate(filtered);

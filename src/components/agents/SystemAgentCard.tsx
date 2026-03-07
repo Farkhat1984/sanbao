@@ -89,8 +89,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
         </div>
         <button
           onClick={handleStartChat}
-          className="h-7 px-3 rounded-lg text-white text-xs font-medium transition-colors cursor-pointer"
-          style={{ backgroundColor: agent.iconColor }}
+          className="h-7 px-3 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <MessageSquare className="h-3 w-3" />

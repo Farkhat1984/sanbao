@@ -25,8 +25,8 @@
 
   /* Text */
   --text-primary: #1C2B3A;
-  --text-secondary: #5E7A8A;
-  --text-muted: #9AABB8;
+  --text-secondary: #4A6778;
+  --text-muted: #7A93A3;
   --text-inverse: #F4EFE6;
 
   /* Accent — Celadon Jade */
@@ -92,8 +92,8 @@
   --border-hover: #4A6B7F;
   --border-focus: #8FAF9F;
   --text-primary: #F4EFE6;
-  --text-secondary: #9AABB8;
-  --text-muted: #6B8494;
+  --text-secondary: #A8BCC8;
+  --text-muted: #8A9DAB;
   --text-inverse: #1C2B3A;
   --accent: #8FAF9F;
   --accent-hover: #A3C2B3;
