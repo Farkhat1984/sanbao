@@ -258,7 +258,7 @@ orchestrator: # Python MCP, port 8120
 | `legal_ref_kz` | table | — | — | Правовые справочники (МРП, МЗП, курсы валют) |
 | `accounting_ref_kz` | table | — | 6 таблиц | Бухгалтерские справочники (ставки, ТПС, проводки, амортизация, ФНО) |
 | `tnved` | mixed | `tnved_rates` | 13,279 кодов | ТН ВЭД ЕАЭС (пошлины, НДС, акцизы, DuckDB: duty_rates + required_docs) |
-| `accounting_1c` | text | `accounting_1c` | ~20.7K чанков | 1С Бухгалтерия для КЗ (ITS + PRO1C, зарплата, кадры) |
+| `accounting_1c` | text | `accounting_1c` | ~20.7K чанков | 1С Бухгалтерия для КЗ (зарплата, кадры) |
 | `platform_1c` | text | `platform_1c` | ~39K чанков | Платформа 1С (BSP, EDT, ERP, Розница, документация) |
 | `sop` | text | `company_sops` | — | СОП компании (пусто) |
 | `snip` | text | `construction_norms` | — | Строительные нормы (пусто) |
@@ -315,7 +315,7 @@ orchestrator: # Python MCP, port 8120
 
 | Инструмент | Описание |
 |------------|----------|
-| `search` | Поиск по базе знаний 1С Бухгалтерии (ITS + PRO1C) → domain: accounting_1c |
+| `search` | Поиск по базе знаний 1С Бухгалтерии → domain: accounting_1c |
 | `get_1c_article` | Полный текст статьи 1С по article_id (с картинками) |
 | `sql_query` | NL→SQL→DuckDB по 6 справочным таблицам → domain: accounting_ref_kz |
 | `list_domains` | Список доступных доменов |
