@@ -15,7 +15,8 @@ RUN pip install --no-cache-dir \
     scikit-learn \
     pdfplumber \
     python-docx \
-    PyMuPDF
+    PyMuPDF \
+    openpyxl
 
 COPY ai_cortex/orchestrator/ /app/orchestrator/
 COPY ai_cortex/config/ /app/config/
@@ -33,7 +34,7 @@ ENV DEEPINFRA_API_KEY=""
 ENV ANTHROPIC_API_KEY=""
 
 RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app/config
+    chown -R appuser:appuser /app/config /app/data
 USER appuser
 
 CMD ["python", "-m", "orchestrator", "--http"]

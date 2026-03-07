@@ -39,6 +39,16 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            echo "=== Pulling ai_cortex ==="
+            cd ~/faragj/ai_cortex
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Rebuilding orchestrator ==="
+            cd ~/faragj/sanbao
+            docker compose -f docker-compose.prod.yml build orchestrator
+            docker compose -f docker-compose.prod.yml up -d orchestrator
+
             echo "=== Rebuilding sanbao container ==="
             docker compose -f docker-compose.prod.yml build app
             docker compose -f docker-compose.prod.yml up -d app
