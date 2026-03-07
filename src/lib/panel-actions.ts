@@ -1,5 +1,6 @@
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useArticleStore } from "@/stores/articleStore";
+import { useSourceStore } from "@/stores/sourceStore";
 import { usePanelStore } from "@/stores/panelStore";
 import type { ArtifactData } from "@/types/chat";
 
@@ -56,5 +57,23 @@ export function openArticleInPanel(code: string, article: string) {
     kind: "article",
     label: `${article}`,
     articleKey: key,
+  });
+}
+
+/**
+ * Open a source document chunk in the unified panel.
+ * Fetches chunk context via sourceStore, then opens panel tab.
+ */
+export function openSourceInPanel(domain: string, sourceFile: string, chunkIndex: number) {
+  const { openSource } = useSourceStore.getState();
+  openSource(domain, sourceFile, chunkIndex);
+
+  const key = `${domain}/${sourceFile}/${chunkIndex}`;
+  const { openTab } = usePanelStore.getState();
+  openTab({
+    id: `source-${key}`,
+    kind: "source",
+    label: sourceFile,
+    sourceKey: key,
   });
 }

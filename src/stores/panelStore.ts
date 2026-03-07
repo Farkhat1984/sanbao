@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type PanelTabKind = "artifact" | "article" | "image";
+export type PanelTabKind = "artifact" | "article" | "image" | "source";
 
 export interface PanelTab {
   id: string;
@@ -12,6 +12,8 @@ export interface PanelTab {
   articleKey?: string;
   /** For image tabs — the image URL */
   imageSrc?: string;
+  /** For source tabs — "domain/file.pdf/3" style key */
+  sourceKey?: string;
 }
 
 const MAX_TABS = 8;

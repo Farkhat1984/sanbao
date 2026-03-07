@@ -1,0 +1,26 @@
+# Cloudflare Tunnel — Server 2 (Standby / Failover)
+# Used by: docker-compose.failover.yml (profile: failover)
+# Location on server: ~/faragj/deploy/cloudflared/config.yml
+#
+# ONLY started during failover! Do NOT run alongside Server 1.
+
+tunnel: 222e9fb5-634f-4064-a1e9-8af13f47e4f1
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # --- Sanbao SaaS app (warm standby) ---
+  - hostname: sanbao.ai
+    service: http://localhost:3004
+  - hostname: www.sanbao.ai
+    service: http://localhost:3004
+
+  # --- AI Cortex Web Admin ---
+  # Note: ai-cortex-web not deployed on Server 2 (admin not critical for failover)
+  # If needed, add container to docker-compose.failover.yml
+
+  # --- MCP API (Orchestrator) ---
+  - hostname: mcp.sanbao.ai
+    service: http://localhost:8120
+
+  # --- Catch-all ---
+  - service: http_status:404

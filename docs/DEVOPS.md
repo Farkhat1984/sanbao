@@ -43,15 +43,19 @@
 
 ### Server 1 (`~/faragj/sanbao`)
 
-| Сервис | Порт (внешний) | Порт (внутренний) | Описание |
-|--------|---------------|-------------------|----------|
-| cloudflared | - | - | CF Tunnel → `localhost:3004` (systemd сервис) |
-| Sys Nginx | `443`, `80` | - | SSL termination (CF Origin Cert), proxy → `:3004` |
-| Docker Nginx | `3004` | `80` | Load balancer, 3 реплики app |
-| App (x3) | - | `3004` | Next.js standalone |
-| PostgreSQL | `5436` | `5432` | БД |
-| PgBouncer | - | `5432` | Connection pooling |
-| Redis | - | `6379` | Кеш, очереди, rate-limit |
+| Сервис | Порт (внешний) | Порт (внутренний) | Домен | Описание |
+|--------|---------------|-------------------|-------|----------|
+| cloudflared | - | - | - | CF Tunnel → 3 сервиса (systemd) |
+| Sys Nginx | `443`, `80` | - | - | SSL termination (CF Origin Cert) |
+| Docker Nginx | `3004` | `80` | `sanbao.ai` | LB, 3 реплики app |
+| App (x3) | - | `3004` | - | Next.js standalone (Sanbao SaaS) |
+| ai-cortex-web | `5173` | `80` | `jcas.kz` | AI Cortex Web Admin (React SPA) |
+| FragmentDB | `8110` | `8080` | - | Векторная БД (Rust) |
+| Orchestrator | `8120` | `8120` | `mcp.sanbao.ai` | MCP сервер (4 агента) |
+| Embedding Proxy | `8097` | `8097` | - | DeepInfra embeddings |
+| PostgreSQL | `5436` | `5432` | - | БД |
+| PgBouncer | - | `5432` | - | Connection pooling |
+| Redis | - | `6379` | - | Кеш, очереди, rate-limit |
 
 **Docker Compose:** `docker-compose.prod.yml` (**ВСЕГДА** указывать `-f docker-compose.prod.yml`, иначе Docker мержит с dev-файлом и ломает порты!)
 **Cloudflared:** `/etc/cloudflared/config.yml` (systemd сервис, НЕ Docker)
@@ -220,16 +224,27 @@ AI Cortex Orchestrator (v0.8.0) работает как Docker-сервис `orc
 
 ### Архитектура маршрутизации
 
-DNS все домены (`sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai`, `api.sanbao.ai`) → CNAME → `222e9fb5-...cfargotunnel.com` (proxied). Трафик идёт **через Cloudflare Tunnel**, НЕ напрямую на origin:443.
+DNS все домены (`sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai`, `jcas.kz`, `www.jcas.kz`) → CNAME → `222e9fb5-...cfargotunnel.com` (proxied). Трафик идёт **через Cloudflare Tunnel**, НЕ напрямую на origin:443.
+
+**Маршрутизация доменов (3 сервиса — 3 домена):**
+
+| Домен | Порт | Контейнер | Назначение |
+|-------|------|-----------|------------|
+| `sanbao.ai` | `:3004` | nginx → app x3 | Sanbao SaaS (B2B AI-ассистент) |
+| `jcas.kz` | `:5173` | ai-cortex-web | AI Cortex Web Admin (FragmentDB + Orchestrator dashboard) |
+| `mcp.sanbao.ai` | `:8120` | orchestrator | MCP API (прямой доступ к Orchestrator) |
 
 **Server 1** — системный сервис `cloudflared` (`/etc/cloudflared/config.yml`):
-- Маршруты: `sanbao.ai` → `http://localhost:3004`, `mcp.sanbao.ai` → `:8120`, `rexor.kz` → `:3003`
+- Шаблон конфига: `sanbao/infra/cloudflared/server1-config.yml`
+- Маршруты: `sanbao.ai` → `:3004`, `jcas.kz` → `:5173`, `mcp.sanbao.ai` → `:8120`
 - Обновить конфиг: `sudo nano /etc/cloudflared/config.yml && sudo systemctl restart cloudflared`
 
 **Server 2** — Docker контейнер `deploy-cloudflared-1` (profile `failover`):
 - Запускается ТОЛЬКО при failover: `docker compose --profile failover up -d`
-- Конфиг: `~/faragj/deploy/cloudflared/config.yml` (ingress rules: `sanbao.ai`, `www.sanbao.ai`, `mcp.sanbao.ai` → `localhost:3004`/`:8120`)
+- Шаблон конфига: `sanbao/infra/cloudflared/server2-config.yml`
+- Конфиг: `~/faragj/deploy/cloudflared/config.yml` (ingress rules: `sanbao.ai` → `:3004`, `mcp.sanbao.ai` → `:8120`)
 - Credentials: `~/faragj/deploy/cloudflared/credentials.json` (тот же tunnel ID, тот же аккаунт)
+- **Примечание:** `jcas.kz` на Server 2 не обслуживается (админка не критична при failover)
 - Контейнер запускается с `network_mode: host` + `user: root` (для доступа к credentials)
 - **ВАЖНО:** НЕ запускать cloudflared на Server 2 если sanbao там не запущен! Иначе Cloudflare будет балансировать между серверами и часть запросов уйдёт в пустоту → 503.
 

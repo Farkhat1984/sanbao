@@ -1,0 +1,31 @@
+# Cloudflare Tunnel — Server 1 (Primary)
+# Location on server: /etc/cloudflared/config.yml
+# Restart: sudo systemctl restart cloudflared
+#
+# ARCHITECTURE:
+#   sanbao.ai      → Sanbao Next.js SaaS app (:3004)
+#   jcas.kz        → AI Cortex Web Admin dashboard (:5173)
+#   mcp.sanbao.ai  → Orchestrator MCP API (:8120)
+
+tunnel: 222e9fb5-634f-4064-a1e9-8af13f47e4f1
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # --- Sanbao SaaS app ---
+  - hostname: sanbao.ai
+    service: http://localhost:3004
+  - hostname: www.sanbao.ai
+    service: http://localhost:3004
+
+  # --- AI Cortex Web Admin (FragmentDB + Orchestrator dashboard) ---
+  - hostname: jcas.kz
+    service: http://localhost:5173
+  - hostname: www.jcas.kz
+    service: http://localhost:5173
+
+  # --- MCP API (Orchestrator direct access) ---
+  - hostname: mcp.sanbao.ai
+    service: http://localhost:8120
+
+  # --- Catch-all (required by cloudflared) ---
+  - service: http_status:404

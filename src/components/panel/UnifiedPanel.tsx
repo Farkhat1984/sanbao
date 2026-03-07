@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { PanelTabBar } from "./PanelTabBar";
 import { ArtifactContent } from "./ArtifactContent";
 import { ArticleContentView } from "./ArticleContentView";
+import { SourceContentView } from "./SourceContentView";
 
 const springTransition = { type: "spring" as const, damping: 25, stiffness: 300 };
 
@@ -144,6 +145,7 @@ export function UnifiedPanel() {
     if (!activeTab) return null;
     if (activeTab.kind === "artifact") return <ArtifactContent />;
     if (activeTab.kind === "article") return <ArticleContentView />;
+    if (activeTab.kind === "source") return <SourceContentView />;
     if (activeTab.kind === "image" && activeTab.imageSrc) {
       return (
         <div className="h-full flex items-center justify-center p-4 overflow-auto bg-surface-alt">

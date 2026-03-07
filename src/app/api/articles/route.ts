@@ -25,6 +25,38 @@ export async function GET(request: NextRequest) {
 
   const ctx = { userId: session.user.id };
 
+  // source:// protocol — resolve via get_source tool
+  if (code === "source") {
+    // article = "domain/file.pdf/chunk_index"
+    const parts = article.split("/");
+    if (parts.length < 3) {
+      return NextResponse.json({ error: "Invalid source URI format" }, { status: 400 });
+    }
+    const domain = parts[0];
+    const chunkIndex = parseInt(parts[parts.length - 1], 10);
+    const sourceFile = parts.slice(1, -1).join("/");
+
+    if (!domain || !sourceFile || isNaN(chunkIndex)) {
+      return NextResponse.json({ error: "Invalid source URI components" }, { status: 400 });
+    }
+
+    const { result: srcResult, error: srcError } = await callMcpTool(
+      UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,
+      "get_source", { source_file: sourceFile, chunk_index: chunkIndex, domain }, ctx,
+    );
+    if (srcError) return NextResponse.json({ error: `MCP error: ${srcError}` }, { status: 502 });
+
+    try {
+      const parsed = JSON.parse(srcResult);
+      if (parsed.error) {
+        return NextResponse.json({ error: parsed.error }, { status: 404 });
+      }
+      return NextResponse.json(parsed);
+    } catch {
+      return NextResponse.json({ text: srcResult, source_file: sourceFile, chunk_index: chunkIndex });
+    }
+  }
+
   // Single unified call — orchestrator resolves the right handler
   const { result, error } = await callMcpTool(
     UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,

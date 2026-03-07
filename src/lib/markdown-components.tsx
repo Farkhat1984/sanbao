@@ -4,12 +4,13 @@
 import { ExternalLink, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ArticleLink } from "@/components/chat/ArticleLink";
+import { SourceLink } from "@/components/chat/SourceLink";
 import { openImageInPanel } from "@/lib/panel-actions";
 import { defaultUrlTransform } from "react-markdown";
 
-/** Allow article:// protocol through URL sanitization */
+/** Allow article:// and source:// protocols through URL sanitization */
 export function urlTransform(url: string): string {
-  if (url.startsWith("article://")) return url;
+  if (url.startsWith("article://") || url.startsWith("source://")) return url;
   return defaultUrlTransform(url);
 }
 
@@ -23,6 +24,21 @@ export const markdownComponents = {
     </div>
   ),
   a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+    // source://domain/file.pdf/chunk_index → clickable SourceLink (internal panel)
+    if (href?.startsWith("source://")) {
+      const raw = href.replace("source://", "").replace(/\/+$/, "");
+      // Parse: domain/source_file/chunk_index
+      const parts = raw.split("/");
+      if (parts.length >= 3) {
+        const domain = parts[0];
+        const chunkIndex = parseInt(parts[parts.length - 1], 10);
+        const sourceFile = parts.slice(1, -1).join("/");
+        if (domain && sourceFile && !isNaN(chunkIndex)) {
+          return <SourceLink domain={domain} sourceFile={sourceFile} chunkIndex={chunkIndex}>{children}</SourceLink>;
+        }
+      }
+      return <span className="text-accent font-medium">{children}</span>;
+    }
     // article://criminal_code/188 → clickable ArticleLink (internal panel)
     if (href?.startsWith("article://")) {
       const raw = href.replace("article://", "").replace(/\/+$/, ""); // strip trailing slashes
