@@ -194,7 +194,8 @@ const withAuth = auth((req) => {
 });
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
-  const { method, pathname } = req.nextUrl;
+  const { method } = req;
+  const { pathname } = req.nextUrl;
 
   // P3-40: CSRF Origin check for state-changing methods (before auth)
   if (STATE_CHANGING_METHODS.has(method) && !isCsrfExempt(pathname)) {
