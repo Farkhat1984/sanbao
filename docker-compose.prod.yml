@@ -158,6 +158,7 @@ services:
       - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AI_CORTEX_ENABLE_OCR=true
       - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
     depends_on:
       fragmentdb:
@@ -165,17 +166,17 @@ services:
       embedding-proxy:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8120/health || python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8120)); s.close()\""]
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8120)); s.close()\""]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 10
       start_period: 600s
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 8G
         reservations:
-          memory: 512M
+          memory: 1G
 
   ai-cortex-web:
     build:
