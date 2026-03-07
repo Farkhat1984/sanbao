@@ -125,7 +125,7 @@ export function SkillForm({ initial }: SkillFormProps) {
               type="button"
               onClick={handleGenerate}
               disabled={generating || !genDescription.trim()}
-              className="h-9 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer"
+              className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}

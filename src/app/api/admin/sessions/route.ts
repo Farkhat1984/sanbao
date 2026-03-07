@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -14,7 +14,7 @@ export async function GET() {
     take: 500,
   });
 
-  return NextResponse.json(
+  return jsonOk(
     sessions.map((s) => ({
       id: s.id,
       userId: s.userId,
@@ -35,23 +35,20 @@ export async function DELETE(req: Request) {
     // Require explicit confirmation for bulk delete to prevent accidental mass session termination
     const url = new URL(req.url);
     if (url.searchParams.get("confirm") !== "true") {
-      return NextResponse.json(
-        { error: "Bulk delete requires ?confirm=true query parameter" },
-        { status: 400 }
-      );
+      return jsonError("Bulk delete requires ?confirm=true query parameter", 400);
     }
 
     // Exclude the current admin's session to prevent self-lockout
     await prisma.session.deleteMany({
       where: { userId: { not: result.userId } },
     });
-    return NextResponse.json({ success: true, deleted: "all_except_current" });
+    return jsonOk({ success: true, deleted: "all_except_current" });
   }
 
   if (body.sessionId) {
     await prisma.session.delete({ where: { id: body.sessionId } }).catch(() => null);
-    return NextResponse.json({ success: true });
+    return jsonOk({ success: true });
   }
 
-  return NextResponse.json({ error: "sessionId or all required" }, { status: 400 });
+  return jsonError("sessionId or all required", 400);
 }

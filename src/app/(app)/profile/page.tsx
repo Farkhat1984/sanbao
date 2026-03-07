@@ -35,7 +35,7 @@ export default function ProfilePage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="text-xl font-bold text-text-primary mb-6">Профиль</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-6 font-[family-name:var(--font-display)]">Профиль</h1>
 
         {/* User Card */}
         <div className="bg-surface border border-border rounded-2xl p-6 mb-6">
@@ -81,7 +81,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Upgrade Card */}
-        <div className="bg-gradient-to-r from-accent to-legal-ref rounded-2xl p-6 text-white">
+        <div className="bg-accent rounded-2xl p-6 text-white">
           <h3 className="text-lg font-bold mb-2">Sanbao Pro</h3>
           <p className="text-sm opacity-90 mb-4">
             Расширенные юридические инструменты, приоритетный доступ к AI,

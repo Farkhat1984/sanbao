@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     : 0;
   const anomalies = costPerUser.filter((u) => u.cost > avgCost * 3);
 
-  return NextResponse.json({
+  return jsonOk({
     period,
     dailyMessages: dailyMessages.map((d) => ({
       date: d.date.toISOString().slice(0, 10),

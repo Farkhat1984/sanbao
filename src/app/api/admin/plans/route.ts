@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -12,5 +12,5 @@ export async function GET() {
     take: 500,
   });
 
-  return NextResponse.json(plans);
+  return jsonOk(plans);
 }

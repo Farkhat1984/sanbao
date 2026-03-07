@@ -3,21 +3,10 @@
 import { ArrowRight } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
+import { staggerContainer, staggerItem, springTransition } from "@/lib/animations";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
-
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.06 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0 },
-};
 
 export function WelcomeScreen() {
   const { activeAgentId, setPendingInput } = useChatStore();
@@ -53,7 +42,7 @@ export function WelcomeScreen() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", damping: 20, stiffness: 200 }}
+        transition={springTransition}
         className="text-center mb-10"
       >
         {/* Logo / Agent Icon */}
@@ -77,14 +66,14 @@ export function WelcomeScreen() {
           );
         })() : (
           <>
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-5 shadow-lg">
+            <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center mx-auto mb-5 shadow-lg sonar">
               <SanbaoCompass size={32} className="text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-text-primary mb-2">
-              Sanbao AI
+            <h2 className="text-2xl font-bold text-text-primary mb-2 font-[family-name:var(--font-display)]">
+              Sanbao<span className="text-accent">.ai</span>
             </h2>
             <p className="text-sm text-text-secondary max-w-md">
-              AI-платформа для профессионалов. Создавайте документы, анализируйте данные, автоматизируйте задачи с точностью, которой можно доверять.
+              Мультиагентная AI-платформа для профессионалов. Подключайте агентов, базы знаний и инструменты — решайте задачи любой сложности.
             </p>
           </>
         )}
@@ -93,7 +82,7 @@ export function WelcomeScreen() {
       {/* Starter prompts from agent */}
       {hasAgent && activeAgent.starterPrompts && activeAgent.starterPrompts.length > 0 && toolActions.length === 0 && (
         <motion.div
-          variants={containerVariants}
+          variants={staggerContainer}
           initial="hidden"
           animate="visible"
           className="flex flex-wrap justify-center gap-2 max-w-2xl w-full"
@@ -101,7 +90,7 @@ export function WelcomeScreen() {
           {activeAgent.starterPrompts.map((prompt, i) => (
             <motion.button
               key={i}
-              variants={itemVariants}
+              variants={staggerItem}
               onClick={() => handleQuickAction(prompt)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover text-sm text-text-primary transition-all duration-200 cursor-pointer group"
             >
@@ -115,7 +104,7 @@ export function WelcomeScreen() {
       {/* Quick Actions from agent tools */}
       {toolActions.length > 0 && (
         <motion.div
-          variants={containerVariants}
+          variants={staggerContainer}
           initial="hidden"
           animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full"
@@ -123,7 +112,7 @@ export function WelcomeScreen() {
           {toolActions.map((action) => (
             <motion.button
               key={action.key}
-              variants={itemVariants}
+              variants={staggerItem}
               onClick={() => handleQuickAction(action.prompt)}
               className="group text-left p-4 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover transition-all duration-200 cursor-pointer"
             >

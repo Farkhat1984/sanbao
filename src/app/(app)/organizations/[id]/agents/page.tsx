@@ -15,11 +15,11 @@ interface OrgAgentItem {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  CREATING: { label: "Создание", icon: Loader2, color: "text-blue-500" },
-  PROCESSING: { label: "Обработка", icon: Loader2, color: "text-amber-500" },
-  READY: { label: "Готов", icon: CheckCircle, color: "text-emerald-500" },
+  CREATING: { label: "Создание", icon: Loader2, color: "text-accent" },
+  PROCESSING: { label: "Обработка", icon: Loader2, color: "text-warning" },
+  READY: { label: "Готов", icon: CheckCircle, color: "text-success" },
   PUBLISHED: { label: "Опубликован", icon: CheckCircle, color: "text-accent" },
-  ERROR: { label: "Ошибка", icon: AlertCircle, color: "text-red-500" },
+  ERROR: { label: "Ошибка", icon: AlertCircle, color: "text-error" },
 };
 
 export default function OrgAgentsPage({
@@ -58,14 +58,14 @@ export default function OrgAgentsPage({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">AI-агенты</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-агенты</h1>
             <p className="text-sm text-text-muted mt-1">
               Агенты, созданные из ваших документов
             </p>
           </div>
           <button
             onClick={() => router.push(`/organizations/${orgId}/agents/new`)}
-            className="h-10 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all cursor-pointer"
+            className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Создать агента

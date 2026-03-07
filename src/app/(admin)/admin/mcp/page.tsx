@@ -45,7 +45,7 @@ const MCP_PRESETS: McpPreset[] = [
     name: "GitHub",
     description: "Управление репозиториями, PR, issues, branches. Code review и CI/CD автоматизация.",
     category: "Разработка",
-    categoryColor: "#4F6EF7",
+    categoryColor: "#8FAF9F",
     defaultUrl: "http://localhost:3101/mcp",
     transport: "STREAMABLE_HTTP",
     setupCommand: "npx -y @modelcontextprotocol/server-github",
@@ -78,7 +78,7 @@ const MCP_PRESETS: McpPreset[] = [
     name: "Filesystem",
     description: "Чтение, запись, поиск файлов и директорий. Безопасный доступ к файловой системе.",
     category: "Файлы",
-    categoryColor: "#7C3AED",
+    categoryColor: "#B8956A",
     defaultUrl: "http://localhost:3104/mcp",
     transport: "STREAMABLE_HTTP",
     setupCommand: "npx -y @modelcontextprotocol/server-filesystem /path/to/dir",
@@ -284,7 +284,7 @@ export default function AdminMcpPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Глобальные MCP-серверы</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Глобальные MCP-серверы</h1>
           <p className="text-sm text-text-muted mt-1">Серверы доступные всем пользователям</p>
         </div>
         <div className="flex items-center gap-2">
@@ -449,7 +449,7 @@ export default function AdminMcpPage() {
                     <button
                       onClick={() => handleToggleEnabled(s.id, s.isEnabled)}
                       title={s.isEnabled ? "Отключить для пользователей" : "Включить для пользователей"}
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-orange-500 hover:bg-orange-500/10" : "text-text-muted hover:text-success hover:bg-success/10"}`}
+                      className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-warning hover:bg-warning-light" : "text-text-muted hover:text-success hover:bg-success/10"}`}
                     >
                       {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" /> : <ToggleLeft className="h-4.5 w-4.5" />}
                     </button>

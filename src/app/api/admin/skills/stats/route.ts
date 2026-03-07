@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -50,5 +50,5 @@ export async function GET() {
   const activeSkills = skills.filter((s) => s.status === "APPROVED" || s.isBuiltIn).length;
   const pendingSkills = skills.filter((s) => s.status === "PENDING").length;
 
-  return NextResponse.json({ stats, totalSkills, activeSkills, pendingSkills });
+  return jsonOk({ stats, totalSkills, activeSkills, pendingSkills });
 }

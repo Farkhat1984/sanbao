@@ -12,54 +12,53 @@
 
 :root {
   /* Background */
-  --bg: #FAFBFD;
-  --bg-surface: #FFFFFF;
-  --bg-surface-alt: #F3F5F9;
-  --bg-surface-hover: #EDF0F5;
-  --bg-overlay: rgba(250, 251, 253, 0.85);
+  --bg: #F4EFE6;
+  --bg-surface: #F4EFE6;
+  --bg-surface-alt: #EDE8DF;
+  --bg-surface-hover: #E2DDD4;
+  --bg-overlay: rgba(244, 239, 230, 0.85);
 
   /* Borders */
-  --border: #E8ECF2;
-  --border-hover: #D0D7E2;
-  --border-focus: #4F6EF7;
+  --border: #D9C9B0;
+  --border-hover: #C4B89E;
+  --border-focus: #8FAF9F;
 
   /* Text */
-  --text-primary: #1A2138;
-  --text-secondary: #5C6B82;
-  --text-muted: #8E99AB;
-  --text-inverse: #FFFFFF;
+  --text-primary: #1C2B3A;
+  --text-secondary: #5E7A8A;
+  --text-muted: #9AABB8;
+  --text-inverse: #F4EFE6;
 
-  /* Accent — Indigo Blue */
-  --accent: #4F6EF7;
-  --accent-hover: #3B57D9;
-  --accent-light: #EEF1FE;
-  --accent-gradient: linear-gradient(135deg, #4F6EF7 0%, #7C3AED 100%);
+  /* Accent — Celadon Jade */
+  --accent: #8FAF9F;
+  --accent-hover: #7A9E8E;
+  --accent-light: #C5D9CF;
 
-  /* Legal Reference — Purple */
-  --legal-ref: #7C3AED;
-  --legal-ref-bg: #F5F0FF;
-  --legal-ref-hover: #6D28D9;
+  /* Legal Reference — Aged Gold */
+  --legal-ref: #B8956A;
+  --legal-ref-bg: #F5EFE4;
+  --legal-ref-hover: #A07D55;
 
   /* Status */
   --success: #22C55E;
   --success-light: #F0FDF4;
   --warning: #F59E0B;
   --warning-light: #FFFBEB;
-  --error: #EF4444;
-  --error-light: #FEF2F2;
+  --error: #C4857A;
+  --error-light: #F5E8E5;
   --info: #3B82F6;
   --info-light: #EFF6FF;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(26, 33, 56, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 33, 56, 0.06);
-  --shadow-lg: 0 8px 32px rgba(26, 33, 56, 0.08);
-  --shadow-xl: 0 16px 48px rgba(26, 33, 56, 0.10);
-  --shadow-input: 0 4px 24px rgba(79, 110, 247, 0.08);
-  --shadow-input-focus: 0 4px 32px rgba(79, 110, 247, 0.15);
+  --shadow-sm: 0 1px 2px rgba(28, 43, 58, 0.04);
+  --shadow-md: 0 4px 12px rgba(28, 43, 58, 0.06);
+  --shadow-lg: 0 8px 32px rgba(28, 43, 58, 0.08);
+  --shadow-xl: 0 16px 48px rgba(28, 43, 58, 0.10);
+  --shadow-input: 0 4px 24px rgba(143, 175, 159, 0.08);
+  --shadow-input-focus: 0 4px 32px rgba(143, 175, 159, 0.15);
 
   /* Sidebar */
-  --sidebar-bg: rgba(243, 245, 249, 0.75);
+  --sidebar-bg: rgba(237, 232, 223, 0.75);
   --sidebar-width: 280px;
   --sidebar-collapsed: 64px;
 
@@ -82,7 +81,42 @@
   --duration-slow: 400ms;
 }
 
-/* Dark theme disabled — light only */
+/* Dark mode — Phase 1 */
+[data-theme="dark"] {
+  --bg: #1C2B3A;
+  --bg-surface: #243447;
+  --bg-surface-alt: #2C3E50;
+  --bg-surface-hover: #34495E;
+  --bg-overlay: rgba(28, 43, 58, 0.85);
+  --border: #3D5A6E;
+  --border-hover: #4A6B7F;
+  --border-focus: #8FAF9F;
+  --text-primary: #F4EFE6;
+  --text-secondary: #9AABB8;
+  --text-muted: #6B8494;
+  --text-inverse: #1C2B3A;
+  --accent: #8FAF9F;
+  --accent-hover: #A3C2B3;
+  --accent-light: #2A3F35;
+  --legal-ref: #D4A96A;
+  --legal-ref-bg: #2E3A2F;
+  --legal-ref-hover: #C4955A;
+  --error: #C4857A;
+  --error-light: #3A2A28;
+  --success: #22C55E;
+  --success-light: #1A3A2A;
+  --warning: #F59E0B;
+  --warning-light: #3A3020;
+  --info: #3B82F6;
+  --info-light: #1E2D3D;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --shadow-input: 0 4px 24px rgba(143, 175, 159, 0.1);
+  --shadow-input-focus: 0 4px 32px rgba(143, 175, 159, 0.2);
+  --sidebar-bg: rgba(36, 52, 71, 0.75);
+}
 
 /* ─── Tailwind Theme Tokens ───────────────────────────── */
 
@@ -107,11 +141,17 @@
   --color-legal-ref-bg: var(--legal-ref-bg);
 
   --color-success: var(--success);
+  --color-success-light: var(--success-light);
   --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
   --color-error: var(--error);
+  --color-error-light: var(--error-light);
   --color-info: var(--info);
+  --color-info-light: var(--info-light);
+  --color-legal-ref-hover: var(--legal-ref-hover);
 
-  --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  --font-sans: var(--font-body), "Exo 2", system-ui, sans-serif;
+  --font-display: var(--font-display), "Orbitron", sans-serif;
   --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
 }
 
@@ -186,7 +226,7 @@ body {
 
 ::selection {
   background: var(--accent);
-  color: white;
+  color: var(--text-inverse);
 }
 
 /* Selection on accent (user message) backgrounds */
@@ -233,11 +273,11 @@ body {
   background: conic-gradient(
     from var(--border-angle),
     var(--accent),
-    #a78bfa,
-    #ec4899,
-    #f59e0b,
-    #22c55e,
-    #3b82f6,
+    #B8956A,
+    #C5D9CF,
+    #A07D55,
+    #7A9E8E,
+    #D9C9B0,
     var(--accent)
   );
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -299,6 +339,32 @@ body {
 
 .animate-scale-in {
   animation: scaleIn var(--duration-normal) var(--ease-spring) both;
+}
+
+/* ─── Brand Motifs ───────────────────────────────────── */
+
+.dot-grid {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.sonar {
+  position: relative;
+}
+
+.sonar::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: sonar-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sonar-pulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 
 /* ─── Markdown Styles ─────────────────────────────────── */

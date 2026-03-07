@@ -8,7 +8,7 @@ import {
   Settings, FileText, Scale, Globe,
   Bell, Key, Webhook, ClipboardList,
   AlertTriangle, DollarSign, UserX, Eye, Tag,
-  Wrench, Puzzle, ScrollText,
+  Wrench, ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,6 @@ const sections = [
       { href: "/admin/models", label: "Модели", icon: Bot },
       { href: "/admin/agents", label: "Сис. агенты", icon: Scale },
       { href: "/admin/tools", label: "Инструменты", icon: Wrench },
-      { href: "/admin/plugins", label: "Плагины", icon: Puzzle },
       { href: "/admin/skills", label: "Скиллы", icon: FileText },
       { href: "/admin/prompts", label: "Промпты", icon: ScrollText },
       { href: "/admin/mcp", label: "MCP-серверы", icon: Globe },
@@ -84,7 +83,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
       {sections.map((section, si) => (
         <div key={si}>
           {section.title && (
-            <p className="text-[10px] uppercase tracking-wider text-text-muted px-3 pt-4 pb-1 font-semibold">
+            <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 pt-4 pb-1 font-semibold">
               {section.title}
             </p>
           )}
@@ -102,8 +101,8 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-accent/10 text-accent"
-                    : "text-text-secondary hover:bg-surface-alt hover:text-text-primary"
+                    ? "bg-white/10 text-white"
+                    : "text-white/60 hover:bg-white/10 hover:text-white"
                 )}
               >
                 <link.icon className="h-4 w-4" />

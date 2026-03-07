@@ -1,35 +1,29 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseFileToText } from "@/lib/parse-file";
 import { MAX_FILE_SIZE_PARSE, ALLOWED_FILE_TYPES } from "@/lib/constants";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 
   if (!file) {
-    return NextResponse.json({ error: "Файл не найден" }, { status: 400 });
+    return jsonError("Файл не найден", 400);
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json(
-      { error: "Файл слишком большой (макс. 20MB)" },
-      { status: 400 }
-    );
+    return jsonError("Файл слишком большой (макс. 20MB)", 400);
   }
 
   if (file.type && !ALLOWED_FILE_TYPES.includes(file.type)) {
-    return NextResponse.json(
-      { error: `Тип файла не поддерживается: ${file.type}` },
-      { status: 400 }
-    );
+    return jsonError(`Тип файла не поддерживается: ${file.type}`, 400);
   }
 
   try {
@@ -37,22 +31,14 @@ export async function POST(req: Request) {
     const text = await parseFileToText(buffer, file.name, file.type);
 
     if (!text) {
-      return NextResponse.json(
-        { error: "Не удалось извлечь текст из файла" },
-        { status: 422 }
-      );
+      return jsonError("Не удалось извлечь текст из файла", 422);
     }
 
-    return NextResponse.json({ text, fileName: file.name });
+    return jsonOk({ text, fileName: file.name });
   } catch (err) {
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Ошибка обработки файла",
-      },
-      { status: 500 }
+    return jsonError(
+      err instanceof Error ? err.message : "Ошибка обработки файла",
+      500
     );
   }
 }

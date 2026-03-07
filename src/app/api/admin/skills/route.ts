@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     take: 500,
   });
 
-  return NextResponse.json(skills);
+  return jsonOk(skills);
 }
 
 export async function POST(req: Request) {
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor, isBuiltIn, isPublic } = body;
 
   if (!name || !systemPrompt) {
-    return NextResponse.json({ error: "Обязательные поля: name, systemPrompt" }, { status: 400 });
+    return jsonError("Обязательные поля: name, systemPrompt", 400);
   }
 
   const skill = await prisma.skill.create({
@@ -57,5 +57,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(skill, { status: 201 });
+  return jsonOk(skill, 201);
 }

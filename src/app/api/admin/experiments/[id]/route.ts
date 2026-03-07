@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateExperimentCache } from "@/lib/ab-experiment";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -27,7 +27,7 @@ export async function PUT(
 
   invalidateExperimentCache();
 
-  return NextResponse.json(experiment);
+  return jsonOk(experiment);
 }
 
 export async function DELETE(
@@ -41,5 +41,5 @@ export async function DELETE(
   await prisma.promptExperiment.delete({ where: { id } });
   invalidateExperimentCache();
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

@@ -705,18 +705,6 @@ async function main() {
       sortOrder: 5,
     },
     {
-      id: "tool-image-edit",
-      name: "Редактировать изображение",
-      description: "Изменить изображение с помощью AI",
-      icon: "Sparkles",
-      iconColor: "#6366F1",
-      config: {
-        prompt: "",
-        isImageEdit: true,
-      },
-      sortOrder: 6,
-    },
-    {
       id: "tool-customs-declaration",
       name: "Таможенная декларация",
       description: "ДТ ЕАЭС — декларация на товары",

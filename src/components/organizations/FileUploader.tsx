@@ -76,8 +76,8 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
   if (uploadedCount > 0) {
     return (
       <div className="text-center py-8">
-        <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="h-8 w-8 text-emerald-500" />
+        <div className="h-16 w-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-8 w-8 text-success" />
         </div>
         <h2 className="text-lg font-semibold text-text-primary mb-1">
           Загружено {uploadedCount} файл(ов)
@@ -126,7 +126,7 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
               <span className="text-xs text-text-muted shrink-0">{formatSize(file.size)}</span>
               <button
                 onClick={() => removeFile(i)}
-                className="h-6 w-6 rounded flex items-center justify-center text-text-muted hover:text-red-500 cursor-pointer"
+                className="h-6 w-6 rounded flex items-center justify-center text-text-muted hover:text-error cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -136,7 +136,7 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
       )}
 
       {error && (
-        <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+        <div className="p-3 rounded-xl bg-error-light text-error text-sm">
           {error}
         </div>
       )}
@@ -144,7 +144,7 @@ export function FileUploader({ params, agentId, onComplete }: FileUploaderProps)
       <button
         onClick={handleUpload}
         disabled={files.length === 0 || uploading}
-        className="w-full h-11 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        className="w-full h-11 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
       >
         {uploading ? "Загрузка..." : `Загрузить ${files.length} файл(ов)`}
       </button>

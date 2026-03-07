@@ -1,5 +1,3 @@
-"use client";
-
 import { SkillForm } from "@/components/skills/SkillForm";
 
 export default function NewSkillPage() {

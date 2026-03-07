@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -14,7 +14,7 @@ export async function PUT(
 
   const webhook = await prisma.webhook.findUnique({ where: { id } });
   if (!webhook) {
-    return NextResponse.json({ error: "Вебхук не найден" }, { status: 404 });
+    return jsonError("Вебхук не найден", 404);
   }
 
   // SSRF protection on URL update
@@ -22,14 +22,14 @@ export async function PUT(
     try {
       const parsed = new URL(body.url.trim());
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-        return NextResponse.json({ error: "URL должен использовать http или https" }, { status: 400 });
+        return jsonError("URL должен использовать http или https", 400);
       }
       const BLOCKED_HOSTS = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|\[::1?\]|metadata\.google|169\.254\.\d+\.\d+)/i;
       if (BLOCKED_HOSTS.test(parsed.hostname)) {
-        return NextResponse.json({ error: "URL указывает на внутреннюю сеть" }, { status: 400 });
+        return jsonError("URL указывает на внутреннюю сеть", 400);
       }
     } catch {
-      return NextResponse.json({ error: "Некорректный URL" }, { status: 400 });
+      return jsonError("Некорректный URL", 400);
     }
   }
 
@@ -40,7 +40,7 @@ export async function PUT(
   }
 
   const updated = await prisma.webhook.update({ where: { id }, data });
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -53,9 +53,9 @@ export async function DELETE(
   const { id } = await params;
   const webhook = await prisma.webhook.findUnique({ where: { id } });
   if (!webhook) {
-    return NextResponse.json({ error: "Вебхук не найден" }, { status: 404 });
+    return jsonError("Вебхук не найден", 404);
   }
 
   await prisma.webhook.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

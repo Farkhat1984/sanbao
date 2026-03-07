@@ -62,12 +62,12 @@ export function AgentProgressBar({
       </div>
       <div className="h-2 rounded-full bg-surface-alt overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-accent to-legal-ref transition-all duration-500"
+          className="h-full rounded-full bg-accent transition-all duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>
       {done && (
-        <p className="text-xs text-emerald-600 font-medium">Обработка завершена!</p>
+        <p className="text-xs text-success font-medium">Обработка завершена!</p>
       )}
     </div>
   );

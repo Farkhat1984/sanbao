@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
+import { springTransition } from "@/lib/animations";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -10,15 +11,15 @@ export default function RegisterPage() {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", damping: 20, stiffness: 200 }}
+      transition={springTransition}
       className="w-full max-w-sm"
     >
       {/* Logo */}
       <div className="text-center mb-8">
-        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <div className="h-14 w-14 rounded-full bg-accent flex items-center justify-center mx-auto mb-4 shadow-lg sonar">
           <SanbaoCompass size={28} className="text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-text-primary">
+        <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">
           Создать аккаунт
         </h1>
         <p className="text-sm text-text-secondary mt-1">

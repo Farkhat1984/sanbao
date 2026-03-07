@@ -93,7 +93,7 @@ export default function AgentModerationPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-text-primary">Модерация агентов</h1>
+        <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Модерация агентов</h1>
         <p className="text-sm text-text-muted mt-1">Проверка публичных агентов и обработка жалоб</p>
       </div>
 

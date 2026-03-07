@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { incrementTokens } from "@/lib/usage";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(
   req: Request,
@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { id: conversationId } = await params;
@@ -21,32 +21,32 @@ export async function POST(
   });
 
   if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
   const body = await req.json().catch(() => null);
   if (!body) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return jsonError("Invalid JSON", 400);
   }
   const { messages } = body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
-    return NextResponse.json({ error: "No messages" }, { status: 400 });
+    return jsonError("No messages", 400);
   }
 
   // Limit batch size and individual message size
   if (messages.length > 50) {
-    return NextResponse.json({ error: "Too many messages in batch" }, { status: 400 });
+    return jsonError("Too many messages in batch", 400);
   }
   const ALLOWED_ROLES = new Set(["USER", "ASSISTANT"]);
   const MAX_MSG_SIZE = 200_000; // 200KB per message
   for (const m of messages) {
     if (typeof m.content === "string" && m.content.length > MAX_MSG_SIZE) {
-      return NextResponse.json({ error: "Message too large" }, { status: 400 });
+      return jsonError("Message too large", 400);
     }
     // Prevent role injection — clients can only submit USER and ASSISTANT messages
     if (!ALLOWED_ROLES.has(m.role)) {
-      return NextResponse.json({ error: "Invalid message role" }, { status: 400 });
+      return jsonError("Invalid message role", 400);
     }
   }
 
@@ -136,5 +136,5 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ count: created.count });
+  return jsonOk({ count: created.count });
 }

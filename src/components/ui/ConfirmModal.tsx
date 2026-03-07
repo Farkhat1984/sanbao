@@ -24,15 +24,15 @@ const variantConfig: Record<
 > = {
   danger: {
     icon: Trash2,
-    iconBg: "bg-red-100",
-    iconColor: "text-red-500",
-    btnClass: "bg-error text-white hover:bg-red-600",
+    iconBg: "bg-error-light",
+    iconColor: "text-error",
+    btnClass: "bg-error text-white hover:bg-[#B07068]",
   },
   warning: {
     icon: AlertTriangle,
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-500",
-    btnClass: "bg-amber-500 text-white hover:bg-amber-600",
+    iconBg: "bg-warning-light",
+    iconColor: "text-warning",
+    btnClass: "bg-warning text-white hover:bg-[#D97706]",
   },
   info: {
     icon: Info,

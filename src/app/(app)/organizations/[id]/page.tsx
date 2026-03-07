@@ -85,7 +85,7 @@ export default function OrganizationDetailPage({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">{org.name as string}</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">{org.name as string}</h1>
             <p className="text-sm text-text-muted mt-1">
               {(org.memberCount as number)} участник(ов) · {(org.agentCount as number)} агент(ов)
             </p>
@@ -94,7 +94,7 @@ export default function OrganizationDetailPage({
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="h-9 px-4 rounded-xl border border-red-200 text-red-600 text-sm font-medium flex items-center gap-2 hover:bg-red-50 transition-colors disabled:opacity-50 cursor-pointer"
+              className="h-9 px-4 rounded-xl border border-error/20 text-error text-sm font-medium flex items-center gap-2 hover:bg-error-light transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
               {deleting ? "Удаление..." : "Удалить"}

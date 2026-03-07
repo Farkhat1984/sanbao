@@ -43,7 +43,6 @@ export const agentUpdateSchema = z.object({
   skillIds: z.array(z.string()).max(50),
   mcpServerIds: z.array(z.string()).max(50),
   toolIds: z.array(z.string()).max(50),
-  pluginIds: z.array(z.string()).max(50),
 }).partial();
 
 // ─── Tool ────────────────────────────────────────────────
@@ -52,7 +51,7 @@ export const toolCreateSchema = z.object({
   name: z.string().min(1).max(200).transform((s) => s.trim()),
   description: z.string().max(2000).optional().nullable().transform((s) => s?.trim() || null),
   icon: z.string().max(50).optional().default("Wrench"),
-  iconColor: z.string().max(20).optional().default("#4F6EF7"),
+  iconColor: z.string().max(20).optional().default("#8FAF9F"),
   type: z.enum(["PROMPT_TEMPLATE", "WEBHOOK", "URL", "FUNCTION"]).optional().default("PROMPT_TEMPLATE"),
   config: z.record(z.string(), z.unknown()).optional().default({}),
   inputSchema: z.record(z.string(), z.unknown()).optional().nullable(),
@@ -93,17 +92,6 @@ export const skillUpdateSchema = z.object({
   icon: z.string().max(50),
   iconColor: z.string().max(20),
   isPublic: z.boolean(),
-}).partial();
-
-// ─── Plugin ─────────────────────────────────────────────
-
-export const pluginUpdateSchema = z.object({
-  name: z.string().min(1).max(200).transform((s) => s.trim()),
-  description: z.string().max(2000).nullable().transform((s) => s?.trim() || null),
-  icon: z.string().max(50),
-  iconColor: z.string().max(20),
-  version: z.string().max(20),
-  isActive: z.boolean(),
 }).partial();
 
 // ─── Organization ───────────────────────────────────────

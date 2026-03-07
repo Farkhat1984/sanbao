@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -11,7 +11,7 @@ export async function GET() {
     take: 500,
   });
 
-  return NextResponse.json(experiments);
+  return jsonOk(experiments);
 }
 
 export async function POST(req: Request) {
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const { name, description, key, variantA, variantB, trafficPct } = body;
 
   if (!name || !key || !variantA || !variantB) {
-    return NextResponse.json({ error: "name, key, variantA, variantB required" }, { status: 400 });
+    return jsonError("name, key, variantA, variantB required", 400);
   }
 
   const experiment = await prisma.promptExperiment.create({
@@ -36,5 +36,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(experiment, { status: 201 });
+  return jsonOk(experiment, 201);
 }

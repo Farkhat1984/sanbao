@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
 import { parsePagination } from "@/lib/validation";
+import { jsonOk } from "@/lib/api-helpers";
 
 // Build a price lookup map from AiModel records: "providerSlug:modelId" → prices
 async function buildPriceMap() {
@@ -110,7 +110,7 @@ export async function GET(req: Request) {
     totalCost += l.cost;
   }
 
-  return NextResponse.json({
+  return jsonOk({
     logs: enrichedLogs,
     total,
     page,

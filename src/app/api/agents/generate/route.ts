@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import {
@@ -11,24 +11,24 @@ import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   // Rate limit: 10 requests/minute per user
   if (!(await checkMinuteRateLimit(`agent-gen:${session.user.id}`, 10))) {
-    return NextResponse.json({ error: "Слишком много запросов" }, { status: 429 });
+    return jsonError("Слишком много запросов", 429);
   }
 
   const { description } = await req.json();
 
   if (!description?.trim() || description.length > 5000) {
-    return NextResponse.json({ error: "Описание обязательно (макс. 5000 символов)" }, { status: 400 });
+    return jsonError("Описание обязательно (макс. 5000 символов)", 400);
   }
 
   try {
     const textModel = await resolveModel("TEXT");
     if (!textModel) {
-      return NextResponse.json({ error: "Модель не настроена" }, { status: 503 });
+      return jsonError("Модель не настроена", 503);
     }
     const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
     const apiKey = textModel.provider.apiKey;
@@ -87,12 +87,9 @@ export async function POST(req: Request) {
       iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
     };
 
-    return NextResponse.json(result);
+    return jsonOk(result);
   } catch (e) {
     console.error("Agent generation error:", e);
-    return NextResponse.json(
-      { error: "Ошибка генерации агента" },
-      { status: 500 }
-    );
+    return jsonError("Ошибка генерации агента", 500);
   }
 }

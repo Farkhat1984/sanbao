@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateAgentContextCache } from "@/lib/tool-resolver";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 const toolUpdateSchema = z.object({
@@ -32,10 +33,10 @@ export async function GET(
   });
 
   if (!tool) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
-  return NextResponse.json({
+  return jsonOk({
     ...tool,
     createdAt: tool.createdAt.toISOString(),
     updatedAt: tool.updatedAt.toISOString(),
@@ -53,7 +54,7 @@ export async function PUT(
 
   const raw = await req.json().catch(() => null);
   if (!raw) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return jsonError("Invalid JSON", 400);
   }
 
   const parsed = toolUpdateSchema.safeParse(raw);
@@ -86,7 +87,7 @@ export async function PUT(
   // Invalidate agent context cache since tool config changed
   invalidateAgentContextCache();
 
-  return NextResponse.json({
+  return jsonOk({
     ...updated,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
@@ -103,9 +104,9 @@ export async function DELETE(
   const { id } = await params;
   const existing = await prisma.tool.findUnique({ where: { id } });
   if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
   await prisma.tool.delete({ where: { id } });
   invalidateAgentContextCache();
-  return NextResponse.json({ ok: true });
+  return jsonOk({ ok: true });
 }

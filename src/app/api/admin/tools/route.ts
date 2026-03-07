@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -14,7 +14,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(tools.map((t) => ({
+  return jsonOk(tools.map((t) => ({
     ...t,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const { name, description, icon, iconColor, type, config, inputSchema, sortOrder } = await req.json();
 
   if (!name?.trim()) {
-    return NextResponse.json({ error: "Название обязательно" }, { status: 400 });
+    return jsonError("Название обязательно", 400);
   }
 
   const tool = await prisma.tool.create({
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       name: name.trim(),
       description: description?.trim() || null,
       icon: icon || "Wrench",
-      iconColor: iconColor || "#4F6EF7",
+      iconColor: iconColor || "#8FAF9F",
       type: type || "PROMPT_TEMPLATE",
       config: config || {},
       inputSchema: inputSchema || null,
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json({
+  return jsonOk({
     ...tool,
     createdAt: tool.createdAt.toISOString(),
     updatedAt: tool.updatedAt.toISOString(),

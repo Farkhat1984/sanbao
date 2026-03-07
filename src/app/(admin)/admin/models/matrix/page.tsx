@@ -66,7 +66,7 @@ export default function ModelMatrixPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Матрица моделей</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Матрица моделей</h1>
           <p className="text-sm text-text-muted mt-1">Доступность моделей по тарифам</p>
         </div>
         <Link href="/admin/models" className="text-sm text-accent hover:underline">&larr; К списку моделей</Link>

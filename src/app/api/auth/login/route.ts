@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { mintSessionToken } from "@/lib/mobile-session";
 import { decrypt } from "@/lib/crypto";
@@ -42,10 +43,7 @@ export async function POST(req: Request) {
     };
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
+      return jsonError("Email and password are required", 400);
     }
 
     const login = email.trim().toLowerCase();
@@ -100,7 +98,7 @@ export async function POST(req: Request) {
         twoFactorVerified: admin.twoFactorEnabled || false,
       });
 
-      return NextResponse.json({
+      return jsonOk({
         token: session.token,
         user: { id: admin.id, email: admin.email, name: admin.name },
         expiresAt: session.expiresAt,
@@ -111,10 +109,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.findUnique({ where: { email: login } });
 
     if (!user || !user.password) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+      return jsonError("Invalid email or password", 401);
     }
 
     if (user.isBanned) {
@@ -126,10 +121,7 @@ export async function POST(req: Request) {
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+      return jsonError("Invalid email or password", 401);
     }
 
     // 2FA check
@@ -164,7 +156,7 @@ export async function POST(req: Request) {
       twoFactorVerified: user.twoFactorEnabled || false,
     });
 
-    return NextResponse.json({
+    return jsonOk({
       token: session.token,
       user: {
         id: user.id,
@@ -176,9 +168,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[AUTH:LOGIN] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError("Internal server error", 500);
   }
 }

@@ -76,8 +76,8 @@ function ArticleError({ error, onRetry, code, article }: { error: string; onRetr
 
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center gap-3">
-      <div className="h-12 w-12 rounded-xl bg-red-50 flex items-center justify-center">
-        <BookOpen className="h-6 w-6 text-red-500" />
+      <div className="h-12 w-12 rounded-xl bg-error-light flex items-center justify-center">
+        <BookOpen className="h-6 w-6 text-error" />
       </div>
       <p className="text-sm text-text-muted">{error}</p>
       {isLaw && (

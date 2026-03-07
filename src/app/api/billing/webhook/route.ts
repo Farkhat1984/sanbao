@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
@@ -26,19 +26,19 @@ export async function POST(req: Request) {
       event = verified;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      return NextResponse.json({ error: `Webhook signature verification failed: ${msg}` }, { status: 400 });
+      return jsonError(`Webhook signature verification failed: ${msg}`, 400);
     }
   } else if (!endpointSecret) {
     // Reject unsigned webhooks — STRIPE_WEBHOOK_SECRET must be configured
     console.warn("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured");
-    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+    return jsonError("Webhook secret not configured", 500);
   } else {
     // endpointSecret set but no signature header
-    return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
+    return jsonError("Missing stripe-signature header", 400);
   }
 
   if (!event?.data?.object) {
-    return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });
+    return jsonError("Invalid webhook payload", 400);
   }
 
   const obj = event.data.object;
@@ -165,5 +165,5 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ received: true });
+  return jsonOk({ received: true });
 }

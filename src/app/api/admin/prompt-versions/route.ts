@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     take: 50,
   });
 
-  return NextResponse.json(versions);
+  return jsonOk(versions);
 }
 
 export async function POST(req: Request) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const { key, content, changelog } = await req.json();
   if (!key || !content) {
-    return NextResponse.json({ error: "key and content required" }, { status: 400 });
+    return jsonError("key and content required", 400);
   }
 
   // Get next version
@@ -52,5 +52,5 @@ export async function POST(req: Request) {
     create: { key, value: content, type: "string" },
   });
 
-  return NextResponse.json(pv, { status: 201 });
+  return jsonOk(pv, 201);
 }

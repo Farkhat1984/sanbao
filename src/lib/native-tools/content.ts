@@ -202,8 +202,8 @@ registerNativeTool({
 
     // Default colors
     const COLORS = [
-      "#4F6EF7", "#7C3AED", "#10B981", "#F59E0B",
-      "#EF4444", "#EC4899", "#06B6D4", "#6366F1",
+      "#8FAF9F", "#B8956A", "#10B981", "#F59E0B",
+      "#C4857A", "#EC4899", "#06B6D4", "#5E7A8A",
     ];
 
     const datasets: ChartDataset[] = rawDatasets.map((ds, i) => {

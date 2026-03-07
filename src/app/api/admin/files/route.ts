@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { isStorageConfigured } from "@/lib/storage";
 import { readdir, stat, unlink } from "fs/promises";
 import path from "path";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -86,7 +86,7 @@ export async function GET() {
       createdAt: f.createdAt.toISOString(),
     }));
 
-  return NextResponse.json({
+  return jsonOk({
     totalFiles,
     totalSize,
     byUser,
@@ -170,7 +170,7 @@ export async function POST() {
     ? (await prisma.agentFile.deleteMany({ where: { id: { in: orphanedIds } } })).count
     : 0;
 
-  return NextResponse.json({
+  return jsonOk({
     deletedFiles,
     deletedRecords,
     freedBytes,
@@ -185,12 +185,12 @@ export async function DELETE(req: Request) {
 
   const { fileId, type } = await req.json();
   if (!fileId || !type) {
-    return NextResponse.json({ error: "fileId and type required" }, { status: 400 });
+    return jsonError("fileId and type required", 400);
   }
 
   if (type === "agent") {
     const file = await prisma.agentFile.findUnique({ where: { id: fileId } });
-    if (!file) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!file) return jsonError("Not found", 404);
     try {
       const safePublicDir = path.resolve(process.cwd(), "public");
       const safePath = path.resolve(process.cwd(), "public", file.fileUrl);
@@ -201,5 +201,5 @@ export async function DELETE(req: Request) {
     await prisma.agentFile.delete({ where: { id: fileId } });
   }
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

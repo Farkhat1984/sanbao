@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { requireAdmin, resetIpWhitelistCache } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { resetContentFilterCache } from "@/lib/content-filter";
 import { resetTransporter } from "@/lib/email";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -12,7 +12,7 @@ export async function GET() {
   const map: Record<string, string> = {};
   for (const s of settings) map[s.key] = s.value;
 
-  return NextResponse.json(map);
+  return jsonOk(map);
 }
 
 export async function PUT(req: Request) {
@@ -66,7 +66,7 @@ export async function PUT(req: Request) {
   // body is { key: value, key2: value2, ... }
   for (const [key, value] of Object.entries(body)) {
     if (!ALLOWED_KEYS.has(key)) {
-      return NextResponse.json({ error: `Недопустимый ключ настройки: ${key}` }, { status: 400 });
+      return jsonError(`Недопустимый ключ настройки: ${key}`, 400);
     }
 
     let sanitized = String(value);
@@ -75,10 +75,7 @@ export async function PUT(req: Request) {
       const num = Number(sanitized);
       const [min, max] = NUMERIC_RANGES[key];
       if (!Number.isFinite(num) || num < min || num > max) {
-        return NextResponse.json(
-          { error: `Значение "${key}" должно быть числом от ${min} до ${max}` },
-          { status: 400 }
-        );
+        return jsonError(`Значение "${key}" должно быть числом от ${min} до ${max}`, 400);
       }
       sanitized = String(Math.floor(num));
     }
@@ -105,5 +102,5 @@ export async function PUT(req: Request) {
     resetIpWhitelistCache();
   }
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

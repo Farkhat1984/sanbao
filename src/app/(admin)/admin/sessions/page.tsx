@@ -58,7 +58,7 @@ export default function AdminSessionsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Сессии</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Сессии</h1>
           <p className="text-sm text-text-muted mt-1">Активные сессии пользователей ({sessions.length})</p>
         </div>
         <Button variant="secondary" size="sm" onClick={handleRevokeAll}>

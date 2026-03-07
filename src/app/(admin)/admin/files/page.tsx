@@ -65,7 +65,7 @@ export default function AdminFilesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Файлы</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Файлы</h1>
           <p className="text-sm text-text-muted mt-1">Загруженные файлы и использование хранилища</p>
         </div>
         <div className="flex items-center gap-2">
@@ -81,8 +81,8 @@ export default function AdminFilesPage() {
 
       {/* Cleanup result */}
       {cleanupResult && (
-        <div className="p-3 mb-6 rounded-xl bg-green-50 border border-green-200">
-          <p className="text-sm text-green-800">
+        <div className="p-3 mb-6 rounded-xl bg-success-light border border-success/20">
+          <p className="text-sm text-success">
             Очистка завершена: удалено {cleanupResult.deletedFiles} файлов с диска, {cleanupResult.deletedRecords} записей из БД.
             Освобождено: {cleanupResult.freedMb} МБ
           </p>
@@ -140,7 +140,7 @@ export default function AdminFilesPage() {
               <button
                 onClick={() => handleDelete(f.id)}
                 disabled={deleting === f.id}
-                className="ml-2 p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                className="ml-2 p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error-light transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

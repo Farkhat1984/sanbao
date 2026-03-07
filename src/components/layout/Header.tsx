@@ -7,6 +7,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { DEFAULT_ICON_COLOR } from "@/lib/constants";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function Header() {
   const { isOpen: sidebarOpen, open } = useSidebarStore();
@@ -19,7 +20,7 @@ export function Header() {
   const showMenuButton = isMobile || !sidebarOpen;
 
   return (
-    <header className="h-14 border-b border-border flex items-center gap-3 px-4 shrink-0 bg-surface/50 backdrop-blur-sm">
+    <header className="h-14 border-b border-[#B8956A]/30 flex items-center gap-3 px-4 shrink-0 bg-surface/50 backdrop-blur-sm">
       {/* Sidebar toggle */}
       {showMenuButton && (
         <Tooltip content="Открыть меню" side="bottom">
@@ -51,6 +52,9 @@ export function Header() {
           {activeConv?.title || "Новый чат"}
         </h1>
       </div>
+
+      {/* Theme Toggle */}
+      <ThemeToggle className="h-8 w-8 shrink-0" />
     </header>
   );
 }

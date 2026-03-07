@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -14,7 +14,7 @@ export async function PUT(
 
   const skill = await prisma.skill.findUnique({ where: { id } });
   if (!skill) {
-    return NextResponse.json({ error: "Скилл не найден" }, { status: 404 });
+    return jsonError("Скилл не найден", 404);
   }
 
   const allowedFields = ["name", "description", "systemPrompt", "templates", "citationRules", "jurisdiction", "icon", "iconColor", "isBuiltIn", "isPublic", "status"];
@@ -24,7 +24,7 @@ export async function PUT(
   }
 
   const updated = await prisma.skill.update({ where: { id }, data });
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -37,9 +37,9 @@ export async function DELETE(
   const { id } = await params;
   const skill = await prisma.skill.findUnique({ where: { id } });
   if (!skill) {
-    return NextResponse.json({ error: "Скилл не найден" }, { status: 404 });
+    return jsonError("Скилл не найден", 404);
   }
 
   await prisma.skill.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

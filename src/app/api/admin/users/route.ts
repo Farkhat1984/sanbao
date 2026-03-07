@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { parsePagination } from "@/lib/validation";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -45,5 +45,5 @@ export async function GET(req: Request) {
     prisma.user.count({ where }),
   ]);
 
-  return NextResponse.json({ users, total, page, limit });
+  return jsonOk({ users, total, page, limit });
 }

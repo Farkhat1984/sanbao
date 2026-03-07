@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { invalidatePlanCache } from "@/lib/usage";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -80,7 +80,7 @@ export async function GET(req: Request) {
     grantedBy: s.grantedBy,
   }));
 
-  return NextResponse.json({
+  return jsonOk({
     totalSubscriptions: subItems.length,
     planDistribution,
     recentPayments,
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   if (!body) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return jsonError("Invalid JSON", 400);
   }
   const { userId, planId, action } = body;
 
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     });
 
     await invalidatePlanCache(userId);
-    return NextResponse.json({ success: true });
+    return jsonOk({ success: true });
   }
 
   if (action === "cancel" && userId) {
@@ -139,7 +139,7 @@ export async function POST(req: Request) {
       });
     }
     await invalidatePlanCache(userId);
-    return NextResponse.json({ success: true });
+    return jsonOk({ success: true });
   }
 
   if (action === "refund" && userId) {
@@ -163,8 +163,8 @@ export async function POST(req: Request) {
       });
     }
     await invalidatePlanCache(userId);
-    return NextResponse.json({ success: true });
+    return jsonOk({ success: true });
   }
 
-  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  return jsonError("Invalid action", 400);
 }

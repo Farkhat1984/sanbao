@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import {
@@ -6,6 +5,7 @@ import {
   PROMPT_META,
   resetPromptCache,
 } from "@/lib/prompts";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -37,7 +37,7 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json(prompts);
+  return jsonOk(prompts);
 }
 
 export async function PUT(req: Request) {
@@ -47,13 +47,13 @@ export async function PUT(req: Request) {
   const { key, content, changelog } = await req.json();
 
   if (!key || typeof key !== "string") {
-    return NextResponse.json({ error: "Ключ обязателен" }, { status: 400 });
+    return jsonError("Ключ обязателен", 400);
   }
   if (!(key in PROMPT_REGISTRY)) {
-    return NextResponse.json({ error: `Неизвестный ключ промпта: ${key}` }, { status: 400 });
+    return jsonError(`Неизвестный ключ промпта: ${key}`, 400);
   }
   if (!content || typeof content !== "string" || content.trim().length < 10) {
-    return NextResponse.json({ error: "Содержимое промпта слишком короткое (мин. 10 символов)" }, { status: 400 });
+    return jsonError("Содержимое промпта слишком короткое (мин. 10 символов)", 400);
   }
 
   // Get next version number
@@ -83,7 +83,7 @@ export async function PUT(req: Request) {
 
   resetPromptCache(key);
 
-  return NextResponse.json({ success: true, version });
+  return jsonOk({ success: true, version });
 }
 
 export async function DELETE(req: Request) {
@@ -93,7 +93,7 @@ export async function DELETE(req: Request) {
   const { key } = await req.json();
 
   if (!key || !(key in PROMPT_REGISTRY)) {
-    return NextResponse.json({ error: `Неизвестный ключ промпта: ${key}` }, { status: 400 });
+    return jsonError(`Неизвестный ключ промпта: ${key}`, 400);
   }
 
   // Delete override from SystemSetting (returns to default)
@@ -121,5 +121,5 @@ export async function DELETE(req: Request) {
 
   resetPromptCache(key);
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

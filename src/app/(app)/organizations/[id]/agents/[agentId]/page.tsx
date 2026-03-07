@@ -166,7 +166,7 @@ export default function OrgAgentDetailPage({
 
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">{agent.name}</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">{agent.name}</h1>
             {agent.description && (
               <p className="text-sm text-text-muted mt-1">{agent.description}</p>
             )}
@@ -183,7 +183,7 @@ export default function OrgAgentDetailPage({
             )}
             <button
               onClick={handleDelete}
-              className="h-9 px-3 rounded-xl border border-red-200 text-red-600 text-sm flex items-center gap-1 hover:bg-red-50 transition-colors cursor-pointer"
+              className="h-9 px-3 rounded-xl border border-error/20 text-error text-sm flex items-center gap-1 hover:bg-error-light transition-colors cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -191,7 +191,7 @@ export default function OrgAgentDetailPage({
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm mb-4">
+          <div className="p-3 rounded-xl bg-error-light text-error text-sm mb-4">
             {error}
           </div>
         )}
@@ -212,7 +212,7 @@ export default function OrgAgentDetailPage({
               <button
                 onClick={handleProcess}
                 disabled={processing}
-                className="h-9 px-4 rounded-xl bg-amber-500 text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="h-9 px-4 rounded-xl bg-warning text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <Play className="h-4 w-4" />
                 {processing ? "Запуск..." : "Обработать"}
@@ -286,11 +286,11 @@ export default function OrgAgentDetailPage({
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; cls: string }> = {
-    CREATING: { label: "Создание", cls: "bg-blue-500/10 text-blue-600" },
-    PROCESSING: { label: "Обработка", cls: "bg-amber-500/10 text-amber-600" },
-    READY: { label: "Готов", cls: "bg-emerald-500/10 text-emerald-600" },
+    CREATING: { label: "Создание", cls: "bg-accent/10 text-accent" },
+    PROCESSING: { label: "Обработка", cls: "bg-warning/10 text-warning" },
+    READY: { label: "Готов", cls: "bg-success/10 text-success" },
     PUBLISHED: { label: "Опубликован", cls: "bg-accent/10 text-accent" },
-    ERROR: { label: "Ошибка", cls: "bg-red-500/10 text-red-600" },
+    ERROR: { label: "Ошибка", cls: "bg-error/10 text-error" },
   };
   const c = config[status] || config.CREATING;
   return (

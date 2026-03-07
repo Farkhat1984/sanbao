@@ -20,9 +20,9 @@ const variants: Record<ButtonVariant, string> = {
   ghost:
     "text-text-secondary hover:bg-surface-alt hover:text-text-primary",
   danger:
-    "bg-error text-white hover:bg-red-600 active:scale-[0.98]",
+    "bg-error text-white hover:bg-[#B07068] active:scale-[0.98]",
   gradient:
-    "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-accent to-legal-ref hover:opacity-90",
+    "bg-accent text-white shadow-md active:scale-[0.98] hover:bg-accent-hover",
 };
 
 const sizes: Record<ButtonSize, string> = {

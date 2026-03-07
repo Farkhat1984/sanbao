@@ -53,10 +53,10 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative p-5 rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50/50 to-surface transition-all duration-200"
+      className="relative p-5 rounded-2xl border border-border border-l-4 border-l-legal-ref bg-surface transition-all duration-200"
     >
       {/* System badge */}
-      <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">
+      <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-legal-ref/10 text-legal-ref">
         <Shield className="h-2.5 w-2.5" />
         <span className="text-[9px] font-semibold uppercase tracking-wider">Системный</span>
       </div>
@@ -72,7 +72,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {agent.name}
           </h3>
-          <p className="text-xs text-violet-500 mt-0.5">
+          <p className="text-xs text-legal-ref mt-0.5">
             Системный агент
           </p>
         </div>
@@ -82,14 +82,14 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
         {agent.description}
       </p>
 
-      <div className="flex items-center justify-between pt-3 border-t border-violet-200/50">
+      <div className="flex items-center justify-between pt-3 border-t border-legal-ref/20">
         <div className="flex items-center gap-1 text-[10px] text-text-muted">
           <Shield className="h-3 w-3" />
           Доступен всем
         </div>
         <button
           onClick={handleStartChat}
-          className="h-7 px-3 rounded-lg text-white text-xs font-medium hover:opacity-90 transition-colors cursor-pointer"
+          className="h-7 px-3 rounded-lg text-white text-xs font-medium transition-colors cursor-pointer"
           style={{ backgroundColor: agent.iconColor }}
         >
           <span className="flex items-center gap-1.5">

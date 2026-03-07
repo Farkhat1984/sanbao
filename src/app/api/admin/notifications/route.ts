@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import type { NotificationType } from "@prisma/client";
 
 export async function GET(req: Request) {
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     prisma.notification.count(),
   ]);
 
-  return NextResponse.json({ notifications, total, page, limit });
+  return jsonOk({ notifications, total, page, limit });
 }
 
 export async function POST(req: Request) {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const { title, message, type, userId, isGlobal } = body;
 
   if (!title || !message) {
-    return NextResponse.json({ error: "Обязательные поля: title, message" }, { status: 400 });
+    return jsonError("Обязательные поля: title, message", 400);
   }
 
   if (isGlobal) {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         userId: null,
       },
     });
-    return NextResponse.json(notification, { status: 201 });
+    return jsonOk(notification, 201);
   }
 
   if (userId) {
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         isGlobal: false,
       },
     });
-    return NextResponse.json(notification, { status: 201 });
+    return jsonOk(notification, 201);
   }
 
   // Mass notification — use global notification instead of per-user rows
@@ -73,5 +73,5 @@ export async function POST(req: Request) {
       userId: null,
     },
   });
-  return NextResponse.json(notification, { status: 201 });
+  return jsonOk(notification, 201);
 }

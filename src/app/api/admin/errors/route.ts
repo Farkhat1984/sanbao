@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
 import { parsePagination } from "@/lib/validation";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -42,5 +42,5 @@ export async function GET(req: Request) {
     prisma.errorLog.count({ where }),
   ]);
 
-  return NextResponse.json({ errors, total, page, limit });
+  return jsonOk({ errors, total, page, limit });
 }

@@ -15,7 +15,7 @@ export default function GlobalError({
 
   return (
     <html>
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif", backgroundColor: "#f8f9fb", color: "#1a1d2e" }}>
+      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif", backgroundColor: "#F4EFE6", color: "#1C2B3A" }}>
         <div style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", padding: "16px", textAlign: "center" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 600 }}>
             Произошла критическая ошибка
@@ -29,7 +29,7 @@ export default function GlobalError({
               marginTop: "8px",
               padding: "10px 24px",
               borderRadius: "12px",
-              backgroundColor: "#4F6EF7",
+              backgroundColor: "#8FAF9F",
               color: "white",
               fontSize: "14px",
               fontWeight: 500,

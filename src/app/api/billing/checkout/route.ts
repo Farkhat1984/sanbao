@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -13,31 +13,31 @@ function getStripe(): Stripe | null {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const stripe = getStripe();
   if (!stripe) {
-    return NextResponse.json({ error: "Stripe не настроен" }, { status: 500 });
+    return jsonError("Stripe не настроен", 500);
   }
 
   const body = await req.json().catch(() => null);
   if (!body) {
-    return NextResponse.json({ error: "Неверный JSON" }, { status: 400 });
+    return jsonError("Неверный JSON", 400);
   }
   const { planId, promoCode } = body;
 
   if (!planId) {
-    return NextResponse.json({ error: "planId required" }, { status: 400 });
+    return jsonError("planId required", 400);
   }
 
   const plan = await prisma.plan.findUnique({ where: { id: planId } });
   if (!plan) {
-    return NextResponse.json({ error: "План не найден" }, { status: 404 });
+    return jsonError("План не найден", 404);
   }
 
   if (!plan.price || plan.price <= 0) {
-    return NextResponse.json({ error: "Бесплатный план не требует оплаты" }, { status: 400 });
+    return jsonError("Бесплатный план не требует оплаты", 400);
   }
 
   // Apply promo code discount (atomic increment to prevent unlimited reuse)
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
   const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL;
   if (!origin) {
-    return NextResponse.json({ error: "Origin or NEXTAUTH_URL must be configured" }, { status: 500 });
+    return jsonError("Origin or NEXTAUTH_URL must be configured", 500);
   }
 
   const checkoutSession = await stripe.checkout.sessions.create({
@@ -88,5 +88,5 @@ export async function POST(req: Request) {
     cancel_url: `${origin}/settings?payment=cancelled`,
   });
 
-  return NextResponse.json({ url: checkoutSession.url });
+  return jsonOk({ url: checkoutSession.url });
 }

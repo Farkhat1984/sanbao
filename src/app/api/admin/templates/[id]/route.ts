@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -14,7 +14,7 @@ export async function PUT(
 
   const template = await prisma.documentTemplate.findUnique({ where: { id } });
   if (!template) {
-    return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
+    return jsonError("Шаблон не найден", 404);
   }
 
   const allowedFields = ["name", "type", "content", "jurisdiction", "isActive"];
@@ -24,7 +24,7 @@ export async function PUT(
   }
 
   const updated = await prisma.documentTemplate.update({ where: { id }, data });
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -37,9 +37,9 @@ export async function DELETE(
   const { id } = await params;
   const template = await prisma.documentTemplate.findUnique({ where: { id } });
   if (!template) {
-    return NextResponse.json({ error: "Шаблон не найден" }, { status: 404 });
+    return jsonError("Шаблон не найден", 404);
   }
 
   await prisma.documentTemplate.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

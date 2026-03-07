@@ -71,7 +71,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
             Live Preview
           </span>
           {sentToChat && (
-            <span className="flex items-center gap-1 text-[10px] text-green-500 font-medium">
+            <span className="flex items-center gap-1 text-[10px] text-success font-medium">
               <Check className="h-3 w-3" />
               Отправлено в чат
             </span>
@@ -81,7 +81,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
           {hasError && onRequestChatFix && !sentToChat && (
             <button
               onClick={handleRequestFix}
-              className="h-6 px-2 rounded-md flex items-center gap-1 text-[10px] text-amber-500 hover:bg-surface transition-colors cursor-pointer"
+              className="h-6 px-2 rounded-md flex items-center gap-1 text-[10px] text-warning hover:bg-surface transition-colors cursor-pointer"
               title="Исправить ошибку"
             >
               <Wrench className="h-3 w-3" />
@@ -111,8 +111,8 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
 
       {/* Error bar */}
       {hasError && errorMessage && (
-        <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 shrink-0">
-          <pre className="text-[11px] text-red-400 font-mono whitespace-pre-wrap break-words max-h-20 overflow-y-auto">
+        <div className="px-3 py-2 bg-error/10 border-b border-error/20 shrink-0">
+          <pre className="text-[11px] text-error font-mono whitespace-pre-wrap break-words max-h-20 overflow-y-auto">
             {errorMessage}
           </pre>
         </div>

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function DELETE(
   _req: Request,
@@ -11,7 +11,7 @@ export async function DELETE(
 
   const { id } = await params;
   await prisma.promoCode.delete({ where: { id } }).catch(() => null);
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }
 
 export async function PUT(
@@ -34,5 +34,5 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }

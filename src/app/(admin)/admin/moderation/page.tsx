@@ -82,7 +82,7 @@ export default function AdminModerationPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-text-primary mb-1">Модерация</h1>
+      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Модерация</h1>
       <p className="text-sm text-text-muted mb-6">Просмотр разговоров и управление контентом</p>
 
       <div className="flex gap-2 mb-4">

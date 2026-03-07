@@ -36,7 +36,7 @@ export default function AdminAnalyticsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Аналитика</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Аналитика</h1>
           <p className="text-sm text-text-muted mt-1">Статистика использования за период</p>
         </div>
         <div className="flex gap-1">

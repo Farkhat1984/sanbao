@@ -17,9 +17,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS: "bg-accent",
-  COMPLETED: "bg-emerald-500",
-  PAUSED: "bg-amber-500",
-  FAILED: "bg-red-500",
+  COMPLETED: "bg-success",
+  PAUSED: "bg-warning",
+  FAILED: "bg-error",
 };
 
 interface TaskItemProps {

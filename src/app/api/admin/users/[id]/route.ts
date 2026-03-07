@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -15,15 +15,15 @@ export async function PUT(
 
   // Validate inputs
   if (role !== undefined && !["USER", "PRO", "ADMIN"].includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    return jsonError("Invalid role", 400);
   }
   if (bannedReason !== undefined && typeof bannedReason === "string" && bannedReason.length > 500) {
-    return NextResponse.json({ error: "bannedReason too long (max 500)" }, { status: 400 });
+    return jsonError("bannedReason too long (max 500)", 400);
   }
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return jsonError("User not found", 404);
   }
 
   // Ban / unban
@@ -48,7 +48,7 @@ export async function PUT(
   if (planSlug) {
     const plan = await prisma.plan.findUnique({ where: { slug: planSlug } });
     if (!plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      return jsonError("Plan not found", 404);
     }
 
     await prisma.subscription.upsert({
@@ -83,7 +83,7 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -96,12 +96,9 @@ export async function DELETE(
   const { id } = await params;
 
   if (id === result.userId) {
-    return NextResponse.json(
-      { error: "Cannot delete yourself" },
-      { status: 400 }
-    );
+    return jsonError("Cannot delete yourself", 400);
   }
 
   await prisma.user.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

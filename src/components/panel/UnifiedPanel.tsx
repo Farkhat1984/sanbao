@@ -35,7 +35,7 @@ class PanelErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
-          <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-full bg-error-light flex items-center justify-center">
             <AlertTriangle className="h-5 w-5 text-error" />
           </div>
           <p className="text-sm text-text-primary font-medium">

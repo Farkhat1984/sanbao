@@ -8,7 +8,6 @@ import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
 import { AgentToolPicker } from "./AgentToolPicker";
-import { AgentPluginPicker } from "./AgentPluginPicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Agent, AgentFile } from "@/types/agent";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
@@ -37,9 +36,6 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>(
     agent?.tools?.map((t) => t.tool.id) || []
   );
-  const [selectedPluginIds, setSelectedPluginIds] = useState<string[]>(
-    agent?.plugins?.map((p) => p.plugin.id) || []
-  );
   const [starterPrompts, setStarterPrompts] = useState<string[]>(
     agent?.starterPrompts || []
   );
@@ -62,7 +58,7 @@ export function AgentForm({ agent }: AgentFormProps) {
     setError(null);
 
     try {
-      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds, pluginIds: selectedPluginIds };
+      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds };
 
       const res = await fetch(
         isEdit ? `/api/agents/${agent.id}` : "/api/agents",
@@ -137,7 +133,7 @@ export function AgentForm({ agent }: AgentFormProps) {
         Назад к агентам
       </button>
 
-      <h1 className="text-xl font-bold text-text-primary mb-6">
+      <h1 className="text-xl font-bold text-text-primary mb-6 font-[family-name:var(--font-display)]">
         {isEdit ? "Редактировать агента" : "Создать агента"}
       </h1>
 
@@ -167,7 +163,7 @@ export function AgentForm({ agent }: AgentFormProps) {
               type="button"
               onClick={handleGenerate}
               disabled={generating || !genDescription.trim()}
-              className="h-9 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer"
+              className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}
@@ -177,188 +173,196 @@ export function AgentForm({ agent }: AgentFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Icon Picker */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Иконка
-          </label>
-          <AgentIconPicker
-            selectedIcon={icon}
-            selectedColor={iconColor}
-            customImage={avatar}
-            onIconChange={setIcon}
-            onColorChange={setIconColor}
-            onCustomImageChange={setAvatar}
-          />
-        </div>
+        {/* Section 1: Идентичность */}
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-4">Идентичность</h2>
 
-        {/* Name */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Название <span className="text-error">*</span>
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Например: Юрист по трудовому праву"
-            maxLength={50}
-            className="w-full h-10 px-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-          />
-        </div>
+          <div className="space-y-6">
+            {/* Icon Picker */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Иконка
+              </label>
+              <AgentIconPicker
+                selectedIcon={icon}
+                selectedColor={iconColor}
+                customImage={avatar}
+                onIconChange={setIcon}
+                onColorChange={setIconColor}
+                onCustomImageChange={setAvatar}
+              />
+            </div>
 
-        {/* Description */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Описание
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Краткое описание для карточки агента"
-            rows={2}
-            className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-none"
-          />
-        </div>
+            {/* Name */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Название <span className="text-error">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Например: Юрист по трудовому праву"
+                maxLength={50}
+                className="w-full h-10 px-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
 
-        {/* Instructions */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Инструкции <span className="text-error">*</span>
-          </label>
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Опишите поведение, стиль и специализацию агента. Это будет его системный промпт..."
-            rows={8}
-            className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Системные инструкции определяют поведение агента в каждом чате
-          </p>
-        </div>
-
-        {/* Starter Prompts */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            <span className="flex items-center gap-1.5">
-              <MessageSquare className="h-4 w-4 text-text-muted" />
-              Стартовые подсказки
-            </span>
-          </label>
-          <div className="space-y-2">
-            {starterPrompts.map((prompt, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={prompt}
-                  onChange={(e) => {
-                    const updated = [...starterPrompts];
-                    updated[idx] = e.target.value;
-                    setStarterPrompts(updated);
-                  }}
-                  placeholder={`Подсказка ${idx + 1}, например: «Составь договор аренды»`}
-                  maxLength={200}
-                  className="flex-1 h-9 px-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            {starterPrompts.length < 6 && (
-              <button
-                type="button"
-                onClick={() => setStarterPrompts([...starterPrompts, ""])}
-                className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Добавить подсказку
-              </button>
-            )}
+            {/* Description */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Описание
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Краткое описание для карточки агента"
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-none"
+              />
+            </div>
           </div>
-          <p className="text-xs text-text-muted mt-1">
-            Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
-          </p>
         </div>
 
-        {/* Files */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Файлы знаний
-          </label>
-          <AgentFileUpload
-            agentId={agent?.id || null}
-            files={files}
-            onFileAdded={(f) => setFiles((prev) => [...prev, f])}
-            onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
-            onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
-          />
-          {!isEdit && (
-            <p className="text-xs text-text-muted mt-2">
-              Файлы можно будет загрузить после создания агента
-            </p>
-          )}
+        {/* Section 2: Поведение */}
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-4">Поведение</h2>
+
+          <div className="space-y-6">
+            {/* Instructions */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Инструкции <span className="text-error">*</span>
+              </label>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Опишите поведение, стиль и специализацию агента. Это будет его системный промпт..."
+                rows={8}
+                className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
+              />
+              <p className="text-xs text-text-muted mt-1">
+                Системные инструкции определяют поведение агента в каждом чате
+              </p>
+            </div>
+
+            {/* Starter Prompts */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                <span className="flex items-center gap-1.5">
+                  <MessageSquare className="h-4 w-4 text-text-muted" />
+                  Стартовые подсказки
+                </span>
+              </label>
+              <div className="space-y-2">
+                {starterPrompts.map((prompt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={prompt}
+                      onChange={(e) => {
+                        const updated = [...starterPrompts];
+                        updated[idx] = e.target.value;
+                        setStarterPrompts(updated);
+                      }}
+                      placeholder={`Подсказка ${idx + 1}, например: «Составь договор аренды»`}
+                      maxLength={200}
+                      className="flex-1 h-9 px-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
+                      className="h-9 w-9 rounded-xl flex items-center justify-center text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {starterPrompts.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setStarterPrompts([...starterPrompts, ""])}
+                    className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Добавить подсказку
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-text-muted mt-1">
+                Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Skills */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Скиллы
-          </label>
-          <AgentSkillPicker
-            selectedIds={selectedSkillIds}
-            onChange={setSelectedSkillIds}
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Скиллы добавляют специализированные инструкции к системному промпту агента
-          </p>
-        </div>
+        {/* Section 3: Возможности */}
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-4">Возможности</h2>
 
-        {/* MCP Servers */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            MCP-серверы
-          </label>
-          <AgentMcpPicker
-            selectedIds={selectedMcpIds}
-            onChange={setSelectedMcpIds}
-          />
-          <p className="text-xs text-text-muted mt-1">
-            MCP-серверы предоставляют агенту дополнительные инструменты
-          </p>
-        </div>
+          <div className="space-y-6">
+            {/* Files */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Файлы знаний
+              </label>
+              <AgentFileUpload
+                agentId={agent?.id || null}
+                files={files}
+                onFileAdded={(f) => setFiles((prev) => [...prev, f])}
+                onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
+                onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
+              />
+              {!isEdit && (
+                <p className="text-xs text-text-muted mt-2">
+                  Файлы можно будет загрузить после создания агента
+                </p>
+              )}
+            </div>
 
-        {/* Tools */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Инструменты
-          </label>
-          <AgentToolPicker
-            selectedIds={selectedToolIds}
-            onChange={setSelectedToolIds}
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Инструменты добавляют быстрые действия и шаблоны к чату с агентом
-          </p>
-        </div>
+            {/* Skills */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Скиллы
+              </label>
+              <AgentSkillPicker
+                selectedIds={selectedSkillIds}
+                onChange={setSelectedSkillIds}
+              />
+              <p className="text-xs text-text-muted mt-1">
+                Скиллы добавляют специализированные инструкции к системному промпту агента
+              </p>
+            </div>
 
-        {/* Plugins */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Плагины
-          </label>
-          <AgentPluginPicker
-            selectedIds={selectedPluginIds}
-            onChange={setSelectedPluginIds}
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Плагины объединяют инструменты, скиллы и MCP-серверы в пакеты
-          </p>
+            {/* MCP Servers */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                MCP-серверы
+              </label>
+              <AgentMcpPicker
+                selectedIds={selectedMcpIds}
+                onChange={setSelectedMcpIds}
+              />
+              <p className="text-xs text-text-muted mt-1">
+                MCP-серверы предоставляют агенту дополнительные инструменты
+              </p>
+            </div>
+
+            {/* Tools */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Инструменты
+              </label>
+              <AgentToolPicker
+                selectedIds={selectedToolIds}
+                onChange={setSelectedToolIds}
+              />
+              <p className="text-xs text-text-muted mt-1">
+                Инструменты добавляют быстрые действия и шаблоны к чату с агентом
+              </p>
+            </div>
+
+          </div>
         </div>
 
         {/* Error */}
@@ -373,7 +377,7 @@ export function AgentForm({ agent }: AgentFormProps) {
           <button
             type="submit"
             disabled={saving}
-            className="h-10 px-6 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+            className="h-10 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

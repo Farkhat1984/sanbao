@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import {
@@ -13,18 +13,18 @@ const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"];
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   // Rate limit: 10 requests/minute per user
   if (!(await checkMinuteRateLimit(`skill-gen:${session.user.id}`, 10))) {
-    return NextResponse.json({ error: "Слишком много запросов" }, { status: 429 });
+    return jsonError("Слишком много запросов", 429);
   }
 
   const { description, jurisdiction } = await req.json();
 
   if (!description?.trim() || description.length > 5000) {
-    return NextResponse.json({ error: "Описание обязательно (макс. 5000 символов)" }, { status: 400 });
+    return jsonError("Описание обязательно (макс. 5000 символов)", 400);
   }
 
   try {
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     const textModel = await resolveModel("TEXT");
     if (!textModel) {
-      return NextResponse.json({ error: "Модель не настроена" }, { status: 503 });
+      return jsonError("Модель не настроена", 503);
     }
     const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
     const apiKey = textModel.provider.apiKey;
@@ -95,10 +95,7 @@ export async function POST(req: Request) {
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("Skill generation: failed to parse JSON from response:", content.slice(0, 500));
-      return NextResponse.json(
-        { error: "Модель вернула некорректный JSON. Попробуйте переформулировать описание скилла." },
-        { status: 422 }
-      );
+      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать описание скилла.", 422);
     }
 
     // Validate systemPrompt is focused and not too long
@@ -114,12 +111,9 @@ export async function POST(req: Request) {
       iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
     };
 
-    return NextResponse.json(result);
+    return jsonOk(result);
   } catch (e) {
     console.error("Skill generation error:", e);
-    return NextResponse.json(
-      { error: "Ошибка генерации скилла. Попробуйте ещё раз." },
-      { status: 500 }
-    );
+    return jsonError("Ошибка генерации скилла. Попробуйте ещё раз.", 500);
   }
 }

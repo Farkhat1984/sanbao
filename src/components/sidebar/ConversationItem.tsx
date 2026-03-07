@@ -118,7 +118,7 @@ export const ConversationItem = memo(function ConversationItem({
           return (
             <div
               className="h-4 w-4 rounded shrink-0 flex items-center justify-center"
-              style={{ backgroundColor: conversation.agentIconColor || "#6366f1" }}
+              style={{ backgroundColor: conversation.agentIconColor || "#8FAF9F" }}
               title={conversation.agentName || "Агент"}
             >
               <AgentIcon className="h-2.5 w-2.5 text-white" />
@@ -171,7 +171,7 @@ export const ConversationItem = memo(function ConversationItem({
             <button
               onClick={handleDeleteClick}
               aria-label="Удалить чат"
-              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-error-light flex items-center gap-2 cursor-pointer"
             >
               <Trash2 className="h-3 w-3" />
               Удалить

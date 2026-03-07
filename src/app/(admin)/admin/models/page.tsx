@@ -126,7 +126,7 @@ export default function AdminModelsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">AI-модели</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-модели</h1>
           <p className="text-sm text-text-muted mt-1">Настройки моделей, температура, токены, стоимость</p>
         </div>
         <div className="flex items-center gap-2">

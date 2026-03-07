@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage, incrementUsage, incrementTokens } from "@/lib/usage";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   let body;
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
-    return NextResponse.json({ error: "Некорректный JSON в теле запроса" }, { status: 400 });
+    return jsonError("Некорректный JSON в теле запроса", 400);
   }
   let {
     messages,
@@ -173,25 +174,25 @@ export async function POST(req: Request) {
   // ─── Input validation ─────────────────────────────────────
 
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > 200) {
-    return NextResponse.json({ error: "Некорректный массив сообщений" }, { status: 400 });
+    return jsonError("Некорректный массив сообщений", 400);
   }
 
   for (const msg of messages) {
     const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
     if (content.length > 100_000) {
-      return NextResponse.json({ error: "Сообщение превышает допустимый размер (100KB)" }, { status: 400 });
+      return jsonError("Сообщение превышает допустимый размер (100KB)", 400);
     }
   }
 
   if (attachments.length > 20) {
-    return NextResponse.json({ error: "Слишком много вложений (макс. 20)" }, { status: 400 });
+    return jsonError("Слишком много вложений (макс. 20)", 400);
   }
 
   // ─── Plan & usage checks ────────────────────────────────
 
   const { plan, usage, monthlyUsage } = await getUserPlanAndUsage(session.user.id);
   if (!plan) {
-    return NextResponse.json({ error: "Нет настроенного тарифа" }, { status: 500 });
+    return jsonError("Нет настроенного тарифа", 500);
   }
 
   const isAdmin = session.user.role === "ADMIN";
@@ -210,19 +211,13 @@ export async function POST(req: Request) {
       );
     }
     if (!(await checkMinuteRateLimit(session.user.id, plan.requestsPerMinute))) {
-      return NextResponse.json({ error: "Слишком много запросов. Подождите минуту." }, { status: 429 });
+      return jsonError("Слишком много запросов. Подождите минуту.", 429);
     }
     if (thinkingEnabled && !plan.canUseReasoning) {
-      return NextResponse.json(
-        { error: "Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках." },
-        { status: 403 }
-      );
+      return jsonError("Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках.", 403);
     }
     if (webSearchEnabled && !plan.canUseAdvancedTools) {
-      return NextResponse.json(
-        { error: "Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках." },
-        { status: 403 }
-      );
+      return jsonError("Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках.", 403);
     }
   }
 
@@ -234,10 +229,7 @@ export async function POST(req: Request) {
       typeof lastUserMsg.content === "string" ? lastUserMsg.content : JSON.stringify(lastUserMsg.content)
     );
     if (filterResult.blocked) {
-      return NextResponse.json(
-        { error: "Сообщение содержит запрещённый контент и не может быть отправлено." },
-        { status: 400 }
-      );
+      return jsonError("Сообщение содержит запрещённый контент и не может быть отправлено.", 400);
     }
   }
 
@@ -279,7 +271,7 @@ export async function POST(req: Request) {
         where: { orgId_userId: { orgId: orgAgent.orgId, userId: session.user.id } },
       });
       if (!membership) {
-        return NextResponse.json({ error: "Нет доступа к этому агенту" }, { status: 403 });
+        return jsonError("Нет доступа к этому агенту", 403);
       }
 
       // Check access mode
@@ -288,7 +280,7 @@ export async function POST(req: Request) {
           where: { orgAgentId_userId: { orgAgentId: orgAgent.id, userId: session.user.id } },
         });
         if (!access) {
-          return NextResponse.json({ error: "Нет доступа к этому агенту" }, { status: 403 });
+          return jsonError("Нет доступа к этому агенту", 403);
         }
       }
 

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { isUrlSafe } from "@/lib/ssrf";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -15,7 +15,7 @@ export async function PUT(
 
   const server = await prisma.mcpServer.findUnique({ where: { id } });
   if (!server || !server.isGlobal) {
-    return NextResponse.json({ error: "Сервер не найден" }, { status: 404 });
+    return jsonError("Сервер не найден", 404);
   }
 
   const allowedFields = ["name", "url", "transport", "apiKey", "status", "isEnabled"];
@@ -25,11 +25,11 @@ export async function PUT(
   }
 
   if (typeof data.url === "string" && !isUrlSafe(data.url)) {
-    return NextResponse.json({ error: "URL заблокирован (SSRF protection)" }, { status: 400 });
+    return jsonError("URL заблокирован (SSRF protection)", 400);
   }
 
   const updated = await prisma.mcpServer.update({ where: { id }, data });
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -42,9 +42,9 @@ export async function DELETE(
   const { id } = await params;
   const server = await prisma.mcpServer.findUnique({ where: { id } });
   if (!server || !server.isGlobal) {
-    return NextResponse.json({ error: "Сервер не найден" }, { status: 404 });
+    return jsonError("Сервер не найден", 404);
   }
 
   await prisma.mcpServer.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

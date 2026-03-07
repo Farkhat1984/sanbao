@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { connectAndDiscoverTools } from "@/lib/mcp-client";
+import { jsonOk } from "@/lib/api-helpers";
 import type { Prisma } from "@prisma/client";
 
 /** POST — run health check + tool discovery for all global MCP servers (or specific id). */
@@ -72,5 +72,5 @@ export async function POST(req: Request) {
     })
   );
 
-  return NextResponse.json(results);
+  return jsonOk(results);
 }

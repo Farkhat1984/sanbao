@@ -29,7 +29,7 @@ export default function AdminToolsPage() {
     name: "",
     description: "",
     icon: "Wrench",
-    iconColor: "#4F6EF7",
+    iconColor: "#8FAF9F",
     type: "PROMPT_TEMPLATE",
     configJson: '{\n  "prompt": ""\n}',
   });
@@ -84,7 +84,7 @@ export default function AdminToolsPage() {
     });
     if (res.ok) {
       setAdding(false);
-      setNewTool({ name: "", description: "", icon: "Wrench", iconColor: "#4F6EF7", type: "PROMPT_TEMPLATE", configJson: '{\n  "prompt": ""\n}' });
+      setNewTool({ name: "", description: "", icon: "Wrench", iconColor: "#8FAF9F", type: "PROMPT_TEMPLATE", configJson: '{\n  "prompt": ""\n}' });
       fetchTools();
     }
   };
@@ -138,7 +138,7 @@ export default function AdminToolsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Инструменты</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Инструменты</h1>
           <p className="text-sm text-text-muted mt-1">Системные инструменты для агентов ({tools.length})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
@@ -154,7 +154,7 @@ export default function AdminToolsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
             <input placeholder="Название" value={newTool.name} onChange={(e) => setNewTool({ ...newTool, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <input placeholder="Иконка (Wrench, FileText...)" value={newTool.icon} onChange={(e) => setNewTool({ ...newTool, icon: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
-            <input placeholder="Цвет (#4F6EF7)" value={newTool.iconColor} onChange={(e) => setNewTool({ ...newTool, iconColor: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
+            <input placeholder="Цвет (#8FAF9F)" value={newTool.iconColor} onChange={(e) => setNewTool({ ...newTool, iconColor: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <select value={newTool.type} onChange={(e) => setNewTool({ ...newTool, type: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent cursor-pointer">
               <option value="PROMPT_TEMPLATE">Промпт-шаблон</option>
               <option value="WEBHOOK">Вебхук</option>

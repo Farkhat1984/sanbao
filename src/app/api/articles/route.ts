@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { callMcpTool } from "@/lib/mcp-client";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const UNIFIED_MCP_URL =
   process.env.UNIFIED_MCP_URL || "http://orchestrator:8120/mcp";
@@ -9,7 +10,7 @@ const CORTEX_TOKEN = process.env.AI_CORTEX_AUTH_TOKEN || null;
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { searchParams } = request.nextUrl;
@@ -17,10 +18,7 @@ export async function GET(request: NextRequest) {
   const article = searchParams.get("article");
 
   if (!code || !article) {
-    return NextResponse.json(
-      { error: "Missing code or article parameter" },
-      { status: 400 }
-    );
+    return jsonError("Missing code or article parameter", 400);
   }
 
   const ctx = { userId: session.user.id };
@@ -30,30 +28,30 @@ export async function GET(request: NextRequest) {
     // article = "domain/file.pdf/chunk_index"
     const parts = article.split("/");
     if (parts.length < 3) {
-      return NextResponse.json({ error: "Invalid source URI format" }, { status: 400 });
+      return jsonError("Invalid source URI format", 400);
     }
     const domain = parts[0];
     const chunkIndex = parseInt(parts[parts.length - 1], 10);
     const sourceFile = parts.slice(1, -1).join("/");
 
     if (!domain || !sourceFile || isNaN(chunkIndex)) {
-      return NextResponse.json({ error: "Invalid source URI components" }, { status: 400 });
+      return jsonError("Invalid source URI components", 400);
     }
 
     const { result: srcResult, error: srcError } = await callMcpTool(
       UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,
       "get_source", { source_file: sourceFile, chunk_index: chunkIndex, domain }, ctx,
     );
-    if (srcError) return NextResponse.json({ error: `MCP error: ${srcError}` }, { status: 502 });
+    if (srcError) return jsonError(`MCP error: ${srcError}`, 502);
 
     try {
       const parsed = JSON.parse(srcResult);
       if (parsed.error) {
-        return NextResponse.json({ error: parsed.error }, { status: 404 });
+        return jsonError(parsed.error, 404);
       }
-      return NextResponse.json(parsed);
+      return jsonOk(parsed);
     } catch {
-      return NextResponse.json({ text: srcResult, source_file: sourceFile, chunk_index: chunkIndex });
+      return jsonOk({ text: srcResult, source_file: sourceFile, chunk_index: chunkIndex });
     }
   }
 
@@ -62,7 +60,7 @@ export async function GET(request: NextRequest) {
     UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,
     "resolve_document", { code, identifier: article }, ctx,
   );
-  if (error) return NextResponse.json({ error: `MCP error: ${error}` }, { status: 502 });
+  if (error) return jsonError(`MCP error: ${error}`, 502);
 
   return parseResponse(code, article, result);
 }
@@ -74,9 +72,9 @@ function parseResponse(code: string, article: string, result: string) {
     const parsed = JSON.parse(result);
 
     if (parsed.error) {
-      return NextResponse.json(
+      return jsonOk(
         { error: parsed.error, code, article },
-        { status: 404 },
+        404,
       );
     }
 
@@ -85,7 +83,7 @@ function parseResponse(code: string, article: string, result: string) {
       ? (parsed.url || `https://adilet.zan.kz/rus/docs/${article}`)
       : undefined;
 
-    return NextResponse.json({
+    return jsonOk({
       code,
       article,
       title: parsed.title || parsed.type_name || parsed.product_key || "",
@@ -94,7 +92,7 @@ function parseResponse(code: string, article: string, result: string) {
       ...(adiletUrl ? { adiletUrl } : {}),
     });
   } catch {
-    return NextResponse.json({
+    return jsonOk({
       code, article,
       title: article,
       text: result,

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveAgentContext } from "@/lib/tool-resolver";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(
   req: Request,
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { id } = await params;
@@ -26,7 +26,7 @@ export async function GET(
     select: { id: true },
   });
   if (!agent) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
   const url = new URL(req.url);
@@ -42,5 +42,5 @@ export async function GET(
     tools = tools.filter((tool) => tool.type === typeFilter);
   }
 
-  return NextResponse.json(tools);
+  return jsonOk(tools);
 }

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import type { SkillStatus } from "@prisma/client";
 
 export async function GET(req: Request) {
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   const items = hasMore ? agents.slice(0, limit) : agents;
   const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
 
-  return NextResponse.json({ items, nextCursor });
+  return jsonOk({ items, nextCursor });
 }
 
 export async function PUT(req: Request) {
@@ -40,13 +40,13 @@ export async function PUT(req: Request) {
   const { agentId, status } = await req.json();
 
   if (!agentId || !status) {
-    return NextResponse.json({ error: "agentId and status required" }, { status: 400 });
+    return jsonError("agentId and status required", 400);
   }
 
   // Validate status against allowed SkillStatus enum values
   const ALLOWED_STATUSES = ["PENDING", "APPROVED", "REJECTED"];
   if (!ALLOWED_STATUSES.includes(status)) {
-    return NextResponse.json({ error: `Invalid status. Allowed: ${ALLOWED_STATUSES.join(", ")}` }, { status: 400 });
+    return jsonError(`Invalid status. Allowed: ${ALLOWED_STATUSES.join(", ")}`, 400);
   }
 
   const agent = await prisma.agent.update({
@@ -54,5 +54,5 @@ export async function PUT(req: Request) {
     data: { status },
   });
 
-  return NextResponse.json(agent);
+  return jsonOk(agent);
 }

@@ -18,8 +18,8 @@ function OrgCard({ org }: { org: OrgSummary }) {
 
   const roleColor: Record<string, string> = {
     OWNER: "bg-accent/10 text-accent",
-    ADMIN: "bg-amber-500/10 text-amber-600",
-    MEMBER: "bg-emerald-500/10 text-emerald-600",
+    ADMIN: "bg-warning/10 text-warning",
+    MEMBER: "bg-success/10 text-success",
   };
 
   return (
@@ -28,7 +28,7 @@ function OrgCard({ org }: { org: OrgSummary }) {
       className="p-5 rounded-2xl border border-border bg-surface hover:border-border-hover hover:shadow-sm transition-all text-left cursor-pointer group"
     >
       <div className="flex items-start gap-3 mb-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-accent/20 to-legal-ref/20 flex items-center justify-center shrink-0">
+        <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
           {org.avatar ? (
             <Avatar src={org.avatar} name={org.name} size="sm" />
           ) : (
@@ -83,14 +83,14 @@ export default function OrganizationsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">Организации</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Организации</h1>
             <p className="text-sm text-text-muted mt-1">
               Управляйте командами и AI-агентами
             </p>
           </div>
           <button
             onClick={() => router.push("/organizations/new")}
-            className="h-10 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Создать организацию

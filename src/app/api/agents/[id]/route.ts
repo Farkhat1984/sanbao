@@ -7,7 +7,6 @@ const AGENT_INCLUDE = {
   skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-  plugins: { include: { plugin: { select: { id: true, name: true, icon: true, iconColor: true } } } },
 };
 
 export async function GET(
@@ -54,7 +53,7 @@ export async function PUT(
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
-  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, pluginIds } = parsed.data;
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds } = parsed.data;
 
   const existing = await prisma.agent.findFirst({
     where: { id, userId },
@@ -82,7 +81,7 @@ export async function PUT(
   });
 
   // Update associations atomically to prevent partial state on failure
-  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(pluginIds);
+  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds);
   if (hasAssociationUpdates) {
     await prisma.$transaction(async (tx) => {
       if (Array.isArray(skillIds)) {
@@ -109,19 +108,11 @@ export async function PUT(
           });
         }
       }
-      if (Array.isArray(pluginIds)) {
-        await tx.agentPlugin.deleteMany({ where: { agentId: id } });
-        if (pluginIds.length > 0) {
-          await tx.agentPlugin.createMany({
-            data: pluginIds.map((pluginId: string) => ({ agentId: id, pluginId })),
-          });
-        }
-      }
     });
   }
 
   // Refetch with relations if associations were updated
-  if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(pluginIds)) {
+  if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds)) {
     const updated = await prisma.agent.findUnique({ where: { id }, include: AGENT_INCLUDE });
     return jsonOk(serializeDates(updated!));
   }

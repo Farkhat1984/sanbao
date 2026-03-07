@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
 import { encrypt } from "@/lib/crypto";
 import { isUrlSafe } from "@/lib/ssrf";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -21,7 +21,7 @@ export async function GET() {
     apiKey: p.apiKey ? `***${p.apiKey.slice(-4)}` : "",
   }));
 
-  return NextResponse.json(masked);
+  return jsonOk(masked);
 }
 
 export async function POST(req: Request) {
@@ -32,18 +32,12 @@ export async function POST(req: Request) {
   const { name, slug, baseUrl, apiKey, isActive, priority, apiFormat } = body;
 
   if (!name || !slug || !baseUrl || !apiKey) {
-    return NextResponse.json(
-      { error: "Обязательные поля: name, slug, baseUrl, apiKey" },
-      { status: 400 }
-    );
+    return jsonError("Обязательные поля: name, slug, baseUrl, apiKey", 400);
   }
 
   // SSRF protection on provider base URL
   if (!isUrlSafe(baseUrl)) {
-    return NextResponse.json(
-      { error: "Недопустимый baseUrl: приватные и локальные адреса запрещены" },
-      { status: 400 }
-    );
+    return jsonError("Недопустимый baseUrl: приватные и локальные адреса запрещены", 400);
   }
 
   // Check uniqueness
@@ -51,10 +45,7 @@ export async function POST(req: Request) {
     where: { OR: [{ name }, { slug }] },
   });
   if (existing) {
-    return NextResponse.json(
-      { error: "Провайдер с таким именем или slug уже существует" },
-      { status: 409 }
-    );
+    return jsonError("Провайдер с таким именем или slug уже существует", 409);
   }
 
   const provider = await prisma.aiProvider.create({
@@ -71,5 +62,5 @@ export async function POST(req: Request) {
 
   invalidateModelCache();
 
-  return NextResponse.json(provider, { status: 201 });
+  return jsonOk(provider, 201);
 }

@@ -41,18 +41,12 @@ const mockAgentTool = {
   createMany: vi.fn(),
   deleteMany: vi.fn(),
 };
-const mockAgentPlugin = {
-  createMany: vi.fn(),
-  deleteMany: vi.fn(),
-};
-
 // Patch prisma mock
 Object.assign(prisma, {
   agent: mockAgent,
   agentSkill: mockAgentSkill,
   agentMcpServer: mockAgentMcpServer,
   agentTool: mockAgentTool,
-  agentPlugin: mockAgentPlugin,
 });
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -93,7 +87,6 @@ function makeFakeAgent(overrides: Record<string, unknown> = {}) {
     skills: [],
     mcpServers: [],
     tools: [],
-    plugins: [],
     _count: { conversations: 0, files: 0 },
     ...overrides,
   };
@@ -372,12 +365,11 @@ describe("GET /api/agents/[id]", () => {
     }
   });
 
-  it("should include relations: files, skills, mcpServers, tools, plugins", async () => {
+  it("should include relations: files, skills, mcpServers, tools", async () => {
     const agent = makeFakeAgent({
       skills: [{ id: "as-1", skill: { id: "s-1", name: "Skill" } }],
       mcpServers: [{ id: "ams-1", mcpServer: { id: "mcp-github", name: "GitHub", url: "http://localhost:3101/sse", status: "DISCONNECTED" } }],
       tools: [{ id: "at-1", tool: { id: "t-1", name: "Tool" } }],
-      plugins: [{ id: "ap-1", plugin: { id: "p-1", name: "Plugin" } }],
     });
     mockAgent.findFirst.mockResolvedValueOnce(agent);
 
@@ -386,7 +378,6 @@ describe("GET /api/agents/[id]", () => {
     expect(data.skills).toHaveLength(1);
     expect(data.mcpServers).toHaveLength(1);
     expect(data.tools).toHaveLength(1);
-    expect(data.plugins).toHaveLength(1);
   });
 
   it("should serialize dates to ISO strings", async () => {
@@ -494,21 +485,6 @@ describe("PUT /api/agents/[id]", () => {
     });
   });
 
-  it("should update plugin associations", async () => {
-    mockAgent.findFirst.mockResolvedValueOnce(makeFakeAgent());
-    mockAgent.update.mockResolvedValueOnce(makeFakeAgent());
-    mockAgent.findUnique.mockResolvedValueOnce(makeFakeAgent());
-
-    const req = makeJsonRequest("http://localhost/api/agents/agent-1", "PUT", {
-      pluginIds: ["plugin-1"],
-    });
-    await updateAgent(req, makeParams("agent-1"));
-
-    expect(mockAgentPlugin.deleteMany).toHaveBeenCalled();
-    expect(mockAgentPlugin.createMany).toHaveBeenCalledWith({
-      data: [{ agentId: "agent-1", pluginId: "plugin-1" }],
-    });
-  });
 
   it("should update starterPrompts filtering empty strings", async () => {
     mockAgent.findFirst.mockResolvedValueOnce(makeFakeAgent());

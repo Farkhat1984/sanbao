@@ -9,7 +9,6 @@ import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { TemplateModal } from "./TemplateModal";
-import { ImageEditModal } from "@/components/image-edit/ImageEditModal";
 
 interface TemplateField {
   id: string;
@@ -39,8 +38,6 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
   const isMobile = useIsMobile();
   const [expandedToolId, setExpandedToolId] = useState<string | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<ToolTemplate | null>(null);
-  const [imageEditOpen, setImageEditOpen] = useState(false);
-
   const getTemplates = (tool: AgentToolInfo): ToolTemplate[] => {
     const config = tool.config as { templates?: ToolTemplate[] };
     return Array.isArray(config?.templates) ? config.templates : [];
@@ -52,11 +49,6 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
   };
 
   const handleSelectTool = (tool: AgentToolInfo) => {
-    if (tool.name === "Редактировать изображение") {
-      setImageEditOpen(true);
-      onClose();
-      return;
-    }
     const templates = getTemplates(tool);
     if (templates.length > 0) {
       setExpandedToolId(expandedToolId === tool.id ? null : tool.id);
@@ -248,11 +240,6 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
         onSubmit={handleTemplateSubmit}
       />
 
-      {/* Image edit modal */}
-      <ImageEditModal
-        isOpen={imageEditOpen}
-        onClose={() => setImageEditOpen(false)}
-      />
     </>
   );
 }

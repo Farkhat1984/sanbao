@@ -1,23 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { runSubscriptionMaintenance } from "@/lib/subscription-manager";
 import { timingSafeEqual } from "crypto";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization") || "";
   const expected = process.env.CRON_SECRET;
 
   if (!expected) {
-    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+    return jsonError("CRON_SECRET not configured", 500);
   }
   const expectedFull = `Bearer ${expected}`;
   if (
     authHeader.length !== expectedFull.length ||
     !timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedFull))
   ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const result = await runSubscriptionMaintenance();
 
-  return NextResponse.json({ ok: true, ...result });
+  return jsonOk({ ok: true, ...result });
 }

@@ -1,25 +1,25 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const body = await req.json().catch(() => null);
   if (!body) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return jsonError("Invalid JSON", 400);
   }
   const { targetType, targetId, reason } = body;
 
   if (!targetType || !targetId || !reason) {
-    return NextResponse.json({ error: "targetType, targetId, reason required" }, { status: 400 });
+    return jsonError("targetType, targetId, reason required", 400);
   }
 
   if (!["agent", "skill"].includes(targetType)) {
-    return NextResponse.json({ error: "targetType must be agent or skill" }, { status: 400 });
+    return jsonError("targetType must be agent or skill", 400);
   }
 
   // Prevent duplicate reports from same user
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   });
 
   if (existing) {
-    return NextResponse.json({ error: "Жалоба уже отправлена" }, { status: 409 });
+    return jsonError("Жалоба уже отправлена", 409);
   }
 
   const report = await prisma.contentReport.create({
@@ -45,5 +45,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(report, { status: 201 });
+  return jsonOk(report, 201);
 }

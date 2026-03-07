@@ -40,7 +40,7 @@ export default function MarketplacePage() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] flex items-center gap-2">
               <Store className="h-5 w-5" />
               Маркетплейс скиллов
             </h1>

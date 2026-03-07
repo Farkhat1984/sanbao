@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { jsonOk } from "@/lib/api-helpers";
 
 /**
  * POST /api/auth/logout
@@ -6,5 +6,5 @@ import { NextResponse } from "next/server";
  * Client should discard the token.
  */
 export async function POST() {
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

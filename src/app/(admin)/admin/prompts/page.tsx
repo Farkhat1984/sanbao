@@ -112,7 +112,7 @@ export default function AdminPromptsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-text-primary">Управление промптами</h1>
+        <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Управление промптами</h1>
         <p className="text-sm text-text-muted mt-1">
           Редактирование всех системных промптов с версионированием
         </p>

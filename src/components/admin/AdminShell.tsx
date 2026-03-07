@@ -26,17 +26,17 @@ export function AdminShell({ children }: AdminShellProps) {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="p-4 h-14 flex items-center gap-2 border-b border-border">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center">
+      <div className="p-4 h-14 flex items-center gap-2 border-b border-white/10">
+        <div className="h-8 w-8 rounded-lg bg-legal-ref flex items-center justify-center">
           <ShieldCheck className="h-4 w-4 text-white" />
         </div>
-        <span className="font-semibold text-text-primary text-sm">
+        <span className="font-semibold text-white text-sm font-[family-name:var(--font-display)]">
           Админ-панель
         </span>
         {isMobile && (
           <button
             onClick={() => setDrawerOpen(false)}
-            className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -49,10 +49,10 @@ export function AdminShell({ children }: AdminShellProps) {
       </nav>
 
       {/* Back to chat */}
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-white/10">
         <Link
           href="/chat"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/10 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Вернуться в чат
@@ -99,7 +99,7 @@ export function AdminShell({ children }: AdminShellProps) {
                   animate={{ x: 0 }}
                   exit={{ x: "-100%" }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[300px] flex flex-col bg-surface border-r border-border"
+                  className="fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[300px] flex flex-col bg-[#151F2A] border-r border-white/10"
                 >
                   {sidebarContent}
                 </motion.aside>
@@ -117,7 +117,7 @@ export function AdminShell({ children }: AdminShellProps) {
       ) : (
         <>
           {/* Desktop sidebar */}
-          <aside className="w-[240px] h-screen flex flex-col border-r border-border bg-surface shrink-0">
+          <aside className="w-[240px] h-screen flex flex-col border-r border-white/10 bg-[#151F2A] shrink-0">
             {sidebarContent}
           </aside>
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Upload, Sparkles, X, Loader2 } from "lucide-react";
+import { useRef } from "react";
+import { Upload, X } from "lucide-react";
 
 interface AvatarUploadProps {
   avatar: string | null;
@@ -29,9 +29,6 @@ function resizeImage(dataUrl: string, size: number): Promise<string> {
 
 export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [generating, setGenerating] = useState(false);
-  const [genPrompt, setGenPrompt] = useState("");
-  const [showGenInput, setShowGenInput] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,30 +41,6 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
     };
     reader.readAsDataURL(file);
     e.target.value = "";
-  };
-
-  const handleGenerate = async () => {
-    if (!genPrompt.trim()) return;
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/image-generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: `Avatar portrait, ${genPrompt.trim()}, professional, circular crop friendly, clean background` }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (data.imageBase64) {
-        const resized = await resizeImage(data.imageBase64, 200);
-        onAvatarChange(resized);
-        setShowGenInput(false);
-        setGenPrompt("");
-      }
-    } catch {
-      // silent
-    } finally {
-      setGenerating(false);
-    }
   };
 
   return (
@@ -110,35 +83,7 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
             <Upload className="h-3.5 w-3.5" />
             Загрузить
           </button>
-          <button
-            type="button"
-            onClick={() => setShowGenInput(!showGenInput)}
-            className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-muted hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Сгенерировать
-          </button>
         </div>
-
-        {showGenInput && (
-          <div className="flex gap-2">
-            <input
-              value={genPrompt}
-              onChange={(e) => setGenPrompt(e.target.value)}
-              placeholder="Опишите аватарку..."
-              className="flex-1 h-8 px-3 rounded-lg bg-surface-alt border border-border text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-              onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-            />
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating || !genPrompt.trim()}
-              className="h-8 px-3 rounded-lg bg-accent text-white text-xs flex items-center gap-1 cursor-pointer disabled:opacity-60 transition-colors"
-            >
-              {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

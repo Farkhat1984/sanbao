@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { randomBytes, createHash } from "crypto";
 
 export async function GET() {
@@ -28,7 +28,7 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json(masked);
+  return jsonOk(masked);
 }
 
 export async function POST(req: Request) {
@@ -39,12 +39,12 @@ export async function POST(req: Request) {
   const { userId, name, expiresAt, rateLimit } = body;
 
   if (!userId || !name) {
-    return NextResponse.json({ error: "Обязательные поля: userId, name" }, { status: 400 });
+    return jsonError("Обязательные поля: userId, name", 400);
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
+    return jsonError("Пользователь не найден", 404);
   }
 
   const key = `lma_${randomBytes(32).toString("hex")}`;
@@ -64,11 +64,11 @@ export async function POST(req: Request) {
     const apiKey = await prisma.apiKey.create({
       data: { ...data, keyHash, keyPrefix } as never,
     });
-    return NextResponse.json({ ...apiKey, key, keyHash: undefined }, { status: 201 });
+    return jsonOk({ ...apiKey, key, keyHash: undefined }, 201);
   } catch {
     // Fallback: hash fields not in DB yet — store prefix in key column
     const apiKey = await prisma.apiKey.create({ data: data as never });
-    return NextResponse.json({ ...apiKey, key }, { status: 201 });
+    return jsonOk({ ...apiKey, key }, 201);
   }
 
 }

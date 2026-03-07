@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     prisma.conversation.count({ where }),
   ]);
 
-  return NextResponse.json({
+  return jsonOk({
     conversations: conversations.map((c) => ({
       id: c.id,
       title: c.title,

@@ -101,7 +101,7 @@ export default function OrgMembersPage({
         </button>
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-text-primary">Участники</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Участники</h1>
           {isAdmin && (
             <button
               onClick={() => setShowInvite(!showInvite)}
@@ -172,7 +172,7 @@ export default function OrgMembersPage({
                   </div>
                   <div className={cn(
                     "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium",
-                    member.role === "OWNER" ? "bg-amber-500/10 text-amber-600" :
+                    member.role === "OWNER" ? "bg-warning/10 text-warning" :
                     member.role === "ADMIN" ? "bg-accent/10 text-accent" :
                     "bg-surface-alt text-text-muted"
                   )}>
@@ -182,7 +182,7 @@ export default function OrgMembersPage({
                   {isAdmin && member.role !== "OWNER" && (
                     <button
                       onClick={() => handleRemove(member)}
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error hover:bg-error-light transition-colors cursor-pointer"
                     >
                       <X className="h-4 w-4" />
                     </button>

@@ -11,7 +11,6 @@ import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
 import { AgentSkillPicker } from "@/components/agents/AgentSkillPicker";
 import { AgentMcpPicker } from "@/components/agents/AgentMcpPicker";
 import { AgentToolPicker } from "@/components/agents/AgentToolPicker";
-import { AgentPluginPicker } from "@/components/agents/AgentPluginPicker";
 import { AgentFileUpload } from "@/components/agents/AgentFileUpload";
 import type { AgentFile } from "@/types/agent";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
@@ -31,7 +30,6 @@ interface SystemAgentData {
   skills: Array<{ id: string; name: string }>;
   mcpServers: Array<{ id: string; name: string }>;
   tools: Array<{ id: string; name: string }>;
-  plugins: Array<{ id: string; name: string }>;
 }
 
 export default function AdminAgentEditPage({
@@ -57,8 +55,6 @@ export default function AdminAgentEditPage({
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
-  const [selectedPluginIds, setSelectedPluginIds] = useState<string[]>([]);
-
   // AI generation
   const [showGenPanel, setShowGenPanel] = useState(false);
   const [genDescription, setGenDescription] = useState("");
@@ -90,7 +86,6 @@ export default function AdminAgentEditPage({
           setSelectedSkillIds(data.skills?.map((s) => s.id) || []);
           setSelectedMcpIds(data.mcpServers?.map((m) => m.id) || []);
           setSelectedToolIds(data.tools?.map((t) => t.id) || []);
-          setSelectedPluginIds(data.plugins?.map((p) => p.id) || []);
         })
         .catch(() => setError("Не удалось загрузить агента"))
         .finally(() => setLoading(false));
@@ -119,7 +114,6 @@ export default function AdminAgentEditPage({
           skillIds: selectedSkillIds,
           mcpServerIds: selectedMcpIds,
           toolIds: selectedToolIds,
-          pluginIds: selectedPluginIds,
         }),
       });
       if (!res.ok) {
@@ -203,7 +197,7 @@ export default function AdminAgentEditPage({
       </button>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-text-primary">
+        <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">
           Редактировать системного агента
         </h1>
         <Button
@@ -242,7 +236,7 @@ export default function AdminAgentEditPage({
               type="button"
               onClick={handleGenerate}
               disabled={generating || !genDescription.trim()}
-              className="h-9 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer"
+              className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}
@@ -419,20 +413,6 @@ export default function AdminAgentEditPage({
           </p>
         </div>
 
-        {/* Plugins */}
-        <div>
-          <label className="text-sm font-medium text-text-primary mb-2 block">
-            Плагины
-          </label>
-          <AgentPluginPicker
-            selectedIds={selectedPluginIds}
-            onChange={setSelectedPluginIds}
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Плагины объединяют инструменты, скиллы и MCP-серверы в пакеты
-          </p>
-        </div>
-
         {/* Error */}
         {error && (
           <div className="p-3 rounded-xl bg-error/10 border border-error/20">
@@ -446,7 +426,7 @@ export default function AdminAgentEditPage({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="h-10 px-6 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
+            className="h-10 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Сохранить

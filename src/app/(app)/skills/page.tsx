@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Zap, Store } from "lucide-react";
+import { Plus, Zap, Store, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSkillStore } from "@/stores/skillStore";
@@ -53,7 +53,7 @@ export default function SkillsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">Скиллы</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Скиллы</h1>
             <p className="text-sm text-text-muted mt-1">
               Модульные юридические навыки для AI-ассистента
             </p>
@@ -68,7 +68,7 @@ export default function SkillsPage() {
             </button>
             <button
               onClick={() => router.push("/skills/new")}
-              className="h-10 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all shadow-sm cursor-pointer"
+              className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Создать скилл
@@ -98,9 +98,12 @@ export default function SkillsPage() {
           <>
             {builtIn.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-sm font-semibold text-text-muted mb-4">
-                  Встроенные скиллы
-                </h2>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Zap className="h-4 w-4 text-accent" />
+                  <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">Встроенные</h2>
+                  <span className="text-xs text-text-muted tabular-nums">{builtIn.length}</span>
+                  <div className="flex-1 h-px bg-border ml-2" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {builtIn.map((skill) => (
                     <SkillCard key={skill.id} skill={skill} />
@@ -111,9 +114,12 @@ export default function SkillsPage() {
 
             {custom.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-sm font-semibold text-text-muted mb-4">
-                  Мои скиллы
-                </h2>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">Мои скиллы</h2>
+                  <span className="text-xs text-text-muted tabular-nums">{custom.length}</span>
+                  <div className="flex-1 h-px bg-border ml-2" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {custom.map((skill) => (
                     <SkillCard

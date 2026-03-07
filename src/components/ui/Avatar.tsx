@@ -28,13 +28,13 @@ function getInitials(name?: string | null): string {
 function getColor(name?: string | null): string {
   if (!name) return "bg-accent";
   const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
+    "bg-accent",
+    "bg-[#B8956A]",
     "bg-emerald-500",
     "bg-amber-500",
-    "bg-rose-500",
-    "bg-cyan-500",
-    "bg-indigo-500",
+    "bg-[#C4857A]",
+    "bg-cyan-600",
+    "bg-[#5E7A8A]",
   ];
   const idx = name.charCodeAt(0) % colors.length;
   return colors[idx];

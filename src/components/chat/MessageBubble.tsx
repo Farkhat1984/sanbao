@@ -12,7 +12,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -49,7 +49,7 @@ interface MessageBubbleProps {
   onRetry?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const { trackArtifact, findByTitle, applyEdits } = useArtifactStore();
@@ -182,7 +182,7 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
               "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
               isUser
                 ? "bg-accent text-white"
-                : !agentIconColor && "bg-gradient-to-br from-accent to-legal-ref text-white"
+                : !agentIconColor && "bg-accent text-white"
             )}
             style={!isUser && agentIconColor ? { backgroundColor: agentIconColor, color: "white" } : undefined}
           >
@@ -214,7 +214,7 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
           <div className="mb-2 w-full">
             <button
               onClick={() => setReasoningOpen(!reasoningOpen)}
-              className="flex items-center gap-1.5 text-[11px] text-violet-500 hover:text-violet-600 transition-colors cursor-pointer mb-1"
+              className="flex items-center gap-1.5 text-[11px] text-legal-ref hover:text-[#A07D55] transition-colors cursor-pointer mb-1"
             >
               <Brain className="h-3 w-3" />
               <span>Ход мысли</span>
@@ -229,7 +229,7 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="rounded-xl bg-violet-50 border border-violet-200 px-3 py-2 text-xs text-violet-700 leading-relaxed max-h-[300px] overflow-y-auto"
+                className="rounded-xl bg-legal-ref-bg border border-legal-ref/20 px-3 py-2 text-xs text-legal-ref leading-relaxed max-h-[300px] overflow-y-auto"
               >
                 <pre className="whitespace-pre-wrap font-sans">
                   {displayReasoning}
@@ -310,22 +310,22 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
                       <button
                         key={i}
                         onClick={() => handleOpenEditedArtifact(part.title || "")}
-                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 hover:border-emerald-400 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
+                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-success-light border border-success/20 hover:border-success/40 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
                       >
-                        <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                          <Pencil className="h-5 w-5 text-emerald-600" />
+                        <div className="h-10 w-10 rounded-lg bg-success-light flex items-center justify-center shrink-0">
+                          <Pencil className="h-5 w-5 text-success" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-text-primary truncate">
                             {part.title}
                           </p>
-                          <p className="text-xs text-emerald-600">
+                          <p className="text-xs text-success">
                             {part.edits?.length} {part.edits?.length === 1 ? "изменение" : "изменений"}
                             {target ? ` · v${target.version}` : ""}
                             {" "}&middot; Нажмите чтобы открыть
                           </p>
                         </div>
-                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/edit:text-emerald-500 transition-colors shrink-0" />
+                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/edit:text-success transition-colors shrink-0" />
                       </button>
                     );
                   }
@@ -471,4 +471,4 @@ export function MessageBubble({ message, isLast, agentName, agentIcon, agentIcon
       </div>
     </motion.div>
   );
-}
+});

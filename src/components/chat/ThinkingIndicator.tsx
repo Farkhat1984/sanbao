@@ -38,68 +38,68 @@ const TOOL_VISUALS: Record<
   web_search: {
     Icon: Globe,
     label: "Ищет в интернете",
-    gradient: "from-emerald-500 to-teal-600",
-    dot: "bg-emerald-500",
+    gradient: "from-accent to-accent-hover",
+    dot: "bg-accent",
   },
   knowledge: {
     Icon: DatabaseZap,
     label: "Ищет в базе знаний",
-    gradient: "from-indigo-500 to-violet-600",
-    dot: "bg-indigo-500",
+    gradient: "from-accent to-accent-hover",
+    dot: "bg-accent",
   },
   calculation: {
     Icon: Calculator,
     label: "Вычисляет",
-    gradient: "from-sky-500 to-blue-600",
-    dot: "bg-sky-500",
+    gradient: "from-info to-info",
+    dot: "bg-info",
   },
   memory: {
     Icon: Bookmark,
     label: "Сохраняет в память",
-    gradient: "from-pink-500 to-rose-600",
-    dot: "bg-pink-500",
+    gradient: "from-error to-error",
+    dot: "bg-error",
   },
   task: {
     Icon: ClipboardList,
     label: "Создаёт задачу",
-    gradient: "from-amber-500 to-orange-500",
-    dot: "bg-amber-500",
+    gradient: "from-warning to-warning",
+    dot: "bg-warning",
   },
   notification: {
     Icon: Bell,
     label: "Отправляет уведомление",
-    gradient: "from-yellow-500 to-amber-500",
-    dot: "bg-yellow-500",
+    gradient: "from-warning to-warning",
+    dot: "bg-warning",
   },
   scratchpad: {
     Icon: StickyNote,
     label: "Работает с заметками",
-    gradient: "from-lime-500 to-green-600",
-    dot: "bg-lime-500",
+    gradient: "from-success to-success",
+    dot: "bg-success",
   },
   chart: {
     Icon: BarChart3,
     label: "Строит график",
-    gradient: "from-cyan-500 to-teal-600",
-    dot: "bg-cyan-500",
+    gradient: "from-info to-info",
+    dot: "bg-info",
   },
   http: {
     Icon: Send,
     label: "Выполняет запрос",
-    gradient: "from-orange-500 to-red-500",
-    dot: "bg-orange-500",
+    gradient: "from-error to-error",
+    dot: "bg-error",
   },
   mcp: {
     Icon: Plug,
     label: "Использует плагин",
-    gradient: "from-purple-500 to-fuchsia-600",
-    dot: "bg-purple-500",
+    gradient: "from-legal-ref to-legal-ref",
+    dot: "bg-legal-ref",
   },
   generic: {
     Icon: MessageSquare,
     label: "Использует инструменты",
-    gradient: "from-blue-500 to-cyan-600",
-    dot: "bg-blue-500",
+    gradient: "from-text-secondary to-text-secondary",
+    dot: "bg-text-secondary",
   },
 };
 
@@ -163,8 +163,8 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
   if (phase === "thinking") {
     label = `${name} думает`;
     Icon = Brain;
-    gradientClass = "from-violet-500 to-purple-600";
-    dotColorClass = "bg-violet-500";
+    gradientClass = "from-legal-ref to-[#A07D55]";
+    dotColorClass = "bg-legal-ref";
     animKey = "thinking";
   } else if (phase === "searching") {
     // Web search (no tool name) or specific tool
@@ -178,8 +178,8 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
     } else {
       label = "Ищет в интернете";
       Icon = Globe;
-      gradientClass = "from-emerald-500 to-teal-600";
-      dotColorClass = "bg-emerald-500";
+      gradientClass = "from-accent to-accent-hover";
+      dotColorClass = "bg-accent";
       animKey = "searching";
     }
   } else if (phase === "using_tool") {
@@ -192,13 +192,13 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
   } else if (phase === "planning") {
     label = `${name} составляет план`;
     Icon = ListChecks;
-    gradientClass = "from-amber-500 to-orange-500";
-    dotColorClass = "bg-amber-500";
+    gradientClass = "from-warning to-warning";
+    dotColorClass = "bg-warning";
     animKey = "planning";
   } else {
     label = `${name} отвечает`;
     Icon = MessageSquare;
-    gradientClass = "from-accent to-legal-ref";
+    gradientClass = "from-accent to-accent-hover";
     dotColorClass = "bg-accent";
     animKey = "answering";
   }

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -14,7 +14,7 @@ export async function PUT(
 
   const key = await prisma.apiKey.findUnique({ where: { id } });
   if (!key) {
-    return NextResponse.json({ error: "API-ключ не найден" }, { status: 404 });
+    return jsonError("API-ключ не найден", 404);
   }
 
   const allowedFields = ["name", "isActive", "rateLimit", "expiresAt"];
@@ -26,7 +26,7 @@ export async function PUT(
   }
 
   const updated = await prisma.apiKey.update({ where: { id }, data });
-  return NextResponse.json({ ...updated, key: `${updated.key.slice(0, 8)}...${updated.key.slice(-4)}` });
+  return jsonOk({ ...updated, key: `${updated.key.slice(0, 8)}...${updated.key.slice(-4)}` });
 }
 
 export async function DELETE(
@@ -39,9 +39,9 @@ export async function DELETE(
   const { id } = await params;
   const key = await prisma.apiKey.findUnique({ where: { id } });
   if (!key) {
-    return NextResponse.json({ error: "API-ключ не найден" }, { status: 404 });
+    return jsonError("API-ключ не найден", 404);
   }
 
   await prisma.apiKey.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

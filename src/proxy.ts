@@ -21,7 +21,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()"
+    "camera=(self), microphone=(self), geolocation=(), payment=()"
   );
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("X-DNS-Prefetch-Control", "off");
@@ -114,6 +114,8 @@ const withAuth = auth((req) => {
     pathname.startsWith("/agents") ||
     pathname.startsWith("/skills") ||
     pathname.startsWith("/mcp") ||
+    pathname.startsWith("/organizations") ||
+    pathname.startsWith("/invite") ||
     pathname.startsWith("/admin");
 
   if (isAppRoute && !isLoggedIn) {
@@ -201,6 +203,8 @@ export const config = {
     "/agents/:path*",
     "/skills/:path*",
     "/mcp/:path*",
+    "/organizations/:path*",
+    "/invite/:path*",
     "/admin/:path*",
     "/api/:path*",
   ],

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 import { isShutdown } from "@/lib/shutdown";
 import { timingSafeEqual } from "crypto";
@@ -20,9 +20,9 @@ export async function GET(req: Request) {
   }
   // If shutting down, immediately return 503 so LB drains this instance
   if (isShutdown()) {
-    return NextResponse.json(
+    return jsonOk(
       { status: "shutting_down", timestamp: new Date().toISOString() },
-      { status: 503 }
+      503
     );
   }
 
@@ -91,8 +91,8 @@ export async function GET(req: Request) {
   const overallOk = Object.values(checks).every((c) => c.status === "ok" || c.status === "disconnected" || c.status === "unavailable");
   const status = dbOk ? (overallOk ? "healthy" : "degraded") : "unhealthy";
 
-  return NextResponse.json(
+  return jsonOk(
     { status, checks, timestamp: new Date().toISOString() },
-    { status: dbOk ? 200 : 503 }
+    dbOk ? 200 : 503
   );
 }

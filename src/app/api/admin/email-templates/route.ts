@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import type { EmailType } from "@prisma/client";
 
 const VALID_TYPES = [
@@ -28,7 +28,7 @@ export async function GET() {
     return { id: null, type, subject: "", html: "", isActive: false };
   });
 
-  return NextResponse.json(all);
+  return jsonOk(all);
 }
 
 export async function PUT(req: Request) {
@@ -39,7 +39,7 @@ export async function PUT(req: Request) {
   const { type, subject, html, isActive } = body;
 
   if (!type || !VALID_TYPES.includes(type)) {
-    return NextResponse.json({ error: "Неверный тип шаблона" }, { status: 400 });
+    return jsonError("Неверный тип шаблона", 400);
   }
 
   const template = await prisma.emailTemplate.upsert({
@@ -57,5 +57,5 @@ export async function PUT(req: Request) {
     },
   });
 
-  return NextResponse.json(template);
+  return jsonOk(template);
 }

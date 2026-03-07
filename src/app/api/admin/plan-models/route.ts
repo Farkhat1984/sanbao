@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
-/** GET — full matrix: all plans × all models with PlanModel links. */
+/** GET — full matrix: all plans x all models with PlanModel links. */
 export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
@@ -19,7 +19,7 @@ export async function GET() {
     prisma.planModel.findMany({ take: 500 }),
   ]);
 
-  return NextResponse.json({ plans, models, planModels });
+  return jsonOk({ plans, models, planModels });
 }
 
 /** POST — toggle model access for a plan. */
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const { planId, modelId, action, isDefault } = await req.json();
 
   if (!planId || !modelId || !action) {
-    return NextResponse.json({ error: "planId, modelId, action required" }, { status: 400 });
+    return jsonError("planId, modelId, action required", 400);
   }
 
   if (action === "add") {
@@ -62,5 +62,5 @@ export async function POST(req: Request) {
   }
 
   invalidateModelCache();
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

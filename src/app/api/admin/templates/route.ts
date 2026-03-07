@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     take: 500,
   });
 
-  return NextResponse.json(templates);
+  return jsonOk(templates);
 }
 
 export async function POST(req: Request) {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const { name, type, content, jurisdiction, isActive } = body;
 
   if (!name || !type || !content) {
-    return NextResponse.json({ error: "Обязательные поля: name, type, content" }, { status: 400 });
+    return jsonError("Обязательные поля: name, type, content", 400);
   }
 
   const template = await prisma.documentTemplate.create({
@@ -44,5 +44,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(template, { status: 201 });
+  return jsonOk(template, 201);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import {
   mintSessionToken,
   validateRefreshToken,
@@ -35,19 +36,13 @@ export async function POST(req: Request) {
     const { refreshToken } = body as { refreshToken?: string };
 
     if (!refreshToken || typeof refreshToken !== "string") {
-      return NextResponse.json(
-        { error: "refreshToken is required" },
-        { status: 400 }
-      );
+      return jsonError("refreshToken is required", 400);
     }
 
     // Validate opaque refresh token against Redis
     const userId = await validateRefreshToken(refreshToken);
     if (!userId) {
-      return NextResponse.json(
-        { error: "Invalid or expired refresh token" },
-        { status: 401 }
-      );
+      return jsonError("Invalid or expired refresh token", 401);
     }
 
     // Validate user still exists and is not banned
@@ -65,10 +60,7 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 401 }
-      );
+      return jsonError("User not found", 401);
     }
 
     if (user.isBanned) {
@@ -92,7 +84,7 @@ export async function POST(req: Request) {
     // For now, we use sliding window — same token, TTL extended in validateRefreshToken()
     const newRefreshToken = refreshToken;
 
-    return NextResponse.json({
+    return jsonOk({
       accessToken: session.token,
       refreshToken: newRefreshToken,
       // Legacy field for backward compat
@@ -107,9 +99,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[AUTH:REFRESH] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError("Internal server error", 500);
   }
 }

@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUrlSafe } from "@/lib/ssrf";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { avatar } = await req.json();
@@ -14,10 +14,10 @@ export async function PUT(req: Request) {
   // Validate avatar URL to prevent XSS
   if (avatar) {
     if (typeof avatar !== "string" || avatar.length > 2000) {
-      return NextResponse.json({ error: "Некорректный URL аватара" }, { status: 400 });
+      return jsonError("Некорректный URL аватара", 400);
     }
     if (!isUrlSafe(avatar)) {
-      return NextResponse.json({ error: "Недопустимый URL аватара" }, { status: 400 });
+      return jsonError("Недопустимый URL аватара", 400);
     }
   }
 
@@ -26,5 +26,5 @@ export async function PUT(req: Request) {
     data: { image: avatar || null },
   });
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

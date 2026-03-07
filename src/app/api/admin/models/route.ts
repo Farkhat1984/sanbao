@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const VALID_CATEGORIES = ["TEXT", "IMAGE", "VOICE", "VIDEO", "CODE", "EMBEDDING"];
 
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     orderBy: [{ category: "asc" }, { displayName: "asc" }],
   });
 
-  return NextResponse.json(models);
+  return jsonOk(models);
 }
 
 export async function POST(req: Request) {
@@ -58,23 +58,17 @@ export async function POST(req: Request) {
   } = body;
 
   if (!providerId || !modelId || !displayName || !category) {
-    return NextResponse.json(
-      { error: "Обязательные поля: providerId, modelId, displayName, category" },
-      { status: 400 }
-    );
+    return jsonError("Обязательные поля: providerId, modelId, displayName, category", 400);
   }
 
   if (!VALID_CATEGORIES.includes(category)) {
-    return NextResponse.json(
-      { error: `Допустимые категории: ${VALID_CATEGORIES.join(", ")}` },
-      { status: 400 }
-    );
+    return jsonError(`Допустимые категории: ${VALID_CATEGORIES.join(", ")}`, 400);
   }
 
   // Provider must exist
   const provider = await prisma.aiProvider.findUnique({ where: { id: providerId } });
   if (!provider) {
-    return NextResponse.json({ error: "Провайдер не найден" }, { status: 404 });
+    return jsonError("Провайдер не найден", 404);
   }
 
   // Unique check
@@ -82,10 +76,7 @@ export async function POST(req: Request) {
     where: { providerId_modelId: { providerId, modelId } },
   });
   if (existing) {
-    return NextResponse.json(
-      { error: "Модель с таким modelId уже существует у этого провайдера" },
-      { status: 409 }
-    );
+    return jsonError("Модель с таким modelId уже существует у этого провайдера", 409);
   }
 
   // Atomic default swap + create in transaction to prevent race conditions
@@ -121,5 +112,5 @@ export async function POST(req: Request) {
 
   invalidateModelCache();
 
-  return NextResponse.json(model, { status: 201 });
+  return jsonOk(model, 201);
 }

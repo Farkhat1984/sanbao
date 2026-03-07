@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Bot,
   Zap,
-  Puzzle,
   Cable,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,29 +18,21 @@ const PLAYGROUND_ITEMS = [
     label: "Агенты",
     icon: Bot,
     href: "/agents",
-    color: "bg-blue-50 text-blue-500",
+    color: "bg-accent-light text-accent",
     description: "AI-ассистенты",
   },
   {
     label: "Скиллы",
     icon: Zap,
     href: "/skills",
-    color: "bg-indigo-50 text-indigo-500",
+    color: "bg-accent-light text-accent",
     description: "Шаблоны промптов",
-  },
-  {
-    label: "Плагины",
-    icon: Puzzle,
-    href: "/plugins",
-    color: "bg-amber-50 text-amber-500",
-    description: "Скоро",
-    disabled: true,
   },
   {
     label: "MCP",
     icon: Cable,
     href: "/mcp",
-    color: "bg-emerald-50 text-emerald-500",
+    color: "bg-success-light text-success",
     description: "Серверы",
   },
 ];
@@ -77,31 +68,23 @@ export function AgentList() {
           {PLAYGROUND_ITEMS.map((item) => (
             <button
               key={item.label}
-              onClick={() => !item.disabled && handleNavigate(item.href)}
+              onClick={() => handleNavigate(item.href)}
               className={cn(
                 "w-full rounded-lg flex items-center gap-2.5 px-2",
                 "transition-colors",
                 isMobile ? "h-10" : "h-8",
-                item.disabled
-                  ? "text-text-muted/50 cursor-default"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-alt cursor-pointer"
+                "text-text-secondary hover:text-text-primary hover:bg-surface-alt cursor-pointer"
               )}
             >
               <div
                 className={cn(
                   "h-5 w-5 rounded-md flex items-center justify-center shrink-0",
-                  item.color,
-                  item.disabled && "opacity-40"
+                  item.color
                 )}
               >
                 <item.icon className="h-3 w-3" />
               </div>
               <span className="text-sm truncate">{item.label}</span>
-              {item.disabled && (
-                <span className="text-[9px] text-text-muted/50 ml-auto">
-                  скоро
-                </span>
-              )}
             </button>
           ))}
         </div>

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -21,5 +21,5 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json(report);
+  return jsonOk(report);
 }

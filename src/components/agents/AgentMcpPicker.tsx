@@ -39,7 +39,7 @@ export function AgentMcpPicker({ selectedIds, onChange }: AgentMcpPickerProps) {
   };
 
   const statusColor: Record<string, string> = {
-    CONNECTED: "text-green-500",
+    CONNECTED: "text-success",
     DISCONNECTED: "text-text-muted",
     ERROR: "text-error",
   };

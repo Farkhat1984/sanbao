@@ -142,7 +142,7 @@ export function exportAsHtml(content: string, title: string): void {
   pre { background: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto; }
   code { font-family: monospace; font-size: 0.9em; }
   hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }
-  a { color: #4F6EF7; text-decoration: none; }
+  a { color: #8FAF9F; text-decoration: none; }
   @media print { body { margin: 0; padding: 15mm 20mm; max-width: none; } }
 </style>
 </head>

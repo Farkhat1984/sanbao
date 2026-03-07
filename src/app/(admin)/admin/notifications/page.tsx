@@ -60,7 +60,7 @@ export default function AdminNotificationsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-text-primary mb-1">Уведомления</h1>
+      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Уведомления</h1>
       <p className="text-sm text-text-muted mb-6">Массовые и глобальные уведомления</p>
 
       {/* Send form */}

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { invalidateModelCache } from "@/lib/model-router";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import type { ModelCategory } from "@prisma/client";
 
 export async function GET(
@@ -21,10 +21,10 @@ export async function GET(
   });
 
   if (!model) {
-    return NextResponse.json({ error: "Модель не найдена" }, { status: 404 });
+    return jsonError("Модель не найдена", 404);
   }
 
-  return NextResponse.json(model);
+  return jsonOk(model);
 }
 
 export async function PUT(
@@ -39,7 +39,7 @@ export async function PUT(
 
   const model = await prisma.aiModel.findUnique({ where: { id } });
   if (!model) {
-    return NextResponse.json({ error: "Модель не найдена" }, { status: 404 });
+    return jsonError("Модель не найдена", 404);
   }
 
   const allowedFields = [
@@ -74,7 +74,7 @@ export async function PUT(
 
   invalidateModelCache();
 
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }
 
 export async function DELETE(
@@ -88,11 +88,11 @@ export async function DELETE(
 
   const model = await prisma.aiModel.findUnique({ where: { id } });
   if (!model) {
-    return NextResponse.json({ error: "Модель не найдена" }, { status: 404 });
+    return jsonError("Модель не найдена", 404);
   }
 
   await prisma.aiModel.delete({ where: { id } });
   invalidateModelCache();
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

@@ -57,7 +57,7 @@ export default function AdminTemplatesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Шаблоны документов</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Шаблоны документов</h1>
           <p className="text-sm text-text-muted mt-1">Юридические шаблоны для генерации</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Добавить</Button>

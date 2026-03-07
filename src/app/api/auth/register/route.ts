@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { PASSWORD_MIN_LENGTH, BCRYPT_SALT_ROUNDS } from "@/lib/constants";
@@ -24,25 +25,16 @@ export async function POST(req: Request) {
     // Validate email format + length (RFC 5321: max 254 chars)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || typeof email !== "string" || email.length > 254 || !emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Некорректный email" },
-        { status: 400 }
-      );
+      return jsonError("Некорректный email", 400);
     }
 
     if (!password || password.length < PASSWORD_MIN_LENGTH) {
-      return NextResponse.json(
-        { error: "Пароль должен быть минимум 8 символов" },
-        { status: 400 }
-      );
+      return jsonError("Пароль должен быть минимум 8 символов", 400);
     }
 
     // Prevent bcrypt DoS — bcrypt truncates at 72 bytes anyway
     if (password.length > 128) {
-      return NextResponse.json(
-        { error: "Пароль не должен превышать 128 символов" },
-        { status: 400 }
-      );
+      return jsonError("Пароль не должен превышать 128 символов", 400);
     }
 
     // Sanitize name (strip HTML tags)
@@ -52,10 +44,7 @@ export async function POST(req: Request) {
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return NextResponse.json(
-        { error: "Пользователь с таким email уже существует" },
-        { status: 409 }
-      );
+      return jsonError("Пользователь с таким email уже существует", 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -76,12 +65,9 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    return jsonOk({ success: true }, 201);
   } catch (error) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
-      { status: 500 }
-    );
+    return jsonError("Внутренняя ошибка сервера", 500);
   }
 }

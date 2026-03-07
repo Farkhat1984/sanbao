@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const plans = await prisma.plan.findMany({
@@ -33,5 +33,5 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(plans);
+  return jsonOk(plans);
 }

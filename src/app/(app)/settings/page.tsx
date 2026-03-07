@@ -176,14 +176,14 @@ function SettingsContent() {
   return (
     <div className="h-full">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
-        <h1 className="text-xl font-bold text-text-primary">Настройки</h1>
+        <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Настройки</h1>
 
         {setup2fa && !mounted ? null : setup2fa && (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
-            <p className="text-sm font-medium text-amber-800">
+          <div className="p-4 rounded-xl bg-warning-light border border-warning/20">
+            <p className="text-sm font-medium text-warning">
               Для доступа к админ-панели необходимо включить двухфакторную аутентификацию (2FA).
             </p>
-            <p className="text-xs text-amber-600 mt-1">
+            <p className="text-xs text-warning mt-1">
               Настройте 2FA ниже, затем вернитесь в админ-панель.
             </p>
           </div>
@@ -310,7 +310,7 @@ function SettingsContent() {
           <Button
             variant="ghost"
             onClick={() => { resetAllStores(); signOut({ callbackUrl: "/login" }); }}
-            className="text-error hover:text-error hover:bg-red-50"
+            className="text-error hover:text-error hover:bg-error-light"
           >
             <LogOut className="h-4 w-4" />
             Выйти из аккаунта

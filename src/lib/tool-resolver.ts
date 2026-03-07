@@ -3,10 +3,7 @@
  * for a given agent. Traverses:
  *   agent.tools (direct)
  *   agent.skills → skill.tools
- *   agent.plugins → plugin.tools
- *   agent.plugins → plugin.skills → skill.tools
  *   agent.mcpServers (direct)
- *   agent.plugins → plugin.mcpServers
  */
 
 import { prisma } from "@/lib/prisma";
@@ -18,7 +15,7 @@ const REDIS_AGENT_TTL = 60; // 60 seconds in Redis (shared L2)
 const REDIS_PREFIX = "agent_ctx:";
 const agentContextCache = new BoundedMap<string, { context: ResolvedAgentContext; expiresAt: number }>(200);
 
-/** Invalidate agent context cache (call after admin changes agents/tools/plugins). */
+/** Invalidate agent context cache (call after admin changes agents/tools/skills). */
 export function invalidateAgentContextCache(agentId?: string) {
   if (agentId) {
     agentContextCache.delete(agentId);
@@ -102,17 +99,6 @@ export async function resolveAgentContext(
       skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
       mcpServers: { include: { mcpServer: true } },
       tools: { include: { tool: true } },
-      plugins: {
-        include: {
-          plugin: {
-            include: {
-              tools: { include: { tool: true } },
-              skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
-              mcpServers: { include: { mcpServer: true } },
-            },
-          },
-        },
-      },
     },
   });
 
@@ -256,27 +242,6 @@ export async function resolveAgentContext(
   // 3. Agent's direct MCP servers
   for (const ams of agent.mcpServers) {
     processMcpServer(ams.mcpServer);
-  }
-
-  // 4. Agent's plugins
-  for (const ap of agent.plugins) {
-    const plugin = ap.plugin;
-    if (!plugin.isActive) continue;
-
-    // Plugin's tools
-    for (const pt of plugin.tools) {
-      processTool(pt.tool);
-    }
-
-    // Plugin's skills
-    for (const ps of plugin.skills) {
-      processSkill(ps.skill);
-    }
-
-    // Plugin's MCP servers
-    for (const pms of plugin.mcpServers) {
-      processMcpServer(pms.mcpServer);
-    }
   }
 
   // Sort tools by sortOrder

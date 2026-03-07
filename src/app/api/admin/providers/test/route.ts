@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(req: Request) {
   const result = await requireAdmin();
@@ -9,12 +9,12 @@ export async function POST(req: Request) {
 
   const { providerId } = await req.json();
   if (!providerId) {
-    return NextResponse.json({ error: "providerId is required" }, { status: 400 });
+    return jsonError("providerId is required", 400);
   }
 
   const provider = await prisma.aiProvider.findUnique({ where: { id: providerId } });
   if (!provider) {
-    return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+    return jsonError("Provider not found", 404);
   }
 
   try {
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return NextResponse.json({
+      return jsonOk({
         success: false,
         status: res.status,
         latency,
@@ -43,14 +43,14 @@ export async function POST(req: Request) {
     const data = await res.json().catch(() => ({}));
     const modelCount = Array.isArray(data?.data) ? data.data.length : 0;
 
-    return NextResponse.json({
+    return jsonOk({
       success: true,
       status: res.status,
       latency,
       modelCount,
     });
   } catch (err) {
-    return NextResponse.json({
+    return jsonOk({
       success: false,
       error: err instanceof Error ? err.message : "Connection failed",
       latency: 0,

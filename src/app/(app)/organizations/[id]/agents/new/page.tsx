@@ -70,7 +70,7 @@ export default function NewOrgAgentPage({
         </button>
 
         <div className="flex items-center gap-3 mb-8">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-accent/20 to-legal-ref/20 flex items-center justify-center">
+          <div className="h-12 w-12 rounded-2xl bg-accent/20 flex items-center justify-center">
             {step === "info" ? (
               <Bot className="h-6 w-6 text-accent" />
             ) : (
@@ -78,7 +78,7 @@ export default function NewOrgAgentPage({
             )}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-text-primary">
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">
               {step === "info" ? "Новый агент" : "Загрузка файлов"}
             </h1>
             <p className="text-sm text-text-muted">
@@ -123,7 +123,7 @@ export default function NewOrgAgentPage({
             </div>
 
             {error && (
-              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+              <div className="p-3 rounded-xl bg-error-light text-error text-sm">
                 {error}
               </div>
             )}
@@ -131,7 +131,7 @@ export default function NewOrgAgentPage({
             <button
               type="submit"
               disabled={!name.trim() || isSubmitting}
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white font-medium flex items-center justify-center gap-2 hover:shadow-md transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full h-11 rounded-xl bg-accent hover:bg-accent-hover text-white font-medium flex items-center justify-center gap-2 hover:shadow-md transition-all disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? "Создание..." : "Далее: загрузить файлы"}
             </button>

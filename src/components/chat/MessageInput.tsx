@@ -13,14 +13,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
-import dynamic from "next/dynamic";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { PlusMenu } from "@/components/chat/PlusMenu";
 
-const ImageGenerateModal = dynamic(
-  () => import("@/components/image-edit/ImageGenerateModal").then((m) => m.ImageGenerateModal),
-  { ssr: false }
-);
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/stores/agentStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -32,7 +27,6 @@ export function MessageInput() {
   const [input, setInput] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [imageGenOpen, setImageGenOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,7 +120,7 @@ export function MessageInput() {
           <button
             onClick={toggleThinking}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 font-medium hover:bg-violet-200 transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-legal-ref-bg text-legal-ref font-medium hover:bg-[#EDE5D6] transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
@@ -139,7 +133,7 @@ export function MessageInput() {
           <button
             onClick={toggleWebSearch}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium hover:bg-emerald-200 transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-light text-success font-medium hover:bg-success/20 transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
@@ -207,7 +201,6 @@ export function MessageInput() {
             setToolsOpen={setToolsOpen}
             onAttachClick={() => fileInputRef.current?.click()}
             onCameraClick={() => cameraInputRef.current?.click()}
-            onImageGenOpen={() => setImageGenOpen(true)}
             hasAgentTools={agentTools.length > 0}
             webSearchEnabled={webSearchEnabled}
             thinkingEnabled={thinkingEnabled}
@@ -231,7 +224,7 @@ export function MessageInput() {
             rows={1}
             className={cn(
               "flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none leading-relaxed max-h-[120px] overflow-y-auto py-1",
-              isRecording && "placeholder:text-red-400"
+              isRecording && "placeholder:text-error"
             )}
           />
 
@@ -245,7 +238,7 @@ export function MessageInput() {
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={handleStop}
                 aria-label="Остановить генерацию"
-                className="h-9 w-9 rounded-full bg-error text-white flex items-center justify-center hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
+                className="h-9 w-9 rounded-full bg-error text-white flex items-center justify-center hover:bg-[#B07068] transition-colors shrink-0 cursor-pointer"
               >
                 <StopCircle className="h-4 w-4" />
               </motion.button>
@@ -257,10 +250,10 @@ export function MessageInput() {
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={stopRecording}
                 aria-label="Остановить запись"
-                className="relative h-9 w-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shrink-0 cursor-pointer"
+                className="relative h-9 w-9 rounded-full bg-error text-white flex items-center justify-center hover:bg-[#B07068] transition-colors shrink-0 cursor-pointer"
               >
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-red-500"
+                  className="absolute inset-0 rounded-full bg-error"
                   animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
@@ -279,7 +272,7 @@ export function MessageInput() {
                   "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer",
                   hasParsing
                     ? "bg-surface-alt text-text-muted"
-                    : "bg-gradient-to-r from-accent to-legal-ref text-white shadow-md hover:shadow-lg"
+                    : "bg-accent text-white shadow-md hover:shadow-lg hover:bg-accent-hover"
                 )}
               >
                 {hasParsing ? (
@@ -329,12 +322,6 @@ export function MessageInput() {
           </span>
         </div>
       </div>
-
-      {/* Image generate modal */}
-      <ImageGenerateModal
-        isOpen={imageGenOpen}
-        onClose={() => setImageGenOpen(false)}
-      />
 
       {/* File error alert */}
       <AlertModal

@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const SYSTEM_AGENT_INCLUDE = {
   skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-  plugins: { include: { plugin: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   files: true,
 };
 
@@ -24,10 +23,10 @@ export async function GET(
   });
 
   if (!agent) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
-  return NextResponse.json({
+  return jsonOk({
     id: agent.id,
     name: agent.name,
     description: agent.description,
@@ -43,7 +42,6 @@ export async function GET(
     skills: agent.skills.map((s) => s.skill),
     mcpServers: agent.mcpServers.map((m) => m.mcpServer),
     tools: agent.tools.map((t) => t.tool),
-    plugins: agent.plugins.map((p) => p.plugin),
   });
 }
 
@@ -61,7 +59,7 @@ export async function PUT(
     where: { id, isSystem: true },
   });
   if (!agent) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
   // Map admin fields to Agent model
@@ -80,8 +78,8 @@ export async function PUT(
   await prisma.agent.update({ where: { id }, data });
 
   // Update associations atomically
-  const { skillIds, mcpServerIds, toolIds, pluginIds } = body;
-  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(pluginIds);
+  const { skillIds, mcpServerIds, toolIds } = body;
+  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds);
 
   if (hasAssociationUpdates) {
     await prisma.$transaction(async (tx) => {
@@ -103,19 +101,13 @@ export async function PUT(
           await tx.agentTool.createMany({ data: toolIds.map((toolId: string) => ({ agentId: id, toolId })) });
         }
       }
-      if (Array.isArray(pluginIds)) {
-        await tx.agentPlugin.deleteMany({ where: { agentId: id } });
-        if (pluginIds.length > 0) {
-          await tx.agentPlugin.createMany({ data: pluginIds.map((pluginId: string) => ({ agentId: id, pluginId })) });
-        }
-      }
     });
   }
 
   // Refetch with all relations
   const updated = await prisma.agent.findUnique({ where: { id }, include: SYSTEM_AGENT_INCLUDE });
 
-  return NextResponse.json({
+  return jsonOk({
     id: updated!.id,
     name: updated!.name,
     description: updated!.description,
@@ -130,7 +122,6 @@ export async function PUT(
     skills: updated!.skills.map((s) => s.skill),
     mcpServers: updated!.mcpServers.map((m) => m.mcpServer),
     tools: updated!.tools.map((t) => t.tool),
-    plugins: updated!.plugins.map((p) => p.plugin),
   });
 }
 
@@ -146,9 +137,9 @@ export async function DELETE(
     where: { id, isSystem: true },
   });
   if (!agent) {
-    return NextResponse.json({ error: "Агент не найден" }, { status: 404 });
+    return jsonError("Агент не найден", 404);
   }
 
   await prisma.agent.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

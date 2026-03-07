@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(
   req: Request,
@@ -14,7 +14,7 @@ export async function PUT(
 
   const plan = await prisma.plan.findUnique({ where: { id } });
   if (!plan) {
-    return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+    return jsonError("Plan not found", 404);
   }
 
   const allowedFields = [
@@ -59,5 +59,5 @@ export async function PUT(
     data,
   });
 
-  return NextResponse.json(updated);
+  return jsonOk(updated);
 }

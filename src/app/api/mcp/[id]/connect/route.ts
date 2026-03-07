@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { connectAndDiscoverTools } from "@/lib/mcp-client";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(
   _req: Request,
@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { id } = await params;
@@ -19,7 +19,7 @@ export async function POST(
   });
 
   if (!server) {
-    return NextResponse.json({ error: "Не найден" }, { status: 404 });
+    return jsonError("Не найден", 404);
   }
 
   const { tools, error } = await connectAndDiscoverTools(
@@ -34,7 +34,7 @@ export async function POST(
       data: { status: "ERROR", discoveredTools: undefined },
     });
 
-    return NextResponse.json({ error, status: "ERROR" }, { status: 502 });
+    return jsonOk({ error, status: "ERROR" }, 502);
   }
 
   await prisma.mcpServer.update({
@@ -45,7 +45,7 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({
+  return jsonOk({
     status: "CONNECTED",
     tools,
     toolCount: tools.length,

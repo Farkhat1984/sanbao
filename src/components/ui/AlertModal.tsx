@@ -22,13 +22,13 @@ const variantConfig: Record<
 > = {
   error: {
     icon: AlertCircle,
-    iconBg: "bg-red-100",
-    iconColor: "text-red-500",
+    iconBg: "bg-error-light",
+    iconColor: "text-error",
   },
   success: {
     icon: CheckCircle,
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-500",
+    iconBg: "bg-success-light",
+    iconColor: "text-success",
   },
   info: {
     icon: Info,

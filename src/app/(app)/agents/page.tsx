@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Search, Bot, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAgentStore } from "@/stores/agentStore";
 import { AgentCard } from "@/components/agents/AgentCard";
@@ -22,6 +22,7 @@ export default function AgentsPage() {
   const { agents, setAgents, isLoading, setLoading } = useAgentStore();
   const [loaded, setLoaded] = useState(false);
   const [systemAgents, setSystemAgents] = useState<SystemAgentInfo[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -38,13 +39,43 @@ export default function AgentsPage() {
       });
   }, [setAgents, setLoading]);
 
+  const normalizedQuery = searchQuery.toLowerCase().trim();
+
+  const filteredSystemAgents = useMemo(
+    () =>
+      systemAgents.filter(
+        (a) =>
+          !normalizedQuery ||
+          a.name.toLowerCase().includes(normalizedQuery) ||
+          a.description.toLowerCase().includes(normalizedQuery),
+      ),
+    [systemAgents, normalizedQuery],
+  );
+
+  const filteredUserAgents = useMemo(
+    () =>
+      agents.filter(
+        (a) =>
+          !normalizedQuery ||
+          a.name.toLowerCase().includes(normalizedQuery) ||
+          (a.description ?? "").toLowerCase().includes(normalizedQuery),
+      ),
+    [agents, normalizedQuery],
+  );
+
+  const hasNoResults =
+    loaded &&
+    normalizedQuery.length > 0 &&
+    filteredSystemAgents.length === 0 &&
+    filteredUserAgents.length === 0;
+
   return (
     <div className="h-full">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text-primary">
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">
               Агенты
             </h1>
             <p className="text-sm text-text-muted mt-1">
@@ -53,53 +84,122 @@ export default function AgentsPage() {
           </div>
           <button
             onClick={() => router.push("/agents/new")}
-            className="h-10 px-5 rounded-xl bg-gradient-to-r from-accent to-legal-ref text-white text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-all shadow-sm cursor-pointer"
+            className="h-10 px-5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Создать агента
           </button>
         </div>
 
+        {/* Search */}
+        <div className="relative mb-8">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск по имени или описанию..."
+            className="w-full h-10 pl-10 pr-4 rounded-xl border border-border bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-colors"
+          />
+        </div>
+
         {/* Loading */}
         {isLoading && !loaded && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-5 rounded-2xl border border-border bg-surface">
-                <div className="flex items-start gap-3 mb-3">
-                  <Skeleton className="h-10 w-10 rounded-xl" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-24 mb-1.5" />
-                    <Skeleton className="h-3 w-16" />
+          <div className="space-y-8">
+            <div>
+              <Skeleton className="h-4 w-40 mb-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-5 rounded-2xl border border-border bg-surface">
+                    <div className="flex items-start gap-3 mb-3">
+                      <Skeleton className="h-10 w-10 rounded-xl" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-24 mb-1.5" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-3 w-full mb-1.5" />
+                    <Skeleton className="h-3 w-3/4" />
                   </div>
-                </div>
-                <Skeleton className="h-3 w-full mb-1.5" />
-                <Skeleton className="h-3 w-3/4" />
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         )}
 
-        {/* Agent Grid — System agents first, then user agents */}
         {loaded && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* System agents from API */}
-            {systemAgents.map((agent) => (
-              <SystemAgentCard key={agent.id} agent={agent} />
-            ))}
+          <div className="space-y-8">
+            {/* System Agents Section */}
+            {filteredSystemAgents.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
+                    Системные
+                  </h2>
+                  <span className="text-xs text-text-muted tabular-nums">
+                    {filteredSystemAgents.length}
+                  </span>
+                  <div className="flex-1 h-px bg-border ml-2" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredSystemAgents.map((agent) => (
+                    <SystemAgentCard key={agent.id} agent={agent} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-            {/* User agents */}
-            {agents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
-        )}
+            {/* User Agents Section */}
+            <section>
+              <div className="flex items-center gap-2.5 mb-4">
+                <Bot className="h-4 w-4 text-accent" />
+                <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
+                  Мои агенты
+                </h2>
+                <span className="text-xs text-text-muted tabular-nums">
+                  {filteredUserAgents.length}
+                </span>
+                <div className="flex-1 h-px bg-border ml-2" />
+              </div>
 
-        {/* Empty hint (when no user agents) */}
-        {loaded && agents.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-sm text-text-muted">
-              Создайте персонального агента с уникальными инструкциями и файлами знаний
-            </p>
+              {filteredUserAgents.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredUserAgents.map((agent) => (
+                    <AgentCard key={agent.id} agent={agent} />
+                  ))}
+                </div>
+              ) : (
+                !normalizedQuery && (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl border border-dashed border-border bg-surface/50">
+                    <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
+                      <Bot className="h-6 w-6 text-accent" />
+                    </div>
+                    <p className="text-sm font-medium text-text-primary mb-1">
+                      У вас пока нет агентов
+                    </p>
+                    <p className="text-sm text-text-muted text-center max-w-xs">
+                      Создайте персонального агента с уникальными инструкциями и файлами знаний
+                    </p>
+                  </div>
+                )
+              )}
+            </section>
+
+            {/* No search results */}
+            {hasNoResults && (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <div className="h-12 w-12 rounded-xl bg-surface flex items-center justify-center mb-4 border border-border">
+                  <Search className="h-6 w-6 text-text-muted" />
+                </div>
+                <p className="text-sm font-medium text-text-primary mb-1">
+                  Ничего не найдено
+                </p>
+                <p className="text-sm text-text-muted">
+                  Попробуйте изменить поисковый запрос
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

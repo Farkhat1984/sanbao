@@ -337,6 +337,7 @@ model Subscription {
   updatedAt DateTime @updatedAt
 
   @@index([planId])
+  @@index([planId, expiresAt])
   @@index([expiresAt])
 }
 
@@ -532,6 +533,7 @@ model Task {
   updatedAt DateTime @updatedAt
 
   @@index([userId, status])
+  @@index([userId, status, updatedAt])
   @@index([conversationId])
 }
 
@@ -629,6 +631,7 @@ model UserMcpServer {
   mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, mcpServerId])
   @@index([userId, isActive])
@@ -664,6 +667,7 @@ model McpToolLog {
   @@index([mcpServerId, createdAt])
   @@index([toolName, createdAt])
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([conversationId])
 }
 
@@ -723,6 +727,7 @@ model AiModel {
 
   @@unique([providerId, modelId])
   @@index([category, isActive])
+  @@index([providerId, isActive])
 }
 
 model PlanModel {
@@ -827,6 +832,7 @@ model Notification {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, isRead])
   @@index([isGlobal, createdAt])
@@ -933,6 +939,7 @@ model Payment {
   updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
+  @@index([userId, status, createdAt])
   @@index([status])
   @@index([externalId]) // Stripe/Freedom webhook reconciliation by payment intent ID
 }
@@ -950,6 +957,7 @@ model PromoCode {
   planId      String?   // restrict to specific plan
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code])
 }
@@ -1105,7 +1113,8 @@ model OrgMember {
   org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  joinedAt DateTime @default(now())
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([orgId, userId])
   @@index([userId])
@@ -1122,6 +1131,7 @@ model OrgInvite {
   org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   expiresAt DateTime
 
   @@index([email])
@@ -1148,6 +1158,7 @@ model OrgAgent {
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
+  @@index([orgId, status])
   @@index([mcpServerId]) // FK: avoid full scan on McpServer cascade/lookup
 }
 
@@ -1174,6 +1185,9 @@ model OrgAgentMember {
 
   orgAgent OrgAgent @relation(fields: [orgAgentId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([orgAgentId, userId])
 }

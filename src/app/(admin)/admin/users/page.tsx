@@ -1,13 +1,11 @@
-"use client";
-
 import { UsersTable } from "@/components/admin/UsersTable";
 
 export default function AdminUsersPage() {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-4">
+      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-4">
         Пользователи
-      </h2>
+      </h1>
       <UsersTable />
     </div>
   );

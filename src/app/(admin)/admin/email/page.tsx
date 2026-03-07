@@ -122,7 +122,7 @@ export default function AdminEmailPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-text-primary mb-1">Email</h1>
+      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Email</h1>
       <p className="text-sm text-text-muted mb-6">Логи отправки, шаблоны и SMTP-конфигурация</p>
 
       <div className="flex gap-1 mb-4">

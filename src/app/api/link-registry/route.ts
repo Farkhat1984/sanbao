@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { jsonOk } from "@/lib/api-helpers";
 
 const ORCHESTRATOR_URL =
   process.env.ORCHESTRATOR_URL || "http://orchestrator:8120";
@@ -15,13 +15,13 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      return NextResponse.json({}, { status: res.status });
+      return jsonOk({}, res.status);
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    return jsonOk(data);
   } catch (e) {
     console.error("Failed to fetch link registry:", e);
-    return NextResponse.json({});
+    return jsonOk({});
   }
 }

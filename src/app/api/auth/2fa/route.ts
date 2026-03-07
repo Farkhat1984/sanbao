@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { OTP } from "otplib";
 import QRCode from "qrcode";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { encrypt, decrypt } from "@/lib/crypto";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const otp = new OTP();
 
@@ -12,7 +12,7 @@ const otp = new OTP();
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -21,11 +21,11 @@ export async function GET() {
   });
 
   if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return jsonError("User not found", 404);
   }
 
   if (user.twoFactorEnabled) {
-    return NextResponse.json({ enabled: true });
+    return jsonOk({ enabled: true });
   }
 
   const secret = otp.generateSecret();
@@ -42,23 +42,20 @@ export async function GET() {
   // The QR code data URL encodes the otpauth:// URI which contains the secret,
   // but only in a form that authenticator apps can scan — not easily copy-pasted.
   // Exposing the raw secret makes it trivial to clone the TOTP generator.
-  return NextResponse.json({ qrCodeUrl, enabled: false });
+  return jsonOk({ qrCodeUrl, enabled: false });
 }
 
 /** POST — verify TOTP code and enable/disable 2FA */
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   // Rate limit: 5 attempts per minute per user to prevent TOTP brute-force
   const allowed = await checkRateLimit(`2fa:${session.user.id}`, 5, 60_000);
   if (!allowed) {
-    return NextResponse.json(
-      { error: "Слишком много попыток. Подождите минуту." },
-      { status: 429 }
-    );
+    return jsonError("Слишком много попыток. Подождите минуту.", 429);
   }
 
   const body = await req.json();
@@ -71,19 +68,19 @@ export async function POST(req: Request) {
   });
 
   if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return jsonError("User not found", 404);
   }
 
   // Enable 2FA
   if (action === "enable") {
     if (!user.twoFactorSecret || !code) {
-      return NextResponse.json({ error: "Secret not set or code missing" }, { status: 400 });
+      return jsonError("Secret not set or code missing", 400);
     }
 
     const decryptedSecret = decrypt(user.twoFactorSecret);
     const result = await otp.verify({ token: code, secret: decryptedSecret });
     if (!result.valid) {
-      return NextResponse.json({ error: "Неверный код" }, { status: 400 });
+      return jsonError("Неверный код", 400);
     }
 
     await prisma.user.update({
@@ -91,22 +88,22 @@ export async function POST(req: Request) {
       data: { twoFactorEnabled: true, securityStamp: new Date() },
     });
 
-    return NextResponse.json({ success: true, enabled: true });
+    return jsonOk({ success: true, enabled: true });
   }
 
   // Disable 2FA
   if (action === "disable") {
     if (user.role === "ADMIN") {
-      return NextResponse.json({ error: "Администраторы не могут отключить 2FA" }, { status: 403 });
+      return jsonError("Администраторы не могут отключить 2FA", 403);
     }
     if (!user.twoFactorSecret || !code) {
-      return NextResponse.json({ error: "Code required to disable 2FA" }, { status: 400 });
+      return jsonError("Code required to disable 2FA", 400);
     }
 
     const decryptedSecret = decrypt(user.twoFactorSecret);
     const result = await otp.verify({ token: code, secret: decryptedSecret });
     if (!result.valid) {
-      return NextResponse.json({ error: "Неверный код" }, { status: 400 });
+      return jsonError("Неверный код", 400);
     }
 
     await prisma.user.update({
@@ -114,19 +111,19 @@ export async function POST(req: Request) {
       data: { twoFactorEnabled: false, twoFactorSecret: null, securityStamp: new Date() },
     });
 
-    return NextResponse.json({ success: true, enabled: false });
+    return jsonOk({ success: true, enabled: false });
   }
 
   // Verify code (for login flow)
   if (action === "verify") {
     if (!user.twoFactorSecret || !code) {
-      return NextResponse.json({ error: "Code required" }, { status: 400 });
+      return jsonError("Code required", 400);
     }
 
     const decryptedSecret = decrypt(user.twoFactorSecret);
     const result = await otp.verify({ token: code, secret: decryptedSecret });
-    return NextResponse.json({ valid: result.valid });
+    return jsonOk({ valid: result.valid });
   }
 
-  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  return jsonError("Invalid action", 400);
 }

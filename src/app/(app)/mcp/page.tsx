@@ -18,11 +18,11 @@ export default function McpPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-xl bg-accent-light text-accent flex items-center justify-center">
             <Cable className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-text-primary">MCP-серверы</h1>
+            <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">MCP-серверы</h1>
             <p className="text-xs text-text-muted">
               Подключайте внешние инструменты через Model Context Protocol
             </p>

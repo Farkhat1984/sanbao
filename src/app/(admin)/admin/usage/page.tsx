@@ -46,7 +46,7 @@ export default function AdminUsagePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary mb-1">Расход токенов</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Расход токенов</h1>
           <p className="text-sm text-text-muted">Детальная статистика использования AI</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => {
@@ -62,11 +62,11 @@ export default function AdminUsagePage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
           <p className="text-xs text-text-muted">Input токенов</p>
-          <p className="text-xl font-bold text-text-primary mt-1">{totals.inputTokens.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mt-1">{totals.inputTokens.toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <p className="text-xs text-text-muted">Output токенов</p>
-          <p className="text-xl font-bold text-text-primary mt-1">{totals.outputTokens.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mt-1">{totals.outputTokens.toLocaleString()}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <p className="text-xs text-text-muted">Себестоимость</p>

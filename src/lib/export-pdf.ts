@@ -78,6 +78,16 @@ export async function exportToPdf(
     const pageData = pageCanvas.toDataURL("image/jpeg", 0.95);
     const pageImgHeight = (pageCanvas.height * imgWidth) / pageCanvas.width;
     pdf.addImage(pageData, "JPEG", MARGIN_MM, MARGIN_MM, imgWidth, pageImgHeight);
+
+    // Brand footer
+    pdf.setFontSize(8);
+    pdf.setTextColor(155, 171, 184); // #9AABB8 (text-muted)
+    pdf.text(
+      `Sanbao.ai — ${i + 1}/${pageCount}`,
+      A4_WIDTH_MM / 2,
+      A4_HEIGHT_MM - 8,
+      { align: "center" }
+    );
   }
 
   pdf.save(`${sanitizeFilename(title)}.pdf`);

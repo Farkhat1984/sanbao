@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   Settings,
   ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function Sidebar() {
   const close = useSidebarStore((s) => s.close);
@@ -86,11 +88,11 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent to-legal-ref flex items-center justify-center shrink-0 text-white">
+          <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center shrink-0 text-white">
             <SanbaoCompass size={20} state={isStreaming ? "loading" : "idle"} />
           </div>
-          <span className="font-semibold text-text-primary text-base tracking-tight">
-            Sanbao
+          <span className="font-semibold text-text-primary text-base tracking-tight font-[family-name:var(--font-display)]">
+            Sanbao<span className="text-accent font-normal">.ai</span>
           </span>
         </div>
 
@@ -98,7 +100,10 @@ export function Sidebar() {
           <button
             onClick={close}
             aria-label="Закрыть боковую панель"
-            className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+            className={cn(
+              "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer",
+              isMobile ? "h-9 w-9" : "h-7 w-7"
+            )}
           >
             <PanelLeftClose className="h-4 w-4" />
           </button>
@@ -171,6 +176,17 @@ export function Sidebar() {
               </button>
             </Tooltip>
           )}
+          <Tooltip content="Организации" side="top">
+            <button
+              onClick={() => handleNavigate("/organizations")}
+              className={cn(
+                "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
+                isMobile ? "h-10 w-10" : "h-8 w-8"
+              )}
+            >
+              <Building2 className="h-4 w-4" />
+            </button>
+          </Tooltip>
           <Tooltip content="Настройки" side="top">
             <button
               onClick={() => handleNavigate("/settings")}
@@ -182,6 +198,7 @@ export function Sidebar() {
               <Settings className="h-4 w-4" />
             </button>
           </Tooltip>
+          <ThemeToggle className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} />
         </div>
       </div>
     </aside>

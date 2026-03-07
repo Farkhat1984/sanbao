@@ -67,9 +67,9 @@ export default function AdminPlansPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-4">
+      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-4">
         Управление тарифами
-      </h2>
+      </h1>
       <div className="space-y-4">
         {plans.map((plan) => (
           <PlanForm key={plan.id} plan={plan} onSave={handleSave} />

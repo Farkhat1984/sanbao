@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -39,7 +39,7 @@ export async function GET() {
     where: { date: today },
   });
 
-  return NextResponse.json({
+  return jsonOk({
     totalUsers,
     activeToday,
     totalMessagesToday: totalMessagesToday._sum.messageCount || 0,

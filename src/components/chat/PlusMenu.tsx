@@ -7,7 +7,6 @@ import {
   Globe,
   Brain,
   Camera,
-  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
@@ -22,7 +21,6 @@ export interface PlusMenuProps {
   setToolsOpen: (open: boolean) => void;
   onAttachClick: () => void;
   onCameraClick: () => void;
-  onImageGenOpen: () => void;
   hasAgentTools: boolean;
   webSearchEnabled: boolean;
   thinkingEnabled: boolean;
@@ -39,7 +37,6 @@ export function PlusMenu({
   setToolsOpen,
   onAttachClick,
   onCameraClick,
-  onImageGenOpen,
   hasAgentTools,
   webSearchEnabled,
   thinkingEnabled,
@@ -96,7 +93,7 @@ export function PlusMenu({
                 damping: 25,
                 stiffness: 300,
               }}
-              className="absolute bottom-full left-0 mb-2 z-40 w-[220px] bg-surface border border-border rounded-2xl shadow-xl overflow-hidden"
+              className="absolute bottom-full left-0 mb-2 z-40 w-[min(220px,85vw)] bg-surface border border-border rounded-2xl shadow-xl overflow-hidden"
             >
               <div className="py-1.5">
                 {/* Attach file */}
@@ -104,7 +101,7 @@ export function PlusMenu({
                   onClick={handleAttachClick}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <div className="h-7 w-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                  <div className="h-7 w-7 rounded-lg bg-accent-light text-accent flex items-center justify-center">
                     <Paperclip className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 text-left">
@@ -120,7 +117,7 @@ export function PlusMenu({
                   onClick={handleCameraClick}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <div className="h-7 w-7 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
+                  <div className="h-7 w-7 rounded-lg bg-success-light text-success flex items-center justify-center">
                     <Camera className="h-3.5 w-3.5" />
                   </div>
                   <span>Сделать фото</span>
@@ -132,26 +129,12 @@ export function PlusMenu({
                     onClick={handleOpenTools}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                   >
-                    <div className="h-7 w-7 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center">
+                    <div className="h-7 w-7 rounded-lg bg-warning-light text-warning flex items-center justify-center">
                       <Wrench className="h-3.5 w-3.5" />
                     </div>
                     <span>Инструменты</span>
                   </button>
                 )}
-
-                {/* Image generation */}
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onImageGenOpen();
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                >
-                  <div className="h-7 w-7 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
-                    <ImageIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <span>Генерация картинок</span>
-                </button>
 
                 <div className="h-px bg-border mx-3 my-1" />
 
@@ -167,8 +150,8 @@ export function PlusMenu({
                     className={cn(
                       "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
                       webSearchEnabled
-                        ? "bg-emerald-500 text-white"
-                        : "bg-emerald-50 text-emerald-500"
+                        ? "bg-success text-white"
+                        : "bg-success-light text-success"
                     )}
                   >
                     <Globe className="h-3.5 w-3.5" />
@@ -179,7 +162,7 @@ export function PlusMenu({
                   <div
                     className={cn(
                       "w-8 h-4.5 rounded-full transition-colors relative",
-                      webSearchEnabled ? "bg-emerald-500" : "bg-border"
+                      webSearchEnabled ? "bg-success" : "bg-border"
                     )}
                   >
                     <div
@@ -203,8 +186,8 @@ export function PlusMenu({
                     className={cn(
                       "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
                       thinkingEnabled
-                        ? "bg-violet-500 text-white"
-                        : "bg-violet-50 text-violet-500"
+                        ? "bg-legal-ref text-white"
+                        : "bg-legal-ref-bg text-legal-ref"
                     )}
                   >
                     <Brain className="h-3.5 w-3.5" />
@@ -215,7 +198,7 @@ export function PlusMenu({
                   <div
                     className={cn(
                       "w-8 h-4.5 rounded-full transition-colors relative",
-                      thinkingEnabled ? "bg-violet-500" : "bg-border"
+                      thinkingEnabled ? "bg-legal-ref" : "bg-border"
                     )}
                   >
                     <div

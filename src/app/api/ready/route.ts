@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 import { isShutdown } from "@/lib/shutdown";
 
@@ -16,14 +17,14 @@ import { isShutdown } from "@/lib/shutdown";
  */
 export async function GET() {
   if (isShutdown()) {
-    return NextResponse.json({ ready: false, reason: "shutting_down" }, { status: 503 });
+    return jsonOk({ ready: false, reason: "shutting_down" }, 503);
   }
 
   // DB: lightweight connection pool check
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
-    return NextResponse.json({ ready: false, reason: "db_unavailable" }, { status: 503 });
+    return jsonOk({ ready: false, reason: "db_unavailable" }, 503);
   }
 
   // Redis: optional (app works without it)

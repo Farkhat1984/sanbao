@@ -67,7 +67,7 @@ export async function GET(req: Request) {
         agentId: resolveAgentId(c.systemAgentId),
         agentName: c.systemAgentId === FEMIDA_ID ? "Фемида" : null,
         agentIcon: c.systemAgentId === FEMIDA_ID ? "Scale" : null,
-        agentIconColor: c.systemAgentId === FEMIDA_ID ? "#7C3AED" : null,
+        agentIconColor: c.systemAgentId === FEMIDA_ID ? "#B8956A" : null,
         isSystemAgent: true,
       };
     }

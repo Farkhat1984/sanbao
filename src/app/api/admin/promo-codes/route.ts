@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET() {
   const result = await requireAdmin();
@@ -11,7 +11,7 @@ export async function GET() {
     take: 500,
   });
 
-  return NextResponse.json(codes);
+  return jsonOk(codes);
 }
 
 export async function POST(req: Request) {
@@ -21,12 +21,12 @@ export async function POST(req: Request) {
   const { code, description, discount, maxUses, validUntil, planId } = await req.json();
 
   if (!code || !discount) {
-    return NextResponse.json({ error: "code and discount required" }, { status: 400 });
+    return jsonError("code and discount required", 400);
   }
 
   const existing = await prisma.promoCode.findUnique({ where: { code } });
   if (existing) {
-    return NextResponse.json({ error: "Промокод уже существует" }, { status: 409 });
+    return jsonError("Промокод уже существует", 409);
   }
 
   const promo = await prisma.promoCode.create({
@@ -40,5 +40,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(promo, { status: 201 });
+  return jsonOk(promo, 201);
 }

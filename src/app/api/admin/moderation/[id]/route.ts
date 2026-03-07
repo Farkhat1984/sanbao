@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function GET(
   _req: Request,
@@ -28,10 +28,10 @@ export async function GET(
   });
 
   if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return jsonError("Not found", 404);
   }
 
-  return NextResponse.json({
+  return jsonOk({
     messages: conversation.messages.map((m) => ({
       id: m.id,
       role: m.role,
@@ -58,5 +58,5 @@ export async function PUT(
     });
   }
 
-  return NextResponse.json({ success: true });
+  return jsonOk({ success: true });
 }

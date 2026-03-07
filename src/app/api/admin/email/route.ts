@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, verifySmtp } from "@/lib/email";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 /** GET — list email logs with pagination */
 export async function GET(req: Request) {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     prisma.emailLog.count({ where }),
   ]);
 
-  return NextResponse.json({ logs, total, page, limit });
+  return jsonOk({ logs, total, page, limit });
 }
 
 /** POST — actions: verify SMTP or send test email */
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   if (action === "verify") {
     const check = await verifySmtp();
-    return NextResponse.json(check);
+    return jsonOk(check);
   }
 
   if (action === "test" && to) {
@@ -51,8 +51,8 @@ export async function POST(req: Request) {
       type: "WELCOME",
       metadata: { test: true },
     });
-    return NextResponse.json({ ok });
+    return jsonOk({ ok });
   }
 
-  return NextResponse.json({ error: "Неизвестное действие" }, { status: 400 });
+  return jsonError("Неизвестное действие", 400);
 }

@@ -67,7 +67,7 @@ export default function AdminPromoCodesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Промокоды</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Промокоды</h1>
           <p className="text-sm text-text-muted mt-1">Скидки и промо-акции</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>

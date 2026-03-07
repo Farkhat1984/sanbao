@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, Puzzle, BookOpen } from "lucide-react";
+import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
@@ -20,7 +20,6 @@ interface SystemAgent {
   skills: Array<{ id: string; name: string }>;
   mcpServers: Array<{ id: string; name: string }>;
   tools: Array<{ id: string; name: string }>;
-  plugins: Array<{ id: string; name: string }>;
 }
 
 export default function AdminAgentsPage() {
@@ -86,7 +85,7 @@ export default function AdminAgentsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Системные агенты</h1>
+          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Системные агенты</h1>
           <p className="text-sm text-text-muted mt-1">Управление встроенными агентами</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => router.push("/admin/agents/new")}>
@@ -98,7 +97,7 @@ export default function AdminAgentsPage() {
       <div className="space-y-3">
         {agents.map((a) => {
           const IconComp = ICON_MAP[a.icon] || ICON_MAP.Bot;
-          const attachmentCount = (a.skills?.length || 0) + (a.mcpServers?.length || 0) + (a.tools?.length || 0) + (a.plugins?.length || 0);
+          const attachmentCount = (a.skills?.length || 0) + (a.mcpServers?.length || 0) + (a.tools?.length || 0);
 
           return (
             <div
@@ -144,12 +143,6 @@ export default function AdminAgentsPage() {
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-success/10 text-success text-[10px] font-medium">
                             <BookOpen className="h-2.5 w-2.5" />
                             {a.skills.length}
-                          </span>
-                        )}
-                        {a.plugins?.length > 0 && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-legal-ref/10 text-legal-ref text-[10px] font-medium">
-                            <Puzzle className="h-2.5 w-2.5" />
-                            {a.plugins.length}
                           </span>
                         )}
                       </div>

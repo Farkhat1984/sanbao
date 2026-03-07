@@ -17,17 +17,15 @@ export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   DOCUMENT: "Документ",
   CODE: "Код",
   ANALYSIS: "Правовой анализ",
-  IMAGE: "Изображение",
 };
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // ─── Defaults ───
-export const DEFAULT_ICON_COLOR = "#4F6EF7";
+export const DEFAULT_ICON_COLOR = "#8FAF9F";
 export const DEFAULT_AGENT_ICON = "Bot";
 export const DEFAULT_SKILL_ICON = "Scale";
 export const DEFAULT_TOOL_ICON = "Wrench";
-export const DEFAULT_PLUGIN_ICON = "Puzzle";
 
 // ─── Pagination ───
 export const DEFAULT_PAGINATION_LIMIT = 50;
@@ -55,8 +53,8 @@ export const VALID_ICONS = [
   "ShieldCheck","ClipboardCheck","Brain","Triangle","Sparkles",
 ];
 export const VALID_COLORS = [
-  "#4F6EF7","#7C3AED","#10B981","#F59E0B",
-  "#EF4444","#EC4899","#06B6D4","#6366F1",
+  "#8FAF9F","#B8956A","#10B981","#F59E0B",
+  "#C4857A","#EC4899","#06B6D4","#5E7A8A",
 ];
 
 // ─── AI Defaults ───
@@ -120,10 +118,6 @@ export const REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60; // 30 days (seconds)
 // ─── Email ───
 export const DEFAULT_SMTP_PORT = 587;
 export const DEFAULT_EMAIL_FROM = "noreply@sanbao.ai";
-
-// ─── Image generation ───
-export const DEFAULT_IMAGE_SIZE = "1024x1024";
-export const DEFAULT_IMAGE_COUNT = 1;
 
 // ─── Code preview CDN ───
 export const REACT_CDN_URL = "https://unpkg.com/react@18/umd/react.development.js";

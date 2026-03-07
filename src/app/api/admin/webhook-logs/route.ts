@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { jsonOk } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -24,5 +24,5 @@ export async function GET(req: Request) {
     prisma.webhookLog.count({ where }),
   ]);
 
-  return NextResponse.json({ logs, total, page, limit });
+  return jsonOk({ logs, total, page, limit });
 }

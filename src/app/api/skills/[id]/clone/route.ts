@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(
   _req: Request,
@@ -8,7 +8,7 @@ export async function POST(
 ) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401);
   }
 
   const { id } = await params;
@@ -21,7 +21,7 @@ export async function POST(
   });
 
   if (!source) {
-    return NextResponse.json({ error: "Скилл не найден" }, { status: 404 });
+    return jsonError("Скилл не найден", 404);
   }
 
   const clone = await prisma.skill.create({
@@ -40,7 +40,7 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({
+  return jsonOk({
     ...clone,
     createdAt: clone.createdAt.toISOString(),
     updatedAt: clone.updatedAt.toISOString(),

@@ -20,7 +20,7 @@ export function ContextIndicator({ usagePercent, isCompacting }: ContextIndicato
         <div
           className={cn(
             "h-full rounded-full transition-all duration-500",
-            isCritical ? "bg-error" : isHigh ? "bg-amber-500" : "bg-accent"
+            isCritical ? "bg-error" : isHigh ? "bg-warning" : "bg-accent"
           )}
           style={{ width: `${Math.min(100, usagePercent)}%` }}
         />

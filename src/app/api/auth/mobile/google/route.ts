@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyGoogleIdToken } from "@/lib/mobile-auth";
 import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
@@ -28,10 +29,7 @@ export async function POST(req: Request) {
     const { idToken } = body as { idToken?: string };
 
     if (!idToken || typeof idToken !== "string") {
-      return NextResponse.json(
-        { error: "idToken is required" },
-        { status: 400 }
-      );
+      return jsonError("idToken is required", 400);
     }
 
     // Verify Google ID token
@@ -39,10 +37,7 @@ export async function POST(req: Request) {
     try {
       googlePayload = await verifyGoogleIdToken(idToken);
     } catch {
-      return NextResponse.json(
-        { error: "Invalid Google ID token" },
-        { status: 401 }
-      );
+      return jsonError("Invalid Google ID token", 401);
     }
 
     const googleSub = googlePayload.sub;
@@ -88,7 +83,7 @@ export async function POST(req: Request) {
       });
       const refreshToken = await mintRefreshToken(user.id);
 
-      return NextResponse.json({
+      return jsonOk({
         accessToken: session.token,
         refreshToken,
         // Legacy field for backward compat
@@ -111,10 +106,7 @@ export async function POST(req: Request) {
     }
 
     if (!googleEmail) {
-      return NextResponse.json(
-        { error: "Google account has no email" },
-        { status: 400 }
-      );
+      return jsonError("Google account has no email", 400);
     }
 
     if (!user) {
@@ -160,7 +152,7 @@ export async function POST(req: Request) {
     });
     const refreshToken = await mintRefreshToken(user.id);
 
-    return NextResponse.json({
+    return jsonOk({
       accessToken: session.token,
       refreshToken,
       // Legacy field for backward compat
@@ -175,9 +167,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[AUTH:GOOGLE-MOBILE] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError("Internal server error", 500);
   }
 }

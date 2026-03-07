@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyAppleToken } from "@/lib/mobile-auth";
 import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
@@ -33,10 +34,7 @@ export async function POST(req: Request) {
     };
 
     if (!identityToken || typeof identityToken !== "string") {
-      return NextResponse.json(
-        { error: "identityToken is required" },
-        { status: 400 }
-      );
+      return jsonError("identityToken is required", 400);
     }
 
     // Verify Apple identity token
@@ -44,10 +42,7 @@ export async function POST(req: Request) {
     try {
       applePayload = await verifyAppleToken(identityToken, nonce);
     } catch {
-      return NextResponse.json(
-        { error: "Invalid Apple identity token" },
-        { status: 401 }
-      );
+      return jsonError("Invalid Apple identity token", 401);
     }
 
     const appleSub = applePayload.sub;
@@ -99,7 +94,7 @@ export async function POST(req: Request) {
       });
       const refreshToken = await mintRefreshToken(user.id);
 
-      return NextResponse.json({
+      return jsonOk({
         accessToken: session.token,
         refreshToken,
         // Legacy field for backward compat
@@ -163,7 +158,7 @@ export async function POST(req: Request) {
     });
     const refreshToken = await mintRefreshToken(user.id);
 
-    return NextResponse.json({
+    return jsonOk({
       accessToken: session.token,
       refreshToken,
       // Legacy field for backward compat
@@ -177,9 +172,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[AUTH:APPLE] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError("Internal server error", 500);
   }
 }
