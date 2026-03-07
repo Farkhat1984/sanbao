@@ -2,6 +2,7 @@ import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helper
 import { prisma } from "@/lib/prisma";
 import { requireOrgMember } from "@/lib/org-auth";
 import { checkOrgLimit, checkOrgFileSize } from "@/lib/org-limits";
+import { MAX_AGENT_FILE_SIZE } from "@/lib/constants";
 import { decrypt } from "@/lib/crypto";
 import { uploadFile as uploadToS3 } from "@/lib/storage";
 import { uploadFile as uploadToCortex } from "@/lib/ai-cortex-client";
@@ -48,6 +49,9 @@ export async function POST(
   const uploaded: Array<{ id: string; fileName: string; fileSize: number }> = [];
 
   for (const file of files) {
+    if (file.size > MAX_AGENT_FILE_SIZE) {
+      return jsonError(`«${file.name}» превышает лимит 100 МБ`, 400);
+    }
     if (session.user.role !== "ADMIN") {
       const sizeCheck = await checkOrgFileSize(org.ownerId, file.size);
       if (!sizeCheck.allowed) return jsonError(`${file.name}: ${sizeCheck.error}`, 400);

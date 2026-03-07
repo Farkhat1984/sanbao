@@ -254,6 +254,40 @@ export async function POST(req: Request) {
 
   // ─── Load org agent MCP tools (if orgAgentId provided) ──
 
+  // Fallback 1: resolve from existing conversation
+  if (!orgAgentId && !agentId && reqConvId) {
+    const conv = await prisma.conversation.findUnique({
+      where: { id: reqConvId },
+      select: { orgAgentId: true },
+    });
+    if (conv?.orgAgentId) {
+      orgAgentId = conv.orgAgentId;
+    }
+  }
+
+  // Fallback 2: if user has exactly one published org agent, auto-resolve it
+  // (handles stale client JS that doesn't send orgAgentId)
+  if (!orgAgentId && !agentId) {
+    const userPublishedAgents = await prisma.orgAgent.findMany({
+      where: {
+        status: "PUBLISHED",
+        org: { members: { some: { userId: session.user.id } } },
+      },
+      select: { id: true },
+      take: 2,
+    });
+    if (userPublishedAgents.length === 1) {
+      orgAgentId = userPublishedAgents[0].id;
+      // Also update conversation if it exists
+      if (reqConvId) {
+        prisma.conversation.update({
+          where: { id: reqConvId },
+          data: { orgAgentId },
+        }).catch(() => {});
+      }
+    }
+  }
+
   if (orgAgentId && !agentId) {
     const orgAgent = await prisma.orgAgent.findUnique({
       where: { id: orgAgentId },
@@ -262,10 +296,24 @@ export async function POST(req: Request) {
         mcpServer: {
           select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true },
         },
+        skills: {
+          include: {
+            skill: {
+              include: { tools: { include: { tool: true } } },
+            },
+          },
+        },
+        mcpServers: {
+          include: {
+            mcpServer: {
+              select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true },
+            },
+          },
+        },
       },
     });
 
-    if (orgAgent && orgAgent.mcpServer) {
+    if (orgAgent) {
       // Verify user is a member of the org
       const membership = await prisma.orgMember.findUnique({
         where: { orgId_userId: { orgId: orgAgent.orgId, userId: session.user.id } },
@@ -289,13 +337,16 @@ export async function POST(req: Request) {
       if (orgAgent.description) {
         systemPrompt += ` ${orgAgent.description}`;
       }
+      if (orgAgent.instructions) {
+        systemPrompt += `\n\n${orgAgent.instructions}`;
+      }
       systemPrompt += "\nИспользуй доступные инструменты для поиска в базе знаний организации.";
       systemPrompt += "\n\nПри цитировании данных из базы знаний ВСЕГДА ссылайся на источник в формате:\n[описание](source://домен/файл/номер_чанка)\nНапример: [Глава 3, НДС](source://ns_proj123/report.pdf/5)\nЭто позволяет пользователю открыть первоисточник одним кликом.";
       systemPrompt += "\n\n⚠ ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО ДЛЯ ЭТОГО АГЕНТА: Ты работаешь как специализированный агент. НЕ создавай документы (<sanbao-doc>) без явной просьбы пользователя. Отвечай обычным текстом. Создавай документ ТОЛЬКО если пользователь прямо попросил: «создай», «составь», «оформи», «подготовь документ».";
 
-      // Load MCP tools from org agent's server
+      // Load MCP tools from org agent's pipeline server
       const srv = orgAgent.mcpServer;
-      if (srv.status === "CONNECTED" && Array.isArray(srv.discoveredTools)) {
+      if (srv && srv.status === "CONNECTED" && Array.isArray(srv.discoveredTools)) {
         const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
         for (const tool of tools) {
           agentMcpTools.push({
@@ -307,6 +358,40 @@ export async function POST(req: Request) {
             description: tool.description,
             inputSchema: tool.inputSchema,
           });
+        }
+      }
+
+      // Apply skill prompts (same pattern as regular agents)
+      if (orgAgent.skills && orgAgent.skills.length > 0) {
+        for (const as of orgAgent.skills) {
+          const skill = as.skill;
+          let sp = `\n\n--- Скилл: ${skill.name} ---\n${skill.systemPrompt}`;
+          if (skill.citationRules) sp += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
+          if (skill.jurisdiction) sp += `\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+          systemPrompt += sp;
+        }
+      }
+
+      // Load additional MCP servers (beyond the pipeline-generated one)
+      if (orgAgent.mcpServers && orgAgent.mcpServers.length > 0) {
+        for (const ams of orgAgent.mcpServers) {
+          const addSrv = ams.mcpServer;
+          if (addSrv.status === "CONNECTED" && Array.isArray(addSrv.discoveredTools)) {
+            const addTools = addSrv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+            for (const tool of addTools) {
+              if (!agentMcpTools.some((t) => t.name === tool.name)) {
+                agentMcpTools.push({
+                  url: addSrv.url,
+                  transport: addSrv.transport as "SSE" | "STREAMABLE_HTTP",
+                  apiKey: addSrv.apiKey,
+                  mcpServerId: addSrv.id,
+                  name: tool.name,
+                  description: tool.description || "",
+                  inputSchema: tool.inputSchema || {},
+                });
+              }
+            }
+          }
         }
       }
     }

@@ -21,7 +21,7 @@ function mapMessages(raw: any[]): ChatMessage[] {
 
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
-  const { setActiveConversation, setActiveAgentId, setMessages, setMessagesPagination } = useChatStore();
+  const { setActiveConversation, setActiveAgentId, setOrgAgentId, setMessages, setMessagesPagination } = useChatStore();
   const isStreaming = useChatStore((s) => s.isStreaming);
   const wasStreamingRef = useRef(false);
   const hasLoadedRef = useRef(false);
@@ -40,6 +40,7 @@ export default function ConversationPage() {
       })
       .then((data) => {
         setActiveAgentId(data.agentId || null);
+        setOrgAgentId(data.orgAgentId || null);
         if (data.messages && Array.isArray(data.messages)) {
           setMessages(mapMessages(data.messages));
         }
@@ -48,10 +49,11 @@ export default function ConversationPage() {
       })
       .catch(() => {
         setActiveAgentId(null);
+        setOrgAgentId(null);
         setMessages([]);
         setMessagesPagination(null, false);
       });
-  }, [id, setActiveAgentId, setMessages, setMessagesPagination]);
+  }, [id, setActiveAgentId, setOrgAgentId, setMessages, setMessagesPagination]);
 
   // Load messages on mount only — NOT when isStreaming changes.
   // This prevents a race where fetchMessages() runs before the

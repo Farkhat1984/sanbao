@@ -2,10 +2,8 @@ import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireOrgMember } from "@/lib/org-auth";
 import { decrypt } from "@/lib/crypto";
-import { processProject, publishProject } from "@/lib/ai-cortex-client";
-import { connectAndDiscoverTools } from "@/lib/mcp-client";
+import { reprocessProject } from "@/lib/ai-cortex-client";
 import { logAudit } from "@/lib/audit";
-import type { Prisma } from "@prisma/client";
 
 export async function POST(
   _req: Request,
@@ -29,41 +27,21 @@ export async function POST(
 
   const nsApiKey = decrypt(org.nsApiKey);
 
-  await prisma.orgAgent.update({
-    where: { id: agentId },
-    data: { status: "PROCESSING" },
-  });
-
   try {
-    await processProject(nsApiKey, agent.projectId);
-    const { endpoint } = await publishProject(nsApiKey, agent.projectId);
-
-    // Refresh MCP tools
-    if (agent.mcpServerId) {
-      const { tools } = await connectAndDiscoverTools(endpoint, "STREAMABLE_HTTP", nsApiKey);
-      await prisma.mcpServer.update({
-        where: { id: agent.mcpServerId },
-        data: {
-          url: endpoint,
-          status: tools.length > 0 ? "CONNECTED" : "ERROR",
-          discoveredTools: tools as unknown as Prisma.InputJsonValue,
-          lastHealthCheck: new Date(),
-        },
-      });
-    }
-
-    await prisma.orgAgent.update({
-      where: { id: agentId },
-      data: { status: "PUBLISHED" },
-    });
+    await reprocessProject(nsApiKey, agent.projectId);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Ошибка переобработки";
     await prisma.orgAgent.update({
       where: { id: agentId },
       data: { status: "ERROR" },
     });
-    const msg = err instanceof Error ? err.message : "Ошибка переобработки";
     return jsonError(msg, 502);
   }
+
+  await prisma.orgAgent.update({
+    where: { id: agentId },
+    data: { status: "PROCESSING" },
+  });
 
   await logAudit({
     actorId: userId,
@@ -72,5 +50,5 @@ export async function POST(
     targetId: agentId,
   });
 
-  return jsonOk({ success: true, status: "PUBLISHED" });
+  return jsonOk({ success: true, status: "PROCESSING" });
 }

@@ -37,6 +37,7 @@ export function useStreamChat({
     isStreaming,
     activeConversationId,
     activeAgentId,
+    orgAgentId,
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,
@@ -111,6 +112,7 @@ export function useStreamChat({
           body: JSON.stringify({
             title: trimmed.slice(0, 60) || "Новый чат",
             agentId: activeAgentId || undefined,
+            orgAgentId: orgAgentId || undefined,
           }),
         });
         if (convRes.ok) {
@@ -161,6 +163,7 @@ export function useStreamChat({
         body: JSON.stringify({
           messages: apiMessages,
           agentId: activeAgentId,
+          orgAgentId: orgAgentId || undefined,
           conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
@@ -382,6 +385,7 @@ export function useStreamChat({
     messages,
     activeConversationId,
     activeAgentId,
+    orgAgentId,
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,

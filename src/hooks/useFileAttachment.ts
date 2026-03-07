@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { MAX_FILE_SIZE_PARSE } from "@/lib/constants";
+import { MAX_FILE_SIZE_PARSE, CHAT_FILE_WARN_CHARS, CHAT_FILE_MAX_CHARS } from "@/lib/constants";
 
 // ─── Constants ──────────────────────────────────────────
 
@@ -119,7 +119,21 @@ export function useFileAttachment(): UseFileAttachmentReturn {
           attached.base64 = dataUrl.split(",")[1];
           setFiles((prev) => [...prev, attached]);
         } else if (isText) {
-          attached.textContent = await readFileAsText(file);
+          const text = await readFileAsText(file);
+          if (text.length > CHAT_FILE_MAX_CHARS) {
+            setAlertMessage({
+              title: "Файл слишком большой для чата",
+              description: `«${file.name}» содержит ~${Math.round(text.length / 4000)}K токенов. Максимум ~50K токенов. Загрузите файл в Агента для работы с большими документами.`,
+            });
+            continue;
+          }
+          if (text.length > CHAT_FILE_WARN_CHARS) {
+            setAlertMessage({
+              title: "Большой файл",
+              description: `«${file.name}» содержит ~${Math.round(text.length / 4000)}K токенов. Качество ответов может снизиться. Для больших документов рекомендуем загрузить файл в Агента.`,
+            });
+          }
+          attached.textContent = text;
           setFiles((prev) => [...prev, attached]);
         } else if (isDocument) {
           // Parse document server-side
@@ -141,6 +155,22 @@ export function useFileAttachment(): UseFileAttachmentReturn {
             }
 
             const { text } = await response.json();
+
+            if (text.length > CHAT_FILE_MAX_CHARS) {
+              setAlertMessage({
+                title: "Файл слишком большой для чата",
+                description: `«${file.name}» содержит ~${Math.round(text.length / 4000)}K токенов. Максимум ~50K токенов. Загрузите файл в Агента для работы с большими документами.`,
+              });
+              setFiles((prev) => prev.filter((f) => f.id !== attached.id));
+              continue;
+            }
+            if (text.length > CHAT_FILE_WARN_CHARS) {
+              setAlertMessage({
+                title: "Большой файл",
+                description: `«${file.name}» содержит ~${Math.round(text.length / 4000)}K токенов. Качество ответов может снизиться. Для больших документов рекомендуем загрузить файл в Агента.`,
+              });
+            }
+
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === attached.id

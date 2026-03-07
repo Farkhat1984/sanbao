@@ -12,14 +12,18 @@ interface ProgressEvent {
 export function AgentProgressBar({
   orgId,
   agentId,
+  onComplete,
 }: {
   orgId: string;
   agentId: string;
+  onComplete?: () => void;
 }) {
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("Подготовка...");
   const [done, setDone] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const es = new EventSource(`/api/organizations/${orgId}/agents/${agentId}/progress`);
@@ -35,6 +39,7 @@ export function AgentProgressBar({
           setDone(true);
           setProgress(100);
           es.close();
+          onCompleteRef.current?.();
         }
         if (data.status === "error") {
           setStage("Ошибка обработки");

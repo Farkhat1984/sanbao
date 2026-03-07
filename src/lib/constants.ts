@@ -83,6 +83,11 @@ export const FALLBACK_PROVIDER_SLUG = "deepinfra";
 // ─── File limits ───
 export const MAX_FILE_SIZE_PARSE = 20 * 1024 * 1024; // 20MB
 export const MAX_LOGO_SIZE = 512 * 1024; // 512KB
+export const MAX_AGENT_FILE_SIZE = 100 * 1024 * 1024; // 100MB (Cloudflare limit)
+/** Chars threshold for "large file" warning in chat (~12K tokens) */
+export const CHAT_FILE_WARN_CHARS = 50_000;
+/** Hard limit for chat file content in chars (~50K tokens) */
+export const CHAT_FILE_MAX_CHARS = 200_000;
 
 // ─── Rate limiting ───
 export const VIOLATION_THRESHOLD = 10;

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, FileText, X, CheckCircle } from "lucide-react";
+import { Upload, FileText, X, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MAX_AGENT_FILE_SIZE } from "@/lib/constants";
 
 interface FileUploaderProps {
   orgId: string;
@@ -17,15 +18,26 @@ export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) 
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const validateAndAddFiles = (newFiles: File[]) => {
+    const valid: File[] = [];
+    for (const file of newFiles) {
+      if (file.size > MAX_AGENT_FILE_SIZE) {
+        setError(`«${file.name}» превышает лимит 100 МБ`);
+        continue;
+      }
+      valid.push(file);
+    }
+    if (valid.length > 0) setFiles((prev) => [...prev, ...valid]);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const dropped = Array.from(e.dataTransfer.files);
-    setFiles((prev) => [...prev, ...dropped]);
+    validateAndAddFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+      validateAndAddFiles(Array.from(e.target.files));
     }
   };
 
@@ -103,7 +115,7 @@ export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) 
           Перетащите файлы или нажмите для выбора
         </p>
         <p className="text-xs text-text-secondary mt-1">
-          PDF, DOCX, XLSX, HTML, CSV, TXT
+          PDF, DOCX, XLSX, HTML, CSV, TXT · до 100 МБ
         </p>
         <input
           ref={inputRef}

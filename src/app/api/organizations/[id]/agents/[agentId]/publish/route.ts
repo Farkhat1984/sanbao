@@ -29,11 +29,12 @@ export async function POST(
 
   const nsApiKey = decrypt(org.nsApiKey);
 
-  // Publish in AI Cortex
+  // Publish in AI Cortex with agent name for tool generation
   let endpoint: string;
   let domain: string;
   try {
-    const result = await publishProject(nsApiKey, agent.projectId);
+    const agentSlug = `agent_${agentId}`;
+    const result = await publishProject(nsApiKey, agent.projectId, agentSlug);
     endpoint = result.endpoint;
     domain = result.domain;
   } catch (err) {
@@ -90,7 +91,11 @@ export async function POST(
     where: { id: agentId },
     data: { mcpServerId: mcpServer.id, status: "PUBLISHED" },
     include: {
+      files: { orderBy: { createdAt: "desc" } },
       mcpServer: { select: { id: true, name: true, url: true, status: true, discoveredTools: true } },
+      skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+      mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+      _count: { select: { files: true, members: true, conversations: true } },
     },
   });
 
@@ -102,5 +107,10 @@ export async function POST(
     details: { endpoint, mcpServerId: mcpServer.id, toolCount: tools.length },
   });
 
-  return jsonOk(serializeDates(updated));
+  return jsonOk(serializeDates({
+    ...updated,
+    fileCount: updated._count.files,
+    memberCount: updated._count.members,
+    conversationCount: updated._count.conversations,
+  }));
 }

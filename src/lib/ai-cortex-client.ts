@@ -116,19 +116,37 @@ export async function processProject(
   });
 }
 
-export async function publishProject(
+export async function reprocessProject(
   nsApiKey: string,
   projectId: string
-): Promise<{ endpoint: string; domain: string }> {
-  const res = await cortexFetch(`/api/projects/${projectId}/publish`, {
+): Promise<void> {
+  await cortexFetch(`/api/projects/${projectId}/reprocess`, {
     method: "POST",
     apiKey: nsApiKey,
     timeout: TIMEOUT_PROCESS,
   });
+}
+
+export async function publishProject(
+  nsApiKey: string,
+  projectId: string,
+  agentName?: string
+): Promise<{ endpoint: string; domain: string }> {
+  const body: Record<string, string> = {};
+  if (agentName) body.agent_name = agentName;
+
+  const res = await cortexFetch(`/api/projects/${projectId}/publish`, {
+    method: "POST",
+    apiKey: nsApiKey,
+    timeout: TIMEOUT_PROCESS,
+    body: JSON.stringify(body),
+  });
   const data = await res.json();
   const domain = data.domain || `project_${projectId}`;
-  // Orchestrator serves published domains via the unified /mcp endpoint
-  const endpoint = data.endpoint || data.mcp_endpoint || data.url || `${AI_CORTEX_URL}/mcp`;
+  // Use agent-specific endpoint if agent was created, otherwise unified /mcp
+  const registeredAgent = data.agent || agentName;
+  const endpoint = data.endpoint || data.mcp_endpoint || data.url
+    || (registeredAgent ? `${AI_CORTEX_URL}/${registeredAgent}` : `${AI_CORTEX_URL}/mcp`);
   return { endpoint, domain };
 }
 
