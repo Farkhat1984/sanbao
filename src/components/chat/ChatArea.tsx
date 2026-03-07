@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { ListChecks, ChevronDown, ChevronRight } from "lucide-react";
+import { ListChecks, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { useTaskStore } from "@/stores/taskStore";
@@ -13,9 +13,28 @@ import { ContextIndicator } from "./ContextIndicator";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
 import { SanbaoFact } from "./SanbaoFact";
+import type { ChatMessage } from "@/types/chat";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapMessages(raw: any[]): ChatMessage[] {
+  return raw.map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    planContent: m.planContent || undefined,
+    createdAt: m.createdAt,
+    legalRefs: m.legalRefs || [],
+    artifacts: m.artifacts || [],
+  }));
+}
 
 export function ChatArea() {
   const { messages, isStreaming, streamingPhase, streamingToolName, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
+  const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
+  const isLoadingMoreMessages = useChatStore((s) => s.isLoadingMoreMessages);
+  const messagesCursor = useChatStore((s) => s.messagesCursor);
+  const prependMessages = useChatStore((s) => s.prependMessages);
+  const setIsLoadingMoreMessages = useChatStore((s) => s.setIsLoadingMoreMessages);
   const { setActiveAgent, setAgentTools } = useAgentStore();
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -35,6 +54,39 @@ export function ChatArea() {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isStreaming, streamingPhase]);
+
+  /** Load older messages, preserving scroll position */
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeConversationId || !messagesCursor || isLoadingMoreMessages) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Capture scroll state before prepending
+    const scrollHeightBefore = container.scrollHeight;
+
+    setIsLoadingMoreMessages(true);
+    try {
+      const res = await fetch(
+        `/api/conversations/${activeConversationId}?limit=50&before=${messagesCursor}`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.messages && Array.isArray(data.messages)) {
+        prependMessages(mapMessages(data.messages), data.nextCursor ?? null);
+
+        // Restore scroll position after React renders the prepended messages.
+        // requestAnimationFrame ensures DOM has been updated.
+        requestAnimationFrame(() => {
+          const scrollHeightAfter = container.scrollHeight;
+          container.scrollTop = scrollHeightAfter - scrollHeightBefore;
+        });
+      }
+    } catch {
+      /* silent — user can retry */
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }, [activeConversationId, messagesCursor, isLoadingMoreMessages, setIsLoadingMoreMessages, prependMessages]);
 
   // Load full agent data when activeAgentId changes
   useEffect(() => {
@@ -112,6 +164,22 @@ export function ChatArea() {
           <WelcomeScreen />
         ) : (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-1">
+            {/* Load older messages button */}
+            {hasMoreMessages && (
+              <div className="flex justify-center pb-3">
+                <button
+                  onClick={loadOlderMessages}
+                  disabled={isLoadingMoreMessages}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isLoadingMoreMessages ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  {isLoadingMoreMessages ? "Загрузка..." : "Загрузить ранние сообщения"}
+                </button>
+              </div>
+            )}
+
             {messages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
@@ -139,7 +207,7 @@ export function ChatArea() {
       </div>
 
       {/* Context indicator + Input */}
-      <div className="shrink-0 pb-4 px-4 safe-bottom">
+      <div className="shrink-0 pb-6 px-4 safe-bottom">
         <div className="max-w-3xl mx-auto">
           {contextUsage && (
             <ContextIndicator
