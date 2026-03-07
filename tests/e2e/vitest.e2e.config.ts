@@ -24,10 +24,8 @@ export default defineConfig({
     include: ["tests/e2e/**/*.test.ts"],
     testTimeout: 60_000,
     hookTimeout: 30_000,
-    // Run tests sequentially to avoid overloading the server
-    pool: "forks",
-    poolOptions: {
-      forks: { singleFork: true },
+    sequence: {
+      concurrent: false,
     },
   },
 });
