@@ -14,6 +14,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { ConversationList } from "./ConversationList";
 import { AgentList } from "./AgentList";
 import { OrgAgentList } from "./OrgAgentList";
+import { ArchiveSection } from "./ArchiveSection";
 import { Avatar } from "@/components/ui/Avatar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
@@ -145,6 +146,9 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
         <ConversationList />
       </div>
+
+      {/* Archive — static, always visible */}
+      <ArchiveSection />
 
       {/* Footer */}
       <div className={cn("border-t border-border p-3 shrink-0", isMobile && "safe-bottom")}>

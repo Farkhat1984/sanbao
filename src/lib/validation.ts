@@ -114,6 +114,9 @@ export const orgInviteSchema = z.object({
 export const orgAgentCreateSchema = z.object({
   name: z.string().min(1).max(200).transform((s) => s.trim()),
   description: z.string().max(2000).optional().nullable().transform((s) => s?.trim() || null),
+  icon: z.string().max(50).optional().nullable(),
+  iconColor: z.string().max(20).optional().nullable(),
+  instructions: z.string().max(10000).optional().nullable().transform((s) => s?.trim() || null),
 });
 
 // ─── Conversation update (whitelist fields) ──────────────

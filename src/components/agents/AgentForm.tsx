@@ -13,9 +13,10 @@ import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
 interface AgentFormProps {
   agent?: Agent;
+  orgId?: string;
 }
 
-export function AgentForm({ agent }: AgentFormProps) {
+export function AgentForm({ agent, orgId }: AgentFormProps) {
   const router = useRouter();
   const isEdit = !!agent;
 
@@ -43,10 +44,12 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [showGenPanel, setShowGenPanel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const backUrl = orgId ? `/organizations/${orgId}/agents` : "/agents";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !instructions.trim()) {
-      setError("Заполните название и инструкции");
+    if (!name.trim() || (!orgId && !instructions.trim())) {
+      setError(orgId ? "Заполните название" : "Заполните название и инструкции");
       return;
     }
 
@@ -54,23 +57,28 @@ export function AgentForm({ agent }: AgentFormProps) {
     setError(null);
 
     try {
-      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds };
+      const url = isEdit
+        ? `/api/agents/${agent.id}`
+        : orgId
+          ? `/api/organizations/${orgId}/agents`
+          : "/api/agents";
 
-      const res = await fetch(
-        isEdit ? `/api/agents/${agent.id}` : "/api/agents",
-        {
-          method: isEdit ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
+      const body = orgId
+        ? { name, description, icon, iconColor, instructions }
+        : { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds };
+
+      const res = await fetch(url, {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Ошибка сохранения");
       }
 
-      router.push("/agents");
+      router.push(backUrl);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
@@ -85,7 +93,7 @@ export function AgentForm({ agent }: AgentFormProps) {
     setDeleting(true);
     try {
       await fetch(`/api/agents/${agent.id}`, { method: "DELETE" });
-      router.push("/agents");
+      router.push(backUrl);
       router.refresh();
     } catch {
       setError("Ошибка удаления");
@@ -122,11 +130,11 @@ export function AgentForm({ agent }: AgentFormProps) {
     <div className="max-w-2xl mx-auto px-6 py-8">
       {/* Back link */}
       <button
-        onClick={() => router.push("/agents")}
+        onClick={() => router.push(backUrl)}
         className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к агентам
+        {orgId ? "Назад" : "Назад к агентам"}
       </button>
 
       <h1 className="text-xl font-bold text-text-primary mb-6 font-[family-name:var(--font-display)]">
@@ -182,10 +190,10 @@ export function AgentForm({ agent }: AgentFormProps) {
               <AgentIconPicker
                 selectedIcon={icon}
                 selectedColor={iconColor}
-                customImage={avatar}
+                customImage={orgId ? undefined : avatar}
                 onIconChange={setIcon}
                 onColorChange={setIconColor}
-                onCustomImageChange={setAvatar}
+                onCustomImageChange={orgId ? undefined : setAvatar}
               />
             </div>
 
@@ -228,7 +236,7 @@ export function AgentForm({ agent }: AgentFormProps) {
             {/* Instructions */}
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
-                Инструкции <span className="text-error">*</span>
+                Инструкции {!orgId && <span className="text-error">*</span>}
               </label>
               <textarea
                 value={instructions}
@@ -243,6 +251,7 @@ export function AgentForm({ agent }: AgentFormProps) {
             </div>
 
             {/* Starter Prompts */}
+            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 <span className="flex items-center gap-1.5">
@@ -289,6 +298,7 @@ export function AgentForm({ agent }: AgentFormProps) {
                 Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
               </p>
             </div>
+            )}
           </div>
         </div>
 
@@ -317,6 +327,7 @@ export function AgentForm({ agent }: AgentFormProps) {
             </div>
 
             {/* Skills */}
+            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 Скиллы
@@ -329,8 +340,10 @@ export function AgentForm({ agent }: AgentFormProps) {
                 Скиллы добавляют специализированные инструкции к системному промпту агента
               </p>
             </div>
+            )}
 
             {/* MCP Servers */}
+            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 MCP-серверы
@@ -343,6 +356,7 @@ export function AgentForm({ agent }: AgentFormProps) {
                 MCP-серверы предоставляют агенту дополнительные инструменты
               </p>
             </div>
+            )}
 
 
           </div>
@@ -372,7 +386,7 @@ export function AgentForm({ agent }: AgentFormProps) {
 
           <button
             type="button"
-            onClick={() => router.push("/agents")}
+            onClick={() => router.push(backUrl)}
             className="h-10 px-6 rounded-xl border border-border bg-surface text-sm text-text-muted hover:text-text-primary transition-colors cursor-pointer"
           >
             Отмена

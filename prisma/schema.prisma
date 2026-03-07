@@ -1141,9 +1141,12 @@ model OrgInvite {
 model OrgAgent {
   id          String         @id @default(cuid())
   orgId       String
-  name        String
-  description String?        @db.Text
-  projectId   String?
+  name         String
+  description  String?        @db.Text
+  icon         String?
+  iconColor    String?
+  instructions String?        @db.Text
+  projectId    String?
   mcpServerId String?
   status      OrgAgentStatus @default(CREATING)
   accessMode  OrgAgentAccess @default(ALL_MEMBERS)
