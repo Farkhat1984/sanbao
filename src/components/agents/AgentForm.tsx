@@ -49,8 +49,8 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || (!orgId && !instructions.trim())) {
-      setError(orgId ? "Заполните название" : "Заполните название и инструкции");
+    if (!name.trim()) {
+      setError("Заполните название");
       return;
     }
 
@@ -59,14 +59,24 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
 
     try {
       const url = isEdit
-        ? `/api/agents/${agent.id}`
+        ? orgId
+          ? `/api/organizations/${orgId}/agents/${agent.id}`
+          : `/api/agents/${agent.id}`
         : orgId
           ? `/api/organizations/${orgId}/agents`
           : "/api/agents";
 
-      const body = orgId
-        ? { name, description, icon, iconColor, instructions }
-        : { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds };
+      const body = {
+        name,
+        description,
+        instructions,
+        icon,
+        iconColor,
+        ...(!orgId && { avatar }),
+        starterPrompts: starterPrompts.filter((s: string) => s.trim()),
+        skillIds: selectedSkillIds,
+        mcpServerIds: selectedMcpIds,
+      };
 
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
@@ -110,9 +120,14 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
         }
       }
 
-      // Redirect to detail page if org agent with files, otherwise to list
-      if (!isEdit && pendingFiles.length > 0 && created?.id && orgId) {
-        router.push(`/organizations/${orgId}/agents/${created.id}`);
+      // Redirect: org agent → detail page, regular agent → list
+      if (orgId) {
+        const targetId = isEdit ? agent!.id : created?.id;
+        if (targetId) {
+          router.push(`/organizations/${orgId}/agents/${targetId}`);
+        } else {
+          router.push(backUrl);
+        }
       } else {
         router.push(backUrl);
       }
@@ -273,7 +288,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             {/* Instructions */}
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
-                Инструкции {!orgId && <span className="text-error">*</span>}
+                Инструкции
               </label>
               <textarea
                 value={instructions}
@@ -288,7 +303,6 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             </div>
 
             {/* Starter Prompts */}
-            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 <span className="flex items-center gap-1.5">
@@ -335,7 +349,6 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 Подсказки показываются на экране приветствия агента как быстрые действия (до 6 шт.)
               </p>
             </div>
-            )}
           </div>
         </div>
 
@@ -360,7 +373,6 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             </div>
 
             {/* Skills */}
-            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 Скиллы
@@ -373,10 +385,8 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 Скиллы добавляют специализированные инструкции к системному промпту агента
               </p>
             </div>
-            )}
 
             {/* MCP Servers */}
-            {!orgId && (
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 MCP-серверы
@@ -389,7 +399,6 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 MCP-серверы предоставляют агенту дополнительные инструменты
               </p>
             </div>
-            )}
 
 
           </div>

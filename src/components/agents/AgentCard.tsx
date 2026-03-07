@@ -49,7 +49,7 @@ export function AgentCard({ agent }: AgentCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className="group p-5 rounded-2xl border border-border bg-surface hover:border-border-hover transition-all duration-200 cursor-pointer"
-      onClick={() => router.push(`/agents/${agent.id}/edit`)}
+      onClick={() => router.push(`/agents/${agent.id}`)}
     >
       <div className="flex items-start gap-3 mb-3">
         {agent.avatar ? (

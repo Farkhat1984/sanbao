@@ -118,11 +118,30 @@ export async function POST(
       icon: parsed.data.icon,
       iconColor: parsed.data.iconColor,
       instructions: parsed.data.instructions,
+      starterPrompts: parsed.data.starterPrompts?.filter((s) => s.trim()) ?? [],
       projectId,
       status: "CREATING",
     },
     include: { _count: { select: { files: true } } },
   });
+
+  // Create skill associations
+  const skillIds = parsed.data.skillIds;
+  if (Array.isArray(skillIds) && skillIds.length > 0) {
+    await prisma.orgAgentSkill.createMany({
+      data: skillIds.map((skillId) => ({ orgAgentId: agent.id, skillId })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Create MCP server associations
+  const mcpServerIds = parsed.data.mcpServerIds;
+  if (Array.isArray(mcpServerIds) && mcpServerIds.length > 0) {
+    await prisma.orgAgentMcpServer.createMany({
+      data: mcpServerIds.map((mcpServerId) => ({ orgAgentId: agent.id, mcpServerId })),
+      skipDuplicates: true,
+    });
+  }
 
   await logAudit({
     actorId: userId,

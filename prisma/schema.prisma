@@ -372,9 +372,10 @@ model Skill {
 
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agents AgentSkill[]
-  tools  SkillTool[]
-  plugins PluginSkill[]
+  agents    AgentSkill[]
+  orgAgents OrgAgentSkill[]
+  tools     SkillTool[]
+  plugins   PluginSkill[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -611,8 +612,9 @@ model McpServer {
   agents   AgentMcpServer[]
   toolLogs McpToolLog[]
   plugins  PluginMcpServer[]
-  userLinks UserMcpServer[]
-  orgAgents OrgAgent[]
+  userLinks      UserMcpServer[]
+  orgAgents      OrgAgent[]
+  orgAgentLinks  OrgAgentMcpServer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1151,11 +1153,15 @@ model OrgAgent {
   status      OrgAgentStatus @default(CREATING)
   accessMode  OrgAgentAccess @default(ALL_MEMBERS)
 
+  starterPrompts String[]         @default([])
+
   org           Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   mcpServer     McpServer?       @relation(fields: [mcpServerId], references: [id])
   files         OrgAgentFile[]
   members       OrgAgentMember[]
   conversations Conversation[]
+  skills        OrgAgentSkill[]
+  mcpServers    OrgAgentMcpServer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1193,6 +1199,28 @@ model OrgAgentMember {
   updatedAt DateTime @updatedAt
 
   @@unique([orgAgentId, userId])
+}
+
+model OrgAgentSkill {
+  id         String @id @default(cuid())
+  orgAgentId String
+  skillId    String
+
+  orgAgent OrgAgent @relation(fields: [orgAgentId], references: [id], onDelete: Cascade)
+  skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([orgAgentId, skillId])
+}
+
+model OrgAgentMcpServer {
+  id          String @id @default(cuid())
+  orgAgentId  String
+  mcpServerId String
+
+  orgAgent  OrgAgent  @relation(fields: [orgAgentId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+
+  @@unique([orgAgentId, mcpServerId])
 }
 
 // ─── Enums ───────────────────────────────────────────────

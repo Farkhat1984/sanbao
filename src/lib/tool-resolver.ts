@@ -109,16 +109,43 @@ export async function resolveAgentContext(
   // Build system prompt
   let systemPrompt = agent.instructions;
 
-  // In-context files: inject content directly into system prompt
-  const inContextFiles = agent.files.filter((f) => f.inContext && f.extractedText);
-  const lazyFiles = agent.files.filter((f) => !f.inContext);
+  // In-context files: inject content directly into system prompt (with budget cap)
+  const MAX_CONTEXT_CHARS = 50_000; // ~12K tokens total budget for in-context files
 
-  const filesContext = inContextFiles
+  const wantInContext = agent.files.filter((f) => f.inContext !== false && f.extractedText);
+  const explicitLazy = agent.files.filter((f) => f.inContext === false);
+
+  // Fit files into context budget, demote oversized to lazy
+  const fittedFiles: typeof wantInContext = [];
+  const demotedFiles: typeof wantInContext = [];
+  let contextBudget = MAX_CONTEXT_CHARS;
+
+  for (const f of wantInContext) {
+    const len = f.extractedText!.length;
+    if (len <= contextBudget) {
+      fittedFiles.push(f);
+      contextBudget -= len;
+    } else {
+      demotedFiles.push(f);
+    }
+  }
+
+  const lazyFiles = [...explicitLazy, ...demotedFiles];
+
+  const filesContext = fittedFiles
     .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
     .join("\n\n");
 
   if (filesContext) {
     systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
+  }
+
+  // Note about demoted files so the model knows to use read_knowledge
+  if (demotedFiles.length > 0) {
+    const demotedList = demotedFiles
+      .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
+      .join("\n");
+    systemPrompt += `\n\nСледующие файлы слишком большие для включения в контекст. Используй инструмент read_knowledge для доступа к ним:\n${demotedList}`;
   }
 
   // Lazy files: only list names, agent must use read_knowledge tool to access

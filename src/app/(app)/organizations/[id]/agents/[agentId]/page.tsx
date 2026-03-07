@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare, Upload, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare, Upload, AlertTriangle, Zap, Server, Pencil } from "lucide-react";
 import { AgentProgressBar } from "@/components/organizations/AgentProgressBar";
 import { FileUploader } from "@/components/organizations/FileUploader";
 import { Modal } from "@/components/ui/Modal";
@@ -15,7 +15,10 @@ interface AgentDetail {
   description: string | null;
   status: string;
   projectId: string | null;
+  starterPrompts: string[];
   mcpServer: { id: string; name: string; status: string; discoveredTools: unknown[] | null } | null;
+  skills: Array<{ id: string; skill: { id: string; name: string; icon: string; iconColor: string } }>;
+  mcpServers: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string } }>;
   files: Array<{ id: string; fileName: string; fileType: string; fileSize: number; createdAt: string }>;
   fileCount: number;
   conversationCount: number;
@@ -210,6 +213,12 @@ export default function OrgAgentDetailPage({
               </button>
             )}
             <button
+              onClick={() => router.push(`/organizations/${ids.id}/agents/${ids.agentId}/edit`)}
+              className="h-9 px-3 rounded-xl border border-border text-text-primary text-sm flex items-center gap-1.5 hover:bg-surface-alt transition-colors cursor-pointer"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => setShowDeleteConfirm(true)}
               className="h-9 px-3 rounded-xl border border-error/20 text-error text-sm flex items-center gap-1 hover:bg-error-light transition-colors cursor-pointer"
             >
@@ -232,7 +241,23 @@ export default function OrgAgentDetailPage({
           </div>
 
           {agent.status === "PROCESSING" && (
-            <AgentProgressBar orgId={ids.id} agentId={ids.agentId} />
+            <AgentProgressBar
+              orgId={ids.id}
+              agentId={ids.agentId}
+              onComplete={async () => {
+                // Update agent status to READY in DB
+                try {
+                  await fetch(`/api/organizations/${ids.id}/agents/${ids.agentId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "READY" }),
+                  });
+                } catch {
+                  // Non-critical
+                }
+                await loadAgent();
+              }}
+            />
           )}
 
           <div className="flex flex-wrap gap-2 mt-4">
@@ -282,6 +307,72 @@ export default function OrgAgentDetailPage({
                     {tool.name}
                   </code>
                   <span className="text-xs text-text-secondary">{tool.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Starter Prompts */}
+        {agent.starterPrompts && agent.starterPrompts.length > 0 && (
+          <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
+            <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-text-secondary" />
+              Стартовые подсказки
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {agent.starterPrompts.map((prompt, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1.5 rounded-lg bg-surface-alt text-xs text-text-primary border border-border"
+                >
+                  {prompt}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Skills */}
+        {agent.skills && agent.skills.length > 0 && (
+          <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
+            <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-text-secondary" />
+              Скиллы ({agent.skills.length})
+            </h2>
+            <div className="space-y-2">
+              {agent.skills.map((as) => (
+                <div key={as.id} className="flex items-center gap-2 py-1.5">
+                  <span
+                    className="h-6 w-6 rounded-md flex items-center justify-center text-xs"
+                    style={{ backgroundColor: `${as.skill.iconColor}20`, color: as.skill.iconColor }}
+                  >
+                    {as.skill.icon?.charAt(0) || "S"}
+                  </span>
+                  <span className="text-sm text-text-primary">{as.skill.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Additional MCP Servers */}
+        {agent.mcpServers && agent.mcpServers.length > 0 && (
+          <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
+            <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Server className="h-4 w-4 text-text-secondary" />
+              MCP-серверы ({agent.mcpServers.length})
+            </h2>
+            <div className="space-y-2">
+              {agent.mcpServers.map((ams) => (
+                <div key={ams.id} className="flex items-center justify-between py-1.5">
+                  <span className="text-sm text-text-primary">{ams.mcpServer.name}</span>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-xs font-medium",
+                    ams.mcpServer.status === "CONNECTED" ? "bg-success/10 text-success" : "bg-error/10 text-error"
+                  )}>
+                    {ams.mcpServer.status === "CONNECTED" ? "Подключен" : "Отключен"}
+                  </span>
                 </div>
               ))}
             </div>

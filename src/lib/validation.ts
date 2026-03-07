@@ -117,6 +117,9 @@ export const orgAgentCreateSchema = z.object({
   icon: z.string().max(50).optional().nullable(),
   iconColor: z.string().max(20).optional().nullable(),
   instructions: z.string().max(10000).optional().nullable().transform((s) => s?.trim() || null),
+  starterPrompts: z.array(z.string().max(200)).max(6).optional(),
+  skillIds: z.array(z.string()).max(20).optional(),
+  mcpServerIds: z.array(z.string()).max(10).optional(),
 });
 
 // ─── Conversation update (whitelist fields) ──────────────

@@ -97,6 +97,10 @@ export async function POST(
     }
   }
 
+  // Large files default to lazy mode (accessible via read_knowledge tool)
+  // to prevent context overflow in the system prompt
+  const inContext = file.size <= 100_000;
+
   const agentFile = await prisma.agentFile.create({
     data: {
       agentId: id,
@@ -105,6 +109,7 @@ export async function POST(
       fileUrl,
       fileSize: file.size,
       extractedText,
+      inContext,
     },
   });
 
