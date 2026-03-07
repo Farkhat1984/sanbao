@@ -281,26 +281,38 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
                   if (part.type === "artifact") {
                     return (
-                      <button
-                        key={i}
-                        onClick={() => handleOpenArtifact(part)}
-                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
-                      >
-                        <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-                          <FileText className="h-5 w-5 text-accent" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text-primary truncate">
-                            {part.title}
-                          </p>
-                          <p className="text-xs text-text-muted">
-                            {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
-                              part.artifactType}{" "}
-                            &middot; Нажмите чтобы открыть
-                          </p>
-                        </div>
-                        <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
-                      </button>
+                      <div key={i}>
+                        {/* Render artifact content inline as markdown */}
+                        {part.content.trim() && (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            urlTransform={urlTransform}
+                            components={markdownComponents}
+                          >
+                            {part.content}
+                          </ReactMarkdown>
+                        )}
+                        {/* Compact widget to open in artifact panel */}
+                        <button
+                          onClick={() => handleOpenArtifact(part)}
+                          className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
+                        >
+                          <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
+                            <FileText className="h-5 w-5 text-accent" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-text-primary truncate">
+                              {part.title}
+                            </p>
+                            <p className="text-xs text-text-muted">
+                              {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
+                                part.artifactType}{" "}
+                              &middot; Открыть в панели
+                            </p>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-text-muted group-hover/artifact:text-accent transition-colors shrink-0" />
+                        </button>
+                      </div>
                     );
                   }
 

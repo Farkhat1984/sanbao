@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, memo } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Pin, Trash2, Archive } from "lucide-react";
+import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -15,11 +15,15 @@ import type { ConversationSummary } from "@/types/chat";
 interface ConversationItemProps {
   conversation: ConversationSummary;
   isActive: boolean;
+  isArchived?: boolean;
+  onUnarchive?: (id: string) => void;
 }
 
 export const ConversationItem = memo(function ConversationItem({
   conversation,
   isActive,
+  isArchived,
+  onUnarchive,
 }: ConversationItemProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -79,6 +83,18 @@ export const ConversationItem = memo(function ConversationItem({
       setActiveAgentId(null);
       router.push("/chat");
     }
+  };
+
+  const handleUnarchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    useChatStore.getState().addConversation(conversation);
+    fetch(`/api/conversations/${conversation.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived: false }),
+    }).catch(console.error);
+    onUnarchive?.(conversation.id);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -160,14 +176,23 @@ export const ConversationItem = memo(function ConversationItem({
             transition={{ duration: 0.12 }}
             className="absolute right-0 top-full z-20 w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
           >
-            <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-              <Pin className="h-3 w-3" />
-              {conversation.pinned ? "Открепить" : "Закрепить"}
-            </button>
-            <button onClick={handleArchive} aria-label="Архивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-              <Archive className="h-3 w-3" />
-              В архив
-            </button>
+            {!isArchived && (
+              <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+                <Pin className="h-3 w-3" />
+                {conversation.pinned ? "Открепить" : "Закрепить"}
+              </button>
+            )}
+            {isArchived ? (
+              <button onClick={handleUnarchive} aria-label="Разархивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+                <ArchiveRestore className="h-3 w-3" />
+                Разархивировать
+              </button>
+            ) : (
+              <button onClick={handleArchive} aria-label="Архивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
+                <Archive className="h-3 w-3" />
+                В архив
+              </button>
+            )}
             <button
               onClick={handleDeleteClick}
               aria-label="Удалить чат"

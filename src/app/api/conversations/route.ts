@@ -11,9 +11,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200);
+  const showArchived = searchParams.get("archived") === "true";
 
   const conversations = await prisma.conversation.findMany({
-    where: { userId, archived: false },
+    where: { userId, archived: showArchived },
     orderBy: { updatedAt: "desc" },
     take: limit + 1, // fetch one extra to determine if there are more
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

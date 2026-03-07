@@ -7,7 +7,6 @@ import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
-import { AgentToolPicker } from "./AgentToolPicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Agent, AgentFile } from "@/types/agent";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
@@ -33,9 +32,6 @@ export function AgentForm({ agent }: AgentFormProps) {
   const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>(
     agent?.mcpServers?.map((m) => m.mcpServer.id) || []
   );
-  const [selectedToolIds, setSelectedToolIds] = useState<string[]>(
-    agent?.tools?.map((t) => t.tool.id) || []
-  );
   const [starterPrompts, setStarterPrompts] = useState<string[]>(
     agent?.starterPrompts || []
   );
@@ -58,7 +54,7 @@ export function AgentForm({ agent }: AgentFormProps) {
     setError(null);
 
     try {
-      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds, toolIds: selectedToolIds };
+      const body = { name, description, instructions, icon, iconColor, avatar, starterPrompts: starterPrompts.filter((s) => s.trim()), skillIds: selectedSkillIds, mcpServerIds: selectedMcpIds };
 
       const res = await fetch(
         isEdit ? `/api/agents/${agent.id}` : "/api/agents",
@@ -348,19 +344,6 @@ export function AgentForm({ agent }: AgentFormProps) {
               </p>
             </div>
 
-            {/* Tools */}
-            <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">
-                Инструменты
-              </label>
-              <AgentToolPicker
-                selectedIds={selectedToolIds}
-                onChange={setSelectedToolIds}
-              />
-              <p className="text-xs text-text-muted mt-1">
-                Инструменты добавляют быстрые действия и шаблоны к чату с агентом
-              </p>
-            </div>
 
           </div>
         </div>

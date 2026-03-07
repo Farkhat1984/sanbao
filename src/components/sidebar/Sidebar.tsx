@@ -7,7 +7,6 @@ import {
   PanelLeftClose,
   Settings,
   ShieldCheck,
-  Building2,
 } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -176,17 +175,7 @@ export function Sidebar() {
               </button>
             </Tooltip>
           )}
-          <Tooltip content="Организации" side="top">
-            <button
-              onClick={() => handleNavigate("/organizations")}
-              className={cn(
-                "rounded-lg flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer",
-                isMobile ? "h-10 w-10" : "h-8 w-8"
-              )}
-            >
-              <Building2 className="h-4 w-4" />
-            </button>
-          </Tooltip>
+
           <Tooltip content="Настройки" side="top">
             <button
               onClick={() => handleNavigate("/settings")}

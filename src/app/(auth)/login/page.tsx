@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { springTransition } from "@/lib/animations";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
-import { CompassRose } from "@/components/icons";
-import { Bot, Zap, Cable } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -26,46 +24,14 @@ export default function LoginPage() {
       className="w-full max-w-4xl flex rounded-2xl overflow-hidden shadow-xl border border-border"
     >
       {/* Left panel — brand showcase (hidden on mobile) */}
-      <div className="hidden md:flex w-[45%] bg-[#1C2B3A] relative flex-col items-center justify-center p-10 text-center overflow-hidden">
-        {/* Compass Rose watermark */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <CompassRose size={400} className="text-accent" opacity={0.08} />
-        </div>
-
-        <div className="relative z-10">
-          <SanbaoCompass size={64} className="text-accent mx-auto mb-6" state="idle" />
-          <h2 className="text-2xl font-bold text-[#F4EFE6] mb-3 font-[family-name:var(--font-display)] tracking-wide">
-            Sanbao<span className="text-accent">.ai</span>
-          </h2>
-          <p className="text-[#9AABB8] text-sm leading-relaxed max-w-[260px] mx-auto">
-            Мультиагентная AI-платформа для профессионалов
-          </p>
-
-          {/* Feature icons */}
-          <div className="flex justify-center gap-8 mt-8">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-accent/15 flex items-center justify-center">
-                <Bot size={20} className="text-accent" />
-              </div>
-              <span className="text-[10px] text-[#9AABB8]">Агенты</span>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-[#B8956A]/15 flex items-center justify-center">
-                <Zap size={20} className="text-[#B8956A]" />
-              </div>
-              <span className="text-[10px] text-[#9AABB8]">Скиллы</span>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-10 w-10 rounded-xl bg-accent/15 flex items-center justify-center">
-                <Cable size={20} className="text-accent" />
-              </div>
-              <span className="text-[10px] text-[#9AABB8]">MCP</span>
-            </div>
-          </div>
-
-          {/* Chinese characters watermark */}
-          <p className="text-[#F4EFE6]/5 text-6xl font-light mt-8 select-none">三宝</p>
-        </div>
+      <div className="hidden md:flex w-[45%] bg-[#1C2B3A] flex-col items-center justify-center p-10 text-center">
+        <SanbaoCompass size={64} className="text-accent mx-auto mb-6" state="idle" />
+        <h2 className="text-2xl font-bold text-[#F4EFE6] mb-3 font-[family-name:var(--font-display)] tracking-wide">
+          Sanbao<span className="text-accent">.ai</span>
+        </h2>
+        <p className="text-[#9AABB8] text-sm leading-relaxed max-w-[260px] mx-auto">
+          Мультиагентная AI-платформа для профессионалов
+        </p>
       </div>
 
       {/* Right panel — auth form */}

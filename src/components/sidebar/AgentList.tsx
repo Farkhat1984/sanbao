@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Building2,
   Bot,
   Zap,
   Cable,
@@ -14,6 +15,13 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 
 const PLAYGROUND_ITEMS = [
+  {
+    label: "Организации",
+    icon: Building2,
+    href: "/organizations",
+    color: "bg-accent-light text-accent",
+    description: "Команды",
+  },
   {
     label: "Агенты",
     icon: Bot,

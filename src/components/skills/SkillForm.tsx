@@ -8,15 +8,6 @@ import { ArrowLeft, Save, Sparkles, ChevronDown, ChevronUp, Loader2 } from "luci
 import type { Skill } from "@/types/skill";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
 
-const JURISDICTIONS = [
-  { value: "RU", label: "Россия" },
-  { value: "KZ", label: "Казахстан" },
-  { value: "BY", label: "Беларусь" },
-  { value: "EU", label: "Евросоюз" },
-  { value: "EU/RU", label: "ЕС + Россия" },
-  { value: "International", label: "Международное" },
-];
-
 interface SkillFormProps {
   initial?: Skill;
 }
@@ -33,7 +24,6 @@ export function SkillForm({ initial }: SkillFormProps) {
   const [description, setDescription] = useState(initial?.description || "");
   const [systemPrompt, setSystemPrompt] = useState(initial?.systemPrompt || "");
   const [citationRules, setCitationRules] = useState(initial?.citationRules || "");
-  const [jurisdiction, setJurisdiction] = useState(initial?.jurisdiction || "RU");
   const [icon, setIcon] = useState(initial?.icon || DEFAULT_SKILL_ICON);
   const [iconColor, setIconColor] = useState(initial?.iconColor || DEFAULT_ICON_COLOR);
 
@@ -54,7 +44,6 @@ export function SkillForm({ initial }: SkillFormProps) {
           description,
           systemPrompt,
           citationRules,
-          jurisdiction,
           icon,
           iconColor,
         }),
@@ -77,7 +66,7 @@ export function SkillForm({ initial }: SkillFormProps) {
       const res = await fetch("/api/skills/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: genDescription, jurisdiction }),
+        body: JSON.stringify({ description: genDescription }),
       });
       if (!res.ok) throw new Error("Ошибка генерации");
       const data = await res.json();
@@ -85,7 +74,6 @@ export function SkillForm({ initial }: SkillFormProps) {
       if (data.description) setDescription(data.description);
       if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
       if (data.citationRules) setCitationRules(data.citationRules);
-      if (data.jurisdiction) setJurisdiction(data.jurisdiction);
       if (data.icon) setIcon(data.icon);
       if (data.iconColor) setIconColor(data.iconColor);
       setShowGenPanel(false);
@@ -179,23 +167,6 @@ export function SkillForm({ initial }: SkillFormProps) {
             placeholder="Краткое описание скилла"
             className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
           />
-        </div>
-
-        <div>
-          <label className="text-xs font-medium text-text-muted mb-1.5 block">
-            Юрисдикция
-          </label>
-          <select
-            value={jurisdiction}
-            onChange={(e) => setJurisdiction(e.target.value)}
-            className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent cursor-pointer"
-          >
-            {JURISDICTIONS.map((j) => (
-              <option key={j.value} value={j.value}>
-                {j.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div>

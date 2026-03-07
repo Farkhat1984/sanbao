@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Bot, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, Bot, Trash2 } from "lucide-react";
 import { useOrgStore } from "@/stores/orgStore";
 import { cn } from "@/lib/utils";
 
@@ -115,14 +115,6 @@ export default function OrganizationDetailPage({
             description={`${org.agentCount as number} агентов`}
             onClick={async () => { const { id } = await params; router.push(`/organizations/${id}/agents`); }}
           />
-          {isAdmin && (
-            <NavCard
-              icon={Settings}
-              title="Настройки"
-              description="Управление организацией"
-              onClick={async () => { const { id } = await params; router.push(`/organizations/${id}/members`); }}
-            />
-          )}
         </div>
       </div>
     </div>

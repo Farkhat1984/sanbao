@@ -65,9 +65,9 @@ export default function AdminAnalyticsPage() {
       {/* Messages chart (bar) */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Сообщения / день</h2>
-        <div className="flex items-end gap-[2px] h-32">
+        <div className="flex gap-[2px] h-32">
           {data.dailyMessages.map((d) => (
-            <div key={d.date} className="flex-1 group relative">
+            <div key={d.date} className="flex-1 h-full flex flex-col justify-end group relative">
               <div className="bg-accent/80 rounded-t-sm transition-all" style={{ height: `${(d.messages / maxMsg) * 100}%`, minHeight: d.messages > 0 ? "2px" : "0" }} />
               <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary whitespace-nowrap shadow-md z-10">
                 {d.date}: {d.messages} сообщ.
@@ -80,9 +80,9 @@ export default function AdminAnalyticsPage() {
       {/* Tokens chart */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Токены / день</h2>
-        <div className="flex items-end gap-[2px] h-32">
+        <div className="flex gap-[2px] h-32">
           {data.dailyMessages.map((d) => (
-            <div key={d.date} className="flex-1 group relative">
+            <div key={d.date} className="flex-1 h-full flex flex-col justify-end group relative">
               <div className="bg-legal-ref/80 rounded-t-sm transition-all" style={{ height: `${(d.tokens / maxTok) * 100}%`, minHeight: d.tokens > 0 ? "2px" : "0" }} />
               <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block bg-surface border border-border rounded px-2 py-1 text-xs text-text-primary whitespace-nowrap shadow-md z-10">
                 {d.date}: {d.tokens.toLocaleString()} ток.
