@@ -81,7 +81,7 @@ export async function POST(req: Request) {
           const invoicePromise = sendInvoiceEmail({
             userId,
             planName: plan.name,
-            amount: `${(amountTotal / 100).toLocaleString("ru-RU")} ${currency.toUpperCase()}`,
+            amount: `$${(amountTotal / 100).toLocaleString("en-US")}`,
             periodStart: now,
             periodEnd,
           });

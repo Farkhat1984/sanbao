@@ -112,7 +112,7 @@ export function PlusMenu({
                   onClick={handleCameraClick}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <div className="h-7 w-7 rounded-lg bg-success-light text-success flex items-center justify-center">
+                  <div className="h-7 w-7 rounded-lg bg-accent-light text-accent flex items-center justify-center">
                     <Camera className="h-3.5 w-3.5" />
                   </div>
                   <span>Сделать фото</span>

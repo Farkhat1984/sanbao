@@ -36,6 +36,13 @@ function calcRevenue(
   return (inputTokens / 1000) * prices.pricePer1kInput + (outputTokens / 1000) * prices.pricePer1kOutput;
 }
 
+function defaultFrom(): Date {
+  const d = new Date();
+  d.setDate(1); // first day of current month
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export async function GET(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
@@ -44,15 +51,20 @@ export async function GET(req: Request) {
   const userId = searchParams.get("userId");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const providerFilter = searchParams.get("provider");
+  const modelFilter = searchParams.get("model");
   const { page, limit } = parsePagination(searchParams);
 
-  const where: Record<string, unknown> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {};
   if (userId) where.userId = userId;
-  if (from || to) {
-    where.createdAt = {};
-    if (from) (where.createdAt as Record<string, unknown>).gte = new Date(from);
-    if (to) (where.createdAt as Record<string, unknown>).lte = new Date(to);
-  }
+  if (providerFilter) where.provider = providerFilter;
+  if (modelFilter) where.model = { contains: modelFilter, mode: "insensitive" };
+
+  // Default to current month if no date range specified
+  const dateFrom = from ? new Date(from) : defaultFrom();
+  const dateTo = to ? new Date(to) : new Date();
+  where.createdAt = { gte: dateFrom, lte: dateTo };
 
   const format = searchParams.get("format");
   const priceMap = await buildPriceMap();
@@ -76,7 +88,7 @@ export async function GET(req: Request) {
     return csvResponse(csv, `token-usage-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
-  const [logs, total] = await Promise.all([
+  const [logs, total, agg, grouped] = await Promise.all([
     prisma.tokenLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -84,31 +96,36 @@ export async function GET(req: Request) {
       take: limit,
     }),
     prisma.tokenLog.count({ where }),
+    prisma.tokenLog.aggregate({
+      where,
+      _sum: { inputTokens: true, outputTokens: true, cost: true },
+    }),
+    // Group by provider+model for revenue calc (DB-side aggregation, not full scan)
+    prisma.tokenLog.groupBy({
+      by: ["provider", "model"],
+      where,
+      _sum: { inputTokens: true, outputTokens: true, cost: true },
+    }),
   ]);
 
-  // Enrich logs with revenue & profit
+  // Enrich individual logs with revenue & profit
   const enrichedLogs = logs.map((l) => {
     const revenue = calcRevenue(priceMap, l.provider, l.model, l.inputTokens, l.outputTokens);
     return { ...l, revenue, profit: revenue - l.cost };
   });
 
-  // Aggregates
-  const agg = await prisma.tokenLog.aggregate({
-    where,
-    _sum: { inputTokens: true, outputTokens: true, cost: true },
-  });
-
-  // Compute total revenue from all matching logs
-  const allForRevenue = await prisma.tokenLog.findMany({
-    where,
-    select: { provider: true, model: true, inputTokens: true, outputTokens: true, cost: true },
-  });
+  // Compute total revenue from grouped aggregates (not full table scan)
   let totalRevenue = 0;
   let totalCost = 0;
-  for (const l of allForRevenue) {
-    totalRevenue += calcRevenue(priceMap, l.provider, l.model, l.inputTokens, l.outputTokens);
-    totalCost += l.cost;
+  for (const g of grouped) {
+    const inp = g._sum.inputTokens || 0;
+    const out = g._sum.outputTokens || 0;
+    totalRevenue += calcRevenue(priceMap, g.provider, g.model, inp, out);
+    totalCost += g._sum.cost || 0;
   }
+
+  // Distinct providers for filter dropdown
+  const providers = [...new Set(grouped.map((g) => g.provider))].sort();
 
   return jsonOk({
     logs: enrichedLogs,
@@ -122,5 +139,8 @@ export async function GET(req: Request) {
       revenue: totalRevenue,
       profit: totalRevenue - totalCost,
     },
+    providers,
+    dateFrom: dateFrom.toISOString(),
+    dateTo: dateTo.toISOString(),
   });
 }

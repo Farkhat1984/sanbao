@@ -85,14 +85,14 @@ const FEATURES = [
 const PLANS = [
   {
     name: "Бесплатный",
-    price: "0 ₸",
+    price: "$0",
     period: "мес",
     features: ["5 сообщений в день", "1 агент", "Базовые инструменты", "Общий доступ"],
     highlighted: false,
   },
   {
     name: "Pro",
-    price: "4,990 ₸",
+    price: "$20",
     period: "мес",
     features: [
       "Безлимитные сообщения",
@@ -104,7 +104,7 @@ const PLANS = [
   },
   {
     name: "Business",
-    price: "14,990 ₸",
+    price: "$60",
     period: "мес",
     features: [
       "Всё из Pro",

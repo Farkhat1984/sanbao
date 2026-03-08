@@ -29,6 +29,7 @@ export const agentCreateSchema = z.object({
   starterPrompts: z.array(z.string().max(500)).max(10).optional().default([]),
   skillIds: z.array(z.string()).max(50).optional().default([]),
   mcpServerIds: z.array(z.string()).max(50).optional().default([]),
+  integrationIds: z.array(z.string()).max(20).optional().default([]),
 });
 
 export const agentUpdateSchema = z.object({
@@ -43,6 +44,7 @@ export const agentUpdateSchema = z.object({
   skillIds: z.array(z.string()).max(50),
   mcpServerIds: z.array(z.string()).max(50),
   toolIds: z.array(z.string()).max(50),
+  integrationIds: z.array(z.string()).max(20),
 }).partial();
 
 // ─── Tool ────────────────────────────────────────────────
@@ -125,6 +127,23 @@ export const orgAgentCreateSchema = z.object({
   skillIds: z.array(z.string()).max(20).optional(),
   mcpServerIds: z.array(z.string()).max(10).optional(),
 });
+
+// ─── Integration ────────────────────────────────────────
+
+export const integrationCreateSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  type: z.enum(["ODATA_1C"]),
+  baseUrl: z.string().url().max(500),
+  username: z.string().min(1).max(200),
+  password: z.string().min(1).max(500),
+});
+
+export const integrationUpdateSchema = z.object({
+  name: z.string().min(1).max(200).transform((s) => s.trim()),
+  baseUrl: z.string().url().max(500),
+  username: z.string().min(1).max(200),
+  password: z.string().min(1).max(500),
+}).partial();
 
 // ─── Conversation update (whitelist fields) ──────────────
 

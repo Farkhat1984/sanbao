@@ -99,6 +99,7 @@ export async function resolveAgentContext(
       skills: { include: { skill: { include: { tools: { include: { tool: true } } } } } },
       mcpServers: { include: { mcpServer: true } },
       tools: { include: { tool: true } },
+      integrations: { include: { integration: true } },
     },
   });
 
@@ -272,6 +273,17 @@ export async function resolveAgentContext(
   // 3. Agent's direct MCP servers
   for (const ams of agent.mcpServers) {
     processMcpServer(ams.mcpServer);
+  }
+
+  // 4. Agent's integrations — inject connected catalogs into system prompt
+  if ("integrations" in agent && Array.isArray(agent.integrations)) {
+    for (const ai of agent.integrations as Array<{ integration: { status: string; catalog: string | null; name: string; baseUrl: string } }>) {
+      const intg = ai.integration;
+      if (intg.status === "CONNECTED" && intg.catalog) {
+        systemPrompt += `\n\n--- Интеграция: ${intg.name} (${intg.baseUrl}) ---\n${intg.catalog}`;
+        systemPrompt += `\n\nДля запросов к этой 1С используй инструмент odata_query.`;
+      }
+    }
   }
 
   // Sort tools by sortOrder

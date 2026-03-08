@@ -19,12 +19,14 @@ interface PlanData {
   documentsPerMonth: number;
   canUseAdvancedTools: boolean;
   canUseReasoning: boolean;
+  canUseSkills: boolean;
   canUseRag: boolean;
   canUseGraph: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
   maxStorageMb: number;
+  maxOrganizations: number;
   _count?: { subscriptions: number };
 }
 

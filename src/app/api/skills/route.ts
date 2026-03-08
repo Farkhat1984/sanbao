@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { skillCreateSchema } from "@/lib/validation";
+import { getUserPlanAndUsage } from "@/lib/usage";
 import { type Prisma } from "@prisma/client";
 
 const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
@@ -75,6 +76,12 @@ export async function POST(req: Request) {
   const result = await requireAuth();
   if ("error" in result) return result.error;
   const { userId } = result.auth;
+
+  // Check plan allows skills creation
+  const { plan } = await getUserPlanAndUsage(userId);
+  if (plan && !plan.canUseSkills) {
+    return jsonError("Создание скиллов недоступно на вашем тарифе", 403);
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) return jsonError("Неверный JSON", 400);

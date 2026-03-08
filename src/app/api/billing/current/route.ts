@@ -30,9 +30,11 @@ export async function GET() {
           documentsPerMonth: plan.documentsPerMonth,
           canUseAdvancedTools: plan.canUseAdvancedTools,
           canUseReasoning: plan.canUseReasoning,
+          canUseSkills: plan.canUseSkills,
           canUseRag: plan.canUseRag,
           canUseGraph: plan.canUseGraph,
           canChooseProvider: plan.canChooseProvider,
+          maxOrganizations: plan.maxOrganizations,
         }
       : null,
     subscription: subscription

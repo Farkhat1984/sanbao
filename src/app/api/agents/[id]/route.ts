@@ -7,6 +7,7 @@ const AGENT_INCLUDE = {
   skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
+  integrations: { include: { integration: { select: { id: true, name: true, type: true, status: true, entityCount: true } } } },
 };
 
 /** Strip heavy extractedText from files, replace with boolean hasText */
@@ -65,7 +66,7 @@ export async function PUT(
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
-  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds } = parsed.data;
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, integrationIds } = parsed.data;
 
   const existing = await prisma.agent.findFirst({
     where: { id, userId },
@@ -93,7 +94,7 @@ export async function PUT(
   });
 
   // Update associations atomically to prevent partial state on failure
-  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds);
+  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(integrationIds);
   if (hasAssociationUpdates) {
     await prisma.$transaction(async (tx) => {
       if (Array.isArray(skillIds)) {
@@ -120,11 +121,19 @@ export async function PUT(
           });
         }
       }
+      if (Array.isArray(integrationIds)) {
+        await tx.agentIntegration.deleteMany({ where: { agentId: id } });
+        if (integrationIds.length > 0) {
+          await tx.agentIntegration.createMany({
+            data: integrationIds.map((integrationId: string) => ({ agentId: id, integrationId })),
+          });
+        }
+      }
     });
   }
 
   // Refetch with relations if associations were updated
-  if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds)) {
+  if (Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds) || Array.isArray(integrationIds)) {
     const updated = await prisma.agent.findUnique({ where: { id }, include: AGENT_INCLUDE });
     return jsonOk(serializeDates(stripFileText(updated as unknown as Record<string, unknown>)));
   }

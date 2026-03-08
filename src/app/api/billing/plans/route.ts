@@ -26,9 +26,11 @@ export async function GET() {
       documentsPerMonth: true,
       canUseAdvancedTools: true,
       canUseReasoning: true,
+      canUseSkills: true,
       canUseRag: true,
       canUseGraph: true,
       canChooseProvider: true,
+      maxOrganizations: true,
       highlighted: true,
     },
   });

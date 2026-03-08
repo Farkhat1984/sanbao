@@ -125,7 +125,7 @@ export const S3_DEFAULT_REGION = "us-east-1";
 export const PRESIGNED_URL_EXPIRY = 3600;
 
 // ─── Billing ───
-export const DEFAULT_CURRENCY = "KZT";
+export const DEFAULT_CURRENCY = "USD";
 export const STRIPE_API_VERSION = "2026-01-28.clover" as const;
 export const SUBSCRIPTION_EXPIRY_WARNING_DAYS = 3;
 
@@ -148,6 +148,12 @@ export const REACT_DOM_CDN_URL = "https://unpkg.com/react-dom@18/umd/react-dom.d
 export const BABEL_CDN_URL = "https://unpkg.com/@babel/standalone/babel.min.js";
 export const TAILWIND_CDN_URL = "https://cdn.tailwindcss.com";
 export const PYODIDE_CDN_URL = "https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js";
+
+// ─── Integrations ───
+export const INTEGRATION_TYPES = [
+  { value: "ODATA_1C", label: "1С OData", icon: "Database" },
+] as const;
+export const INTEGRATION_DISCOVERY_TIMEOUT_MS = 15_000;
 
 // ─── Native Tools ───
 export const NATIVE_TOOL_HTTP_TIMEOUT_MS = 30_000;

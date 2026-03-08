@@ -50,7 +50,6 @@ export function UserEditModal({
             className="w-full h-10 px-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
           >
             <option value="USER">Пользователь</option>
-            <option value="PRO">Pro</option>
             <option value="ADMIN">Администратор</option>
           </select>
         </div>

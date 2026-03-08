@@ -31,6 +31,7 @@ export async function PUT(
     "documentsPerMonth",
     "canUseAdvancedTools",
     "canUseReasoning",
+    "canUseSkills",
     "canUseRag",
     "canUseGraph",
     "canChooseProvider",
@@ -38,6 +39,7 @@ export async function PUT(
     "sortOrder",
     "highlighted",
     "maxStorageMb",
+    "maxOrganizations",
   ];
 
   const data: Record<string, unknown> = {};

@@ -14,7 +14,7 @@ export async function PUT(
   const { role, planSlug, isBanned, bannedReason } = body;
 
   // Validate inputs
-  if (role !== undefined && !["USER", "PRO", "ADMIN"].includes(role)) {
+  if (role !== undefined && !["USER", "ADMIN"].includes(role)) {
     return jsonError("Invalid role", 400);
   }
   if (bannedReason !== undefined && typeof bannedReason === "string" && bannedReason.length > 500) {
@@ -38,7 +38,7 @@ export async function PUT(
     });
   }
 
-  if (role && ["USER", "PRO", "ADMIN"].includes(role)) {
+  if (role && ["USER", "ADMIN"].includes(role)) {
     await prisma.user.update({
       where: { id },
       data: { role },

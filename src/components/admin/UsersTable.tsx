@@ -28,6 +28,8 @@ export function UsersTable() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -38,13 +40,15 @@ export function UsersTable() {
       page: String(page),
       limit: "20",
       ...(search && { search }),
+      ...(roleFilter && { role: roleFilter }),
+      ...(planFilter && { plan: planFilter }),
     });
     const res = await fetch(`/api/admin/users?${params}`);
     const data = await res.json();
     setUsers(data.users);
     setTotal(data.total);
     setLoading(false);
-  }, [page, search]);
+  }, [page, search, roleFilter, planFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -74,8 +78,6 @@ export function UsersTable() {
     switch (role) {
       case "ADMIN":
         return <Badge variant="error">Админ</Badge>;
-      case "PRO":
-        return <Badge variant="accent">Pro</Badge>;
       default:
         return <Badge variant="default">Юзер</Badge>;
     }
@@ -83,19 +85,49 @@ export function UsersTable() {
 
   return (
     <div>
-      {/* Search */}
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
-        <input
-          type="text"
-          placeholder="Поиск по имени или email..."
-          value={search}
+      {/* Search + Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+          <input
+            type="text"
+            placeholder="Поиск по имени или email..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="w-full h-10 pl-10 pr-4 rounded-xl bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+          />
+        </div>
+        <select
+          value={roleFilter}
           onChange={(e) => {
-            setSearch(e.target.value);
+            setRoleFilter(e.target.value);
             setPage(1);
           }}
-          className="w-full h-10 pl-10 pr-4 rounded-xl bg-surface border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-        />
+          className="h-10 px-3 rounded-xl bg-surface border border-border text-sm text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
+        >
+          <option value="">Все роли</option>
+          <option value="USER">Пользователь</option>
+          <option value="ADMIN">Админ</option>
+        </select>
+        <select
+          value={planFilter}
+          onChange={(e) => {
+            setPlanFilter(e.target.value);
+            setPage(1);
+          }}
+          className="h-10 px-3 rounded-xl bg-surface border border-border text-sm text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
+        >
+          <option value="">Все тарифы</option>
+          <option value="none">Без подписки</option>
+          {plans.map((p) => (
+            <option key={p.slug} value={p.slug}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}

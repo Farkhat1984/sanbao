@@ -73,6 +73,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const streamingReasoning = useChatStore((s) =>
     isLast && isAssistant && s.isStreaming ? s.streamingReasoning : null
   );
+  const isCurrentlyStreaming = useChatStore((s) =>
+    isLast && isAssistant && s.isStreaming
+  );
   const displayContent = streamingContent ?? message.content;
   const displayReasoning = streamingReasoning ?? message.reasoning;
 
@@ -95,10 +98,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Parse artifacts and edits from assistant messages (memoized — regex parsing is expensive)
+  // Parse artifacts and edits from assistant messages (memoized — regex parsing is expensive).
+  // During streaming, skip expensive regex parsing — render plain markdown instead.
   const parts = useMemo(
-    () => (isAssistant ? parseContentWithArtifacts(displayContent) : []),
-    [isAssistant, displayContent]
+    () => (isAssistant && !isCurrentlyStreaming ? parseContentWithArtifacts(displayContent) : []),
+    [isAssistant, isCurrentlyStreaming, displayContent]
   );
   const hasSpecialParts = useMemo(
     () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
@@ -111,15 +115,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     [isAssistant, hasSpecialParts, displayContent]
   );
 
-  // Detect overflow for assistant messages
+  // Detect overflow for assistant messages (skip during streaming to avoid layout thrashing)
   useEffect(() => {
-    if (!isAssistant || isExpanded) return;
+    if (!isAssistant || isExpanded || isCurrentlyStreaming) return;
     const el = bubbleRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
       setIsOverflowing(el.scrollHeight > ASSISTANT_COLLAPSE_HEIGHT);
     });
-  }, [displayContent, isAssistant, isExpanded]);
+  }, [displayContent, isAssistant, isExpanded, isCurrentlyStreaming]);
 
   // Detect overflow for user messages
   useEffect(() => {
@@ -179,7 +183,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
   return (
     <motion.div
-      initial={isLast ? { opacity: 0, y: 8 } : false}
+      initial={isLast && !isCurrentlyStreaming ? { opacity: 0, y: 8 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
       className={cn("group flex gap-3 py-3", isUser && "flex-row-reverse")}

@@ -206,7 +206,7 @@ export function ChatArea() {
       </div>
 
       {/* Context indicator + Input */}
-      <div className="shrink-0 pb-6 px-4 safe-bottom">
+      <div className="shrink-0 px-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
         <div className="max-w-3xl mx-auto">
           {contextUsage && (
             <ContextIndicator

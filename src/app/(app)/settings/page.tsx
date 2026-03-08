@@ -35,9 +35,11 @@ interface PlanInfo {
   documentsPerMonth: number;
   canUseAdvancedTools: boolean;
   canUseReasoning: boolean;
+  canUseSkills: boolean;
   canUseRag: boolean;
   canUseGraph: boolean;
   canChooseProvider: boolean;
+  maxOrganizations?: number;
   highlighted?: boolean;
 }
 

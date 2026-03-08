@@ -10,6 +10,7 @@ import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/
 
 interface SkillFormProps {
   initial?: Skill;
+  adminMode?: boolean;
 }
 
 /** Rough token estimate: ~4 chars per token */
@@ -18,7 +19,7 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-export function SkillForm({ initial }: SkillFormProps) {
+export function SkillForm({ initial, adminMode }: SkillFormProps) {
   const router = useRouter();
   const isNew = !initial;
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,8 @@ export function SkillForm({ initial }: SkillFormProps) {
   const [category, setCategory] = useState(initial?.category || "CUSTOM");
   const [tags, setTags] = useState<string[]>(initial?.tags || []);
   const [tagInput, setTagInput] = useState("");
+  const [isBuiltIn, setIsBuiltIn] = useState(initial?.isBuiltIn ?? true);
+  const [isPublic, setIsPublic] = useState(initial?.isPublic ?? true);
 
   const promptTokens = estimateTokens(systemPrompt);
 
@@ -64,26 +67,35 @@ export function SkillForm({ initial }: SkillFormProps) {
 
     setSaving(true);
     try {
-      const url = initial ? `/api/skills/${initial.id}` : "/api/skills";
+      const url = adminMode
+        ? (initial ? `/api/admin/skills/${initial.id}` : "/api/admin/skills")
+        : (initial ? `/api/skills/${initial.id}` : "/api/skills");
       const method = initial ? "PUT" : "POST";
+
+      const payload: Record<string, unknown> = {
+        name,
+        description,
+        systemPrompt,
+        citationRules,
+        icon,
+        iconColor,
+        category,
+        tags,
+      };
+
+      if (adminMode) {
+        payload.isBuiltIn = isBuiltIn;
+        payload.isPublic = isPublic;
+      }
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          description,
-          systemPrompt,
-          citationRules,
-          icon,
-          iconColor,
-          category,
-          tags,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        router.push("/skills");
+        router.push(adminMode ? "/admin/skills" : "/skills");
         router.refresh();
       }
     } finally {
@@ -161,7 +173,7 @@ export function SkillForm({ initial }: SkillFormProps) {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push(adminMode ? "/admin/skills" : "/skills")}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -285,6 +297,29 @@ export function SkillForm({ initial }: SkillFormProps) {
             className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
           />
         </div>
+
+        {adminMode && (
+          <div className="flex items-center gap-6 pt-2 border-t border-border">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isBuiltIn}
+                onChange={(e) => setIsBuiltIn(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-accent focus:ring-accent cursor-pointer"
+              />
+              <span className="text-sm text-text-primary">Системный скилл</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-accent focus:ring-accent cursor-pointer"
+              />
+              <span className="text-sm text-text-primary">Публичный</span>
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3">
@@ -292,7 +327,7 @@ export function SkillForm({ initial }: SkillFormProps) {
           <Save className="h-4 w-4" />
           {saving ? "Сохранение..." : initial ? "Сохранить" : "Создать"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
+        <Button type="button" variant="ghost" onClick={() => router.push(adminMode ? "/admin/skills" : "/skills")}>
           Отмена
         </Button>
       </div>

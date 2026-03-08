@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     data: {
       userId,
       amount: finalAmount,
-      currency: "KZT",
+      currency: "USD",
       status: "PENDING",
       provider: "freedom",
       metadata: { planId: plan.id, planName: plan.name, promoCode: appliedPromo, originalAmount: plan.price },

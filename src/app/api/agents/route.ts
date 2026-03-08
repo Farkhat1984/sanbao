@@ -73,7 +73,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
-  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds } = parsed.data;
+  const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, integrationIds } = parsed.data;
 
   // Check maxAgents limit (0 = no agents allowed, -1 = unlimited; admins bypass)
   const { plan } = await getUserPlanAndUsage(userId);
@@ -120,10 +120,18 @@ export async function POST(req: Request) {
     });
   }
 
+  // Create integration associations
+  if (integrationIds && integrationIds.length > 0) {
+    await prisma.agentIntegration.createMany({
+      data: integrationIds.map((integrationId: string) => ({ agentId: agent.id, integrationId })),
+    });
+  }
+
   return jsonOk({
     ...serializeDates(agent),
     files: [],
     skills: [],
     mcpServers: [],
+    integrations: [],
   }, 201);
 }

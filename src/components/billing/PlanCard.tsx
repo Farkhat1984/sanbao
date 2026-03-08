@@ -1,4 +1,4 @@
-import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Share2 } from "lucide-react";
+import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Puzzle, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -18,9 +18,11 @@ interface PlanCardProps {
     documentsPerMonth: number;
     canUseAdvancedTools: boolean;
     canUseReasoning: boolean;
+    canUseSkills?: boolean;
     canUseRag: boolean;
     canUseGraph: boolean;
     canChooseProvider: boolean;
+    maxOrganizations?: number;
     highlighted?: boolean;
   };
   isCurrent: boolean;
@@ -45,7 +47,9 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
     },
     {
       icon: Cpu,
-      label: `${formatTokens(plan.tokensPerMonth)} токенов/мес`,
+      label: plan.tokensPerMonth <= 0
+        ? "Безлимит токенов/мес"
+        : `${formatTokens(plan.tokensPerMonth)} токенов/мес`,
     },
     {
       icon: Zap,
@@ -62,7 +66,17 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
   ];
 
   const features = [
-    { enabled: plan.canUseReasoning, label: "Рассуждения", icon: Brain },
+    { enabled: plan.canUseReasoning, label: "Режим рассуждений", icon: Brain },
+    {
+      enabled: plan.maxAgents !== 0,
+      label: plan.maxAgents < 0
+        ? "Агенты: безлимит"
+        : plan.maxAgents > 0
+          ? `Агенты: до ${plan.maxAgents}`
+          : "Агентные возможности",
+      icon: Bot,
+    },
+    { enabled: plan.canUseSkills ?? false, label: "Скиллы", icon: Puzzle },
     {
       enabled: plan.documentsPerMonth !== 0,
       label: plan.documentsPerMonth < 0
@@ -72,18 +86,14 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
           : "Создание документов",
       icon: FileText,
     },
+    { enabled: plan.canUseRag, label: "База знаний", icon: Database },
     {
-      enabled: plan.maxAgents !== 0,
-      label: plan.maxAgents < 0
-        ? "Агенты: безлимит"
-        : plan.maxAgents > 0
-          ? `Агенты: до ${plan.maxAgents}`
-          : "Кастомные агенты",
-      icon: Bot,
+      enabled: (plan.maxOrganizations ?? 0) > 0,
+      label: (plan.maxOrganizations ?? 0) > 0
+        ? `Организации: до ${plan.maxOrganizations}`
+        : "Создание организаций",
+      icon: Building2,
     },
-    { enabled: plan.canUseRag, label: "RAG (база знаний)", icon: Database },
-    { enabled: plan.canUseGraph, label: "Граф знаний", icon: Share2 },
-    { enabled: plan.canChooseProvider, label: "Выбор AI-провайдера", icon: Sparkles },
   ];
 
   return (
@@ -109,7 +119,7 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
       <div className="mb-4">
         <h3 className="text-lg font-bold text-text-primary">{plan.name}</h3>
         <p className="text-2xl font-bold text-text-primary mt-1">
-          {plan.price > 0 ? `${plan.price.toLocaleString("ru-RU")} ₸/мес` : "Бесплатно"}
+          {plan.price > 0 ? `$${plan.price.toLocaleString("en-US")}/мес` : "Бесплатно"}
         </p>
         {plan.description && (
           <p className="text-xs text-text-secondary mt-2">{plan.description}</p>

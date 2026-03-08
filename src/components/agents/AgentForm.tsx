@@ -7,6 +7,7 @@ import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
+import { AgentIntegrationPicker } from "./AgentIntegrationPicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Agent, AgentFile } from "@/types/agent";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
@@ -32,6 +33,9 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
   );
   const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>(
     agent?.mcpServers?.map((m) => m.mcpServer.id) || []
+  );
+  const [selectedIntegrationIds, setSelectedIntegrationIds] = useState<string[]>(
+    agent?.integrations?.map((i: { integration: { id: string } }) => i.integration.id) || []
   );
   const [starterPrompts, setStarterPrompts] = useState<string[]>(
     agent?.starterPrompts || []
@@ -76,6 +80,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
         starterPrompts: starterPrompts.filter((s: string) => s.trim()),
         skillIds: selectedSkillIds,
         mcpServerIds: selectedMcpIds,
+        integrationIds: selectedIntegrationIds,
       };
 
       const res = await fetch(url, {
@@ -400,6 +405,19 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
               </p>
             </div>
 
+            {/* Integrations */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Интеграции
+              </label>
+              <AgentIntegrationPicker
+                selectedIds={selectedIntegrationIds}
+                onChange={setSelectedIntegrationIds}
+              />
+              <p className="text-xs text-text-secondary mt-1">
+                Интеграции дают агенту доступ к данным из внешних систем (1С и др.)
+              </p>
+            </div>
 
           </div>
         </div>

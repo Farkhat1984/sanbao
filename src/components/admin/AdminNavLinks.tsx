@@ -57,7 +57,6 @@ const sections = [
       { href: "/admin/email", label: "Email", icon: Mail },
       { href: "/admin/notifications", label: "Уведомления", icon: Bell },
       { href: "/admin/settings", label: "Настройки", icon: Settings },
-      { href: "/admin/templates", label: "Шаблоны", icon: FileText },
     ],
   },
   {

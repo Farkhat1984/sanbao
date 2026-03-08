@@ -24,6 +24,7 @@ export interface Agent {
   skills?: Array<{ id: string; skill: { id: string; name: string; icon: string; iconColor: string } }>;
   mcpServers?: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string } }>;
   tools?: Array<{ id: string; tool: { id: string; name: string; icon: string; iconColor: string } }>;
+  integrations?: Array<{ id: string; integration: { id: string; name: string; type: string; status: string } }>;
   createdAt: string;
   updatedAt: string;
 }

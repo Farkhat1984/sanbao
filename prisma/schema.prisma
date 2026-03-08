@@ -86,6 +86,7 @@ model User {
   tools         Tool[]
   plugins       Plugin[]
   userFiles     UserFile[]
+  integrations   Integration[]
   ownedOrgs      Organization[] @relation("OrgOwner")
   orgMembers     OrgMember[]
   orgAgentAccess OrgAgentMember[]
@@ -256,6 +257,7 @@ model Agent {
   mcpServers    AgentMcpServer[]
   tools         AgentTool[]
   plugins       AgentPlugin[]
+  integrations  AgentIntegration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -299,6 +301,7 @@ model Plan {
   documentsPerMonth   Int      @default(0)
   canUseAdvancedTools Boolean  @default(false)
   canUseReasoning     Boolean  @default(false)
+  canUseSkills        Boolean  @default(false)
   canUseRag           Boolean  @default(false)
   canUseGraph         Boolean  @default(false)
   canChooseProvider   Boolean  @default(false)
@@ -1228,11 +1231,47 @@ model OrgAgentMcpServer {
   @@unique([orgAgentId, mcpServerId])
 }
 
+// ─── Integrations ──────────────────────────────────────
+
+model Integration {
+  id                  String            @id @default(cuid())
+  userId              String
+  name                String
+  type                IntegrationType
+  baseUrl             String
+  credentials         String            @db.Text  // AES-256-GCM encrypted
+  status              IntegrationStatus @default(PENDING)
+  statusMessage       String?
+  catalog             String?           @db.Text  // Generated MD catalog
+  discoveredEntities  Json?
+  entityCount         Int               @default(0)
+  lastDiscoveredAt    DateTime?
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agents AgentIntegration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, type])
+}
+
+model AgentIntegration {
+  id            String @id @default(cuid())
+  agentId       String
+  integrationId String
+
+  agent       Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, integrationId])
+}
+
 // ─── Enums ───────────────────────────────────────────────
 
 enum UserRole {
   USER
-  PRO
   ADMIN
 }
 
@@ -1333,4 +1372,15 @@ enum NotificationType {
   MAINTENANCE
   UPDATE
   BILLING
+}
+
+enum IntegrationType {
+  ODATA_1C
+}
+
+enum IntegrationStatus {
+  PENDING
+  DISCOVERING
+  CONNECTED
+  ERROR
 }

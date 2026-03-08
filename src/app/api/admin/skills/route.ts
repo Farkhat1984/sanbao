@@ -14,16 +14,33 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // builtin | public | all
   const category = searchParams.get("category");
+  const sort = searchParams.get("sort"); // popular | newest (default)
+  const q = searchParams.get("q");
   const { page, limit } = parsePagination(searchParams);
   const skip = (page - 1) * limit;
 
-  // Only show system/built-in skills — custom user skills are managed by users themselves
-  const where: Prisma.SkillWhereInput = { isBuiltIn: true };
+  const where: Prisma.SkillWhereInput = {};
+
+  if (type === "builtin") where.isBuiltIn = true;
   if (type === "public") where.isPublic = true;
 
   if (category && VALID_CATEGORY_VALUES.includes(category as typeof VALID_CATEGORY_VALUES[number])) {
     where.category = category as typeof VALID_CATEGORY_VALUES[number];
   }
+
+  // Search by name or description
+  if (q && q.trim()) {
+    const query = q.trim();
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { description: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
+  const orderBy: Prisma.SkillOrderByWithRelationInput[] =
+    sort === "popular"
+      ? [{ usageCount: "desc" }, { createdAt: "desc" }]
+      : [{ isBuiltIn: "desc" }, { createdAt: "desc" }];
 
   const [skills, total] = await Promise.all([
     prisma.skill.findMany({
@@ -32,7 +49,7 @@ export async function GET(req: Request) {
         user: { select: { id: true, name: true, email: true } },
         _count: { select: { agents: true } },
       },
-      orderBy: [{ isBuiltIn: "desc" }, { createdAt: "desc" }],
+      orderBy,
       skip,
       take: limit,
     }),

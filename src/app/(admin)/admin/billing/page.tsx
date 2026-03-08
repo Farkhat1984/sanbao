@@ -1,52 +1,174 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { CreditCard, DollarSign, TrendingUp, Users, RotateCcw, UserPlus, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CreditCard,
+  DollarSign,
+  TrendingUp,
+  Users,
+  RotateCcw,
+  UserPlus,
+  XCircle,
+  Search,
+  Loader2,
+  Copy,
+  Check,
+} from "lucide-react";
+
+interface SubItem {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  planId: string;
+  planName: string;
+  amount: number;
+  expiresAt: string | null;
+  grantedBy: string | null;
+  createdAt: string;
+}
+
+interface PayItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  currency: string;
+  status: string;
+  provider: string;
+  createdAt: string;
+}
 
 interface BillingStats {
   totalSubscriptions: number;
   planDistribution: { planName: string; count: number }[];
-  subscriptions: { userId: string; userName: string; planId: string; planName: string; amount: number; expiresAt: string | null; grantedBy: string | null; createdAt: string }[];
-  subPage: number;
-  subLimit: number;
-  payments: { id: string; userId: string; userName: string; amount: number; currency: string; status: string; provider: string; createdAt: string }[];
+  subscriptions: SubItem[];
+  hasMoreSubs: boolean;
+  nextSubCursor: string | null;
+  payments: PayItem[];
   totalPayments: number;
-  payPage: number;
-  payLimit: number;
+  hasMorePays: boolean;
+  nextPayCursor: string | null;
   monthlyRevenue: number;
   plans?: { id: string; name: string; price: number }[];
 }
 
-const SUBS_PER_PAGE = 25;
-const PAYMENTS_PER_PAGE = 25;
+const LIMIT = 25;
+
+function CopyId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  const short = id.length > 12 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(id); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      className="inline-flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+      title={id}
+    >
+      {short}
+      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+    </button>
+  );
+}
 
 export default function AdminBillingPage() {
   const [stats, setStats] = useState<BillingStats | null>(null);
+  const [subs, setSubs] = useState<SubItem[]>([]);
+  const [pays, setPays] = useState<PayItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreSubs, setLoadingMoreSubs] = useState(false);
+  const [loadingMorePays, setLoadingMorePays] = useState(false);
+  const [subCursor, setSubCursor] = useState<string | null>(null);
+  const [payCursor, setPayCursor] = useState<string | null>(null);
+  const [hasMoreSubs, setHasMoreSubs] = useState(false);
+  const [hasMorePays, setHasMorePays] = useState(false);
   const [refunding, setRefunding] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState("");
   const [assignPlanId, setAssignPlanId] = useState("");
   const [assigning, setAssigning] = useState(false);
-  const [subPage, setSubPage] = useState(1);
-  const [payPage, setPayPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const subsEndRef = useRef<HTMLDivElement>(null);
+  const paysEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchBilling = useCallback(async () => {
+  const fetchInitial = useCallback(async (q: string, pf: string) => {
     setLoading(true);
-    const params = new URLSearchParams({
-      subPage: String(subPage),
-      subLimit: String(SUBS_PER_PAGE),
-      payPage: String(payPage),
-      payLimit: String(PAYMENTS_PER_PAGE),
-    });
+    const params = new URLSearchParams({ subLimit: String(LIMIT), payLimit: String(LIMIT) });
+    if (q) params.set("search", q);
+    if (pf) params.set("planFilter", pf);
     const res = await fetch(`/api/admin/billing?${params}`);
-    const data = await res.json();
+    const data: BillingStats = await res.json();
     setStats(data);
+    setSubs(data.subscriptions);
+    setPays(data.payments);
+    setSubCursor(data.nextSubCursor);
+    setPayCursor(data.nextPayCursor);
+    setHasMoreSubs(data.hasMoreSubs);
+    setHasMorePays(data.hasMorePays);
     setLoading(false);
-  }, [subPage, payPage]);
+  }, []);
 
-  useEffect(() => { fetchBilling(); }, [fetchBilling]);
+  useEffect(() => { fetchInitial(search, planFilter); }, [fetchInitial, planFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced search
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchInitial(val, planFilter), 400);
+  };
+
+  // Infinite scroll — subscriptions
+  const loadMoreSubs = useCallback(async () => {
+    if (!subCursor || loadingMoreSubs) return;
+    setLoadingMoreSubs(true);
+    const params = new URLSearchParams({ subLimit: String(LIMIT), subCursor, payLimit: "0" });
+    if (search) params.set("search", search);
+    if (planFilter) params.set("planFilter", planFilter);
+    const res = await fetch(`/api/admin/billing?${params}`);
+    const data: BillingStats = await res.json();
+    setSubs((prev) => [...prev, ...data.subscriptions]);
+    setSubCursor(data.nextSubCursor);
+    setHasMoreSubs(data.hasMoreSubs);
+    setLoadingMoreSubs(false);
+  }, [subCursor, loadingMoreSubs, search, planFilter]);
+
+  // Infinite scroll — payments
+  const loadMorePays = useCallback(async () => {
+    if (!payCursor || loadingMorePays) return;
+    setLoadingMorePays(true);
+    const params = new URLSearchParams({ payLimit: String(LIMIT), payCursor, subLimit: "0" });
+    if (search) params.set("search", search);
+    const res = await fetch(`/api/admin/billing?${params}`);
+    const data: BillingStats = await res.json();
+    setPays((prev) => [...prev, ...data.payments]);
+    setPayCursor(data.nextPayCursor);
+    setHasMorePays(data.hasMorePays);
+    setLoadingMorePays(false);
+  }, [payCursor, loadingMorePays, search]);
+
+  // IntersectionObserver for subs
+  useEffect(() => {
+    if (!subsEndRef.current || !hasMoreSubs) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMoreSubs(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(subsEndRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreSubs, loadMoreSubs]);
+
+  // IntersectionObserver for pays
+  useEffect(() => {
+    if (!paysEndRef.current || !hasMorePays) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMorePays(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(paysEndRef.current);
+    return () => observer.disconnect();
+  }, [hasMorePays, loadMorePays]);
 
   const handleRefund = async (userId: string) => {
     if (!confirm("Возврат средств и понижение до бесплатного тарифа?")) return;
@@ -57,7 +179,7 @@ export default function AdminBillingPage() {
       body: JSON.stringify({ userId, action: "refund" }),
     });
     setRefunding(null);
-    fetchBilling();
+    fetchInitial(search, planFilter);
   };
 
   const handleAssign = async () => {
@@ -71,7 +193,7 @@ export default function AdminBillingPage() {
     setAssigning(false);
     setAssignUserId("");
     setAssignPlanId("");
-    fetchBilling();
+    fetchInitial(search, planFilter);
   };
 
   const handleCancel = async (userId: string) => {
@@ -81,15 +203,18 @@ export default function AdminBillingPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, action: "cancel" }),
     });
-    fetchBilling();
+    fetchInitial(search, planFilter);
   };
 
   if (loading || !stats) {
-    return <div className="space-y-4">{[...Array(4)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />)}</div>;
+    return (
+      <div className="space-y-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />
+        ))}
+      </div>
+    );
   }
-
-  const subTotalPages = Math.ceil(stats.totalSubscriptions / SUBS_PER_PAGE);
-  const payTotalPages = Math.ceil(stats.totalPayments / PAYMENTS_PER_PAGE);
 
   return (
     <div>
@@ -110,7 +235,7 @@ export default function AdminBillingPage() {
             <DollarSign className="h-4 w-4 text-text-secondary" />
             <p className="text-xs text-text-secondary">MRR (расчётный)</p>
           </div>
-          <p className="text-2xl font-bold text-accent">{stats.monthlyRevenue.toLocaleString()} &#x20B8;</p>
+          <p className="text-2xl font-bold text-accent">${stats.monthlyRevenue.toLocaleString("en-US")}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -138,7 +263,7 @@ export default function AdminBillingPage() {
               <div key={p.planName} className="flex items-center gap-3">
                 <span className="text-sm text-text-primary w-24">{p.planName}</span>
                 <div className="flex-1 bg-surface-alt rounded-full h-5 overflow-hidden">
-                  <div className="bg-accent/60 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  <div className="bg-accent/60 h-full rounded-full transition-all" style={{ width: `${Math.max(pct, 1)}%` }} />
                 </div>
                 <span className="text-sm text-text-secondary w-16 text-right">{p.count} ({pct}%)</span>
               </div>
@@ -147,19 +272,54 @@ export default function AdminBillingPage() {
         </div>
       </div>
 
+      {/* Search + filter */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Поиск по имени, email или ID..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full h-9 pl-9 pr-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+          />
+        </div>
+        <select
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value)}
+          className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+        >
+          <option value="">Все планы</option>
+          {stats.plans?.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Manual subscription management */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Назначить подписку</h2>
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <label className="text-xs text-text-secondary block mb-1">User ID</label>
-            <input placeholder="clu..." value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)} className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
+            <input
+              placeholder="clu..."
+              value={assignUserId}
+              onChange={(e) => setAssignUserId(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+            />
           </div>
           <div className="flex-1">
             <label className="text-xs text-text-secondary block mb-1">План</label>
-            <select value={assignPlanId} onChange={(e) => setAssignPlanId(e.target.value)} className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent">
+            <select
+              value={assignPlanId}
+              onChange={(e) => setAssignPlanId(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+            >
               <option value="">Выберите план</option>
-              {stats.plans?.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.price})</option>)}
+              {stats.plans?.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+              ))}
             </select>
           </div>
           <Button variant="gradient" size="sm" onClick={handleAssign} isLoading={assigning}>
@@ -168,26 +328,27 @@ export default function AdminBillingPage() {
         </div>
       </div>
 
-      {/* Subscriptions with pagination */}
+      {/* Subscriptions — infinite scroll */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Подписки ({stats.totalSubscriptions})</h2>
-        <div className="space-y-2">
-          {stats.subscriptions.map((s) => (
+        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          {subs.map((s) => (
             <div key={s.userId} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <div>
-                <span className="text-sm text-text-primary">{s.userName}</span>
-                <Badge variant="default" className="ml-2">{s.planName}</Badge>
-                {s.grantedBy && <span className="text-xs text-text-secondary ml-2">(назначено вручную)</span>}
-                {s.expiresAt && <span className="text-xs text-text-secondary ml-2">до {new Date(s.expiresAt).toLocaleDateString("ru-RU")}</span>}
-                <span className="text-xs text-text-secondary ml-2">&middot; {new Date(s.createdAt).toLocaleDateString("ru-RU")}</span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-text-primary">{s.userName}</span>
+                  <Badge variant="default">{s.planName}</Badge>
+                  {s.grantedBy && <span className="text-xs text-text-secondary">(вручную)</span>}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <CopyId id={s.userId} />
+                  {s.userEmail && <span className="text-[11px] text-text-muted">{s.userEmail}</span>}
+                  {s.expiresAt && <span className="text-[11px] text-text-muted">до {new Date(s.expiresAt).toLocaleDateString("ru-RU")}</span>}
+                  <span className="text-[11px] text-text-muted">{new Date(s.createdAt).toLocaleDateString("ru-RU")}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleRefund(s.userId)}
-                  isLoading={refunding === s.userId}
-                >
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+                <Button variant="secondary" size="sm" onClick={() => handleRefund(s.userId)} isLoading={refunding === s.userId}>
                   <RotateCcw className="h-3 w-3" /> Возврат
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => handleCancel(s.userId)}>
@@ -196,89 +357,54 @@ export default function AdminBillingPage() {
               </div>
             </div>
           ))}
-          {stats.subscriptions.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет подписок</p>}
-        </div>
-
-        {/* Subscriptions pagination */}
-        {subTotalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{stats.totalSubscriptions} подписок</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSubPage((p) => Math.max(1, p - 1))}
-                disabled={subPage === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{subPage} / {subTotalPages}</span>
-              <button
-                onClick={() => setSubPage((p) => Math.min(subTotalPages, p + 1))}
-                disabled={subPage === subTotalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {subs.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет подписок</p>}
+          {loadingMoreSubs && (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-5 w-5 text-text-secondary animate-spin" />
             </div>
-          </div>
-        )}
+          )}
+          <div ref={subsEndRef} />
+        </div>
       </div>
 
-      {/* Payment history with pagination */}
+      {/* Payment history — infinite scroll */}
       <div className="bg-surface border border-border rounded-2xl p-5">
         <h2 className="text-sm font-semibold text-text-primary mb-4">Платежи ({stats.totalPayments})</h2>
-        <div className="space-y-2">
-          {stats.payments.map((p) => (
+        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          {pays.map((p) => (
             <div key={p.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <div>
-                <span className="text-sm text-text-primary">{p.userName}</span>
-                <span className="text-xs text-text-secondary ml-2">&middot; {new Date(p.createdAt).toLocaleDateString("ru-RU")}</span>
-                <span className="text-xs text-text-secondary ml-2">&middot; {p.provider}</span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-text-primary">{p.userName}</span>
+                  <Badge variant={p.status === "COMPLETED" ? "accent" : p.status === "REFUNDED" ? "default" : "default"}>
+                    {p.status === "COMPLETED" ? "Оплачен" : p.status === "REFUNDED" ? "Возврат" : p.status === "FAILED" ? "Ошибка" : "Ожидание"}
+                  </Badge>
+                  <span className="text-xs text-text-secondary">{p.provider}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <CopyId id={p.userId} />
+                  {p.userEmail && <span className="text-[11px] text-text-muted">{p.userEmail}</span>}
+                  <span className="text-[11px] text-text-muted">{new Date(p.createdAt).toLocaleDateString("ru-RU")}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={p.status === "COMPLETED" ? "accent" : p.status === "REFUNDED" ? "default" : "default"}>
-                  {p.status === "COMPLETED" ? "Оплачен" : p.status === "REFUNDED" ? "Возврат" : p.status === "FAILED" ? "Ошибка" : "Ожидание"}
-                </Badge>
-                <span className="text-sm font-medium text-text-primary">{(p.amount / 100).toLocaleString()} {p.currency}</span>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <span className="text-sm font-medium text-text-primary">${p.amount.toLocaleString("en-US")}</span>
                 {p.status === "COMPLETED" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleRefund(p.userId)}
-                    isLoading={refunding === p.userId}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => handleRefund(p.userId)} isLoading={refunding === p.userId}>
                     <RotateCcw className="h-3 w-3" />
                   </Button>
                 )}
               </div>
             </div>
           ))}
-          {stats.payments.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет платежей</p>}
-        </div>
-
-        {/* Payments pagination */}
-        {payTotalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{stats.totalPayments} платежей</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPayPage((p) => Math.max(1, p - 1))}
-                disabled={payPage === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{payPage} / {payTotalPages}</span>
-              <button
-                onClick={() => setPayPage((p) => Math.min(payTotalPages, p + 1))}
-                disabled={payPage === payTotalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {pays.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет платежей</p>}
+          {loadingMorePays && (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-5 w-5 text-text-secondary animate-spin" />
             </div>
-          </div>
-        )}
+          )}
+          <div ref={paysEndRef} />
+        </div>
       </div>
     </div>
   );

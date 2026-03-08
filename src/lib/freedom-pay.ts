@@ -60,7 +60,7 @@ export function verifySignature(
 
 export interface InitPaymentParams {
   orderId: string;
-  amount: number; // in KZT (e.g. 5990 for 5990 KZT)
+  amount: number; // in USD (e.g. 20 for $20)
   description: string;
   userEmail?: string;
   userPhone?: string;
@@ -84,7 +84,7 @@ export async function initPayment(params: InitPaymentParams): Promise<InitPaymen
   const reqParams: Record<string, string> = {
     pg_merchant_id: FREEDOM_MERCHANT_ID,
     pg_amount: String(params.amount),
-    pg_currency: params.currency || "KZT",
+    pg_currency: params.currency || "USD",
     pg_description: params.description,
     pg_order_id: params.orderId,
     pg_salt: salt,

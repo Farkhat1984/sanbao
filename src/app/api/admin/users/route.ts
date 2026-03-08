@@ -9,17 +9,36 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") || "";
+  const role = searchParams.get("role"); // USER | ADMIN
+  const plan = searchParams.get("plan"); // plan slug
   const { page, limit } = parsePagination(searchParams);
   const skip = (page - 1) * limit;
 
-  const where = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
-          { email: { contains: search, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conditions: any[] = [];
+
+  if (search) {
+    conditions.push({
+      OR: [
+        { name: { contains: search, mode: "insensitive" as const } },
+        { email: { contains: search, mode: "insensitive" as const } },
+      ],
+    });
+  }
+
+  if (role && ["USER", "ADMIN"].includes(role)) {
+    conditions.push({ role: role as "USER" | "ADMIN" });
+  }
+
+  if (plan) {
+    if (plan === "none") {
+      conditions.push({ subscription: null });
+    } else {
+      conditions.push({ subscription: { plan: { slug: plan } } });
+    }
+  }
+
+  const where = conditions.length > 0 ? { AND: conditions } : {};
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({

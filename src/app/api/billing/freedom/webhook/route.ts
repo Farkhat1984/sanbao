@@ -117,7 +117,7 @@ export async function POST(req: Request) {
             sendInvoiceEmail({
               userId: payment.userId,
               planName: plan.name,
-              amount: `${payment.amount.toLocaleString("ru-RU")} ${payment.currency}`,
+              amount: `$${payment.amount.toLocaleString("en-US")}`,
               periodStart: now,
               periodEnd,
             }),

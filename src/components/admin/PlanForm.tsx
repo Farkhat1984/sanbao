@@ -21,12 +21,14 @@ interface PlanData {
   documentsPerMonth: number;
   canUseAdvancedTools: boolean;
   canUseReasoning: boolean;
+  canUseSkills: boolean;
   canUseRag: boolean;
   canUseGraph: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
   maxStorageMb: number;
+  maxOrganizations: number;
   _count?: { subscriptions: number };
 }
 
@@ -51,8 +53,10 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     maxAgents: plan.maxAgents,
     documentsPerMonth: plan.documentsPerMonth,
     maxStorageMb: plan.maxStorageMb,
+    maxOrganizations: plan.maxOrganizations,
     canUseAdvancedTools: plan.canUseAdvancedTools,
     canUseReasoning: plan.canUseReasoning,
+    canUseSkills: plan.canUseSkills,
     canUseRag: plan.canUseRag,
     canUseGraph: plan.canUseGraph,
     canChooseProvider: plan.canChooseProvider,
@@ -155,7 +159,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         </div>
         <div>
           <label className="text-xs font-medium text-text-secondary block mb-1">
-            Цена (₸)
+            Цена ($)
           </label>
           <input
             type="number"
@@ -167,21 +171,21 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         </div>
         {numField("Сообщений/день", "messagesPerDay", "0 = безлимит")}
         {numField("Токенов/сообщение", "tokensPerMessage")}
-        {numField("Токенов/месяц", "tokensPerMonth")}
+        {numField("Токенов/месяц", "tokensPerMonth", "0 = безлимит")}
         {numField("Запросов/мин", "requestsPerMinute")}
         {numField("Окно контекста", "contextWindowSize")}
         {numField("Макс. диалогов", "maxConversations", "0 = безлимит")}
-        {numField("Макс. агентов", "maxAgents", "0 = нет, -1 = безлимит")}
-        {numField("Документов/месяц", "documentsPerMonth", "0 = нет, -1 = безлимит")}
+        {numField("Макс. агентов", "maxAgents", "0 = безлимит")}
+        {numField("Документов/месяц", "documentsPerMonth", "0 = безлимит")}
         {numField("Хранилище (МБ)", "maxStorageMb", "0 = безлимит")}
+        {numField("Макс. организаций", "maxOrganizations", "0 = нет")}
       </div>
 
       <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-border">
+        {toggle("Режим рассуждений", "canUseReasoning")}
+        {toggle("Скиллы", "canUseSkills")}
+        {toggle("База знаний", "canUseRag")}
         {toggle("Продвинутые инструменты", "canUseAdvancedTools")}
-        {toggle("Рассуждения (Reasoning)", "canUseReasoning")}
-        {toggle("RAG (база знаний)", "canUseRag")}
-        {toggle("Граф знаний", "canUseGraph")}
-        {toggle("Выбор AI-провайдера", "canChooseProvider")}
         {toggle("Рекомендуемый", "highlighted")}
       </div>
     </div>

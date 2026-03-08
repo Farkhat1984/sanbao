@@ -8,6 +8,7 @@ import {
   Zap,
   Cable,
   Building2,
+  Database,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -42,6 +43,13 @@ const PLAYGROUND_ITEMS = [
     href: "/skills",
     color: "bg-accent-light text-accent",
     description: "Шаблоны промптов",
+  },
+  {
+    label: "Интеграции",
+    icon: Database,
+    href: "/integrations",
+    color: "bg-accent-light text-accent",
+    description: "1С и другие системы",
   },
 ];
 

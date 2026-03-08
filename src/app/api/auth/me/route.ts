@@ -40,6 +40,7 @@ export async function GET() {
                 maxAgents: true,
                 canUseAdvancedTools: true,
                 canUseReasoning: true,
+                canUseSkills: true,
                 canUseRag: true,
               },
             },

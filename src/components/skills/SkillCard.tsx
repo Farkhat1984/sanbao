@@ -10,6 +10,7 @@ import type { Skill } from "@/types/skill";
 interface SkillCardProps {
   skill: Skill;
   isOwner?: boolean;
+  adminMode?: boolean;
   onClone?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -33,7 +34,7 @@ const CATEGORY_MAP: Record<string, { label: string; color: string }> = Object.fr
 
 const MAX_VISIBLE_TAGS = 3;
 
-export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps) {
+export function SkillCard({ skill, isOwner, adminMode, onClone, onDelete }: SkillCardProps) {
   const router = useRouter();
   const Icon = ICON_MAP[skill.icon] || ICON_MAP.Scale;
   const categoryInfo = CATEGORY_MAP[skill.category];
@@ -102,10 +103,10 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
       )}
 
       <div className="flex items-center gap-2 pt-3 border-t border-border">
-        {isOwner && !skill.isBuiltIn && (
+        {(adminMode || (isOwner && !skill.isBuiltIn)) && (
           <>
             <button
-              onClick={() => router.push(`/skills/${skill.id}/edit`)}
+              onClick={() => router.push(adminMode ? `/admin/skills/${skill.id}/edit` : `/skills/${skill.id}/edit`)}
               className="h-7 px-3 rounded-lg bg-surface-alt text-text-secondary text-xs font-medium hover:text-text-primary transition-colors cursor-pointer flex items-center gap-1"
             >
               <Pencil className="h-3 w-3" />
@@ -119,7 +120,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
             </button>
           </>
         )}
-        {!isOwner && onClone && (
+        {!isOwner && !adminMode && onClone && (
           <button
             onClick={() => onClone(skill.id)}
             className="h-7 px-3 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors cursor-pointer flex items-center gap-1"
