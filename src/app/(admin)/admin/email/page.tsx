@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mail, CheckCircle, XCircle, Send, RefreshCw, FileEdit, Save } from "lucide-react";
+import { Envelope, CheckCircle, XCircle, PaperPlaneRight, ArrowsClockwise, NotePencil, FloppyDisk } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -127,7 +127,7 @@ export default function AdminEmailPage() {
 
       <div className="flex gap-1 mb-4">
         <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>Логи</button>
-        <button onClick={() => setTab("templates")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "templates" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><FileEdit className="h-3 w-3 inline mr-1" />Шаблоны</button>
+        <button onClick={() => setTab("templates")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "templates" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><NotePencil className="h-3 w-3 inline mr-1" weight="duotone" />Шаблоны</button>
       </div>
 
       {tab === "templates" && (
@@ -138,7 +138,7 @@ export default function AdminEmailPage() {
                 <h3 className="text-sm font-semibold text-text-primary">{TYPE_LABELS[editType] || editType}</h3>
                 <div className="flex items-center gap-2">
                   <Button variant="gradient" size="sm" onClick={handleSaveTemplate} isLoading={savingTemplate}>
-                    <Save className="h-3.5 w-3.5" /> Сохранить
+                    <FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditType(null)}>Отмена</Button>
                 </div>
@@ -179,7 +179,7 @@ export default function AdminEmailPage() {
                   </div>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => { setEditType(t.type); setEditForm({ subject: t.subject, html: t.html, isActive: t.isActive }); }}>
-                  <FileEdit className="h-3.5 w-3.5" /> Изменить
+                  <NotePencil className="h-3.5 w-3.5" weight="duotone" /> Изменить
                 </Button>
               </div>
             ))
@@ -193,7 +193,7 @@ export default function AdminEmailPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <Button variant="secondary" size="sm" onClick={handleVerifySmtp}>
-              <RefreshCw className="h-3.5 w-3.5" />
+              <ArrowsClockwise className="h-3.5 w-3.5" weight="duotone" />
               Проверить SMTP
             </Button>
           </div>
@@ -201,12 +201,12 @@ export default function AdminEmailPage() {
             <div className="flex items-center gap-2">
               {smtpStatus.ok ? (
                 <>
-                  <CheckCircle className="h-4 w-4 text-success" />
+                  <CheckCircle className="h-4 w-4 text-success" weight="duotone" />
                   <span className="text-sm text-success">SMTP работает</span>
                 </>
               ) : (
                 <>
-                  <XCircle className="h-4 w-4 text-error" />
+                  <XCircle className="h-4 w-4 text-error" weight="duotone" />
                   <span className="text-sm text-error">{smtpStatus.error || "Ошибка SMTP"}</span>
                 </>
               )}
@@ -222,7 +222,7 @@ export default function AdminEmailPage() {
               className="h-9 w-64 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
             />
             <Button variant="gradient" size="sm" onClick={handleTestEmail} isLoading={sending}>
-              <Send className="h-3.5 w-3.5" />
+              <PaperPlaneRight className="h-3.5 w-3.5" weight="duotone" />
               Тест
             </Button>
           </div>
@@ -242,7 +242,7 @@ export default function AdminEmailPage() {
             {logs.map((log) => (
               <div key={log.id} className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-text-secondary" />
+                  <Envelope className="h-4 w-4 text-text-secondary" weight="duotone" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-text-primary">{log.to}</span>

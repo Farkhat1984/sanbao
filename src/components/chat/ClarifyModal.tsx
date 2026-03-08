@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Send, X } from "lucide-react";
+import { PaperPlaneRight, X } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { Modal } from "@/components/ui/Modal";
 import { useChatStore } from "@/stores/chatStore";
@@ -142,7 +142,7 @@ export function ClarifyModal() {
           onClick={handleClose}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
-          <X className="h-3.5 w-3.5" />
+          <X weight="duotone" className="h-3.5 w-3.5" />
           Пропустить
         </button>
         <button
@@ -155,7 +155,7 @@ export function ClarifyModal() {
               : "bg-surface-alt text-text-secondary"
           )}
         >
-          <Send className="h-3.5 w-3.5" />
+          <PaperPlaneRight weight="duotone" className="h-3.5 w-3.5" />
           Отправить ответы
         </button>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +62,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                   onClick={onClose}
                   className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" weight="duotone" />
                 </button>
               </div>
             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, ExternalLink, CheckCircle, AlertTriangle } from "lucide-react";
+import { BookOpen, ArrowSquareOut, CheckCircle, Warning } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { LegalRef } from "@/types/chat";
@@ -25,12 +25,12 @@ export function LegalReference({ reference }: LegalReferenceProps) {
           isOpen && "ring-2 ring-legal-ref/30"
         )}
       >
-        <BookOpen className="h-3 w-3" />
+        <BookOpen weight="duotone" className="h-3 w-3" />
         <span>{reference.articleTitle}</span>
         {reference.isActual ? (
-          <CheckCircle className="h-3 w-3 text-success" />
+          <CheckCircle weight="duotone" className="h-3 w-3 text-success" />
         ) : (
-          <AlertTriangle className="h-3 w-3 text-warning" />
+          <Warning weight="duotone" className="h-3 w-3 text-warning" />
         )}
       </button>
 
@@ -63,12 +63,12 @@ export function LegalReference({ reference }: LegalReferenceProps) {
                   <div className="flex items-center gap-1">
                     {reference.isActual ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-success bg-success-light px-2 py-0.5 rounded-md">
-                        <CheckCircle className="h-3 w-3" />
+                        <CheckCircle weight="duotone" className="h-3 w-3" />
                         Актуальна
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] text-warning bg-warning-light px-2 py-0.5 rounded-md">
-                        <AlertTriangle className="h-3 w-3" />
+                        <Warning weight="duotone" className="h-3 w-3" />
                         Не актуальна
                       </span>
                     )}
@@ -92,7 +92,7 @@ export function LegalReference({ reference }: LegalReferenceProps) {
                     rel="noopener noreferrer"
                     className="text-xs text-accent hover:text-accent-hover flex items-center gap-1 transition-colors"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <ArrowSquareOut weight="duotone" className="h-3 w-3" />
                     Открыть источник
                   </a>
                 </div>

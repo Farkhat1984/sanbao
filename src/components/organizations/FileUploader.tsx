@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, FileText, X, CheckCircle, AlertTriangle } from "lucide-react";
+import { UploadSimple, FileText, X, CheckCircle, Warning } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { MAX_AGENT_FILE_SIZE } from "@/lib/constants";
 
@@ -88,7 +88,7 @@ export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) 
     return (
       <div className="text-center py-8">
         <div className="h-16 w-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="h-8 w-8 text-success" />
+          <CheckCircle className="h-8 w-8 text-success" weight="duotone" />
         </div>
         <h2 className="text-lg font-semibold text-text-primary mb-1">
           Загружено {uploadedCount} файл(ов)
@@ -110,7 +110,7 @@ export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) 
           "border-border hover:border-accent/50 hover:bg-accent/5"
         )}
       >
-        <Upload className="h-8 w-8 text-text-secondary mx-auto mb-3" />
+        <UploadSimple className="h-8 w-8 text-text-secondary mx-auto mb-3" weight="duotone" />
         <p className="text-sm text-text-primary font-medium">
           Перетащите файлы или нажмите для выбора
         </p>
@@ -132,14 +132,14 @@ export function FileUploader({ orgId, agentId, onComplete }: FileUploaderProps) 
         <div className="space-y-2">
           {files.map((file, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface">
-              <FileText className="h-4 w-4 text-text-secondary shrink-0" />
+              <FileText className="h-4 w-4 text-text-secondary shrink-0" weight="duotone" />
               <span className="text-sm text-text-primary truncate flex-1">{file.name}</span>
               <span className="text-xs text-text-secondary shrink-0">{formatSize(file.size)}</span>
               <button
                 onClick={() => removeFile(i)}
                 className="h-6 w-6 rounded flex items-center justify-center text-text-secondary hover:text-error cursor-pointer"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" weight="duotone" />
               </button>
             </div>
           ))}

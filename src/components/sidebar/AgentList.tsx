@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
-  Bot,
-  Zap,
-  Cable,
-  Building2,
-} from "lucide-react";
+  CaretDown,
+  CaretRight,
+  Robot,
+  Lightning,
+  Plugs,
+  BuildingOffice,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -17,28 +17,28 @@ import { cn } from "@/lib/utils";
 const PLAYGROUND_ITEMS = [
   {
     label: "Агенты",
-    icon: Bot,
+    icon: Robot,
     href: "/agents",
     color: "bg-accent-light text-accent",
     description: "AI-ассистенты",
   },
   {
     label: "Скиллы",
-    icon: Zap,
+    icon: Lightning,
     href: "/skills",
     color: "bg-accent-light text-accent",
     description: "Шаблоны промптов",
   },
   {
     label: "Организации",
-    icon: Building2,
+    icon: BuildingOffice,
     href: "/organizations",
     color: "bg-accent-light text-accent",
     description: "Корпоративные агенты",
   },
   {
     label: "MCP",
-    icon: Cable,
+    icon: Plugs,
     href: "/mcp",
     color: "bg-accent-light text-accent",
     description: "Серверы",
@@ -64,9 +64,9 @@ export function AgentList() {
         className="w-full flex items-center gap-1.5 py-1.5 text-[11px] font-medium text-text-secondary uppercase tracking-wider hover:text-text-primary transition-colors cursor-pointer"
       >
         {expanded ? (
-          <ChevronDown className="h-3 w-3" />
+          <CaretDown weight="duotone" className="h-3 w-3" />
         ) : (
-          <ChevronRight className="h-3 w-3" />
+          <CaretRight weight="duotone" className="h-3 w-3" />
         )}
         Playground
       </button>
@@ -90,7 +90,7 @@ export function AgentList() {
                   item.color
                 )}
               >
-                <item.icon className="h-3 w-3" />
+                <item.icon weight="duotone" className="h-3 w-3" />
               </div>
               <span className="text-sm truncate">{item.label}</span>
             </button>

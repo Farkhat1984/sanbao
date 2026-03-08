@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -54,7 +54,7 @@ export default function AdminUsagePage() {
           if (userId) params.set("userId", userId);
           window.open(`/api/admin/token-usage?${params}`, "_blank");
         }}>
-          <Download className="h-4 w-4" /> CSV
+          <DownloadSimple className="h-4 w-4" weight="duotone" /> CSV
         </Button>
       </div>
 

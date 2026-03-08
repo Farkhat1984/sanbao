@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { ArrowsClockwise, CheckCircle, XCircle, WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 
 interface HealthData {
@@ -24,9 +24,9 @@ export default function AdminHealthPage() {
   useEffect(() => { fetchHealth(); }, []);
 
   const statusIcon = (s: string) => {
-    if (s === "ok") return <CheckCircle className="h-5 w-5 text-success" />;
-    if (s === "error") return <XCircle className="h-5 w-5 text-error" />;
-    return <AlertCircle className="h-5 w-5 text-warning" />;
+    if (s === "ok") return <CheckCircle className="h-5 w-5 text-success" weight="duotone" />;
+    if (s === "error") return <XCircle className="h-5 w-5 text-error" weight="duotone" />;
+    return <WarningCircle className="h-5 w-5 text-warning" weight="duotone" />;
   };
 
   return (
@@ -37,7 +37,7 @@ export default function AdminHealthPage() {
           <p className="text-sm text-text-secondary mt-1">Статус сервисов</p>
         </div>
         <Button variant="secondary" size="sm" onClick={fetchHealth} isLoading={loading}>
-          <RefreshCw className="h-3.5 w-3.5" /> Обновить
+          <ArrowsClockwise className="h-3.5 w-3.5" weight="duotone" /> Обновить
         </Button>
       </div>
 
@@ -47,7 +47,7 @@ export default function AdminHealthPage() {
         <>
           <div className={`bg-surface border rounded-2xl p-5 mb-6 ${health.status === "healthy" ? "border-success/30" : "border-error/30"}`}>
             <div className="flex items-center gap-3">
-              {health.status === "healthy" ? <CheckCircle className="h-6 w-6 text-success" /> : <XCircle className="h-6 w-6 text-error" />}
+              {health.status === "healthy" ? <CheckCircle className="h-6 w-6 text-success" weight="duotone" /> : <XCircle className="h-6 w-6 text-error" weight="duotone" />}
               <div>
                 <p className="text-sm font-semibold text-text-primary">{health.status === "healthy" ? "Все сервисы работают" : "Есть проблемы"}</p>
                 <p className="text-xs text-text-secondary">Обновлено: {new Date(health.timestamp).toLocaleString("ru-RU")}</p>

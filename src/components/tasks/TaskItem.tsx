@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Trash2, ExternalLink } from "lucide-react";
+import { CaretDown, CaretRight, Trash, ArrowSquareOut } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useTaskStore } from "@/stores/taskStore";
 import { TaskStepList } from "./TaskStepList";
@@ -57,9 +57,9 @@ export function TaskItem({ task }: TaskItemProps) {
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-surface-alt transition-colors cursor-pointer"
       >
         {isExpanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-text-secondary shrink-0" />
+          <CaretDown weight="duotone" className="h-3.5 w-3.5 text-text-secondary shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-text-secondary shrink-0" />
+          <CaretRight weight="duotone" className="h-3.5 w-3.5 text-text-secondary shrink-0" />
         )}
         <div className="flex-1 min-w-0 text-left">
           <p className="text-xs font-medium text-text-primary truncate">
@@ -96,7 +96,7 @@ export function TaskItem({ task }: TaskItemProps) {
                 onClick={() => router.push(`/chat/${task.conversationId}`)}
                 className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-text-secondary hover:text-accent transition-colors cursor-pointer"
               >
-                <ExternalLink className="h-3 w-3" />
+                <ArrowSquareOut weight="duotone" className="h-3 w-3" />
                 Перейти к чату
               </button>
             )}
@@ -105,7 +105,7 @@ export function TaskItem({ task }: TaskItemProps) {
               onClick={handleDelete}
               className="p-1 rounded text-text-secondary hover:text-error transition-colors cursor-pointer"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash weight="duotone" className="h-3 w-3" />
             </button>
           </div>
         </div>

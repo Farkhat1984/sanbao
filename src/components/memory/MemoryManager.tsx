@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useMemoryStore } from "@/stores/memoryStore";
 import { MEMORY_KEYS, type MemoryKey } from "@/types/memory";
 import { Button } from "@/components/ui/Button";
-import { Trash2, Plus, Save, X } from "lucide-react";
+import { Trash, Plus, FloppyDisk, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export function MemoryManager() {
@@ -87,7 +87,7 @@ export function MemoryManager() {
             onClick={() => handleDelete(m.id)}
             className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-secondary hover:text-error hover:bg-error-light transition-all cursor-pointer"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash className="h-3.5 w-3.5" weight="duotone" />
           </button>
         </div>
       ))}
@@ -111,7 +111,7 @@ export function MemoryManager() {
               onClick={handleSave}
               disabled={saving || !newContent.trim()}
             >
-              <Save className="h-3.5 w-3.5" />
+              <FloppyDisk className="h-3.5 w-3.5" weight="duotone" />
               {saving ? "Сохранение..." : "Сохранить"}
             </Button>
             <Button
@@ -122,7 +122,7 @@ export function MemoryManager() {
                 setNewContent("");
               }}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" weight="duotone" />
               Отмена
             </Button>
           </div>
@@ -140,7 +140,7 @@ export function MemoryManager() {
                   "hover:border-accent hover:text-accent transition-colors cursor-pointer"
                 )}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-3 w-3" weight="duotone" />
                 {label}
               </button>
             ))}

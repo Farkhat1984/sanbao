@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Key, Trash2, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Key, Trash, FloppyDisk, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -97,7 +97,7 @@ export default function AdminApiKeysPage() {
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">API-ключи</h1>
           <p className="text-sm text-text-secondary mt-1">Управление ключами доступа ({total})</p>
         </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Создать</Button>
+        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" weight="duotone" /> Создать</Button>
       </div>
 
       {createdKey && (
@@ -115,7 +115,7 @@ export default function AdminApiKeysPage() {
             <input placeholder="Название ключа" value={newKey.name} onChange={(e) => setNewKey({ ...newKey, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <input placeholder="Rate limit (req/min)" type="number" value={newKey.rateLimit} onChange={(e) => setNewKey({ ...newKey, rateLimit: parseInt(e.target.value) || 60 })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
           </div>
-          <div className="mt-3"><Button variant="gradient" size="sm" onClick={handleCreate}><Key className="h-3.5 w-3.5" /> Создать ключ</Button></div>
+          <div className="mt-3"><Button variant="gradient" size="sm" onClick={handleCreate}><Key className="h-3.5 w-3.5" weight="duotone" /> Создать ключ</Button></div>
         </div>
       )}
 
@@ -123,7 +123,7 @@ export default function AdminApiKeysPage() {
         {keys.map((k) => (
           <div key={k.id} className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Key className="h-4 w-4 text-text-secondary" />
+              <Key className="h-4 w-4 text-text-secondary" weight="duotone" />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-text-primary">{k.name}</span>
@@ -142,7 +142,7 @@ export default function AdminApiKeysPage() {
               {editId === k.id ? (
                 <div className="flex items-center gap-1">
                   <input type="number" value={editRate} onChange={(e) => setEditRate(parseInt(e.target.value) || 60)} className="h-8 w-20 px-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
-                  <Button variant="gradient" size="sm" onClick={() => handleUpdateRate(k.id)}><Save className="h-3 w-3" /></Button>
+                  <Button variant="gradient" size="sm" onClick={() => handleUpdateRate(k.id)}><FloppyDisk className="h-3 w-3" weight="duotone" /></Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>X</Button>
                 </div>
               ) : (
@@ -152,7 +152,7 @@ export default function AdminApiKeysPage() {
                 {k.isActive ? "Откл." : "Вкл."}
               </Button>
               <button onClick={() => handleDelete(k.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash className="h-3.5 w-3.5" weight="duotone" />
               </button>
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function AdminApiKeysPage() {
                 disabled={page === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <CaretLeft className="h-4 w-4" weight="duotone" />
               </button>
               <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <button
@@ -177,7 +177,7 @@ export default function AdminApiKeysPage() {
                 disabled={page === totalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
+                <CaretRight className="h-4 w-4" weight="duotone" />
               </button>
             </div>
           </div>

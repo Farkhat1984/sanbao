@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AvatarUpload } from "@/components/agents/AvatarUpload";
-import { Mail, Calendar, Shield, Sparkles } from "lucide-react";
+import { Envelope, Calendar, Shield, Sparkle } from "@phosphor-icons/react";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -46,14 +46,14 @@ export default function ProfilePage() {
                 {user?.name || "Пользователь"}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Mail className="h-3.5 w-3.5 text-text-secondary" />
+                <Envelope weight="duotone" className="h-3.5 w-3.5 text-text-secondary" />
                 <span className="text-sm text-text-secondary">
                   {user?.email || "—"}
                 </span>
               </div>
             </div>
             <Badge variant="accent" className="ml-auto">
-              <Sparkles className="h-3 w-3" />
+              <Sparkle weight="duotone" className="h-3 w-3" />
               {planName}
             </Badge>
           </div>
@@ -61,7 +61,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-3 rounded-xl bg-surface-alt">
               <div className="flex items-center gap-2 text-text-secondary mb-1">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar weight="duotone" className="h-3.5 w-3.5" />
                 <span className="text-xs">Дата регистрации</span>
               </div>
               <span className="text-sm font-medium text-text-primary">
@@ -70,7 +70,7 @@ export default function ProfilePage() {
             </div>
             <div className="p-3 rounded-xl bg-surface-alt">
               <div className="flex items-center gap-2 text-text-secondary mb-1">
-                <Shield className="h-3.5 w-3.5" />
+                <Shield weight="duotone" className="h-3.5 w-3.5" />
                 <span className="text-xs">Роль</span>
               </div>
               <span className="text-sm font-medium text-text-primary">

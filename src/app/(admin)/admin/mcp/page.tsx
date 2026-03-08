@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X, ToggleLeft, ToggleRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FloppyDisk, Trash, WifiHigh, WifiSlash, Heartbeat, FileText, ArrowSquareOut, Copy, Check, BookmarkSimple, PencilSimple, X, ToggleLeft, ToggleRight, MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -289,10 +289,10 @@ export default function AdminMcpPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleHealthCheck} isLoading={checking}>
-            <HeartPulse className="h-4 w-4" /> Health Check
+            <Heartbeat className="h-4 w-4" weight="duotone" /> Health Check
           </Button>
           <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-            <Plus className="h-4 w-4" /> Добавить
+            <Plus className="h-4 w-4" weight="duotone" /> Добавить
           </Button>
         </div>
       </div>
@@ -300,15 +300,15 @@ export default function AdminMcpPage() {
       {/* ── Tabs ── */}
       <div className="flex gap-1 mb-4">
         <button onClick={() => setTab("servers")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "servers" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>Серверы ({servers.length})</button>
-        <button onClick={() => setTab("catalog")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "catalog" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><Bookmark className="h-3 w-3 inline mr-1" />Каталог</button>
-        <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><FileText className="h-3 w-3 inline mr-1" />Tool Logs</button>
+        <button onClick={() => setTab("catalog")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "catalog" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><BookmarkSimple className="h-3 w-3 inline mr-1" weight="duotone" />Каталог</button>
+        <button onClick={() => setTab("logs")} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${tab === "logs" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}><FileText className="h-3 w-3 inline mr-1" weight="duotone" />Tool Logs</button>
       </div>
 
       {/* ── Search & Filters ── */}
       {(tab === "servers" || tab === "logs") && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" weight="duotone" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -382,7 +382,7 @@ export default function AdminMcpPage() {
             <input placeholder="API Key (опционально)" type="password" value={newServer.apiKey} onChange={(e) => setNewServer({ ...newServer, apiKey: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
           </div>
           <div className="mt-3">
-            <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
+            <Button variant="gradient" size="sm" onClick={handleCreate}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Создать</Button>
           </div>
         </div>
       )}
@@ -402,7 +402,7 @@ export default function AdminMcpPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-text-primary">Редактирование</h3>
-                    <button onClick={handleCancelEdit} className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"><X className="h-3.5 w-3.5" /></button>
+                    <button onClick={handleCancelEdit} className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"><X className="h-3.5 w-3.5" weight="duotone" /></button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <input placeholder="Название" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -414,7 +414,7 @@ export default function AdminMcpPage() {
                     <input placeholder="Новый API Key (не менять — оставить пустым)" type="password" value={editData.apiKey} onChange={(e) => setEditData({ ...editData, apiKey: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
                   </div>
                   <div className="mt-3 flex items-center gap-2">
-                    <Button variant="gradient" size="sm" onClick={handleSaveEdit} isLoading={saving}><Save className="h-3.5 w-3.5" /> Сохранить</Button>
+                    <Button variant="gradient" size="sm" onClick={handleSaveEdit} isLoading={saving}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить</Button>
                     <Button variant="secondary" size="sm" onClick={handleCancelEdit}>Отмена</Button>
                   </div>
                 </div>
@@ -422,7 +422,7 @@ export default function AdminMcpPage() {
                 /* ── View Mode ── */
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {s.status === "CONNECTED" ? <Wifi className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-text-secondary" />}
+                    {s.status === "CONNECTED" ? <WifiHigh className="h-4 w-4 text-success" weight="duotone" /> : <WifiSlash className="h-4 w-4 text-text-secondary" weight="duotone" />}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-text-primary">{s.name}</span>
@@ -444,17 +444,17 @@ export default function AdminMcpPage() {
                       title="Подключить и обнаружить инструменты"
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      {checkingId === s.id ? <span className="h-3.5 w-3.5 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <HeartPulse className="h-3.5 w-3.5" />}
+                      {checkingId === s.id ? <span className="h-3.5 w-3.5 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <Heartbeat className="h-3.5 w-3.5" weight="duotone" />}
                     </button>
                     <button
                       onClick={() => handleToggleEnabled(s.id, s.isEnabled)}
                       title={s.isEnabled ? "Отключить для пользователей" : "Включить для пользователей"}
                       className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${s.isEnabled ? "text-success hover:text-warning hover:bg-warning-light" : "text-text-secondary hover:text-success hover:bg-success/10"}`}
                     >
-                      {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" /> : <ToggleLeft className="h-4.5 w-4.5" />}
+                      {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" weight="duotone" /> : <ToggleLeft className="h-4.5 w-4.5" weight="duotone" />}
                     </button>
-                    <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><PencilSimple className="h-3.5 w-3.5" weight="duotone" /></button>
+                    <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash className="h-3.5 w-3.5" weight="duotone" /></button>
                   </div>
                 </div>
               )}
@@ -499,7 +499,7 @@ export default function AdminMcpPage() {
                       rel="noopener noreferrer"
                       className="text-text-secondary hover:text-accent transition-colors"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ArrowSquareOut className="h-3.5 w-3.5" weight="duotone" />
                     </a>
                   </div>
 
@@ -512,7 +512,7 @@ export default function AdminMcpPage() {
                         onClick={() => handleCopyCommand(preset.setupCommand, idx)}
                         className="text-text-secondary hover:text-accent transition-colors cursor-pointer"
                       >
-                        {copiedIdx === idx ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                        {copiedIdx === idx ? <Check className="h-3 w-3 text-success" weight="duotone" /> : <Copy className="h-3 w-3" weight="duotone" />}
                       </button>
                     </div>
                     <code className="text-[11px] text-text-primary font-mono break-all leading-relaxed">{preset.setupCommand}</code>
@@ -530,11 +530,11 @@ export default function AdminMcpPage() {
                     <Badge variant="default">{preset.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</Badge>
                     {alreadyAdded ? (
                       <span className="text-xs text-success font-medium flex items-center gap-1">
-                        <Check className="h-3 w-3" /> Добавлен
+                        <Check className="h-3 w-3" weight="duotone" /> Добавлен
                       </span>
                     ) : (
                       <Button variant="secondary" size="sm" onClick={() => handleAddPreset(preset)}>
-                        <Plus className="h-3 w-3" /> Добавить
+                        <Plus className="h-3 w-3" weight="duotone" /> Добавить
                       </Button>
                     )}
                   </div>
@@ -563,7 +563,7 @@ function Pagination({ page, total, count, perPage, onChange }: { page: number; t
           disabled={page <= 1}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <CaretLeft className="h-4 w-4" weight="duotone" />
         </button>
         <span className="text-xs text-text-secondary px-2">
           {page} / {total}
@@ -573,7 +573,7 @@ function Pagination({ page, total, count, perPage, onChange }: { page: number; t
           disabled={page >= total}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronRight className="h-4 w-4" />
+          <CaretRight className="h-4 w-4" weight="duotone" />
         </button>
       </div>
     </div>

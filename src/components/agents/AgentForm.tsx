@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp, Plus, X, MessageSquare } from "lucide-react";
+import { ArrowLeft, FloppyDisk, Trash, SpinnerGap, Sparkle, CaretDown, CaretUp, Plus, X, ChatTeardrop } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
@@ -185,7 +185,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
         onClick={() => router.push(backUrl)}
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft weight="duotone" className="h-4 w-4" />
         {orgId ? "Назад" : "Назад к агентам"}
       </button>
 
@@ -201,10 +201,10 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent" />
+            <Sparkle weight="duotone" className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
+          {showGenPanel ? <CaretUp weight="duotone" className="h-4 w-4 text-text-secondary" /> : <CaretDown weight="duotone" className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -221,7 +221,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
               disabled={generating || !genDescription.trim()}
               className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {generating ? <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" /> : <Sparkle weight="duotone" className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}
             </button>
           </div>
@@ -306,7 +306,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 <span className="flex items-center gap-1.5">
-                  <MessageSquare className="h-4 w-4 text-text-secondary" />
+                  <ChatTeardrop weight="duotone" className="h-4 w-4 text-text-secondary" />
                   Стартовые подсказки
                 </span>
               </label>
@@ -330,7 +330,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                       onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
                       className="h-9 w-9 rounded-xl flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
                     >
-                      <X className="h-4 w-4" />
+                      <X weight="duotone" className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
@@ -340,7 +340,7 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                     onClick={() => setStarterPrompts([...starterPrompts, ""])}
                     className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <Plus weight="duotone" className="h-3.5 w-3.5" />
                     Добавить подсказку
                   </button>
                 )}
@@ -419,9 +419,9 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
             className="h-10 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
           >
             {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <FloppyDisk weight="duotone" className="h-4 w-4" />
             )}
             {isEdit ? "Сохранить" : "Создать агента"}
           </button>
@@ -442,9 +442,9 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
               className="h-10 px-4 rounded-xl border border-error/30 text-error text-sm flex items-center gap-2 hover:bg-error/10 transition-colors ml-auto cursor-pointer disabled:opacity-60"
             >
               {deleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="h-4 w-4" />
+                <Trash weight="duotone" className="h-4 w-4" />
               )}
               Удалить
             </button>

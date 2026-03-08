@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Save, Sparkles } from "lucide-react";
+import { FloppyDisk, Sparkle } from "@phosphor-icons/react";
 
 interface PlanData {
   id: string;
@@ -108,7 +108,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
           <h3 className="text-lg font-bold text-text-primary">{plan.name}</h3>
           {plan.highlighted && (
             <Badge variant="accent">
-              <Sparkles className="h-3 w-3" />
+              <Sparkle className="h-3 w-3" weight="duotone" />
               Рекомендуемый
             </Badge>
           )}
@@ -125,7 +125,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
               onClick={handleSave}
               isLoading={saving}
             >
-              <Save className="h-3.5 w-3.5" />
+              <FloppyDisk className="h-3.5 w-3.5" weight="duotone" />
               Сохранить
             </Button>
           ) : (

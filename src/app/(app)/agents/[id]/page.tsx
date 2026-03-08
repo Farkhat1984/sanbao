@@ -4,14 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Pencil,
-  Trash2,
-  MessageSquare,
+  PencilSimple,
+  Trash,
+  ChatTeardrop,
   FileText,
-  CheckCircle2,
-  AlertCircle,
-  ImageIcon,
-} from "lucide-react";
+  CheckCircle,
+  WarningCircle,
+  ImageSquare,
+} from "@phosphor-icons/react";
 import { useChatStore } from "@/stores/chatStore";
 import { AgentFileUpload } from "@/components/agents/AgentFileUpload";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
@@ -173,7 +173,7 @@ export default function AgentDetailPage() {
           onClick={() => router.push("/agents")}
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft weight="duotone" className="h-4 w-4" />
           Агенты
         </button>
 
@@ -210,7 +210,7 @@ export default function AgentDetailPage() {
               onClick={handleStartChat}
               className="h-9 px-4 rounded-xl bg-accent text-white text-sm font-medium flex items-center gap-2 hover:bg-accent-hover transition-colors cursor-pointer"
             >
-              <MessageSquare className="h-4 w-4" />
+              <ChatTeardrop weight="duotone" className="h-4 w-4" />
               Начать чат
             </button>
             {isOwned && (
@@ -219,13 +219,13 @@ export default function AgentDetailPage() {
                   onClick={() => router.push(`/agents/${id}/edit`)}
                   className="h-9 px-3 rounded-xl border border-border text-text-primary text-sm flex items-center gap-1.5 hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <PencilSimple weight="duotone" className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="h-9 px-3 rounded-xl border border-error/20 text-error text-sm flex items-center gap-1 hover:bg-error-light transition-colors cursor-pointer"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash weight="duotone" className="h-4 w-4" />
                 </button>
               </>
             )}
@@ -272,19 +272,19 @@ export default function AgentDetailPage() {
               <div className="flex flex-wrap gap-3 text-xs">
                 {filesWithText.length > 0 && (
                   <span className="inline-flex items-center gap-1 text-success">
-                    <CheckCircle2 className="h-3 w-3" />
+                    <CheckCircle weight="duotone" className="h-3 w-3" />
                     {filesWithText.length} извлечён{filesWithText.length === 1 ? "" : "о"}
                   </span>
                 )}
                 {filesWithoutText.length > 0 && (
                   <span className="inline-flex items-center gap-1 text-warning">
-                    <AlertCircle className="h-3 w-3" />
+                    <WarningCircle weight="duotone" className="h-3 w-3" />
                     {filesWithoutText.length} без текста
                   </span>
                 )}
                 {imageFiles.length > 0 && (
                   <span className="inline-flex items-center gap-1 text-text-secondary">
-                    <ImageIcon className="h-3 w-3" />
+                    <ImageSquare weight="duotone" className="h-3 w-3" />
                     {imageFiles.length} изображен{imageFiles.length === 1 ? "ие" : "ий"}
                   </span>
                 )}
@@ -366,7 +366,7 @@ export default function AgentDetailPage() {
                   key={file.id}
                   className="flex items-center gap-3 py-2"
                 >
-                  <FileText className="h-4 w-4 text-text-secondary shrink-0" />
+                  <FileText weight="duotone" className="h-4 w-4 text-text-secondary shrink-0" />
                   <span className="text-sm text-text-primary truncate flex-1">
                     {file.fileName}
                   </span>

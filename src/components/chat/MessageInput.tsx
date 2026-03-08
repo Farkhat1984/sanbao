@@ -2,14 +2,14 @@
 
 import { useState, useRef, useCallback } from "react";
 import {
-  Send,
+  PaperPlaneRight,
   StopCircle,
   Brain,
-  Mic,
+  Microphone,
   X,
   FileText,
-  Loader2,
-} from "lucide-react";
+  SpinnerGap,
+} from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { AlertModal } from "@/components/ui/AlertModal";
@@ -121,9 +121,9 @@ export function MessageInput() {
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
-            <Brain className="h-3 w-3" />
+            <Brain weight="duotone" className="h-3 w-3" />
             Thinking
-            <X className="h-2.5 w-2.5 ml-0.5" />
+            <X weight="duotone" className="h-2.5 w-2.5 ml-0.5" />
           </button>
         )}
       </div>
@@ -153,9 +153,9 @@ export function MessageInput() {
                 ) : (
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-alt border border-border">
                     {file.isParsing ? (
-                      <Loader2 className="h-3.5 w-3.5 text-accent shrink-0 animate-spin" />
+                      <SpinnerGap weight="bold" className="h-3.5 w-3.5 text-accent shrink-0 animate-spin" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5 text-text-secondary shrink-0" />
+                      <FileText weight="duotone" className="h-3.5 w-3.5 text-text-secondary shrink-0" />
                     )}
                     <span className="text-xs text-text-primary truncate max-w-[120px]">
                       {file.name}
@@ -169,7 +169,7 @@ export function MessageInput() {
                     isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   )}
                 >
-                  <X className="h-2.5 w-2.5" />
+                  <X weight="duotone" className="h-2.5 w-2.5" />
                 </button>
               </div>
             ))}
@@ -222,7 +222,7 @@ export function MessageInput() {
                 aria-label="Остановить генерацию"
                 className="h-9 w-9 rounded-full bg-error text-white flex items-center justify-center hover:bg-[#B07068] transition-colors shrink-0 cursor-pointer"
               >
-                <StopCircle className="h-4 w-4" />
+                <StopCircle weight="duotone" className="h-4 w-4" />
               </motion.button>
             ) : isRecording ? (
               <motion.button
@@ -239,7 +239,7 @@ export function MessageInput() {
                   animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                <Mic className="h-4 w-4 relative z-10" />
+                <Microphone weight="duotone" className="h-4 w-4 relative z-10" />
               </motion.button>
             ) : hasContent ? (
               <motion.button
@@ -258,9 +258,9 @@ export function MessageInput() {
                 )}
               >
                 {hasParsing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <PaperPlaneRight weight="duotone" className="h-4 w-4" />
                 )}
               </motion.button>
             ) : hasSpeechSupport ? (
@@ -273,7 +273,7 @@ export function MessageInput() {
                 aria-label="Начать запись голоса"
                 className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer bg-surface-alt text-text-secondary hover:text-text-primary hover:bg-surface-alt/80"
               >
-                <Mic className="h-4 w-4" />
+                <Microphone weight="duotone" className="h-4 w-4" />
               </motion.button>
             ) : (
               <motion.button
@@ -284,7 +284,7 @@ export function MessageInput() {
                 disabled
                 className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 bg-surface-alt text-text-secondary"
               >
-                <Send className="h-4 w-4" />
+                <PaperPlaneRight weight="duotone" className="h-4 w-4" />
               </motion.button>
             )}
           </AnimatePresence>

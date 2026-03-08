@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Users, Bot } from "lucide-react";
+import { Plus, BuildingOffice, Users, Robot } from "@phosphor-icons/react";
 import { useOrgStore, type OrgSummary } from "@/stores/orgStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ function OrgCard({ org }: { org: OrgSummary }) {
           {org.avatar ? (
             <Avatar src={org.avatar} name={org.name} size="sm" />
           ) : (
-            <Building2 className="h-5 w-5 text-accent" />
+            <BuildingOffice weight="duotone" className="h-5 w-5 text-accent" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -46,11 +46,11 @@ function OrgCard({ org }: { org: OrgSummary }) {
       </div>
       <div className="flex items-center gap-4 text-xs text-text-secondary">
         <span className="flex items-center gap-1">
-          <Users className="h-3.5 w-3.5" />
+          <Users weight="duotone" className="h-3.5 w-3.5" />
           {org.memberCount}
         </span>
         <span className="flex items-center gap-1">
-          <Bot className="h-3.5 w-3.5" />
+          <Robot weight="duotone" className="h-3.5 w-3.5" />
           {org.agentCount}
         </span>
       </div>
@@ -92,7 +92,7 @@ export default function OrganizationsPage() {
             onClick={() => router.push("/organizations/new")}
             className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
+            <Plus weight="duotone" className="h-4 w-4" />
             Создать организацию
           </button>
         </div>
@@ -125,7 +125,7 @@ export default function OrganizationsPage() {
         {loaded && organizations.length === 0 && (
           <div className="text-center py-20">
             <div className="h-16 w-16 rounded-2xl bg-surface-alt flex items-center justify-center mx-auto mb-5">
-              <Building2 className="h-8 w-8 text-text-secondary" />
+              <BuildingOffice weight="duotone" className="h-8 w-8 text-text-secondary" />
             </div>
             <h2 className="text-lg font-semibold text-text-primary mb-2">
               Нет организаций

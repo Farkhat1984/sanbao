@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Menu, X } from "lucide-react";
+import { ArrowLeft, ShieldCheck, List, X } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AdminNavLinks } from "@/components/admin/AdminNavLinks";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -28,7 +28,7 @@ export function AdminShell({ children }: AdminShellProps) {
       {/* Logo */}
       <div className="p-4 h-14 flex items-center gap-2 border-b border-white/10">
         <div className="h-8 w-8 rounded-lg bg-legal-ref flex items-center justify-center">
-          <ShieldCheck className="h-4 w-4 text-white" />
+          <ShieldCheck className="h-4 w-4 text-white" weight="duotone" />
         </div>
         <span className="font-semibold text-white text-sm font-[family-name:var(--font-display)]">
           Админ-панель
@@ -38,7 +38,7 @@ export function AdminShell({ children }: AdminShellProps) {
             onClick={() => setDrawerOpen(false)}
             className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" weight="duotone" />
           </button>
         )}
       </div>
@@ -54,7 +54,7 @@ export function AdminShell({ children }: AdminShellProps) {
           href="/chat"
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/10 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" weight="duotone" />
           Вернуться в чат
         </Link>
       </div>
@@ -72,10 +72,10 @@ export function AdminShell({ children }: AdminShellProps) {
               onClick={() => setDrawerOpen(true)}
               className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
             >
-              <Menu className="h-5 w-5" />
+              <List className="h-5 w-5" weight="duotone" />
             </button>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-accent" />
+              <ShieldCheck className="h-4 w-4 text-accent" weight="duotone" />
               <span className="font-semibold text-text-primary text-sm">
                 Админ-панель
               </span>

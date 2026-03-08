@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { FileText } from "@phosphor-icons/react";
 import { openSourceInPanel } from "@/lib/panel-actions";
 
 const FILE_ICONS: Record<string, string> = {

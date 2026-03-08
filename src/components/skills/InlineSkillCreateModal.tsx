@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Sparkles, Loader2, Wand2, FileText } from "lucide-react";
+import { X, Sparkle, SpinnerGap, MagicWand, FileText } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
@@ -153,8 +153,8 @@ export function InlineSkillCreateModal({
     }
   }
 
-  const tabs: { id: TabId; label: string; icon: typeof Wand2 }[] = [
-    { id: "ai", label: "ИИ-генерация", icon: Wand2 },
+  const tabs: { id: TabId; label: string; icon: typeof MagicWand }[] = [
+    { id: "ai", label: "ИИ-генерация", icon: MagicWand },
     { id: "manual", label: "Вручную", icon: FileText },
   ];
 
@@ -179,14 +179,14 @@ export function InlineSkillCreateModal({
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
               <h3 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
+                <Sparkle weight="duotone" className="h-4 w-4 text-accent" />
                 Создать скилл
               </h3>
               <button
                 onClick={handleClose}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
               >
-                <X className="h-4 w-4" />
+                <X weight="duotone" className="h-4 w-4" />
               </button>
             </div>
 
@@ -204,7 +204,7 @@ export function InlineSkillCreateModal({
                       : "text-text-secondary hover:text-text-primary",
                   )}
                 >
-                  <TabIcon className="h-3.5 w-3.5" />
+                  <TabIcon weight="duotone" className="h-3.5 w-3.5" />
                   {label}
                 </button>
               ))}
@@ -252,9 +252,9 @@ export function InlineSkillCreateModal({
                     className="w-full h-10 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
                   >
                     {aiLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Sparkles className="h-4 w-4" />
+                      <Sparkle weight="duotone" className="h-4 w-4" />
                     )}
                     {aiLoading ? "Генерация..." : "Сгенерировать и создать"}
                   </button>
@@ -329,9 +329,9 @@ export function InlineSkillCreateModal({
                     className="w-full h-10 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
                   >
                     {manualLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Sparkles className="h-4 w-4" />
+                      <Sparkle weight="duotone" className="h-4 w-4" />
                     )}
                     {manualLoading ? "Создание..." : "Создать"}
                   </button>

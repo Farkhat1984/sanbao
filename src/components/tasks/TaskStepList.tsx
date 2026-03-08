@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import type { TaskStep } from "@/types/task";
 
 interface TaskStepListProps {
@@ -26,7 +26,7 @@ export function TaskStepList({ steps, onToggle }: TaskStepListProps) {
                 : "border-border group-hover:border-accent/50"
             )}
           >
-            {step.done && <Check className="h-3 w-3 text-white" />}
+            {step.done && <Check weight="duotone" className="h-3 w-3 text-white" />}
           </div>
           <span
             className={cn(

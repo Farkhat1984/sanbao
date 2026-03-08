@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus, Shield, Crown, User, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, UserPlus, Shield, Crown, User, X, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useOrgStore, type OrgMemberInfo } from "@/stores/orgStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
@@ -125,7 +125,7 @@ export default function OrgMembersPage({
           onClick={() => router.push(`/organizations/${orgId}`)}
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft weight="duotone" className="h-4 w-4" />
           Назад
         </button>
 
@@ -143,7 +143,7 @@ export default function OrgMembersPage({
               onClick={() => setShowInvite(!showInvite)}
               className="h-9 px-4 rounded-xl bg-accent text-white text-sm font-medium flex items-center gap-2 hover:bg-accent-hover transition-colors cursor-pointer"
             >
-              <UserPlus className="h-4 w-4" />
+              <UserPlus weight="duotone" className="h-4 w-4" />
               Пригласить
             </button>
           )}
@@ -212,7 +212,7 @@ export default function OrgMembersPage({
                     member.role === "ADMIN" ? "bg-accent/10 text-accent" :
                     "bg-surface-alt text-text-secondary"
                   )}>
-                    <RoleIcon className="h-3 w-3" />
+                    <RoleIcon weight="duotone" className="h-3 w-3" />
                     {roleLabel[member.role]}
                   </div>
                   {isAdmin && member.role !== "OWNER" && (
@@ -220,7 +220,7 @@ export default function OrgMembersPage({
                       onClick={() => handleRemove(member)}
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error-light transition-colors cursor-pointer"
                     >
-                      <X className="h-4 w-4" />
+                      <X weight="duotone" className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -242,7 +242,7 @@ export default function OrgMembersPage({
                   : "text-text-primary bg-surface hover:bg-surface-alt border border-border"
               )}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <CaretLeft weight="duotone" className="h-4 w-4" />
               Назад
             </button>
 
@@ -261,7 +261,7 @@ export default function OrgMembersPage({
               )}
             >
               Далее
-              <ChevronRight className="h-4 w-4" />
+              <CaretRight weight="duotone" className="h-4 w-4" />
             </button>
           </div>
         )}

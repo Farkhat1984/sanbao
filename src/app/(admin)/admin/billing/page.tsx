@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { CreditCard, DollarSign, TrendingUp, Users, RotateCcw, UserPlus, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { CreditCard, CurrencyDollar, TrendUp, Users, ArrowCounterClockwise, UserPlus, XCircle, CaretLeft, CaretRight } from "@phosphor-icons/react";
 
 interface BillingStats {
   totalSubscriptions: number;
@@ -100,28 +100,28 @@ export default function AdminBillingPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="h-4 w-4 text-text-secondary" />
+            <Users className="h-4 w-4 text-text-secondary" weight="duotone" />
             <p className="text-xs text-text-secondary">Подписки</p>
           </div>
           <p className="text-2xl font-bold text-text-primary">{stats.totalSubscriptions}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-text-secondary" />
+            <CurrencyDollar className="h-4 w-4 text-text-secondary" weight="duotone" />
             <p className="text-xs text-text-secondary">MRR (расчётный)</p>
           </div>
           <p className="text-2xl font-bold text-accent">{stats.monthlyRevenue.toLocaleString()} &#x20B8;</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <CreditCard className="h-4 w-4 text-text-secondary" />
+            <CreditCard className="h-4 w-4 text-text-secondary" weight="duotone" />
             <p className="text-xs text-text-secondary">Платежей</p>
           </div>
           <p className="text-2xl font-bold text-text-primary">{stats.totalPayments}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-text-secondary" />
+            <TrendUp className="h-4 w-4 text-text-secondary" weight="duotone" />
             <p className="text-xs text-text-secondary">Планов</p>
           </div>
           <p className="text-2xl font-bold text-text-primary">{stats.planDistribution.length}</p>
@@ -163,7 +163,7 @@ export default function AdminBillingPage() {
             </select>
           </div>
           <Button variant="gradient" size="sm" onClick={handleAssign} isLoading={assigning}>
-            <UserPlus className="h-3.5 w-3.5" /> Назначить
+            <UserPlus className="h-3.5 w-3.5" weight="duotone" /> Назначить
           </Button>
         </div>
       </div>
@@ -188,10 +188,10 @@ export default function AdminBillingPage() {
                   onClick={() => handleRefund(s.userId)}
                   isLoading={refunding === s.userId}
                 >
-                  <RotateCcw className="h-3 w-3" /> Возврат
+                  <ArrowCounterClockwise className="h-3 w-3" weight="duotone" /> Возврат
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => handleCancel(s.userId)}>
-                  <XCircle className="h-3 w-3" /> Отмена
+                  <XCircle className="h-3 w-3" weight="duotone" /> Отмена
                 </Button>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function AdminBillingPage() {
                 disabled={subPage === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <CaretLeft className="h-4 w-4" weight="duotone" />
               </button>
               <span className="text-sm text-text-secondary">{subPage} / {subTotalPages}</span>
               <button
@@ -217,7 +217,7 @@ export default function AdminBillingPage() {
                 disabled={subPage === subTotalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
+                <CaretRight className="h-4 w-4" weight="duotone" />
               </button>
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function AdminBillingPage() {
                     onClick={() => handleRefund(p.userId)}
                     isLoading={refunding === p.userId}
                   >
-                    <RotateCcw className="h-3 w-3" />
+                    <ArrowCounterClockwise className="h-3 w-3" weight="duotone" />
                   </Button>
                 )}
               </div>
@@ -266,7 +266,7 @@ export default function AdminBillingPage() {
                 disabled={payPage === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <CaretLeft className="h-4 w-4" weight="duotone" />
               </button>
               <span className="text-sm text-text-secondary">{payPage} / {payTotalPages}</span>
               <button
@@ -274,7 +274,7 @@ export default function AdminBillingPage() {
                 disabled={payPage === payTotalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
+                <CaretRight className="h-4 w-4" weight="duotone" />
               </button>
             </div>
           </div>

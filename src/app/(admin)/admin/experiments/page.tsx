@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Power, PowerOff, FlaskConical } from "lucide-react";
+import { Plus, Trash, Power, Flask } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 
 interface Experiment {
@@ -79,7 +79,7 @@ export default function AdminExperimentsPage() {
           <p className="text-sm text-text-secondary mt-1">Тестирование вариантов системного промпта</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" /> Создать
+          <Plus className="h-4 w-4" weight="duotone" /> Создать
         </Button>
       </div>
 
@@ -107,7 +107,7 @@ export default function AdminExperimentsPage() {
             <input type="range" min={5} max={95} step={5} value={form.trafficPct} onChange={(e) => setForm({ ...form, trafficPct: parseInt(e.target.value) })} className="flex-1" />
           </div>
           <Button variant="gradient" size="sm" onClick={handleCreate}>
-            <FlaskConical className="h-3.5 w-3.5" /> Запустить эксперимент
+            <Flask className="h-3.5 w-3.5" weight="duotone" /> Запустить эксперимент
           </Button>
         </div>
       )}
@@ -117,7 +117,7 @@ export default function AdminExperimentsPage() {
           <div key={exp.id} className="bg-surface border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <FlaskConical className={`h-5 w-5 ${exp.isActive ? "text-accent" : "text-text-secondary"}`} />
+                <Flask className={`h-5 w-5 ${exp.isActive ? "text-accent" : "text-text-secondary"}`} weight="duotone" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-text-primary">{exp.name}</span>
@@ -131,10 +131,10 @@ export default function AdminExperimentsPage() {
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="secondary" size="sm" onClick={() => handleToggle(exp.id, exp.isActive)}>
-                  {exp.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
+                  {exp.isActive ? <Power className="h-3.5 w-3.5" weight="light" /> : <Power className="h-3.5 w-3.5" weight="duotone" />}
                 </Button>
                 <button onClick={() => handleDelete(exp.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash className="h-3.5 w-3.5" weight="duotone" />
                 </button>
               </div>
             </div>

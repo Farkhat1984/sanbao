@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, Shield } from "lucide-react";
+import { ChatTeardrop, Shield } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useChatStore } from "@/stores/chatStore";
@@ -57,7 +57,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
     >
       {/* System badge */}
       <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-legal-ref/10 text-legal-ref">
-        <Shield className="h-2.5 w-2.5" />
+        <Shield weight="duotone" className="h-2.5 w-2.5" />
         <span className="text-[9px] font-semibold uppercase tracking-wider">Системный</span>
       </div>
 
@@ -65,7 +65,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
         <div
           className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-accent"
         >
-          <Icon className="h-5 w-5 text-white" />
+          <Icon weight="duotone" className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-text-primary truncate">
@@ -83,7 +83,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
 
       <div className="flex items-center justify-between pt-3 border-t border-legal-ref/20">
         <div className="flex items-center gap-1 text-[10px] text-text-secondary">
-          <Shield className="h-3 w-3" />
+          <Shield weight="duotone" className="h-3 w-3" />
           Доступен всем
         </div>
         <button
@@ -91,7 +91,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
           className="h-7 px-3 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
-            <MessageSquare className="h-3 w-3" />
+            <ChatTeardrop weight="duotone" className="h-3 w-3" />
             Начать чат
           </span>
         </button>

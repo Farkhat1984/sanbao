@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { AlertTriangle, Download } from "lucide-react";
+import { Warning, DownloadSimple } from "@phosphor-icons/react";
 
 interface ErrorEntry {
   id: string;
@@ -68,7 +68,7 @@ export default function AdminErrorsPage() {
           <p className="text-sm text-text-secondary mt-1">Ошибки API и системные сбои</p>
         </div>
         <Button variant="secondary" size="sm" onClick={handleExport}>
-          <Download className="h-4 w-4" /> Экспорт CSV
+          <DownloadSimple className="h-4 w-4" weight="duotone" /> Экспорт CSV
         </Button>
       </div>
 
@@ -86,7 +86,7 @@ export default function AdminErrorsPage() {
               <div key={e.id} className="bg-surface border border-border rounded-xl overflow-hidden">
                 <button onClick={() => setExpanded(expanded === e.id ? null : e.id)} className="w-full p-4 flex items-center justify-between text-left cursor-pointer hover:bg-surface-alt/50 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <AlertTriangle className="h-4 w-4 text-error shrink-0" />
+                    <Warning className="h-4 w-4 text-error shrink-0" weight="duotone" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold ${methodColor(e.method)}`}>{e.method}</span>

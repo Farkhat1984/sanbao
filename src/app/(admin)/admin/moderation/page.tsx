@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Eye, Flag, Ban, MessageSquare } from "lucide-react";
+import { Eye, Flag, Prohibit, ChatTeardrop } from "@phosphor-icons/react";
 
 interface ConversationEntry {
   id: string;
@@ -112,13 +112,13 @@ export default function AdminModerationPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => handleView(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer" title="Просмотр">
-                        <Eye className="h-3.5 w-3.5" />
+                        <Eye className="h-3.5 w-3.5" weight="duotone" />
                       </button>
                       <button onClick={() => handleFlag(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer" title="Пометить">
-                        <Flag className="h-3.5 w-3.5" />
+                        <Flag className="h-3.5 w-3.5" weight="duotone" />
                       </button>
                       <button onClick={() => handleBanUser(c.userId)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer" title="Бан">
-                        <Ban className="h-3.5 w-3.5" />
+                        <Prohibit className="h-3.5 w-3.5" weight="duotone" />
                       </button>
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export default function AdminModerationPage() {
         <div className="bg-surface border border-border rounded-2xl p-5 min-h-[400px]">
           {!selectedId ? (
             <div className="flex flex-col items-center justify-center h-full text-text-secondary">
-              <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
+              <ChatTeardrop className="h-8 w-8 mb-2 opacity-50" weight="duotone" />
               <p className="text-sm">Выберите разговор для просмотра</p>
             </div>
           ) : loadingMessages ? (

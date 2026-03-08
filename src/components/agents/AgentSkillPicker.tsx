@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, Plus, AlertTriangle } from "lucide-react";
+import { SpinnerGap, Plus, Warning } from "@phosphor-icons/react";
 import { ICON_MAP } from "./AgentIconPicker";
 import { cn } from "@/lib/utils";
 import { SKILL_CATEGORIES } from "@/lib/constants";
@@ -117,7 +117,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-secondary text-xs py-3">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
         Загрузка скиллов...
       </div>
     );
@@ -134,7 +134,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-border text-text-secondary hover:text-accent hover:border-accent transition-all cursor-pointer"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus weight="duotone" className="h-3.5 w-3.5" />
           Создать скилл
         </button>
         <InlineSkillCreateModal
@@ -151,7 +151,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
       {/* Token warning banner */}
       {totalSelectedTokens > TOKEN_WARNING_THRESHOLD && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-warning-light border border-warning/20 text-warning text-xs font-medium">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <Warning weight="duotone" className="h-3.5 w-3.5 shrink-0" />
           Выбранные скиллы используют ~{totalSelectedTokens} токенов контекста. Это может снизить качество ответов.
         </div>
       )}
@@ -179,6 +179,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
                   )}
                 >
                   <Icon
+                    weight="duotone"
                     className="h-3.5 w-3.5"
                     style={{ color: selected ? undefined : skill.iconColor }}
                   />
@@ -205,7 +206,7 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-border text-text-secondary hover:text-accent hover:border-accent transition-all cursor-pointer"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus weight="duotone" className="h-3.5 w-3.5" />
           Создать скилл
         </button>
       </div>

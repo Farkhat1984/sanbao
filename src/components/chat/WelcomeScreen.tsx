@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@phosphor-icons/react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem, springTransition } from "@/lib/animations";
@@ -95,7 +95,7 @@ export function WelcomeScreen() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border bg-surface hover:bg-surface-alt hover:border-border-hover text-sm text-text-primary transition-all duration-200 cursor-pointer group"
             >
               <span className="line-clamp-1">{prompt}</span>
-              <ArrowRight className="h-3.5 w-3.5 text-text-secondary group-hover:text-accent transition-colors shrink-0" />
+              <ArrowRight weight="duotone" className="h-3.5 w-3.5 text-text-secondary group-hover:text-accent transition-colors shrink-0" />
             </motion.button>
           ))}
         </motion.div>

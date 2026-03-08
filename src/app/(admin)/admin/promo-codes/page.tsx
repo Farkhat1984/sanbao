@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Save, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FloppyDisk, Trash, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -84,7 +84,7 @@ export default function AdminPromoCodesPage() {
           <p className="text-sm text-text-secondary mt-1">Скидки и промо-акции ({total})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" /> Создать
+          <Plus className="h-4 w-4" weight="duotone" /> Создать
         </Button>
       </div>
 
@@ -98,7 +98,7 @@ export default function AdminPromoCodesPage() {
             <input placeholder="Макс. использований (0=безлим)" type="number" value={newCode.maxUses} onChange={(e) => setNewCode({ ...newCode, maxUses: parseInt(e.target.value) || 0 })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
           </div>
           <div className="mt-3">
-            <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
+            <Button variant="gradient" size="sm" onClick={handleCreate}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Создать</Button>
           </div>
         </div>
       )}
@@ -125,7 +125,7 @@ export default function AdminPromoCodesPage() {
                 {c.isActive ? "Откл." : "Вкл."}
               </Button>
               <button onClick={() => handleDelete(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash className="h-3.5 w-3.5" weight="duotone" />
               </button>
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function AdminPromoCodesPage() {
                 disabled={page === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <CaretLeft className="h-4 w-4" weight="duotone" />
               </button>
               <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <button
@@ -150,7 +150,7 @@ export default function AdminPromoCodesPage() {
                 disabled={page === totalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <ChevronRight className="h-4 w-4" />
+                <CaretRight className="h-4 w-4" weight="duotone" />
               </button>
             </div>
           </div>

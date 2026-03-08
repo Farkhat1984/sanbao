@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Plus, Trash, ArrowsClockwise, Circle, CaretDown, CaretUp, SpinnerGap, Wrench, Power, Globe, ToggleLeft, ToggleRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -192,7 +192,7 @@ export function McpServerManager() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-secondary text-xs py-4">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
         Загрузка...
       </div>
     );
@@ -210,7 +210,7 @@ export function McpServerManager() {
       <div key={srv.id} className={cn("rounded-xl bg-surface-alt border border-border overflow-hidden transition-opacity", !isActive && "opacity-50")}>
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Globe className="h-3.5 w-3.5 text-accent shrink-0" />
+            <Globe weight="duotone" className="h-3.5 w-3.5 text-accent shrink-0" />
             <div className="min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
               <p className="text-xs text-text-secondary truncate">
@@ -224,9 +224,9 @@ export function McpServerManager() {
                 onClick={() => setExpandedId(isExpanded ? null : srv.id)}
                 className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
               >
-                <Wrench className="h-3 w-3" />
+                <Wrench weight="duotone" className="h-3 w-3" />
                 {tools.length}
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {isExpanded ? <CaretUp weight="duotone" className="h-3 w-3" /> : <CaretDown weight="duotone" className="h-3 w-3" />}
               </button>
             )}
             <button
@@ -241,11 +241,11 @@ export function McpServerManager() {
               )}
             >
               {togglingId === srv.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
               ) : isActive ? (
-                <ToggleRight className="h-4 w-4" />
+                <ToggleRight weight="duotone" className="h-4 w-4" />
               ) : (
-                <ToggleLeft className="h-4 w-4" />
+                <ToggleLeft weight="duotone" className="h-4 w-4" />
               )}
               <span className="hidden sm:inline text-xs">{isActive ? "Вкл" : "Выкл"}</span>
             </button>
@@ -256,7 +256,7 @@ export function McpServerManager() {
           <div className="border-t border-border px-3 py-2 space-y-1">
             {tools.map((tool) => (
               <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
+                <Wrench weight="duotone" className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-text-primary">{tool.name}</span>
                   {tool.description && (
@@ -281,7 +281,8 @@ export function McpServerManager() {
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-3 min-w-0">
             <Circle
-              className={cn("h-2.5 w-2.5 fill-current shrink-0", statusColor[srv.status])}
+              weight="fill"
+              className={cn("h-2.5 w-2.5 shrink-0", statusColor[srv.status])}
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
@@ -297,9 +298,9 @@ export function McpServerManager() {
                 onClick={() => setExpandedId(isExpanded ? null : srv.id)}
                 className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
               >
-                <Wrench className="h-3 w-3" />
+                <Wrench weight="duotone" className="h-3 w-3" />
                 {tools.length}
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {isExpanded ? <CaretUp weight="duotone" className="h-3 w-3" /> : <CaretDown weight="duotone" className="h-3 w-3" />}
               </button>
             )}
             <span className={cn("text-xs", statusColor[srv.status])}>
@@ -313,9 +314,9 @@ export function McpServerManager() {
                 className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-warning-light text-text-secondary hover:text-warning cursor-pointer transition-colors disabled:opacity-50"
               >
                 {disconnectingId === srv.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <PowerOff className="h-3.5 w-3.5" />
+                  <Power weight="light" className="h-3.5 w-3.5" />
                 )}
               </button>
             ) : (
@@ -326,9 +327,9 @@ export function McpServerManager() {
                 className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-success-light text-text-secondary hover:text-success cursor-pointer transition-colors disabled:opacity-50"
               >
                 {connectingId === srv.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Power className="h-3.5 w-3.5" />
+                  <Power weight="duotone" className="h-3.5 w-3.5" />
                 )}
               </button>
             )}
@@ -339,9 +340,9 @@ export function McpServerManager() {
               className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-secondary hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
             >
               {connectingId === srv.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
+                <ArrowsClockwise weight="duotone" className="h-3.5 w-3.5" />
               )}
             </button>
             <button
@@ -349,7 +350,7 @@ export function McpServerManager() {
               title="Удалить"
               className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-error-light text-text-secondary hover:text-error cursor-pointer transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash weight="duotone" className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -358,7 +359,7 @@ export function McpServerManager() {
           <div className="border-t border-border px-3 py-2 space-y-1">
             {tools.map((tool) => (
               <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
+                <Wrench weight="duotone" className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-text-primary">{tool.name}</span>
                   {tool.description && (
@@ -384,7 +385,7 @@ export function McpServerManager() {
       {hasServers && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
+            <MagnifyingGlass weight="duotone" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -412,7 +413,7 @@ export function McpServerManager() {
       {filteredSystem.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-[11px] text-text-secondary uppercase tracking-wider">
-            <Globe className="h-3 w-3" />
+            <Globe weight="duotone" className="h-3 w-3" />
             Системные серверы
             <span className="text-text-secondary/60">({filteredSystem.length})</span>
           </div>
@@ -497,7 +498,7 @@ export function McpServerManager() {
           onClick={() => setShowForm(true)}
           className="w-full"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus weight="duotone" className="h-3.5 w-3.5" />
           Добавить свой MCP-сервер
         </Button>
       )}

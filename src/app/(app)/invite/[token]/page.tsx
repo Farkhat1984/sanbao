@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Check, AlertCircle } from "lucide-react";
+import { BuildingOffice, Check, WarningCircle } from "@phosphor-icons/react";
 
 export default function InviteAcceptPage({
   params,
@@ -48,7 +48,7 @@ export default function InviteAcceptPage({
         {status === "accepting" && (
           <>
             <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-5 animate-pulse">
-              <Building2 className="h-8 w-8 text-accent" />
+              <BuildingOffice weight="duotone" className="h-8 w-8 text-accent" />
             </div>
             <h1 className="text-lg font-semibold text-text-primary mb-2">
               Принимаем приглашение...
@@ -59,7 +59,7 @@ export default function InviteAcceptPage({
         {status === "success" && (
           <>
             <div className="h-16 w-16 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5">
-              <Check className="h-8 w-8 text-success" />
+              <Check weight="duotone" className="h-8 w-8 text-success" />
             </div>
             <h1 className="text-lg font-semibold text-text-primary mb-2">
               Вы присоединились{orgName ? ` к "${orgName}"` : ""}!
@@ -71,7 +71,7 @@ export default function InviteAcceptPage({
         {status === "error" && (
           <>
             <div className="h-16 w-16 rounded-2xl bg-error-light flex items-center justify-center mx-auto mb-5">
-              <AlertCircle className="h-8 w-8 text-error" />
+              <WarningCircle weight="duotone" className="h-8 w-8 text-error" />
             </div>
             <h1 className="text-lg font-semibold text-text-primary mb-2">
               Ошибка

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
+import { X, DownloadSimple, Copy, Printer, Check, SpinnerGap, CaretDown } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
@@ -208,7 +208,7 @@ export function ArtifactContent() {
                   className="flex items-center gap-0.5 text-[10px] text-text-secondary hover:text-accent transition-colors cursor-pointer"
                 >
                   v{activeArtifact.version}
-                  <ChevronDown className="h-2.5 w-2.5" />
+                  <CaretDown weight="duotone" className="h-2.5 w-2.5" />
                 </button>
                 {versionMenuOpen && (
                   <>
@@ -232,7 +232,7 @@ export function ArtifactContent() {
                         >
                           <span>v{v.version}</span>
                           {v.version === activeArtifact.version && (
-                            <Check className="h-3 w-3 text-accent shrink-0" />
+                            <Check weight="duotone" className="h-3 w-3 text-accent shrink-0" />
                           )}
                         </button>
                       ))}
@@ -255,9 +255,9 @@ export function ArtifactContent() {
             className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
             {copied ? (
-              <Check className={cn(iconSize, "text-success")} />
+              <Check weight="duotone" className={cn(iconSize, "text-success")} />
             ) : (
-              <Copy className={iconSize} />
+              <Copy weight="duotone" className={iconSize} />
             )}
           </button>
 
@@ -269,9 +269,9 @@ export function ArtifactContent() {
               className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-lg border border-border flex items-center justify-center gap-1 text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50 text-[11px]")}
             >
               {isExporting ? (
-                <Loader2 className={cn(iconSize, "animate-spin")} />
+                <SpinnerGap weight="bold" className={cn(iconSize, "animate-spin")} />
               ) : (
-                <Download className={iconSize} />
+                <DownloadSimple weight="duotone" className={iconSize} />
               )}
             </button>
           ) : (
@@ -281,7 +281,7 @@ export function ArtifactContent() {
                 className={cn(isMobile ? "h-9" : "h-7", "pl-2 pr-1 rounded-l-lg border border-border bg-surface-alt text-[11px] text-text-primary flex items-center gap-0.5 hover:bg-surface transition-colors cursor-pointer")}
               >
                 {FORMAT_LABELS[downloadFormat]}
-                <ChevronDown className="h-3 w-3 text-text-secondary" />
+                <CaretDown weight="duotone" className="h-3 w-3 text-text-secondary" />
               </button>
               <button
                 onClick={handleDownload}
@@ -289,9 +289,9 @@ export function ArtifactContent() {
                 className={cn(isMobile ? "h-9" : "h-7", "px-2 rounded-r-lg border border-l-0 border-border flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-50")}
               >
                 {isExporting ? (
-                  <Loader2 className={cn(iconSize, "animate-spin")} />
+                  <SpinnerGap weight="bold" className={cn(iconSize, "animate-spin")} />
                 ) : (
-                  <Download className={iconSize} />
+                  <DownloadSimple weight="duotone" className={iconSize} />
                 )}
               </button>
 
@@ -322,7 +322,7 @@ export function ArtifactContent() {
                           {fmt === "md" && "Markdown (.md)"}
                         </span>
                         {downloadFormat === fmt && (
-                          <Check className="h-3 w-3 text-accent" />
+                          <Check weight="duotone" className="h-3 w-3 text-accent" />
                         )}
                       </button>
                     ))}
@@ -336,7 +336,7 @@ export function ArtifactContent() {
             onClick={handlePrint}
             className={cn(btnSize, "rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer")}
           >
-            <Printer className={iconSize} />
+            <Printer weight="duotone" className={iconSize} />
           </button>
         </div>
       </div>

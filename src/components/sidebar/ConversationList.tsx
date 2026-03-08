@@ -6,7 +6,7 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { groupByDate } from "@/lib/utils";
 import { ConversationItem } from "./ConversationItem";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Loader2 } from "lucide-react";
+import { ChatTeardrop, SpinnerGap } from "@phosphor-icons/react";
 
 /** Number of conversations to fetch per page */
 const PAGE_SIZE = 30;
@@ -71,7 +71,7 @@ export function ConversationList() {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="h-10 w-10 rounded-xl bg-surface-alt flex items-center justify-center mb-3">
-          <MessageSquare className="h-5 w-5 text-text-secondary" />
+          <ChatTeardrop weight="duotone" className="h-5 w-5 text-text-secondary" />
         </div>
         <p className="text-sm text-text-secondary">
           {searchQuery ? "Ничего не найдено" : "Нет чатов"}
@@ -112,7 +112,7 @@ export function ConversationList() {
       {/* Loading spinner for next page */}
       {isLoadingMore && (
         <div className="flex items-center justify-center py-3">
-          <Loader2 className="h-4 w-4 text-text-muted animate-spin" />
+          <SpinnerGap weight="bold" className="h-4 w-4 text-text-muted animate-spin" />
         </div>
       )}
     </div>

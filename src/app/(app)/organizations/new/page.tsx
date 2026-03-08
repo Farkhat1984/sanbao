@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, BuildingOffice } from "@phosphor-icons/react";
 import { useOrgStore } from "@/stores/orgStore";
 
 export default function NewOrganizationPage() {
@@ -48,13 +48,13 @@ export default function NewOrganizationPage() {
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft weight="duotone" className="h-4 w-4" />
           Назад
         </button>
 
         <div className="flex items-center gap-3 mb-8">
           <div className="h-12 w-12 rounded-2xl bg-accent/20 flex items-center justify-center">
-            <Building2 className="h-6 w-6 text-accent" />
+            <BuildingOffice weight="duotone" className="h-6 w-6 text-accent" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Новая организация</h1>

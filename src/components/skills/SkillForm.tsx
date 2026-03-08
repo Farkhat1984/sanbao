@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
-import { ArrowLeft, Save, Sparkles, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
+import { ArrowLeft, FloppyDisk, Sparkle, CaretDown, CaretUp, SpinnerGap, X } from "@phosphor-icons/react";
 import type { Skill } from "@/types/skill";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
 
@@ -129,10 +129,10 @@ export function SkillForm({ initial }: SkillFormProps) {
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent" />
+            <Sparkle weight="duotone" className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
+          {showGenPanel ? <CaretUp weight="duotone" className="h-4 w-4 text-text-secondary" /> : <CaretDown weight="duotone" className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -150,7 +150,7 @@ export function SkillForm({ initial }: SkillFormProps) {
               disabled={generating || !genDescription.trim()}
               className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
-              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {generating ? <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" /> : <Sparkle weight="duotone" className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}
             </button>
           </div>
@@ -164,7 +164,7 @@ export function SkillForm({ initial }: SkillFormProps) {
           onClick={() => router.back()}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft weight="duotone" className="h-4 w-4" />
         </button>
         <h1 className="text-xl font-bold text-text-primary">
           {initial ? "Редактировать скилл" : "Новый скилл"}
@@ -271,7 +271,7 @@ export function SkillForm({ initial }: SkillFormProps) {
                   onClick={() => removeTag(tag)}
                   className="text-text-muted hover:text-error transition-colors cursor-pointer"
                 >
-                  <X className="h-3 w-3" />
+                  <X weight="duotone" className="h-3 w-3" />
                 </button>
               </span>
             ))}
@@ -289,7 +289,7 @@ export function SkillForm({ initial }: SkillFormProps) {
 
       <div className="flex gap-3">
         <Button type="submit" variant="primary" disabled={saving || !name.trim() || !systemPrompt.trim()}>
-          <Save className="h-4 w-4" />
+          <FloppyDisk weight="duotone" className="h-4 w-4" />
           {saving ? "Сохранение..." : initial ? "Сохранить" : "Создать"}
         </Button>
         <Button type="button" variant="ghost" onClick={() => router.back()}>

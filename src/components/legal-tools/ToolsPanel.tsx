@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, X, ChevronRight } from "lucide-react";
+import { FileText, X, CaretRight } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore, type AgentToolInfo } from "@/stores/agentStore";
@@ -123,7 +123,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                     isMobile ? "h-8 w-8" : "h-6 w-6"
                   )}
                 >
-                  <X className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
+                  <X className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} weight="duotone" />
                 </button>
               </div>
 
@@ -162,7 +162,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                             className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
                             style={{ backgroundColor: `${tool.iconColor}15` }}
                           >
-                            <ToolIcon className="h-4 w-4" style={{ color: tool.iconColor }} />
+                            <ToolIcon className="h-4 w-4" style={{ color: tool.iconColor }} weight="duotone" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
@@ -170,11 +170,12 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                                 {tool.name}
                               </h4>
                               {hasTemplates && (
-                                <ChevronRight
+                                <CaretRight
                                   className={cn(
                                     "h-3 w-3 text-text-secondary transition-transform",
                                     isExpanded && "rotate-90"
                                   )}
+                                  weight="duotone"
                                 />
                               )}
                             </div>
@@ -202,7 +203,7 @@ export function ToolsPanel({ isOpen, onClose }: ToolsPanelProps) {
                                   onClick={() => setActiveTemplate(tmpl)}
                                   className="w-full text-left px-3 py-2 rounded-lg text-[11px] text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer flex items-center gap-2 border border-transparent hover:border-border"
                                 >
-                                  <FileText className="h-3 w-3 text-accent shrink-0" />
+                                  <FileText className="h-3 w-3 text-accent shrink-0" weight="duotone" />
                                   <div className="min-w-0">
                                     <span className="font-medium">
                                       {tmpl.name}

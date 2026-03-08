@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { ListChecks, ChevronDown, Loader2, Play, MessageSquare, Send, RotateCcw } from "lucide-react";
+import { ListChecks, CaretDown, SpinnerGap, Play, ChatTeardrop, PaperPlaneRight, ArrowCounterClockwise } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chatStore";
@@ -132,20 +132,21 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 text-[11px] text-warning hover:text-[#D97706] transition-colors cursor-pointer mb-1"
       >
-        <ListChecks className="h-3 w-3" />
+        <ListChecks weight="duotone" className="h-3 w-3" />
         <span>План</span>
         {round > 1 && (
           <span className="text-[10px] bg-warning-light text-warning px-1.5 rounded-full">
             раунд {round}
           </span>
         )}
-        {isStreaming && <Loader2 className="h-3 w-3 animate-spin" />}
+        {isStreaming && <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />}
         {hasSteps && !isStreaming && (
           <span className="text-[10px] text-warning">
             {checkedCount}/{steps.length}
           </span>
         )}
-        <ChevronDown
+        <CaretDown
+          weight="duotone"
           className={cn(
             "h-3 w-3 transition-transform",
             isOpen && "rotate-180"
@@ -213,7 +214,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                   onClick={handleExecute}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-warning text-white hover:bg-[#D97706] transition-colors cursor-pointer"
                 >
-                  <Play className="h-3 w-3" />
+                  <Play weight="duotone" className="h-3 w-3" />
                   {checkedCount > 0 && checkedCount < steps.length
                     ? `Выполнить (${checkedCount})`
                     : "Выполнить всё"}
@@ -227,7 +228,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                       : "text-warning hover:bg-warning-light"
                   )}
                 >
-                  <MessageSquare className="h-3 w-3" />
+                  <ChatTeardrop weight="duotone" className="h-3 w-3" />
                   Уточнить
                 </button>
                 {round > 1 && (
@@ -236,7 +237,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] text-warning hover:text-[#D97706] hover:bg-warning-light transition-colors cursor-pointer"
                     title="Сбросить выбор"
                   >
-                    <RotateCcw className="h-3 w-3" />
+                    <ArrowCounterClockwise weight="duotone" className="h-3 w-3" />
                   </button>
                 )}
               </div>
@@ -271,7 +272,7 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
                           : "bg-warning-light text-warning"
                       )}
                     >
-                      <Send className="h-3 w-3" />
+                      <PaperPlaneRight weight="duotone" className="h-3 w-3" />
                     </button>
                   </div>
                   <p className="text-[10px] text-warning mt-1">
@@ -284,13 +285,13 @@ export function PlanBlock({ content, isStreaming }: PlanBlockProps) {
             {/* Status indicators */}
             {phase === "sent" && (
               <div className="mt-2 pt-2 border-t border-warning/20 text-[10px] text-warning flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />
                 Выполняется...
               </div>
             )}
             {phase === "refining" && (
               <div className="mt-2 pt-2 border-t border-warning/20 text-[10px] text-warning flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />
                 Обновление плана...
               </div>
             )}

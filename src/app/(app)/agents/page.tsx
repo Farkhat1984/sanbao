@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, Bot, Sparkles, Loader2, Building2, MessageSquare } from "lucide-react";
+import { Plus, MagnifyingGlass, Robot, Sparkle, SpinnerGap, BuildingOffice, ChatTeardrop } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAgentStore } from "@/stores/agentStore";
@@ -209,14 +209,14 @@ export default function AgentsPage() {
             onClick={() => router.push("/agents/new")}
             className="h-10 px-5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
+            <Plus weight="duotone" className="h-4 w-4" />
             Создать агента
           </button>
         </div>
 
         {/* Search */}
         <div className="relative mb-8">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+          <MagnifyingGlass weight="duotone" className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -256,7 +256,7 @@ export default function AgentsPage() {
             {filteredSystemAgents.length > 0 && (
               <section>
                 <div className="flex items-center gap-2.5 mb-4">
-                  <Sparkles className="h-4 w-4 text-accent" />
+                  <Sparkle weight="duotone" className="h-4 w-4 text-accent" />
                   <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
                     Системные
                   </h2>
@@ -277,7 +277,7 @@ export default function AgentsPage() {
             {filteredOrgAgents.length > 0 && (
               <section>
                 <div className="flex items-center gap-2.5 mb-4">
-                  <Building2 className="h-4 w-4 text-accent" />
+                  <BuildingOffice weight="duotone" className="h-4 w-4 text-accent" />
                   <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
                     Организации
                   </h2>
@@ -291,14 +291,14 @@ export default function AgentsPage() {
                   {Array.from(orgAgentsByOrg.entries()).map(([orgId, { orgName, agents: orgGroupAgents }]) => (
                     <div key={orgId}>
                       <div className="flex items-center gap-2 mb-3">
-                        <Building2 className="h-3.5 w-3.5 text-text-secondary" />
+                        <BuildingOffice weight="duotone" className="h-3.5 w-3.5 text-text-secondary" />
                         <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wide">
                           {orgName}
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {orgGroupAgents.map((agent) => {
-                          const Icon = (agent.icon && ICON_MAP[agent.icon]) || ICON_MAP.Bot || Bot;
+                          const Icon = (agent.icon && ICON_MAP[agent.icon]) || ICON_MAP.Bot || Robot;
                           return (
                             <motion.div
                               key={agent.id}
@@ -308,7 +308,7 @@ export default function AgentsPage() {
                             >
                               {/* Org badge */}
                               <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                                <Building2 className="h-2.5 w-2.5" />
+                                <BuildingOffice weight="duotone" className="h-2.5 w-2.5" />
                                 <span className="text-[9px] font-semibold uppercase tracking-wider truncate max-w-[80px]">
                                   {orgName}
                                 </span>
@@ -334,7 +334,7 @@ export default function AgentsPage() {
 
                               <div className="flex items-center justify-between pt-3 border-t border-accent/20">
                                 <div className="flex items-center gap-1 text-[10px] text-text-secondary">
-                                  <Building2 className="h-3 w-3" />
+                                  <BuildingOffice weight="duotone" className="h-3 w-3" />
                                   {orgName}
                                 </div>
                                 <button
@@ -342,7 +342,7 @@ export default function AgentsPage() {
                                   className="h-7 px-3 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors cursor-pointer"
                                 >
                                   <span className="flex items-center gap-1.5">
-                                    <MessageSquare className="h-3 w-3" />
+                                    <ChatTeardrop weight="duotone" className="h-3 w-3" />
                                     Начать чат
                                   </span>
                                 </button>
@@ -360,7 +360,7 @@ export default function AgentsPage() {
             {/* User Agents Section */}
             <section>
               <div className="flex items-center gap-2.5 mb-4">
-                <Bot className="h-4 w-4 text-accent" />
+                <Robot weight="duotone" className="h-4 w-4 text-accent" />
                 <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">
                   Мои агенты
                 </h2>
@@ -380,7 +380,7 @@ export default function AgentsPage() {
                 !normalizedQuery && (
                   <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl border border-dashed border-border bg-surface/50">
                     <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
-                      <Bot className="h-6 w-6 text-accent" />
+                      <Robot weight="duotone" className="h-6 w-6 text-accent" />
                     </div>
                     <p className="text-sm font-medium text-text-primary mb-1">
                       У вас пока нет агентов
@@ -397,7 +397,7 @@ export default function AgentsPage() {
                 <div ref={sentinelRef} className="flex items-center justify-center py-8">
                   {loadingMore && (
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
                       <span>Загрузка...</span>
                     </div>
                   )}
@@ -409,7 +409,7 @@ export default function AgentsPage() {
             {hasNoResults && (
               <div className="flex flex-col items-center justify-center py-12 px-4">
                 <div className="h-12 w-12 rounded-xl bg-surface flex items-center justify-center mb-4 border border-border">
-                  <Search className="h-6 w-6 text-text-secondary" />
+                  <MagnifyingGlass weight="duotone" className="h-6 w-6 text-text-secondary" />
                 </div>
                 <p className="text-sm font-medium text-text-primary mb-1">
                   Ничего не найдено

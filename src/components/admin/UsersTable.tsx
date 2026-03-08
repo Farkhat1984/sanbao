@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/Badge";
 import { UserEditModal } from "./UserEditModal";
 
@@ -85,7 +85,7 @@ export function UsersTable() {
     <div>
       {/* Search */}
       <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" weight="duotone" />
         <input
           type="text"
           placeholder="Поиск по имени или email..."
@@ -185,7 +185,7 @@ export function UsersTable() {
               disabled={page === 1}
               className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <CaretLeft className="h-4 w-4" weight="duotone" />
             </button>
             <span className="text-sm text-text-secondary">
               {page} / {totalPages}
@@ -195,7 +195,7 @@ export function UsersTable() {
               disabled={page === totalPages}
               className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
             >
-              <ChevronRight className="h-4 w-4" />
+              <CaretRight className="h-4 w-4" weight="duotone" />
             </button>
           </div>
         </div>

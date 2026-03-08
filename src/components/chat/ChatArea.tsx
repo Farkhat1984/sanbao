@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { ListChecks, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ListChecks, CaretDown, CaretRight, SpinnerGap } from "@phosphor-icons/react";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { useTaskStore } from "@/stores/taskStore";
@@ -141,11 +141,11 @@ export function ChatArea() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent/10 text-accent text-xs font-medium hover:bg-accent/15 transition-colors cursor-pointer"
             >
               {tasksExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+                <CaretDown weight="duotone" className="h-3 w-3" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <CaretRight weight="duotone" className="h-3 w-3" />
               )}
-              <ListChecks className="h-3.5 w-3.5" />
+              <ListChecks weight="duotone" className="h-3.5 w-3.5" />
               <span>{activeTasks.length} {activeTasks.length === 1 ? "задача" : "задачи"} в работе</span>
             </button>
             {tasksExpanded && (
@@ -172,7 +172,7 @@ export function ChatArea() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isLoadingMoreMessages ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <SpinnerGap weight="bold" className="h-3 w-3 animate-spin" />
                   ) : null}
                   {isLoadingMoreMessages ? "Загрузка..." : "Загрузить ранние сообщения"}
                 </button>

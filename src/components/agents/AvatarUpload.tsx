@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, X } from "lucide-react";
+import { UploadSimple, X } from "@phosphor-icons/react";
 
 interface AvatarUploadProps {
   avatar: string | null;
@@ -60,7 +60,7 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
             onClick={() => onAvatarChange(null)}
             className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-error text-white flex items-center justify-center cursor-pointer hover:bg-error/80 transition-colors"
           >
-            <X className="h-3 w-3" />
+            <X weight="duotone" className="h-3 w-3" />
           </button>
         )}
       </div>
@@ -80,7 +80,7 @@ export function AvatarUpload({ avatar, onAvatarChange }: AvatarUploadProps) {
             onClick={() => fileRef.current?.click()}
             className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-secondary hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <UploadSimple weight="duotone" className="h-3.5 w-3.5" />
             Загрузить
           </button>
         </div>

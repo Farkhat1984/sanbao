@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Save, Trash2, Shield, Globe, CheckCircle, XCircle, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Plus, FloppyDisk, Trash, Shield, Globe, CheckCircle, XCircle, CaretLeft, CaretRight, Users } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
@@ -133,7 +133,7 @@ export default function AdminSkillsPage() {
           <p className="text-sm text-text-secondary mt-1">Системные и пользовательские скиллы</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" /> Добавить
+          <Plus className="h-4 w-4" weight="duotone" /> Добавить
         </Button>
       </div>
 
@@ -206,7 +206,7 @@ export default function AdminSkillsPage() {
           <textarea placeholder="Описание" value={newSkill.description} onChange={(e) => setNewSkill({ ...newSkill, description: e.target.value })} className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
           <textarea placeholder="Системный промпт" value={newSkill.systemPrompt} onChange={(e) => setNewSkill({ ...newSkill, systemPrompt: e.target.value })} className="w-full h-32 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
           <textarea placeholder="Правила цитирования" value={newSkill.citationRules} onChange={(e) => setNewSkill({ ...newSkill, citationRules: e.target.value })} className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
-          <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
+          <Button variant="gradient" size="sm" onClick={handleCreate}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Создать</Button>
         </div>
       )}
 
@@ -231,7 +231,7 @@ export default function AdminSkillsPage() {
                 <textarea value={editForm.systemPrompt ?? s.systemPrompt} onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })} className="w-full h-32 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
                 <textarea value={editForm.citationRules ?? s.citationRules ?? ""} onChange={(e) => setEditForm({ ...editForm, citationRules: e.target.value })} placeholder="Правила цитирования" className="w-full h-16 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
                 <div className="flex gap-2">
-                  <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, editForm)}><Save className="h-3.5 w-3.5" /> Сохранить</Button>
+                  <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, editForm)}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить</Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>Отмена</Button>
                 </div>
               </div>
@@ -242,8 +242,8 @@ export default function AdminSkillsPage() {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-text-primary">{s.name}</span>
-                      {s.isBuiltIn && <Badge variant="accent"><Shield className="h-3 w-3" /> Системный</Badge>}
-                      {s.isPublic && <Badge variant="default"><Globe className="h-3 w-3" /> Публичный</Badge>}
+                      {s.isBuiltIn && <Badge variant="accent"><Shield className="h-3 w-3" weight="duotone" /> Системный</Badge>}
+                      {s.isPublic && <Badge variant="default"><Globe className="h-3 w-3" weight="duotone" /> Публичный</Badge>}
                       {/* Category badge */}
                       {s.category && (
                         <span className={cn(
@@ -262,7 +262,7 @@ export default function AdminSkillsPage() {
                     <p className="text-xs text-text-secondary mt-0.5">
                       {s.jurisdiction} &middot; {s._count?.agents || 0} агентов
                       {s.usageCount > 0 && (
-                        <> &middot; <Users className="inline h-3 w-3 -mt-0.5" /> {s.usageCount}</>
+                        <> &middot; <Users className="inline h-3 w-3 -mt-0.5" weight="duotone" /> {s.usageCount}</>
                       )}
                       {s.user && <> &middot; {s.user.name || s.user.email}</>}
                     </p>
@@ -272,25 +272,25 @@ export default function AdminSkillsPage() {
                   {!s.isBuiltIn && s.status === "PENDING" && (
                     <>
                       <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, { status: "APPROVED" })}>
-                        <CheckCircle className="h-3.5 w-3.5" /> Одобрить
+                        <CheckCircle className="h-3.5 w-3.5" weight="duotone" /> Одобрить
                       </Button>
                       <Button variant="secondary" size="sm" onClick={() => handleUpdate(s.id, { status: "REJECTED" })}>
-                        <XCircle className="h-3.5 w-3.5" /> Отклонить
+                        <XCircle className="h-3.5 w-3.5" weight="duotone" /> Отклонить
                       </Button>
                     </>
                   )}
                   {!s.isBuiltIn && s.status === "REJECTED" && (
                     <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, { status: "APPROVED" })}>
-                      <CheckCircle className="h-3.5 w-3.5" /> Одобрить
+                      <CheckCircle className="h-3.5 w-3.5" weight="duotone" /> Одобрить
                     </Button>
                   )}
                   {!s.isBuiltIn && s.status === "APPROVED" && (
                     <Button variant="secondary" size="sm" onClick={() => handleUpdate(s.id, { status: "REJECTED" })}>
-                      <XCircle className="h-3.5 w-3.5" /> Отклонить
+                      <XCircle className="h-3.5 w-3.5" weight="duotone" /> Отклонить
                     </Button>
                   )}
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(s.id); setEditForm({}); }}>Изменить</Button>
-                  <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash className="h-3.5 w-3.5" weight="duotone" /></button>
                 </div>
               </div>
             )}
@@ -311,7 +311,7 @@ export default function AdminSkillsPage() {
                   disabled={page === 1}
                   className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <CaretLeft className="h-4 w-4" weight="duotone" />
                 </button>
                 <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
                 <button
@@ -319,7 +319,7 @@ export default function AdminSkillsPage() {
                   disabled={page === totalPages}
                   className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <CaretRight className="h-4 w-4" weight="duotone" />
                 </button>
               </div>
             </div>

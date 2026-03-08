@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, Pencil } from "lucide-react";
+import { ChatTeardrop, PencilSimple } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useChatStore } from "@/stores/chatStore";
@@ -63,7 +63,7 @@ export function AgentCard({ agent }: AgentCardProps) {
             className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
             style={{ backgroundColor: agent.iconColor }}
           >
-            <Icon className="h-5 w-5 text-white" />
+            <Icon weight="duotone" className="h-5 w-5 text-white" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -78,7 +78,7 @@ export function AgentCard({ agent }: AgentCardProps) {
           }}
           className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <PencilSimple weight="duotone" className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -90,7 +90,7 @@ export function AgentCard({ agent }: AgentCardProps) {
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-1 text-xs text-text-secondary">
-          <MessageSquare className="h-3 w-3" />
+          <ChatTeardrop weight="duotone" className="h-3 w-3" />
           {agent._count.conversations} чат{agent._count.conversations === 1 ? "" : "ов"}
         </div>
         <button

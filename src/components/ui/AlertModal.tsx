@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertCircle, CheckCircle, Info } from "lucide-react";
+import { WarningCircle, CheckCircle, Info } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const variantConfig: Record<
   { icon: typeof Info; iconBg: string; iconColor: string }
 > = {
   error: {
-    icon: AlertCircle,
+    icon: WarningCircle,
     iconBg: "bg-error-light",
     iconColor: "text-error",
   },
@@ -83,7 +83,7 @@ export function AlertModal({
                   config.iconBg
                 )}
               >
-                <Icon className={cn("h-6 w-6", config.iconColor)} />
+                <Icon className={cn("h-6 w-6", config.iconColor)} weight="duotone" />
               </div>
               <h3 className="text-base font-semibold text-text-primary mb-1">
                 {title}

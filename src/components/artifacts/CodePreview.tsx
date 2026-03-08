@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import { RefreshCw, Maximize2, Minimize2, Wrench, Check } from "lucide-react";
+import { ArrowsClockwise, ArrowsOut, ArrowsIn, Wrench, Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { buildPreviewHtml } from "@/lib/code-preview-builder";
 
@@ -72,7 +72,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
           </span>
           {sentToChat && (
             <span className="flex items-center gap-1 text-[10px] text-success font-medium">
-              <Check className="h-3 w-3" />
+              <Check className="h-3 w-3" weight="duotone" />
               Отправлено в чат
             </span>
           )}
@@ -84,7 +84,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
               className="h-6 px-2 rounded-md flex items-center gap-1 text-[10px] text-warning hover:bg-surface transition-colors cursor-pointer"
               title="Исправить ошибку"
             >
-              <Wrench className="h-3 w-3" />
+              <Wrench className="h-3 w-3" weight="duotone" />
               Исправить
             </button>
           )}
@@ -93,7 +93,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
             className="h-6 w-6 rounded-md flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
             title="Обновить превью"
           >
-            <RefreshCw className="h-3 w-3" />
+            <ArrowsClockwise className="h-3 w-3" weight="duotone" />
           </button>
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
@@ -101,9 +101,9 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
             title={isFullscreen ? "Свернуть" : "На весь экран"}
           >
             {isFullscreen ? (
-              <Minimize2 className="h-3 w-3" />
+              <ArrowsIn className="h-3 w-3" weight="duotone" />
             ) : (
-              <Maximize2 className="h-3 w-3" />
+              <ArrowsOut className="h-3 w-3" weight="duotone" />
             )}
           </button>
         </div>

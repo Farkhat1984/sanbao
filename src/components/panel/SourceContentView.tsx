@@ -1,11 +1,11 @@
 "use client";
 
-import { FileText, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { FileText, CaretUp, CaretDown, SpinnerGap } from "@phosphor-icons/react";
 import { useSourceStore } from "@/stores/sourceStore";
 import type { SourceChunkContext } from "@/stores/sourceStore";
 
 function ChunkPreview({ chunk, direction }: { chunk: SourceChunkContext; direction: "before" | "after" }) {
-  const icon = direction === "before" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  const icon = direction === "before" ? <CaretUp weight="duotone" className="h-3 w-3" /> : <CaretDown weight="duotone" className="h-3 w-3" />;
   return (
     <div className="px-4 py-2 bg-surface-alt/50 border-l-2 border-border text-xs text-text-secondary">
       <div className="flex items-center gap-1 mb-1 font-medium">
@@ -25,7 +25,7 @@ export function SourceContentView() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
+        <SpinnerGap weight="bold" className="h-5 w-5 animate-spin text-text-secondary" />
       </div>
     );
   }
@@ -56,7 +56,7 @@ export function SourceContentView() {
       {/* Header */}
       <div className="sticky top-0 bg-surface border-b border-border px-4 py-3 z-10">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-accent shrink-0" />
+          <FileText weight="duotone" className="h-4 w-4 text-accent shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">{s.source_file}</p>
             <div className="flex items-center gap-2 text-xs text-text-secondary">

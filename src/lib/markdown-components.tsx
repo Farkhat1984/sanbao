@@ -1,7 +1,7 @@
 // ─── Custom react-markdown components ────────────────────
 // Shared markdown component overrides for ReactMarkdown.
 
-import { ExternalLink, Image } from "lucide-react";
+import { ArrowSquareOut, Image } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { ArticleLink } from "@/components/chat/ArticleLink";
 import { SourceLink } from "@/components/chat/SourceLink";
@@ -60,7 +60,7 @@ export const markdownComponents = {
         className="text-accent hover:underline inline-flex items-center gap-0.5"
       >
         {children}
-        <ExternalLink className="h-3 w-3 inline shrink-0 opacity-40" />
+        <ArrowSquareOut weight="duotone" className="h-3 w-3 inline shrink-0 opacity-40" />
       </a>
     );
   },
@@ -71,13 +71,13 @@ export const markdownComponents = {
       className="my-2 flex items-center gap-3 p-2.5 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/img"
     >
       <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-        <Image className="h-5 w-5 text-accent" />
+        <Image weight="duotone" className="h-5 w-5 text-accent" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate">{props.alt || "Изображение"}</p>
         <p className="text-xs text-text-secondary">Нажмите чтобы открыть</p>
       </div>
-      <ExternalLink className="h-4 w-4 text-text-secondary group-hover/img:text-accent transition-colors shrink-0" />
+      <ArrowSquareOut weight="duotone" className="h-4 w-4 text-text-secondary group-hover/img:text-accent transition-colors shrink-0" />
     </button>
   ),
   code: ({

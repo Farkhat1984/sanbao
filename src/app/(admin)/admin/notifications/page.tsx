@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bell, Send, Loader2 } from "lucide-react";
+import { Bell, PaperPlaneRight, SpinnerGap } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -124,7 +124,7 @@ export default function AdminNotificationsPage() {
           </label>
         </div>
         <textarea placeholder="Текст уведомления" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="w-full h-20 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
-        <Button variant="gradient" size="sm" onClick={handleSend} isLoading={sending}><Send className="h-3.5 w-3.5" /> Отправить</Button>
+        <Button variant="gradient" size="sm" onClick={handleSend} isLoading={sending}><PaperPlaneRight className="h-3.5 w-3.5" weight="duotone" /> Отправить</Button>
       </div>
 
       {/* History */}
@@ -136,7 +136,7 @@ export default function AdminNotificationsPage() {
             {notifications.map((n) => (
               <div key={n.id} className="bg-surface border border-border rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Bell className={`h-4 w-4 ${typeColor(n.type)}`} />
+                  <Bell className={`h-4 w-4 ${typeColor(n.type)}`} weight="duotone" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-text-primary">{n.title}</span>
@@ -157,7 +157,7 @@ export default function AdminNotificationsPage() {
             <div ref={sentinelRef} className="flex items-center justify-center py-6">
               {loadingMore && (
                 <div className="flex items-center gap-2 text-sm text-text-secondary">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <SpinnerGap className="h-4 w-4 animate-spin" weight="bold" />
                   <span>Загрузка...</span>
                 </div>
               )}
