@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Loader2, Plus, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { ICON_MAP } from "./AgentIconPicker";
 import { cn } from "@/lib/utils";
 import { SKILL_CATEGORIES } from "@/lib/constants";
-import { InlineSkillCreateModal } from "@/components/skills/InlineSkillCreateModal";
 
 interface SkillItem {
   id: string;
@@ -37,7 +36,6 @@ const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
 export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProps) {
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/skills?include=systemPrompt")
@@ -94,26 +92,6 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
       .reduce((sum, s) => sum + estimateTokens(s.systemPrompt), 0);
   }, [skills, selectedIds]);
 
-  function handleSkillCreated(skill: {
-    id: string;
-    name: string;
-    icon: string;
-    iconColor: string;
-    category: string;
-  }) {
-    const newSkill: SkillItem = {
-      id: skill.id,
-      name: skill.name,
-      icon: skill.icon,
-      iconColor: skill.iconColor,
-      category: skill.category,
-      jurisdiction: null,
-    };
-    setSkills((prev) => [newSkill, ...prev]);
-    onChange([...selectedIds, skill.id]);
-    setShowCreateModal(false);
-  }
-
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-secondary text-xs py-3">
@@ -125,24 +103,10 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
 
   if (skills.length === 0) {
     return (
-      <div className="space-y-2">
-        <p className="text-xs text-text-secondary py-2">
-          Нет доступных скиллов.
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-border text-text-secondary hover:text-accent hover:border-accent transition-all cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Создать скилл
-        </button>
-        <InlineSkillCreateModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreated={handleSkillCreated}
-        />
-      </div>
+      <p className="text-xs text-text-secondary py-2">
+        Нет доступных скиллов. Создайте скиллы в разделе{" "}
+        <a href="/skills/new" className="text-accent hover:underline">Скиллы</a>.
+      </p>
     );
   }
 
@@ -197,24 +161,6 @@ export function AgentSkillPicker({ selectedIds, onChange }: AgentSkillPickerProp
           </div>
         </div>
       ))}
-
-      {/* Add skill button */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-border text-text-secondary hover:text-accent hover:border-accent transition-all cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Создать скилл
-        </button>
-      </div>
-
-      <InlineSkillCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreated={handleSkillCreated}
-      />
     </div>
   );
 }

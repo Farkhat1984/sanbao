@@ -16,20 +16,6 @@ import { cn } from "@/lib/utils";
 
 const PLAYGROUND_ITEMS = [
   {
-    label: "Агенты",
-    icon: Bot,
-    href: "/agents",
-    color: "bg-accent-light text-accent",
-    description: "AI-ассистенты",
-  },
-  {
-    label: "Скиллы",
-    icon: Zap,
-    href: "/skills",
-    color: "bg-accent-light text-accent",
-    description: "Шаблоны промптов",
-  },
-  {
     label: "Организации",
     icon: Building2,
     href: "/organizations",
@@ -37,11 +23,25 @@ const PLAYGROUND_ITEMS = [
     description: "Корпоративные агенты",
   },
   {
+    label: "Агенты",
+    icon: Bot,
+    href: "/agents",
+    color: "bg-accent-light text-accent",
+    description: "AI-ассистенты",
+  },
+  {
     label: "MCP",
     icon: Cable,
     href: "/mcp",
     color: "bg-accent-light text-accent",
     description: "Серверы",
+  },
+  {
+    label: "Скиллы",
+    icon: Zap,
+    href: "/skills",
+    color: "bg-accent-light text-accent",
+    description: "Шаблоны промптов",
   },
 ];
 
