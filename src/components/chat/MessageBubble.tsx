@@ -38,6 +38,14 @@ const ASSISTANT_COLLAPSE_HEIGHT = 500;
 /** Height threshold (px) above which user messages are collapsed */
 const USER_COLLAPSE_HEIGHT = 400;
 
+/** Detect if content contains rich markdown (code blocks, tables, lists, headers, images, blockquotes) */
+const RICH_MD_RE = /```|^\|.+\|/m;
+const RICH_MD_BLOCK_RE = /^(\s*[-*+]\s|#{1,6}\s|>\s|\d+\.\s)/m;
+
+function hasRichMarkdown(content: string): boolean {
+  return RICH_MD_RE.test(content) || RICH_MD_BLOCK_RE.test(content);
+}
+
 // ─── Component ───────────────────────────────────────────
 
 interface MessageBubbleProps {
@@ -95,6 +103,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const hasSpecialParts = useMemo(
     () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
     [parts]
+  );
+
+  // Determine if assistant message has rich markdown (needs bordered container)
+  const isRichMd = useMemo(
+    () => isAssistant && (hasSpecialParts || hasRichMarkdown(displayContent)),
+    [isAssistant, hasSpecialParts, displayContent]
   );
 
   // Detect overflow for assistant messages
@@ -200,8 +214,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
       {/* Content */}
       <div
         className={cn(
-          "flex-1 min-w-0 max-w-[85%]",
-          isUser && "flex flex-col items-end"
+          "flex-1 min-w-0",
+          isUser && "max-w-[85%] flex flex-col items-end"
         )}
       >
         {/* Name */}
@@ -248,10 +262,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
         <div
           ref={isAssistant ? bubbleRef : isUser ? userBubbleRef : undefined}
           className={cn(
-            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+            "text-sm leading-relaxed",
             isUser
-              ? "bg-accent text-white rounded-tr-md"
-              : "bg-surface-alt text-text-primary rounded-tl-md border border-border",
+              ? "rounded-2xl px-4 py-3 bg-accent text-white rounded-tr-md"
+              : isRichMd
+                ? "rounded-2xl px-4 py-3 bg-surface-alt text-text-primary rounded-tl-md border border-border"
+                : "text-text-primary py-1",
             isAssistant && !isExpanded && "overflow-hidden relative",
             isAssistant && isExpanded && "overflow-x-auto",
             isUser && !isUserExpanded && isUserOverflowing && "overflow-hidden relative",
@@ -373,7 +389,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
           {/* Gradient overlay + expand button for collapsed messages */}
           {isAssistant && !isExpanded && isOverflowing && (
-            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent flex items-end justify-center pb-2">
+            <div className={cn(
+              "absolute bottom-0 left-0 right-0 h-20 flex items-end justify-center pb-2",
+              isRichMd
+                ? "bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent"
+                : "bg-gradient-to-t from-bg via-bg/90 to-transparent"
+            )}>
               <button
                 onClick={() => setIsExpanded(true)}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"

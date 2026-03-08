@@ -4,7 +4,6 @@ import { useState, useRef, useCallback } from "react";
 import {
   Send,
   StopCircle,
-  Globe,
   Brain,
   Mic,
   X,
@@ -33,9 +32,7 @@ export function MessageInput() {
   const {
     isStreaming,
     thinkingEnabled,
-    webSearchEnabled,
     toggleThinking,
-    toggleWebSearch,
   } = useChatStore();
 
   const { agentTools } = useAgentStore();
@@ -120,25 +117,12 @@ export function MessageInput() {
           <button
             onClick={toggleThinking}
             className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-legal-ref-bg text-legal-ref font-medium hover:bg-[#EDE5D6] transition-colors cursor-pointer",
+              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-light text-accent font-medium hover:bg-accent/20 transition-colors cursor-pointer",
               isMobile ? "text-xs py-1" : "text-[10px]"
             )}
           >
             <Brain className="h-3 w-3" />
             Thinking
-            <X className="h-2.5 w-2.5 ml-0.5" />
-          </button>
-        )}
-        {webSearchEnabled && (
-          <button
-            onClick={toggleWebSearch}
-            className={cn(
-              "flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-light text-success font-medium hover:bg-success/20 transition-colors cursor-pointer",
-              isMobile ? "text-xs py-1" : "text-[10px]"
-            )}
-          >
-            <Globe className="h-3 w-3" />
-            Веб-поиск
             <X className="h-2.5 w-2.5 ml-0.5" />
           </button>
         )}
@@ -202,9 +186,7 @@ export function MessageInput() {
             onAttachClick={() => fileInputRef.current?.click()}
             onCameraClick={() => cameraInputRef.current?.click()}
             hasAgentTools={agentTools.length > 0}
-            webSearchEnabled={webSearchEnabled}
             thinkingEnabled={thinkingEnabled}
-            toggleWebSearch={toggleWebSearch}
             toggleThinking={toggleThinking}
           />
 

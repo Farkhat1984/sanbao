@@ -4,7 +4,6 @@ import {
   Plus,
   Paperclip,
   Wrench,
-  Globe,
   Brain,
   Camera,
 } from "lucide-react";
@@ -22,9 +21,7 @@ export interface PlusMenuProps {
   onAttachClick: () => void;
   onCameraClick: () => void;
   hasAgentTools: boolean;
-  webSearchEnabled: boolean;
   thinkingEnabled: boolean;
-  toggleWebSearch: () => void;
   toggleThinking: () => void;
 }
 
@@ -38,9 +35,7 @@ export function PlusMenu({
   onAttachClick,
   onCameraClick,
   hasAgentTools,
-  webSearchEnabled,
   thinkingEnabled,
-  toggleWebSearch,
   toggleThinking,
 }: PlusMenuProps) {
   const handleOpenTools = () => {
@@ -138,42 +133,6 @@ export function PlusMenu({
 
                 <div className="h-px bg-border mx-3 my-1" />
 
-                {/* Web Search toggle */}
-                <button
-                  onClick={() => {
-                    toggleWebSearch();
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                >
-                  <div
-                    className={cn(
-                      "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
-                      webSearchEnabled
-                        ? "bg-success text-white"
-                        : "bg-success-light text-success"
-                    )}
-                  >
-                    <Globe className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <span>Веб-поиск</span>
-                  </div>
-                  <div
-                    className={cn(
-                      "w-8 h-4.5 rounded-full transition-colors relative",
-                      webSearchEnabled ? "bg-success" : "bg-border"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
-                        webSearchEnabled ? "left-[18px]" : "left-0.5"
-                      )}
-                    />
-                  </div>
-                </button>
-
                 {/* Thinking toggle */}
                 <button
                   onClick={() => {
@@ -182,14 +141,7 @@ export function PlusMenu({
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <div
-                    className={cn(
-                      "h-7 w-7 rounded-lg flex items-center justify-center transition-colors",
-                      thinkingEnabled
-                        ? "bg-legal-ref text-white"
-                        : "bg-legal-ref-bg text-legal-ref"
-                    )}
-                  >
+                  <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-accent-light text-accent transition-colors">
                     <Brain className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 text-left">
@@ -198,7 +150,7 @@ export function PlusMenu({
                   <div
                     className={cn(
                       "w-8 h-4.5 rounded-full transition-colors relative",
-                      thinkingEnabled ? "bg-legal-ref" : "bg-border"
+                      thinkingEnabled ? "bg-accent" : "bg-border"
                     )}
                   >
                     <div

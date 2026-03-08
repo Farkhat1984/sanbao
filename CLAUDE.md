@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPORTANT:** Before any infrastructure or deploy work, read `docs/DEVOPS.md` — it has full docs on servers, ports, services, env vars, CI/CD, Telegram bot, and troubleshooting.
 
-**IMPORTANT:** The project runs entirely in Docker (production). All services (app x3, nginx, postgres, redis, fragmentdb, orchestrator, embedding-proxy) run as Docker containers. Do NOT suggest running `npm run dev` or local processes — always work with Docker. Build and test locally, deploy via `./scripts/deploy.sh`. See `docker-compose.prod.yml` for the full stack.
+**IMPORTANT:** Production runs entirely in Docker (app x3, nginx, postgres, redis, fragmentdb, orchestrator, embedding-proxy). Deploy via `./scripts/deploy.sh`. See `docker-compose.prod.yml` for the full stack. Local dev (`npm run dev`) is fine for development/testing — Docker is required for production deployment.
 
 ## Commands
 

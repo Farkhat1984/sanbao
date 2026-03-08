@@ -165,7 +165,7 @@ export async function POST(req: Request) {
     skillId,
     orgAgentId,
     thinkingEnabled = true,
-    webSearchEnabled = false,
+    webSearchEnabled: _clientWebSearch = false,
     planningEnabled = false,
     attachments = [],
     conversationId: reqConvId,
@@ -216,9 +216,6 @@ export async function POST(req: Request) {
     if (thinkingEnabled && !plan.canUseReasoning) {
       return jsonError("Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках.", 403);
     }
-    if (webSearchEnabled && !plan.canUseAdvancedTools) {
-      return jsonError("Веб-поиск доступен на тарифе Pro и выше. Обновите подписку в настройках.", 403);
-    }
   }
 
   // ─── Content filter ─────────────────────────────────────
@@ -265,28 +262,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // Fallback 2: if user has exactly one published org agent, auto-resolve it
-  // (handles stale client JS that doesn't send orgAgentId)
-  if (!orgAgentId && !agentId) {
-    const userPublishedAgents = await prisma.orgAgent.findMany({
-      where: {
-        status: "PUBLISHED",
-        org: { members: { some: { userId: session.user.id } } },
-      },
-      select: { id: true },
-      take: 2,
-    });
-    if (userPublishedAgents.length === 1) {
-      orgAgentId = userPublishedAgents[0].id;
-      // Also update conversation if it exists
-      if (reqConvId) {
-        prisma.conversation.update({
-          where: { id: reqConvId },
-          data: { orgAgentId },
-        }).catch(() => {});
-      }
-    }
-  }
+  // Org agent is only used when explicitly selected by the client (orgAgentId)
+  // or when continuing a conversation that already has an org agent (Fallback 1 above).
 
   if (orgAgentId && !agentId) {
     const orgAgent = await prisma.orgAgent.findUnique({
@@ -512,11 +489,8 @@ export async function POST(req: Request) {
     agentMcpTools.length = MAX_MCP_TOOLS;
   }
 
-  // Auto-enable web search for eligible plans, but only when the agent
-  // has no MCP tools — agents with MCP should rely on their knowledge bases first.
-  if (!webSearchEnabled && plan.canUseAdvancedTools && agentMcpTools.length === 0) {
-    webSearchEnabled = true;
-  }
+  // Web search is always available — the model decides when to use it
+  let webSearchEnabled = true;
 
   // ─── Load skill ─────────────────────────────────────────
 
@@ -551,9 +525,8 @@ export async function POST(req: Request) {
     systemPrompt += "\n\n" + await getPrompt("prompt_mode_planning");
   }
 
-  if (webSearchEnabled) {
-    systemPrompt += "\n\n" + await getPrompt("prompt_mode_websearch");
-  }
+  // Web search prompt is always included — model decides when to search
+  systemPrompt += "\n\n" + await getPrompt("prompt_mode_websearch");
 
   if (thinkingEnabled) {
     systemPrompt += "\n\n" + await getPrompt("prompt_mode_thinking");
