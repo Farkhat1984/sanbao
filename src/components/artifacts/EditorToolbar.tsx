@@ -1,22 +1,22 @@
 "use client";
 
 import {
-  TextB,
-  TextItalic,
-  TextUnderline,
-  HighlighterCircle,
-  TextHOne,
-  TextHTwo,
-  TextHThree,
-  ListBullets,
-  ListNumbers,
-  TextAlignLeft,
-  TextAlignCenter,
-  TextAlignRight,
-  TextAlignJustify,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Highlighter,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
   Table as TableIcon,
   Minus,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Editor } from "@tiptap/react";
 
@@ -45,28 +45,28 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className={btnClass(editor.isActive("bold"))}
         title="Жирный (Ctrl+B)"
       >
-        <TextB className="h-3.5 w-3.5" weight="duotone" />
+        <Bold className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={btnClass(editor.isActive("italic"))}
         title="Курсив (Ctrl+I)"
       >
-        <TextItalic className="h-3.5 w-3.5" weight="duotone" />
+        <Italic className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         className={btnClass(editor.isActive("underline"))}
         title="Подчёркнутый (Ctrl+U)"
       >
-        <TextUnderline className="h-3.5 w-3.5" weight="duotone" />
+        <UnderlineIcon className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHighlight().run()}
         className={btnClass(editor.isActive("highlight"))}
         title="Выделение"
       >
-        <HighlighterCircle className="h-3.5 w-3.5" weight="duotone" />
+        <Highlighter className="h-3.5 w-3.5" />
       </button>
 
       {divider}
@@ -77,21 +77,21 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className={btnClass(editor.isActive("heading", { level: 1 }))}
         title="Заголовок 1"
       >
-        <TextHOne className="h-3.5 w-3.5" weight="duotone" />
+        <Heading1 className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         className={btnClass(editor.isActive("heading", { level: 2 }))}
         title="Заголовок 2"
       >
-        <TextHTwo className="h-3.5 w-3.5" weight="duotone" />
+        <Heading2 className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         className={btnClass(editor.isActive("heading", { level: 3 }))}
         title="Заголовок 3"
       >
-        <TextHThree className="h-3.5 w-3.5" weight="duotone" />
+        <Heading3 className="h-3.5 w-3.5" />
       </button>
 
       {divider}
@@ -102,14 +102,14 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className={btnClass(editor.isActive("bulletList"))}
         title="Маркированный список"
       >
-        <ListBullets className="h-3.5 w-3.5" weight="duotone" />
+        <List className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         className={btnClass(editor.isActive("orderedList"))}
         title="Нумерованный список"
       >
-        <ListNumbers className="h-3.5 w-3.5" weight="duotone" />
+        <ListOrdered className="h-3.5 w-3.5" />
       </button>
 
       {divider}
@@ -120,28 +120,28 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className={btnClass(editor.isActive({ textAlign: "left" }))}
         title="По левому краю"
       >
-        <TextAlignLeft className="h-3.5 w-3.5" weight="duotone" />
+        <AlignLeft className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().setTextAlign("center").run()}
         className={btnClass(editor.isActive({ textAlign: "center" }))}
         title="По центру"
       >
-        <TextAlignCenter className="h-3.5 w-3.5" weight="duotone" />
+        <AlignCenter className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().setTextAlign("right").run()}
         className={btnClass(editor.isActive({ textAlign: "right" }))}
         title="По правому краю"
       >
-        <TextAlignRight className="h-3.5 w-3.5" weight="duotone" />
+        <AlignRight className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().setTextAlign("justify").run()}
         className={btnClass(editor.isActive({ textAlign: "justify" }))}
         title="По ширине"
       >
-        <TextAlignJustify className="h-3.5 w-3.5" weight="duotone" />
+        <AlignJustify className="h-3.5 w-3.5" />
       </button>
 
       {divider}
@@ -158,14 +158,14 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className={btnClass(false)}
         title="Вставить таблицу"
       >
-        <TableIcon className="h-3.5 w-3.5" weight="duotone" />
+        <TableIcon className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
         className={btnClass(false)}
         title="Горизонтальная линия"
       >
-        <Minus className="h-3.5 w-3.5" weight="duotone" />
+        <Minus className="h-3.5 w-3.5" />
       </button>
     </div>
   );

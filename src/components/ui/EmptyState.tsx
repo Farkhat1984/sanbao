@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import type { LucideIcon } from "lucide-react";
 import { CompassIcon } from "@/components/icons/CompassIcon";
 
 interface EmptyStateProps {
-  icon?: PhosphorIcon;
+  icon?: LucideIcon;
   title: string;
   description?: string;
   action?: React.ReactNode;

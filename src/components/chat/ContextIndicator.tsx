@@ -1,6 +1,6 @@
 "use client";
 
-import { SpinnerGap } from "@phosphor-icons/react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ContextIndicatorProps {
@@ -28,7 +28,7 @@ export function ContextIndicator({ usagePercent, isCompacting }: ContextIndicato
       <span className="text-[10px] text-text-secondary whitespace-nowrap">
         {isCompacting ? (
           <span className="flex items-center gap-1">
-            <SpinnerGap weight="bold" className="h-2.5 w-2.5 animate-spin" />
+            <Loader2 className="h-2.5 w-2.5 animate-spin" />
             Сжатие контекста
           </span>
         ) : (

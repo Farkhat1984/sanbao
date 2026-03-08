@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeft } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +8,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md border-b border-border">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/login" className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors">
-            <ArrowLeft weight="duotone" className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             <span className="text-sm">Назад</span>
           </Link>
           <Link href="/login" className="flex items-center gap-2">

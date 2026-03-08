@@ -3,7 +3,7 @@
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { ConversationItem } from "./ConversationItem";
-import { PushPin } from "@phosphor-icons/react";
+import { Pin } from "lucide-react";
 
 export function PinnedSection() {
   const conversations = useChatStore((s) => s.conversations);
@@ -20,7 +20,7 @@ export function PinnedSection() {
     <div className="border-b border-border shrink-0">
       <div className="px-2 py-1">
         <p className="flex items-center gap-1.5 text-[11px] font-medium text-text-secondary uppercase tracking-wider px-2 py-1.5">
-          <PushPin weight="duotone" className="h-3 w-3" />
+          <Pin className="h-3 w-3" />
           Закреплённые
         </p>
         <div className="max-h-[30vh] overflow-y-auto">

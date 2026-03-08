@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Sun, Moon } from "@phosphor-icons/react";
+import { Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -27,9 +27,9 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="Переключить тему"
     >
       {theme === "dark" ? (
-        <Sun className="h-[18px] w-[18px]" weight="duotone" />
+        <Sun className="h-[18px] w-[18px]" />
       ) : (
-        <Moon className="h-[18px] w-[18px]" weight="duotone" />
+        <Moon className="h-[18px] w-[18px]" />
       )}
     </button>
   );

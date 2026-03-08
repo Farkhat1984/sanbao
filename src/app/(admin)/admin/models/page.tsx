@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, FloppyDisk, Trash, Star, Brain, GridFour } from "@phosphor-icons/react";
+import { Plus, Save, Trash2, Star, StarOff, Brain, Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -131,10 +131,10 @@ export default function AdminModelsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/admin/models/matrix">
-            <Button variant="secondary" size="sm"><GridFour className="h-4 w-4" weight="duotone" /> Матрица планов</Button>
+            <Button variant="secondary" size="sm"><Grid3X3 className="h-4 w-4" /> Матрица планов</Button>
           </Link>
           <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-            <Plus className="h-4 w-4" weight="duotone" /> Добавить
+            <Plus className="h-4 w-4" /> Добавить
           </Button>
         </div>
       </div>
@@ -279,7 +279,7 @@ export default function AdminModelsPage() {
           </div>
           <div className="mt-3">
             <Button variant="gradient" size="sm" onClick={handleCreate}>
-              <FloppyDisk className="h-3.5 w-3.5" weight="duotone" />
+              <Save className="h-3.5 w-3.5" />
               Создать
             </Button>
           </div>
@@ -405,7 +405,7 @@ export default function AdminModelsPage() {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Button variant="gradient" size="sm" onClick={() => handleUpdate(m.id, editForm)}>
-                    <FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить
+                    <Save className="h-3.5 w-3.5" /> Сохранить
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>Отмена</Button>
                 </div>
@@ -419,7 +419,7 @@ export default function AdminModelsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-text-primary">{m.displayName}</span>
                       <Badge variant="default">{CATEGORY_LABELS[m.category] || m.category}</Badge>
-                      {m.supportsThinking && <Badge variant="default"><Brain className="h-3 w-3 inline" weight="duotone" /> Thinking</Badge>}
+                      {m.supportsThinking && <Badge variant="default"><Brain className="h-3 w-3 inline" /> Thinking</Badge>}
                       {m.isDefault && <Badge variant="accent">По умолчанию</Badge>}
                     </div>
                     <p className="text-xs text-text-secondary mt-0.5">
@@ -436,7 +436,7 @@ export default function AdminModelsPage() {
                     size="sm"
                     onClick={() => handleUpdate(m.id, { isDefault: !m.isDefault })}
                   >
-                    {m.isDefault ? <Star className="h-3.5 w-3.5" weight="light" /> : <Star className="h-3.5 w-3.5" weight="duotone" />}
+                    {m.isDefault ? <StarOff className="h-3.5 w-3.5" /> : <Star className="h-3.5 w-3.5" />}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(m.id); setEditForm({}); }}>
                     Изменить
@@ -452,7 +452,7 @@ export default function AdminModelsPage() {
                     onClick={() => handleDelete(m.id)}
                     className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                   >
-                    <Trash className="h-3.5 w-3.5" weight="duotone" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>

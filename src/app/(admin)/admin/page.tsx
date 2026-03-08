@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, ChatTeardrop, ChartBar, Lightning } from "@phosphor-icons/react";
+import { Users, MessageSquare, BarChart3, Zap } from "lucide-react";
 import { StatsCard } from "@/components/admin/StatsCard";
 
 interface Stats {
@@ -45,19 +45,19 @@ export default function AdminDashboard() {
           color="text-accent"
         />
         <StatsCard
-          icon={Lightning}
+          icon={Zap}
           label="Активны сегодня"
           value={stats.activeToday}
           color="text-success"
         />
         <StatsCard
-          icon={ChatTeardrop}
+          icon={MessageSquare}
           label="Сообщений сегодня"
           value={stats.totalMessagesToday}
           color="text-legal-ref"
         />
         <StatsCard
-          icon={ChartBar}
+          icon={BarChart3}
           label="На тарифах"
           value={`${stats.usersByPlan?.pro || 0} Pro / ${stats.usersByPlan?.business || 0} Business`}
           color="text-warning"

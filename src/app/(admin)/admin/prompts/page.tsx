@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FloppyDisk, ArrowCounterClockwise, CaretDown, CaretUp, Clock } from "@phosphor-icons/react";
+import { Save, RotateCcw, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface PromptItem {
@@ -151,9 +151,9 @@ export default function AdminPromptsPage() {
                   <p className="text-xs text-text-secondary mt-0.5 truncate">{prompt.description}</p>
                 </div>
                 {isExpanded ? (
-                  <CaretUp className="h-4 w-4 text-text-secondary shrink-0 ml-3" weight="duotone" />
+                  <ChevronUp className="h-4 w-4 text-text-secondary shrink-0 ml-3" />
                 ) : (
-                  <CaretDown className="h-4 w-4 text-text-secondary shrink-0 ml-3" weight="duotone" />
+                  <ChevronDown className="h-4 w-4 text-text-secondary shrink-0 ml-3" />
                 )}
               </button>
 
@@ -194,7 +194,7 @@ export default function AdminPromptsPage() {
                       onClick={() => handleSave(prompt.key)}
                       isLoading={saving === prompt.key}
                     >
-                      <FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить
+                      <Save className="h-3.5 w-3.5" /> Сохранить
                     </Button>
                     {!prompt.isDefault && (
                       <Button
@@ -203,7 +203,7 @@ export default function AdminPromptsPage() {
                         onClick={() => handleReset(prompt.key)}
                         isLoading={saving === prompt.key}
                       >
-                        <ArrowCounterClockwise className="h-3.5 w-3.5" weight="duotone" /> Сбросить
+                        <RotateCcw className="h-3.5 w-3.5" /> Сбросить
                       </Button>
                     )}
                   </div>
@@ -214,12 +214,12 @@ export default function AdminPromptsPage() {
                       onClick={() => toggleVersions(prompt.key)}
                       className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
                     >
-                      <Clock className="h-3.5 w-3.5" weight="duotone" />
+                      <Clock className="h-3.5 w-3.5" />
                       История версий
                       {showVersions[prompt.key] ? (
-                        <CaretUp className="h-3 w-3" weight="duotone" />
+                        <ChevronUp className="h-3 w-3" />
                       ) : (
-                        <CaretDown className="h-3 w-3" weight="duotone" />
+                        <ChevronDown className="h-3 w-3" />
                       )}
                     </button>
 

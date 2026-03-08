@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, FloppyDisk, Trash, Power, Lightning } from "@phosphor-icons/react";
+import { Plus, Save, Trash2, Power, PowerOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -106,7 +106,7 @@ export default function AdminProvidersPage() {
           <p className="text-sm text-text-secondary mt-1">Управление подключениями к AI API</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" weight="duotone" />
+          <Plus className="h-4 w-4" />
           Добавить
         </Button>
       </div>
@@ -156,7 +156,7 @@ export default function AdminProvidersPage() {
               <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
             </select>
             <Button variant="gradient" size="sm" onClick={handleCreate}>
-              <FloppyDisk className="h-3.5 w-3.5" weight="duotone" />
+              <Save className="h-3.5 w-3.5" />
               Создать
             </Button>
           </div>
@@ -183,7 +183,7 @@ export default function AdminProvidersPage() {
                   onClick={() => handleTest(p.id)}
                   isLoading={testing === p.id}
                 >
-                  <Lightning className="h-3.5 w-3.5" weight="duotone" />
+                  <Zap className="h-3.5 w-3.5" />
                   Тест
                 </Button>
                 <Button
@@ -191,14 +191,14 @@ export default function AdminProvidersPage() {
                   size="sm"
                   onClick={() => handleUpdate(p.id, { isActive: !p.isActive })}
                 >
-                  {p.isActive ? <Power className="h-3.5 w-3.5" weight="light" /> : <Power className="h-3.5 w-3.5" weight="duotone" />}
+                  {p.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                   {p.isActive ? "Откл." : "Вкл."}
                 </Button>
                 <button
                   onClick={() => handleDelete(p.id)}
                   className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                 >
-                  <Trash className="h-3.5 w-3.5" weight="duotone" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

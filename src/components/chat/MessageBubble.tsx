@@ -4,13 +4,13 @@ import {
   User,
   Copy,
   Check,
-  ArrowCounterClockwise,
+  RotateCcw,
   Brain,
-  CaretDown,
+  ChevronDown,
   FileText,
-  ArrowSquareOut,
-  PencilSimple,
-} from "@phosphor-icons/react";
+  ExternalLink,
+  Pencil,
+} from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { motion } from "framer-motion";
@@ -201,7 +201,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
             style={!isUser && agentIconColor ? { backgroundColor: agentIconColor, color: "white" } : undefined}
           >
             {isUser ? (
-              <User weight="duotone" className="h-4 w-4" />
+              <User className="h-4 w-4" />
             ) : AgentIcon ? (
               <AgentIcon className="h-4 w-4" />
             ) : (
@@ -230,10 +230,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onClick={() => setReasoningOpen(!reasoningOpen)}
               className="flex items-center gap-1.5 text-[11px] text-legal-ref hover:text-[#A07D55] transition-colors cursor-pointer mb-1"
             >
-              <Brain weight="duotone" className="h-3 w-3" />
+              <Brain className="h-3 w-3" />
               <span>Ход мысли</span>
-              <CaretDown
-                weight="duotone"
+              <ChevronDown
                 className={cn(
                   "h-3 w-3 transition-transform",
                   reasoningOpen && "rotate-180"
@@ -315,7 +314,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                           className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
                         >
                           <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-                            <FileText weight="duotone" className="h-5 w-5 text-accent" />
+                            <FileText className="h-5 w-5 text-accent" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-text-primary truncate">
@@ -327,7 +326,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                               &middot; Открыть в панели
                             </p>
                           </div>
-                          <ArrowSquareOut weight="duotone" className="h-4 w-4 text-text-secondary group-hover/artifact:text-accent transition-colors shrink-0" />
+                          <ExternalLink className="h-4 w-4 text-text-secondary group-hover/artifact:text-accent transition-colors shrink-0" />
                         </button>
                       </div>
                     );
@@ -342,7 +341,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                         className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-success-light border border-success/20 hover:border-success/40 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
                       >
                         <div className="h-10 w-10 rounded-lg bg-success-light flex items-center justify-center shrink-0">
-                          <PencilSimple weight="duotone" className="h-5 w-5 text-success" />
+                          <Pencil className="h-5 w-5 text-success" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-text-primary truncate">
@@ -354,7 +353,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                             {" "}&middot; Нажмите чтобы открыть
                           </p>
                         </div>
-                        <ArrowSquareOut weight="duotone" className="h-4 w-4 text-text-secondary group-hover/edit:text-success transition-colors shrink-0" />
+                        <ExternalLink className="h-4 w-4 text-text-secondary group-hover/edit:text-success transition-colors shrink-0" />
                       </button>
                     );
                   }
@@ -382,7 +381,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                 onClick={() => setIsUserExpanded(true)}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-white/20 border border-white/30 shadow-sm text-white hover:bg-white/30 transition-colors cursor-pointer"
               >
-                <CaretDown weight="duotone" className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3" />
                 Показать полностью
               </button>
             </div>
@@ -400,7 +399,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                 onClick={() => setIsExpanded(true)}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
               >
-                <CaretDown weight="duotone" className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3" />
                 Показать полностью
               </button>
             </div>
@@ -414,7 +413,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onClick={() => setIsExpanded(false)}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
             >
-              <CaretDown weight="duotone" className="h-3 w-3 rotate-180" />
+              <ChevronDown className="h-3 w-3 rotate-180" />
               Свернуть
             </button>
           </div>
@@ -427,7 +426,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onClick={() => setIsUserExpanded(false)}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
             >
-              <CaretDown weight="duotone" className="h-3 w-3 rotate-180" />
+              <ChevronDown className="h-3 w-3 rotate-180" />
               Свернуть
             </button>
           </div>
@@ -457,9 +456,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               )}
             >
               {copied ? (
-                <Check weight="duotone" className="h-3 w-3 text-success" />
+                <Check className="h-3 w-3 text-success" />
               ) : (
-                <Copy weight="duotone" className="h-3 w-3" />
+                <Copy className="h-3 w-3" />
               )}
               {copied ? "Скопировано" : "Копировать"}
             </button>
@@ -472,7 +471,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
                   isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
                 )}
               >
-                <ArrowCounterClockwise weight="duotone" className="h-3 w-3" />
+                <RotateCcw className="h-3 w-3" />
                 Повторить
               </button>
             )}
@@ -494,9 +493,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               )}
             >
               {copied ? (
-                <Check weight="duotone" className="h-3 w-3 text-success" />
+                <Check className="h-3 w-3 text-success" />
               ) : (
-                <Copy weight="duotone" className="h-3 w-3" />
+                <Copy className="h-3 w-3" />
               )}
               {copied ? "Скопировано" : "Копировать"}
             </button>

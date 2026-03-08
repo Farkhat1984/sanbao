@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowLeft, Warning } from "@phosphor-icons/react";
+import { X, ArrowLeft, AlertTriangle } from "lucide-react";
 import { usePanelStore } from "@/stores/panelStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { PanelTabBar } from "./PanelTabBar";
@@ -36,7 +36,7 @@ class PanelErrorBoundary extends React.Component<
       return (
         <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="h-10 w-10 rounded-full bg-error-light flex items-center justify-center">
-            <Warning weight="duotone" className="h-5 w-5 text-error" />
+            <AlertTriangle className="h-5 w-5 text-error" />
           </div>
           <p className="text-sm text-text-primary font-medium">
             Не удалось отобразить содержимое
@@ -179,7 +179,7 @@ export function UnifiedPanel() {
                 onClick={closePanel}
                 className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
               >
-                <ArrowLeft weight="duotone" className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="flex-1 min-w-0 overflow-hidden">
                 <PanelTabBar />
@@ -227,7 +227,7 @@ export function UnifiedPanel() {
                 className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer shrink-0"
                 title="Закрыть"
               >
-                <X weight="duotone" className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
 

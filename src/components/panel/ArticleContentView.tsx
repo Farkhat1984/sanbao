@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BookOpen, Wrench, ArrowCounterClockwise, Copy, DownloadSimple, Check } from "@phosphor-icons/react";
+import { BookOpen, Wrench, RotateCcw, Copy, Download, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useArticleStore } from "@/stores/articleStore";
@@ -76,7 +76,7 @@ function ArticleError({ error, onRetry, code, article }: { error: string; onRetr
   return (
     <div className="flex flex-col items-center justify-center px-4 py-12 text-center gap-3">
       <div className="h-12 w-12 rounded-xl bg-error-light flex items-center justify-center">
-        <BookOpen weight="duotone" className="h-6 w-6 text-error" />
+        <BookOpen className="h-6 w-6 text-error" />
       </div>
       <p className="text-sm text-text-secondary">{error}</p>
       {isLaw && (
@@ -89,7 +89,7 @@ function ArticleError({ error, onRetry, code, article }: { error: string; onRetr
           onClick={onRetry}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface-alt border border-border hover:border-accent text-text-primary transition-colors cursor-pointer"
         >
-          <ArrowCounterClockwise weight="duotone" className="h-3 w-3" />
+          <RotateCcw className="h-3 w-3" />
           Повторить
         </button>
       </div>
@@ -169,7 +169,7 @@ export function ArticleContentView() {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <HeaderIcon weight="duotone" className="h-4 w-4 text-legal-ref shrink-0" />
+          <HeaderIcon className="h-4 w-4 text-legal-ref shrink-0" />
           <span className="text-sm font-semibold text-text-primary truncate">
             {headerLabel}
           </span>
@@ -181,9 +181,9 @@ export function ArticleContentView() {
             title="Копировать"
           >
             {copied ? (
-              <Check weight="duotone" className="h-3.5 w-3.5 text-success" />
+              <Check className="h-3.5 w-3.5 text-success" />
             ) : (
-              <Copy weight="duotone" className="h-3.5 w-3.5" />
+              <Copy className="h-3.5 w-3.5" />
             )}
           </button>
           <button
@@ -191,7 +191,7 @@ export function ArticleContentView() {
             className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
             title="Скачать"
           >
-            <DownloadSimple weight="duotone" className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

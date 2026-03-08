@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { Warning, Trash, Info } from "@phosphor-icons/react";
+import { AlertTriangle, Trash2, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -20,16 +20,16 @@ interface ConfirmModalProps {
 
 const variantConfig: Record<
   ConfirmVariant,
-  { icon: typeof Trash; iconBg: string; iconColor: string; btnClass: string }
+  { icon: typeof Trash2; iconBg: string; iconColor: string; btnClass: string }
 > = {
   danger: {
-    icon: Trash,
+    icon: Trash2,
     iconBg: "bg-error-light",
     iconColor: "text-error",
     btnClass: "bg-error text-white hover:bg-[#B07068]",
   },
   warning: {
-    icon: Warning,
+    icon: AlertTriangle,
     iconBg: "bg-warning-light",
     iconColor: "text-warning",
     btnClass: "bg-warning text-white hover:bg-[#D97706]",
@@ -93,7 +93,7 @@ export function ConfirmModal({
                   config.iconBg
                 )}
               >
-                <Icon className={cn("h-6 w-6", config.iconColor)} weight="duotone" />
+                <Icon className={cn("h-6 w-6", config.iconColor)} />
               </div>
               <h3 className="text-base font-semibold text-text-primary mb-1">
                 {title}

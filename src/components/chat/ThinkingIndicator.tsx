@@ -2,19 +2,19 @@
 
 import {
   Brain,
-  ChatTeardrop,
+  MessageSquare,
   Globe,
   ListChecks,
-  Database,
+  DatabaseZap,
   Calculator,
-  BookmarkSimple,
-  Clipboard,
+  Bookmark,
+  ClipboardList,
   Bell,
-  Note,
-  ChartBar,
-  PaperPlaneRight,
+  StickyNote,
+  BarChart3,
+  Send,
   Plug,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { motion } from "framer-motion";
 import type { StreamingPhase } from "@/stores/chatStore";
 import { getToolCategory, type ToolCategory } from "@/stores/chatStore";
@@ -42,7 +42,7 @@ const TOOL_VISUALS: Record<
     dot: "bg-accent",
   },
   knowledge: {
-    Icon: Database,
+    Icon: DatabaseZap,
     label: "Ищет в базе знаний",
     gradient: "from-accent to-accent-hover",
     dot: "bg-accent",
@@ -54,13 +54,13 @@ const TOOL_VISUALS: Record<
     dot: "bg-info",
   },
   memory: {
-    Icon: BookmarkSimple,
+    Icon: Bookmark,
     label: "Сохраняет в память",
     gradient: "from-error to-error",
     dot: "bg-error",
   },
   task: {
-    Icon: Clipboard,
+    Icon: ClipboardList,
     label: "Создаёт задачу",
     gradient: "from-warning to-warning",
     dot: "bg-warning",
@@ -72,19 +72,19 @@ const TOOL_VISUALS: Record<
     dot: "bg-warning",
   },
   scratchpad: {
-    Icon: Note,
+    Icon: StickyNote,
     label: "Работает с заметками",
     gradient: "from-success to-success",
     dot: "bg-success",
   },
   chart: {
-    Icon: ChartBar,
+    Icon: BarChart3,
     label: "Строит график",
     gradient: "from-info to-info",
     dot: "bg-info",
   },
   http: {
-    Icon: PaperPlaneRight,
+    Icon: Send,
     label: "Выполняет запрос",
     gradient: "from-error to-error",
     dot: "bg-error",
@@ -96,7 +96,7 @@ const TOOL_VISUALS: Record<
     dot: "bg-legal-ref",
   },
   generic: {
-    Icon: ChatTeardrop,
+    Icon: MessageSquare,
     label: "Использует инструменты",
     gradient: "from-text-secondary to-text-secondary",
     dot: "bg-text-secondary",
@@ -197,7 +197,7 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
     animKey = "planning";
   } else {
     label = `${name} отвечает`;
-    Icon = ChatTeardrop;
+    Icon = MessageSquare;
     gradientClass = "from-accent to-accent-hover";
     dotColorClass = "bg-accent";
     animKey = "answering";
@@ -222,7 +222,7 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
             ease: "easeInOut",
           }}
         >
-          <Icon weight="duotone" className="h-4 w-4 text-white" />
+          <Icon className="h-4 w-4 text-white" />
         </motion.div>
       </div>
 

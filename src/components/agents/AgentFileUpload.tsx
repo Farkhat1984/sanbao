@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { UploadSimple, X, FileText, SpinnerGap, BookOpen, Archive, CheckCircle, Image, WarningCircle } from "@phosphor-icons/react";
+import { Upload, X, FileText, Loader2, BookOpen, Archive, CheckCircle2, ImageIcon, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentFile } from "@/types/agent";
 import { MAX_FILE_SIZE } from "@/lib/constants";
@@ -177,9 +177,9 @@ export function AgentFileUpload({
           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg,.webp"
         />
         {uploading ? (
-          <SpinnerGap weight="bold" className="h-8 w-8 text-accent mx-auto mb-2 animate-spin" />
+          <Loader2 className="h-8 w-8 text-accent mx-auto mb-2 animate-spin" />
         ) : (
-          <UploadSimple weight="duotone" className="h-8 w-8 text-text-secondary mx-auto mb-2" />
+          <Upload className="h-8 w-8 text-text-secondary mx-auto mb-2" />
         )}
         <p className="text-sm text-text-secondary">
           {uploading
@@ -213,7 +213,7 @@ export function AgentFileUpload({
                   !isInContext && "opacity-60"
                 )}
               >
-                <FileText weight="duotone" className="h-4 w-4 text-text-secondary shrink-0" />
+                <FileText className="h-4 w-4 text-text-secondary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary truncate">
                     {file.fileName}
@@ -223,15 +223,15 @@ export function AgentFileUpload({
                     {!isInContext && " · по запросу"}
                     {file.fileType?.startsWith("image/") ? (
                       <span className="inline-flex items-center gap-0.5 text-text-muted">
-                        · <Image weight="duotone" className="h-3 w-3" /> изображение
+                        · <ImageIcon className="h-3 w-3" /> изображение
                       </span>
                     ) : file.extractedText ? (
                       <span className="inline-flex items-center gap-0.5 text-success">
-                        · <CheckCircle weight="duotone" className="h-3 w-3" /> текст извлечён
+                        · <CheckCircle2 className="h-3 w-3" /> текст извлечён
                       </span>
                     ) : file.extractedText === null && file.id ? (
                       <span className="inline-flex items-center gap-0.5 text-warning">
-                        · <WarningCircle weight="duotone" className="h-3 w-3" /> текст не извлечён
+                        · <AlertCircle className="h-3 w-3" /> текст не извлечён
                       </span>
                     ) : null}
                   </p>
@@ -250,7 +250,7 @@ export function AgentFileUpload({
                       : "text-text-secondary hover:text-accent hover:bg-accent/10"
                   )}
                 >
-                  {isInContext ? <BookOpen weight="duotone" className="h-3.5 w-3.5" /> : <Archive weight="duotone" className="h-3.5 w-3.5" />}
+                  {isInContext ? <BookOpen className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -260,7 +260,7 @@ export function AgentFileUpload({
                   }}
                   className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                 >
-                  <X weight="duotone" className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             );
@@ -276,7 +276,7 @@ export function AgentFileUpload({
               key={`queued-${i}`}
               className="flex items-center gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20"
             >
-              <FileText weight="duotone" className="h-4 w-4 text-warning shrink-0" />
+              <FileText className="h-4 w-4 text-warning shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-text-primary truncate">{file.name}</p>
                 <p className="text-xs text-warning">
@@ -288,7 +288,7 @@ export function AgentFileUpload({
                 onClick={() => removeQueuedFile(i)}
                 className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
               >
-                <X weight="duotone" className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}

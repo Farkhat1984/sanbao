@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, FloppyDisk, Trash, WebhooksLogo, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Plus, Save, Trash2, Webhook, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -87,7 +87,7 @@ export default function AdminWebhooksPage() {
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Вебхуки</h1>
           <p className="text-sm text-text-secondary mt-1">HTTP-уведомления о событиях ({total})</p>
         </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" weight="duotone" /> Добавить</Button>
+        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Добавить</Button>
       </div>
 
       {adding && (
@@ -99,7 +99,7 @@ export default function AdminWebhooksPage() {
               <button key={ev} onClick={() => toggleEvent(ev)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${newWh.events.includes(ev) ? "bg-accent text-white" : "bg-surface-alt text-text-secondary hover:bg-surface-alt/80"}`}>{ev}</button>
             ))}
           </div>
-          <Button variant="gradient" size="sm" onClick={handleCreate}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Создать</Button>
+          <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
         </div>
       )}
 
@@ -108,13 +108,13 @@ export default function AdminWebhooksPage() {
           <div key={w.id} className="bg-surface border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <WebhooksLogo className="h-4 w-4 text-text-secondary" weight="duotone" />
+                <Webhook className="h-4 w-4 text-text-secondary" />
                 <span className="text-sm font-mono text-text-primary">{w.url}</span>
                 <div className={`h-2 w-2 rounded-full ${w.isActive ? "bg-success" : "bg-text-muted"}`} />
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="secondary" size="sm" onClick={() => handleToggle(w.id, w.isActive)}>{w.isActive ? "Откл." : "Вкл."}</Button>
-                <button onClick={() => handleDelete(w.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash className="h-3.5 w-3.5" weight="duotone" /></button>
+                <button onClick={() => handleDelete(w.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </div>
             <div className="flex flex-wrap gap-1">
@@ -134,7 +134,7 @@ export default function AdminWebhooksPage() {
                 disabled={page === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretLeft className="h-4 w-4" weight="duotone" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <button
@@ -142,7 +142,7 @@ export default function AdminWebhooksPage() {
                 disabled={page === totalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretRight className="h-4 w-4" weight="duotone" />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>

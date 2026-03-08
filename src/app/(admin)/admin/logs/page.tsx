@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DownloadSimple } from "@phosphor-icons/react";
+import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -57,7 +57,7 @@ export default function AdminLogsPage() {
           if (actionFilter) params.set("action", actionFilter);
           window.open(`/api/admin/audit-log?${params}`, "_blank");
         }}>
-          <DownloadSimple className="h-4 w-4" weight="duotone" /> CSV
+          <Download className="h-4 w-4" /> CSV
         </Button>
       </div>
 

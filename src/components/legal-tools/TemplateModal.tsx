@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText } from "@phosphor-icons/react";
+import { FileText } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 
 interface TemplateField {
@@ -114,7 +114,7 @@ export function TemplateModal({
             disabled={!isValid}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FileText className="h-4 w-4" weight="duotone" />
+            <FileText className="h-4 w-4" />
             Создать документ
           </button>
           <button

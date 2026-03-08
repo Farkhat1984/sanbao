@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { DotsThree, PushPin, Trash, Archive, Tray } from "@phosphor-icons/react";
+import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -145,7 +145,7 @@ export const ConversationItem = memo(function ConversationItem({
         )}
       >
         {conversation.pinned && (
-          <PushPin weight="duotone" className="h-3 w-3 shrink-0 text-accent" />
+          <Pin className="h-3 w-3 shrink-0 text-accent" />
         )}
         {conversation.agentId && conversation.agentIcon && (() => {
           const AgentIcon = ICON_MAP[conversation.agentIcon] || ICON_MAP.Bot;
@@ -183,7 +183,7 @@ export const ConversationItem = memo(function ConversationItem({
           showMenu && "opacity-100"
         )}
       >
-        <DotsThree weight="duotone" className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
+        <MoreHorizontal className={isMobile ? "h-4 w-4" : "h-3.5 w-3.5"} />
       </button>
 
       {/* Dropdown — rendered via portal to escape overflow:hidden containers */}
@@ -200,18 +200,18 @@ export const ConversationItem = memo(function ConversationItem({
           >
             {!isArchived && (
               <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <PushPin weight="duotone" className="h-3 w-3" />
+                <Pin className="h-3 w-3" />
                 {conversation.pinned ? "Открепить" : "Закрепить"}
               </button>
             )}
             {isArchived ? (
               <button onClick={handleUnarchive} aria-label="Разархивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <Tray weight="duotone" className="h-3 w-3" />
+                <ArchiveRestore className="h-3 w-3" />
                 Разархивировать
               </button>
             ) : (
               <button onClick={handleArchive} aria-label="Архивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <Archive weight="duotone" className="h-3 w-3" />
+                <Archive className="h-3 w-3" />
                 В архив
               </button>
             )}
@@ -220,7 +220,7 @@ export const ConversationItem = memo(function ConversationItem({
               aria-label="Удалить чат"
               className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-error-light flex items-center gap-2 cursor-pointer"
             >
-              <Trash weight="duotone" className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" />
               Удалить
             </button>
           </motion.div>

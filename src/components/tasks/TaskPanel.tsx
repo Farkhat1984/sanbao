@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useTaskStore } from "@/stores/taskStore";
 import { TaskItem } from "./TaskItem";
-import { ListChecks } from "@phosphor-icons/react";
+import { ListChecks } from "lucide-react";
 
 export function TaskPanel() {
   const { tasks, setTasks, setLoading, isLoading } = useTaskStore();
@@ -34,7 +34,7 @@ export function TaskPanel() {
   if (tasks.length === 0) {
     return (
       <div className="px-3 py-4 text-center">
-        <ListChecks weight="duotone" className="h-5 w-5 text-text-secondary mx-auto mb-1.5" />
+        <ListChecks className="h-5 w-5 text-text-secondary mx-auto mb-1.5" />
         <p className="text-xs text-text-secondary">Нет задач</p>
       </div>
     );

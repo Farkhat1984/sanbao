@@ -3,20 +3,20 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  ChartBar, Users, CreditCard, Cpu, Robot, Envelope,
-  TrendUp, Coins, Heart, File,
-  GearSix, FileText, Scales, Globe,
-  Bell, Key, WebhooksLogo, Clipboard,
-  Warning, CurrencyDollar, UserMinus, Eye, Tag,
-  Scroll,
-} from "@phosphor-icons/react";
+  BarChart3, Users, CreditCard, Cpu, Bot, Mail,
+  TrendingUp, Coins, Heart, File,
+  Settings, FileText, Scale, Globe,
+  Bell, Key, Webhook, ClipboardList,
+  AlertTriangle, DollarSign, UserX, Eye, Tag,
+  ScrollText,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sections = [
   {
     title: null,
     links: [
-      { href: "/admin", label: "Обзор", icon: ChartBar },
+      { href: "/admin", label: "Обзор", icon: BarChart3 },
     ],
   },
   {
@@ -24,39 +24,39 @@ const sections = [
     links: [
       { href: "/admin/users", label: "Пользователи", icon: Users },
       { href: "/admin/plans", label: "Тарифы", icon: CreditCard },
-      { href: "/admin/billing", label: "Биллинг", icon: CurrencyDollar },
+      { href: "/admin/billing", label: "Биллинг", icon: DollarSign },
       { href: "/admin/promo-codes", label: "Промокоды", icon: Tag },
-      { href: "/admin/sessions", label: "Сессии", icon: UserMinus },
+      { href: "/admin/sessions", label: "Сессии", icon: UserX },
     ],
   },
   {
     title: "AI",
     links: [
       { href: "/admin/providers", label: "Провайдеры", icon: Cpu },
-      { href: "/admin/models", label: "Модели", icon: Robot },
-      { href: "/admin/agents", label: "Сис. агенты", icon: Scales },
+      { href: "/admin/models", label: "Модели", icon: Bot },
+      { href: "/admin/agents", label: "Сис. агенты", icon: Scale },
       { href: "/admin/skills", label: "Скиллы", icon: FileText },
-      { href: "/admin/prompts", label: "Промпты", icon: Scroll },
+      { href: "/admin/prompts", label: "Промпты", icon: ScrollText },
       { href: "/admin/mcp", label: "MCP-серверы", icon: Globe },
     ],
   },
   {
     title: "Аналитика",
     links: [
-      { href: "/admin/analytics", label: "Аналитика", icon: TrendUp },
+      { href: "/admin/analytics", label: "Аналитика", icon: TrendingUp },
       { href: "/admin/usage", label: "Токены", icon: Coins },
     ],
   },
   {
     title: "Система",
     links: [
-      { href: "/admin/logs", label: "Аудит-лог", icon: Clipboard },
-      { href: "/admin/errors", label: "Ошибки", icon: Warning },
+      { href: "/admin/logs", label: "Аудит-лог", icon: ClipboardList },
+      { href: "/admin/errors", label: "Ошибки", icon: AlertTriangle },
       { href: "/admin/health", label: "Health", icon: Heart },
       { href: "/admin/moderation", label: "Модерация", icon: Eye },
-      { href: "/admin/email", label: "Email", icon: Envelope },
+      { href: "/admin/email", label: "Email", icon: Mail },
       { href: "/admin/notifications", label: "Уведомления", icon: Bell },
-      { href: "/admin/settings", label: "Настройки", icon: GearSix },
+      { href: "/admin/settings", label: "Настройки", icon: Settings },
       { href: "/admin/templates", label: "Шаблоны", icon: FileText },
     ],
   },
@@ -64,7 +64,7 @@ const sections = [
     title: "Интеграции",
     links: [
       { href: "/admin/api-keys", label: "API-ключи", icon: Key },
-      { href: "/admin/webhooks", label: "Вебхуки", icon: WebhooksLogo },
+      { href: "/admin/webhooks", label: "Вебхуки", icon: Webhook },
       { href: "/admin/files", label: "Файлы", icon: File },
     ],
   },
@@ -104,7 +104,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
                     : "text-white/60 hover:bg-white/10 hover:text-white"
                 )}
               >
-                <link.icon className="h-4 w-4" weight="duotone" />
+                <link.icon className="h-4 w-4" />
                 {link.label}
               </Link>
             );

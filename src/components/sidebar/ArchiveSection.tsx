@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Archive, CaretRight } from "@phosphor-icons/react";
+import { Archive, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { ConversationItem } from "./ConversationItem";
@@ -53,15 +53,14 @@ export function ArchiveSection() {
             "transition-colors duration-150 cursor-pointer"
           )}
         >
-          <Archive weight="duotone" className="h-3.5 w-3.5 shrink-0" />
+          <Archive className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">Архив</span>
           {count !== null && count > 0 && (
             <span className="ml-auto mr-1 text-[10px] bg-surface-alt text-text-secondary rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
               {count}
             </span>
           )}
-          <CaretRight
-            weight="duotone"
+          <ChevronRight
             className={cn(
               "h-3 w-3 shrink-0 transition-transform duration-200",
               count !== null && count > 0 ? "" : "ml-auto",

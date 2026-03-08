@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Play, Rocket, Trash, FileText, ArrowsClockwise, ChatTeardrop, UploadSimple, Warning, Lightning, HardDrives, PencilSimple } from "@phosphor-icons/react";
+import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare, Upload, AlertTriangle, Zap, Server, Pencil } from "lucide-react";
 import { AgentProgressBar } from "@/components/organizations/AgentProgressBar";
 import { FileUploader } from "@/components/organizations/FileUploader";
 import { Modal } from "@/components/ui/Modal";
@@ -191,7 +191,7 @@ export default function OrgAgentDetailPage({
           onClick={() => router.push(`/organizations/${ids.id}/agents`)}
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft weight="duotone" className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" />
           Агенты
         </button>
 
@@ -208,7 +208,7 @@ export default function OrgAgentDetailPage({
                 onClick={handleChat}
                 className="h-9 px-4 rounded-xl bg-accent text-white text-sm font-medium flex items-center gap-2 cursor-pointer"
               >
-                <ChatTeardrop weight="duotone" className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
                 Чат
               </button>
             )}
@@ -216,13 +216,13 @@ export default function OrgAgentDetailPage({
               onClick={() => router.push(`/organizations/${ids.id}/agents/${ids.agentId}/edit`)}
               className="h-9 px-3 rounded-xl border border-border text-text-primary text-sm flex items-center gap-1.5 hover:bg-surface-alt transition-colors cursor-pointer"
             >
-              <PencilSimple weight="duotone" className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="h-9 px-3 rounded-xl border border-error/20 text-error text-sm flex items-center gap-1 hover:bg-error-light transition-colors cursor-pointer"
             >
-              <Trash weight="duotone" className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function OrgAgentDetailPage({
                 disabled={processing}
                 className="h-9 px-4 rounded-xl bg-warning text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
-                <Play weight="duotone" className="h-4 w-4" />
+                <Play className="h-4 w-4" />
                 {processing ? "Запуск..." : "Обработать"}
               </button>
             )}
@@ -278,7 +278,7 @@ export default function OrgAgentDetailPage({
                 disabled={publishing || agent.status === "PROCESSING"}
                 className="h-9 px-4 rounded-xl bg-accent text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
-                <Rocket weight="duotone" className="h-4 w-4" />
+                <Rocket className="h-4 w-4" />
                 {publishing ? "Публикация..." : "Опубликовать"}
               </button>
             )}
@@ -289,7 +289,7 @@ export default function OrgAgentDetailPage({
                 disabled={reprocessing}
                 className="h-9 px-4 rounded-xl border border-border text-text-primary text-sm font-medium flex items-center gap-2 hover:bg-surface-alt transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <ArrowsClockwise weight="duotone" className={cn("h-4 w-4", reprocessing && "animate-spin")} />
+                <RefreshCw className={cn("h-4 w-4", reprocessing && "animate-spin")} />
                 {reprocessing ? "Переобработка..." : "Переобработать"}
               </button>
             )}
@@ -317,7 +317,7 @@ export default function OrgAgentDetailPage({
         {agent.starterPrompts && agent.starterPrompts.length > 0 && (
           <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
             <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-              <ChatTeardrop weight="duotone" className="h-4 w-4 text-text-secondary" />
+              <MessageSquare className="h-4 w-4 text-text-secondary" />
               Стартовые подсказки
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -337,7 +337,7 @@ export default function OrgAgentDetailPage({
         {agent.skills && agent.skills.length > 0 && (
           <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
             <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-              <Lightning weight="duotone" className="h-4 w-4 text-text-secondary" />
+              <Zap className="h-4 w-4 text-text-secondary" />
               Скиллы ({agent.skills.length})
             </h2>
             <div className="space-y-2">
@@ -360,7 +360,7 @@ export default function OrgAgentDetailPage({
         {agent.mcpServers && agent.mcpServers.length > 0 && (
           <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
             <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-              <HardDrives weight="duotone" className="h-4 w-4 text-text-secondary" />
+              <Server className="h-4 w-4 text-text-secondary" />
               MCP-серверы ({agent.mcpServers.length})
             </h2>
             <div className="space-y-2">
@@ -390,7 +390,7 @@ export default function OrgAgentDetailPage({
                 onClick={() => setShowUploader(true)}
                 className="h-8 px-3 rounded-lg bg-accent/10 text-accent text-xs font-medium flex items-center gap-1.5 hover:bg-accent/20 transition-colors cursor-pointer"
               >
-                <UploadSimple weight="duotone" className="h-3.5 w-3.5" />
+                <Upload className="h-3.5 w-3.5" />
                 Загрузить файлы
               </button>
             )}
@@ -412,7 +412,7 @@ export default function OrgAgentDetailPage({
             <div className="space-y-2">
               {agent.files.map((file) => (
                 <div key={file.id} className="flex items-center gap-3 py-2">
-                  <FileText weight="duotone" className="h-4 w-4 text-text-secondary shrink-0" />
+                  <FileText className="h-4 w-4 text-text-secondary shrink-0" />
                   <span className="text-sm text-text-primary truncate flex-1">{file.fileName}</span>
                   <span className="text-xs text-text-secondary shrink-0">{formatSize(file.fileSize)}</span>
                 </div>
@@ -425,7 +425,7 @@ export default function OrgAgentDetailPage({
       <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Удалить агента">
         <div className="flex items-start gap-3 mb-5">
           <div className="h-10 w-10 rounded-xl bg-error/10 flex items-center justify-center shrink-0">
-            <Warning weight="duotone" className="h-5 w-5 text-error" />
+            <AlertTriangle className="h-5 w-5 text-error" />
           </div>
           <div>
             <p className="text-sm text-text-primary font-medium">

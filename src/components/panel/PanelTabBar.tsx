@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, FileText, BookOpen } from "@phosphor-icons/react";
+import { X, FileText, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "@/stores/panelStore";
 import type { PanelTab } from "@/stores/panelStore";
@@ -54,7 +54,7 @@ export function PanelTabBar() {
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-alt/50"
               )}
             >
-              <Icon weight="duotone" className="h-3 w-3 shrink-0" />
+              <Icon className="h-3 w-3 shrink-0" />
               <span className="truncate">{tab.label}</span>
             </button>
             <button
@@ -64,7 +64,7 @@ export function PanelTabBar() {
               }}
               className="h-4 w-4 rounded flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer ml-0.5 shrink-0"
             >
-              <X weight="duotone" className="h-2.5 w-2.5" />
+              <X className="h-2.5 w-2.5" />
             </button>
             {isActive && (
               <motion.div

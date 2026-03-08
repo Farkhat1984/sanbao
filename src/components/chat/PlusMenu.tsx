@@ -6,7 +6,7 @@ import {
   Wrench,
   Brain,
   Camera,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,7 @@ export function PlusMenu({
         )}
         title="Функции"
       >
-        <Plus weight="duotone" className="h-4.5 w-4.5 transition-transform" />
+        <Plus className="h-4.5 w-4.5 transition-transform" />
       </button>
 
       {/* Plus menu popover */}
@@ -97,7 +97,7 @@ export function PlusMenu({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg bg-accent-light text-accent flex items-center justify-center">
-                    <Paperclip weight="duotone" className="h-3.5 w-3.5" />
+                    <Paperclip className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 text-left">
                     <span>Прикрепить файл</span>
@@ -113,7 +113,7 @@ export function PlusMenu({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg bg-success-light text-success flex items-center justify-center">
-                    <Camera weight="duotone" className="h-3.5 w-3.5" />
+                    <Camera className="h-3.5 w-3.5" />
                   </div>
                   <span>Сделать фото</span>
                 </button>
@@ -125,7 +125,7 @@ export function PlusMenu({
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                   >
                     <div className="h-7 w-7 rounded-lg bg-warning-light text-warning flex items-center justify-center">
-                      <Wrench weight="duotone" className="h-3.5 w-3.5" />
+                      <Wrench className="h-3.5 w-3.5" />
                     </div>
                     <span>Инструменты</span>
                   </button>
@@ -142,7 +142,7 @@ export function PlusMenu({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-accent-light text-accent transition-colors">
-                    <Brain weight="duotone" className="h-3.5 w-3.5" />
+                    <Brain className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 text-left">
                     <span>Thinking</span>

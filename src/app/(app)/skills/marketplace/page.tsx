@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Storefront } from "@phosphor-icons/react";
+import { ArrowLeft, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SkillCard } from "@/components/skills/SkillCard";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -44,11 +44,11 @@ export default function MarketplacePage() {
             onClick={() => router.back()}
             className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
-            <ArrowLeft weight="duotone" className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] flex items-center gap-2">
-              <Storefront weight="duotone" className="h-5 w-5" />
+              <Store className="h-5 w-5" />
               Маркетплейс скиллов
             </h1>
             <p className="text-sm text-text-secondary mt-1">
@@ -116,7 +116,7 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <Storefront weight="duotone" className="h-12 w-12 text-text-secondary mx-auto mb-4" />
+            <Store className="h-12 w-12 text-text-secondary mx-auto mb-4" />
             <p className="text-text-secondary">Пока нет публичных скиллов</p>
           </div>
         )}

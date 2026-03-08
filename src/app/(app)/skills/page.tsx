@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Lightning, Storefront, Sparkle, SpinnerGap, MagnifyingGlass, TrendUp, Clock } from "@phosphor-icons/react";
+import { Plus, Zap, Store, Sparkles, Loader2, Search, TrendingUp, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSkillStore } from "@/stores/skillStore";
@@ -160,14 +160,14 @@ export default function SkillsPage() {
               onClick={() => router.push("/skills/marketplace")}
               className="h-10 px-4 rounded-xl border border-border text-text-secondary text-sm font-medium flex items-center gap-2 hover:border-border-hover transition-all cursor-pointer"
             >
-              <Storefront weight="duotone" className="h-4 w-4" />
+              <Store className="h-4 w-4" />
               Маркетплейс
             </button>
             <button
               onClick={() => router.push("/skills/new")}
               className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm cursor-pointer"
             >
-              <Plus weight="duotone" className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Создать скилл
             </button>
           </div>
@@ -214,7 +214,7 @@ export default function SkillsPage() {
                   : "text-text-secondary hover:text-text-primary",
               )}
             >
-              <Clock weight="duotone" className="h-3 w-3" />
+              <Clock className="h-3 w-3" />
               Новые
             </button>
             <button
@@ -226,7 +226,7 @@ export default function SkillsPage() {
                   : "text-text-secondary hover:text-text-primary",
               )}
             >
-              <TrendUp weight="duotone" className="h-3 w-3" />
+              <TrendingUp className="h-3 w-3" />
               Популярные
             </button>
           </div>
@@ -234,7 +234,7 @@ export default function SkillsPage() {
 
         {/* Search */}
         <div className="relative mb-8">
-          <MagnifyingGlass weight="duotone" className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -267,7 +267,7 @@ export default function SkillsPage() {
             {builtIn.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center gap-2.5 mb-4">
-                  <Lightning weight="duotone" className="h-4 w-4 text-accent" />
+                  <Zap className="h-4 w-4 text-accent" />
                   <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">Встроенные</h2>
                   <span className="text-xs text-text-secondary tabular-nums">{builtIn.length}</span>
                   <div className="flex-1 h-px bg-border ml-2" />
@@ -283,7 +283,7 @@ export default function SkillsPage() {
             {custom.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center gap-2.5 mb-4">
-                  <Sparkle weight="duotone" className="h-4 w-4 text-accent" />
+                  <Sparkles className="h-4 w-4 text-accent" />
                   <h2 className="text-sm font-semibold text-text-primary tracking-wide uppercase">Мои скиллы</h2>
                   <span className="text-xs text-text-secondary tabular-nums">{custom.length}</span>
                   <div className="flex-1 h-px bg-border ml-2" />
@@ -306,7 +306,7 @@ export default function SkillsPage() {
               <div ref={sentinelRef} className="flex items-center justify-center py-8">
                 {loadingMore && (
                   <div className="flex items-center gap-2 text-sm text-text-secondary">
-                    <SpinnerGap weight="bold" className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Загрузка...</span>
                   </div>
                 )}
@@ -317,7 +317,7 @@ export default function SkillsPage() {
             {hasNoResults && (
               <div className="flex flex-col items-center justify-center py-12 px-4">
                 <div className="h-12 w-12 rounded-xl bg-surface flex items-center justify-center mb-4 border border-border">
-                  <MagnifyingGlass weight="duotone" className="h-6 w-6 text-text-secondary" />
+                  <Search className="h-6 w-6 text-text-secondary" />
                 </div>
                 <p className="text-sm font-medium text-text-primary mb-1">
                   Ничего не найдено
@@ -335,7 +335,7 @@ export default function SkillsPage() {
                 className="text-center py-20"
               >
                 <div className="h-16 w-16 rounded-2xl bg-surface-alt flex items-center justify-center mx-auto mb-5">
-                  <Lightning weight="duotone" className="h-8 w-8 text-text-secondary" />
+                  <Zap className="h-8 w-8 text-text-secondary" />
                 </div>
                 <h2 className="text-lg font-semibold text-text-primary mb-2">
                   Нет скиллов

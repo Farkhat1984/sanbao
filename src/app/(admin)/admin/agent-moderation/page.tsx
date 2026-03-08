@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Shield, CheckCircle, XCircle, Warning, ChatTeardrop, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Shield, CheckCircle, XCircle, AlertTriangle, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -114,14 +114,14 @@ export default function AgentModerationPage() {
       <div className="flex gap-1 mb-4 bg-surface-alt rounded-xl p-1 w-fit">
         {([
           { key: "agents", label: "Агенты", icon: Shield, count: agents.length },
-          { key: "reports", label: "Жалобы", icon: Warning, count: reportTotal },
+          { key: "reports", label: "Жалобы", icon: AlertTriangle, count: reportTotal },
         ] as const).map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${tab === key ? "bg-surface text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"}`}
           >
-            <Icon className="h-3.5 w-3.5" weight="duotone" /> {label}
+            <Icon className="h-3.5 w-3.5" /> {label}
             {count > 0 && <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">{count}</span>}
           </button>
         ))}
@@ -164,12 +164,12 @@ export default function AgentModerationPage() {
                   <div className="flex items-center gap-1">
                     {a.status !== "APPROVED" && (
                       <Button variant="secondary" size="sm" onClick={() => handleAgentStatus(a.id, "APPROVED")}>
-                        <CheckCircle className="h-3.5 w-3.5 text-success" weight="duotone" /> Одобрить
+                        <CheckCircle className="h-3.5 w-3.5 text-success" /> Одобрить
                       </Button>
                     )}
                     {a.status !== "REJECTED" && (
                       <Button variant="secondary" size="sm" onClick={() => handleAgentStatus(a.id, "REJECTED")}>
-                        <XCircle className="h-3.5 w-3.5 text-error" weight="duotone" /> Отклонить
+                        <XCircle className="h-3.5 w-3.5 text-error" /> Отклонить
                       </Button>
                     )}
                   </div>
@@ -202,7 +202,7 @@ export default function AgentModerationPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <ChatTeardrop className="h-4 w-4 text-text-secondary" weight="duotone" />
+                      <MessageSquare className="h-4 w-4 text-text-secondary" />
                       <Badge variant="default">{r.targetType === "agent" ? "Агент" : "Скилл"}</Badge>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${REPORT_STATUS_LABELS[r.status]?.color || ""}`}>
                         {REPORT_STATUS_LABELS[r.status]?.label || r.status}
@@ -215,10 +215,10 @@ export default function AgentModerationPage() {
                   {r.status === "PENDING" && (
                     <div className="flex gap-1 ml-3">
                       <Button variant="secondary" size="sm" onClick={() => handleReportResolve(r.id, "ACTION_TAKEN", "Меры приняты")}>
-                        <CheckCircle className="h-3 w-3" weight="duotone" /> Принять
+                        <CheckCircle className="h-3 w-3" /> Принять
                       </Button>
                       <Button variant="secondary" size="sm" onClick={() => handleReportResolve(r.id, "DISMISSED")}>
-                        <XCircle className="h-3 w-3" weight="duotone" /> Отклонить
+                        <XCircle className="h-3 w-3" /> Отклонить
                       </Button>
                     </div>
                   )}
@@ -240,7 +240,7 @@ export default function AgentModerationPage() {
                       disabled={reportPage === 1}
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                     >
-                      <CaretLeft className="h-4 w-4" weight="duotone" />
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
                     <span className="text-sm text-text-secondary">{reportPage} / {totalPages}</span>
                     <button
@@ -248,7 +248,7 @@ export default function AgentModerationPage() {
                       disabled={reportPage === totalPages}
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                     >
-                      <CaretRight className="h-4 w-4" weight="duotone" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>

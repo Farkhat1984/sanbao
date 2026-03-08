@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Robot, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, Users, Bot, Trash2 } from "lucide-react";
 import { useOrgStore } from "@/stores/orgStore";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ export default function OrganizationDetailPage({
           onClick={() => router.push("/organizations")}
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
         >
-          <ArrowLeft weight="duotone" className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" />
           Организации
         </button>
 
@@ -96,7 +96,7 @@ export default function OrganizationDetailPage({
               disabled={deleting}
               className="h-9 px-4 rounded-xl border border-error/20 text-error text-sm font-medium flex items-center gap-2 hover:bg-error-light transition-colors disabled:opacity-50 cursor-pointer"
             >
-              <Trash weight="duotone" className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
               {deleting ? "Удаление..." : "Удалить"}
             </button>
           )}
@@ -110,7 +110,7 @@ export default function OrganizationDetailPage({
             onClick={async () => { const { id } = await params; router.push(`/organizations/${id}/members`); }}
           />
           <NavCard
-            icon={Robot}
+            icon={Bot}
             title="AI-агенты"
             description={`${org.agentCount as number} агентов`}
             onClick={async () => { const { id } = await params; router.push(`/organizations/${id}/agents`); }}
@@ -141,7 +141,7 @@ function NavCard({
       )}
     >
       <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-        <Icon weight="duotone" className="h-5 w-5 text-accent" />
+        <Icon className="h-5 w-5 text-accent" />
       </div>
       <h3 className="font-semibold text-text-primary group-hover:text-accent transition-colors">
         {title}

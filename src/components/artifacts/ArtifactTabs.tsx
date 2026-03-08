@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, PencilSimple, Code, Play } from "@phosphor-icons/react";
+import { Eye, Pencil, Code, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { ArtifactType } from "@/types/chat";
@@ -15,14 +15,14 @@ interface ArtifactTabsProps {
 
 const documentTabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "preview", label: "Просмотр", icon: Eye },
-  { key: "edit", label: "Редактор", icon: PencilSimple },
+  { key: "edit", label: "Редактор", icon: Pencil },
   { key: "source", label: "Исходник", icon: Code },
 ];
 
 const codeTabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "source", label: "Код", icon: Code },
   { key: "preview", label: "Превью", icon: Play },
-  { key: "edit", label: "Редактор", icon: PencilSimple },
+  { key: "edit", label: "Редактор", icon: Pencil },
 ];
 
 export function ArtifactTabs({ activeTab, onTabChange, artifactType }: ArtifactTabsProps) {
@@ -48,7 +48,7 @@ export function ArtifactTabs({ activeTab, onTabChange, artifactType }: ArtifactT
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
             />
           )}
-          <Icon className="h-3.5 w-3.5 relative z-10" weight="duotone" />
+          <Icon className="h-3.5 w-3.5 relative z-10" />
           <span className="relative z-10">{label}</span>
         </button>
       ))}

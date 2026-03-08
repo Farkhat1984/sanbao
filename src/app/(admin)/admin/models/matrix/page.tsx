@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Star } from "@phosphor-icons/react";
+import { Check, Star } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
 
@@ -114,7 +114,7 @@ export default function ModelMatrixPage() {
                                     : "bg-surface-alt text-text-secondary hover:bg-surface-alt/80"
                                 }`}
                               >
-                                {linked && <Check className="h-3.5 w-3.5" weight="duotone" />}
+                                {linked && <Check className="h-3.5 w-3.5" />}
                               </button>
                               {linked && (
                                 <button
@@ -126,7 +126,7 @@ export default function ModelMatrixPage() {
                                   }`}
                                   title="По умолчанию для этого плана"
                                 >
-                                  <Star className={`h-3 w-3 ${def ? "fill-current" : ""}`} weight="duotone" />
+                                  <Star className={`h-3 w-3 ${def ? "fill-current" : ""}`} />
                                 </button>
                               )}
                             </div>
@@ -143,11 +143,11 @@ export default function ModelMatrixPage() {
 
       <div className="mt-4 flex items-center gap-4 text-xs text-text-secondary">
         <div className="flex items-center gap-1.5">
-          <div className="h-5 w-5 rounded bg-accent/15 flex items-center justify-center"><Check className="h-3 w-3 text-accent" weight="duotone" /></div>
+          <div className="h-5 w-5 rounded bg-accent/15 flex items-center justify-center"><Check className="h-3 w-3 text-accent" /></div>
           Доступна
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="h-5 w-5 rounded bg-warning/15 flex items-center justify-center"><Star className="h-3 w-3 text-warning fill-current" weight="duotone" /></div>
+          <div className="h-5 w-5 rounded bg-warning/15 flex items-center justify-center"><Star className="h-3 w-3 text-warning fill-current" /></div>
           По умолчанию
         </div>
       </div>

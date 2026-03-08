@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { File, HardDrive, Trash, Recycle, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { File, HardDrive, Trash2, Recycle, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FileStats {
   totalFiles: number;
@@ -79,7 +79,7 @@ export default function AdminFilesPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleCleanup} isLoading={cleaning}>
-            <Recycle className="h-3.5 w-3.5" weight="duotone" />
+            <Recycle className="h-3.5 w-3.5" />
             Очистка
           </Button>
           <Badge variant={stats.storageConfigured ? "accent" : "default"}>
@@ -102,14 +102,14 @@ export default function AdminFilesPage() {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <File className="h-4 w-4 text-text-secondary" weight="duotone" />
+            <File className="h-4 w-4 text-text-secondary" />
             <p className="text-xs text-text-secondary">Всего файлов</p>
           </div>
           <p className="text-2xl font-bold text-text-primary">{stats.totalFiles}</p>
         </div>
         <div className="bg-surface border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <HardDrive className="h-4 w-4 text-text-secondary" weight="duotone" />
+            <HardDrive className="h-4 w-4 text-text-secondary" />
             <p className="text-xs text-text-secondary">Общий размер</p>
           </div>
           <p className="text-2xl font-bold text-text-primary">{formatSize(stats.totalSize)}</p>
@@ -151,7 +151,7 @@ export default function AdminFilesPage() {
                 disabled={deleting === f.id}
                 className="ml-2 p-1.5 rounded-lg text-text-secondary hover:text-error hover:bg-error-light transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Trash className="h-3.5 w-3.5" weight="duotone" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -170,7 +170,7 @@ export default function AdminFilesPage() {
                     disabled={filePage === 1}
                     className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                   >
-                    <CaretLeft className="h-4 w-4" weight="duotone" />
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
                   <span className="text-sm text-text-secondary">{filePage} / {totalPages}</span>
                   <button
@@ -178,7 +178,7 @@ export default function AdminFilesPage() {
                     disabled={filePage === totalPages}
                     className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
                   >
-                    <CaretRight className="h-4 w-4" weight="duotone" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>

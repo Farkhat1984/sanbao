@@ -1,4 +1,4 @@
-import { Check, X, Sparkle, ChatTeardrop, Cpu, Lightning, FolderOpen, Robot, Stack, Brain, FileText, Database, ShareNetwork } from "@phosphor-icons/react";
+import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,7 @@ function formatTokens(value: number) {
 export function PlanCard({ plan, isCurrent }: PlanCardProps) {
   const limits = [
     {
-      icon: ChatTeardrop,
+      icon: MessageSquare,
       label: formatLimit(plan.messagesPerDay, "сообщ./день"),
     },
     {
@@ -48,11 +48,11 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
       label: `${formatTokens(plan.tokensPerMonth)} токенов/мес`,
     },
     {
-      icon: Lightning,
+      icon: Zap,
       label: `${plan.requestsPerMinute} запросов/мин`,
     },
     {
-      icon: Stack,
+      icon: Layers,
       label: `${(plan.contextWindowSize / 1024).toFixed(0)}K контекст`,
     },
     {
@@ -79,11 +79,11 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
         : plan.maxAgents > 0
           ? `Агенты: до ${plan.maxAgents}`
           : "Кастомные агенты",
-      icon: Robot,
+      icon: Bot,
     },
     { enabled: plan.canUseRag, label: "RAG (база знаний)", icon: Database },
-    { enabled: plan.canUseGraph, label: "Граф знаний", icon: ShareNetwork },
-    { enabled: plan.canChooseProvider, label: "Выбор AI-провайдера", icon: Sparkle },
+    { enabled: plan.canUseGraph, label: "Граф знаний", icon: Share2 },
+    { enabled: plan.canChooseProvider, label: "Выбор AI-провайдера", icon: Sparkles },
   ];
 
   return (
@@ -101,7 +101,7 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
           variant="accent"
           className="absolute -top-2.5 left-1/2 -translate-x-1/2"
         >
-          <Sparkle weight="duotone" className="h-3 w-3" />
+          <Sparkles className="h-3 w-3" />
           Рекомендуемый
         </Badge>
       )}
@@ -119,7 +119,7 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
       <div className="space-y-2 flex-1">
         {limits.map((f, i) => (
           <div key={i} className="flex items-center gap-2">
-            <f.icon weight="duotone" className="h-3.5 w-3.5 text-text-secondary shrink-0" />
+            <f.icon className="h-3.5 w-3.5 text-text-secondary shrink-0" />
             <span className="text-sm text-text-secondary">{f.label}</span>
           </div>
         ))}
@@ -127,9 +127,9 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
         {features.map((f, i) => (
           <div key={`f-${i}`} className="flex items-center gap-2">
             {f.enabled ? (
-              <Check weight="duotone" className="h-3.5 w-3.5 text-success shrink-0" />
+              <Check className="h-3.5 w-3.5 text-success shrink-0" />
             ) : (
-              <X weight="duotone" className="h-3.5 w-3.5 text-text-secondary opacity-40 shrink-0" />
+              <X className="h-3.5 w-3.5 text-text-secondary opacity-40 shrink-0" />
             )}
             <span
               className={cn(
@@ -150,7 +150,7 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
           </div>
         ) : (
           <button className="w-full h-10 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:bg-surface-alt flex items-center justify-center transition-colors cursor-pointer">
-            <Robot weight="duotone" className="h-4 w-4 mr-2" />
+            <Bot className="h-4 w-4 mr-2" />
             Обратитесь к администратору
           </button>
         )}

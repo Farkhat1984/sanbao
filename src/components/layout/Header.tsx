@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarSimple } from "@phosphor-icons/react";
+import { PanelLeftOpen } from "lucide-react";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -30,7 +30,7 @@ export function Header() {
             aria-label="Открыть боковую панель"
             className="h-9 w-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
           >
-            <SidebarSimple className="h-4.5 w-4.5" weight="duotone" />
+            <PanelLeftOpen className="h-4.5 w-4.5" />
           </button>
         </Tooltip>
       )}
@@ -44,7 +44,7 @@ export function Header() {
               className="h-6 w-6 rounded-md flex items-center justify-center shrink-0"
               style={{ backgroundColor: activeConv.agentIconColor || DEFAULT_ICON_COLOR }}
             >
-              <AgentIcon className="h-3.5 w-3.5 text-white" weight="duotone" />
+              <AgentIcon className="h-3.5 w-3.5 text-white" />
             </div>
           );
         })()}

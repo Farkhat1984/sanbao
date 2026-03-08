@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, FloppyDisk, Trash, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Plus, Save, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -73,7 +73,7 @@ export default function AdminTemplatesPage() {
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Шаблоны документов</h1>
           <p className="text-sm text-text-secondary mt-1">Юридические шаблоны для генерации ({total})</p>
         </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" weight="duotone" /> Добавить</Button>
+        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Добавить</Button>
       </div>
 
       {adding && (
@@ -89,7 +89,7 @@ export default function AdminTemplatesPage() {
             <input placeholder="Юрисдикция" value={newTpl.jurisdiction} onChange={(e) => setNewTpl({ ...newTpl, jurisdiction: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
           </div>
           <textarea placeholder="Содержимое шаблона (Markdown)" value={newTpl.content} onChange={(e) => setNewTpl({ ...newTpl, content: e.target.value })} className="w-full h-40 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none mb-3" />
-          <Button variant="gradient" size="sm" onClick={handleCreate}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Создать</Button>
+          <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
         </div>
       )}
 
@@ -105,7 +105,7 @@ export default function AdminTemplatesPage() {
                 </div>
                 <textarea value={editForm.content ?? t.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} className="w-full h-40 px-3 py-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent resize-none mb-3" />
                 <div className="flex gap-2">
-                  <Button variant="gradient" size="sm" onClick={() => handleUpdate(t.id, editForm)}><FloppyDisk className="h-3.5 w-3.5" weight="duotone" /> Сохранить</Button>
+                  <Button variant="gradient" size="sm" onClick={() => handleUpdate(t.id, editForm)}><Save className="h-3.5 w-3.5" /> Сохранить</Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>Отмена</Button>
                 </div>
               </div>
@@ -122,7 +122,7 @@ export default function AdminTemplatesPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(t.id); setEditForm({}); }}>Изменить</Button>
-                  <button onClick={() => handleDelete(t.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash className="h-3.5 w-3.5" weight="duotone" /></button>
+                  <button onClick={() => handleDelete(t.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             )}
@@ -140,7 +140,7 @@ export default function AdminTemplatesPage() {
                 disabled={page === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretLeft className="h-4 w-4" weight="duotone" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <button
@@ -148,7 +148,7 @@ export default function AdminTemplatesPage() {
                 disabled={page === totalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretRight className="h-4 w-4" weight="duotone" />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>

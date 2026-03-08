@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -35,9 +35,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           >
             {children}
           </select>
-          <CaretDown
+          <ChevronDown
             className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary"
-            weight="duotone"
             aria-hidden="true"
           />
         </div>

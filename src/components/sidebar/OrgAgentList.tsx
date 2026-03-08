@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BuildingOffice, CaretDown, Robot } from "@phosphor-icons/react";
+import { Building2, ChevronDown, Bot } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -61,9 +61,9 @@ export function OrgAgentList() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 w-full py-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
       >
-        <BuildingOffice weight="duotone" className="h-3.5 w-3.5" />
+        <Building2 className="h-3.5 w-3.5" />
         <span className="flex-1 text-left">Организации</span>
-        <CaretDown weight="duotone" className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
+        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen && (
@@ -79,7 +79,7 @@ export function OrgAgentList() {
                   onClick={() => handleSelectAgent(agent)}
                   className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
-                  <Robot weight="duotone" className="h-3.5 w-3.5 text-accent shrink-0" />
+                  <Bot className="h-3.5 w-3.5 text-accent shrink-0" />
                   <span className="truncate">{agent.name}</span>
                 </button>
               ))}

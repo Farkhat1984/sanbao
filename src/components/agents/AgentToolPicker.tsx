@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SpinnerGap } from "@phosphor-icons/react";
+import { Loader2 } from "lucide-react";
 import { ICON_MAP } from "./AgentIconPicker";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-text-secondary text-xs py-3">
-        <SpinnerGap weight="bold" className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
         Загрузка инструментов...
       </div>
     );
@@ -73,7 +73,7 @@ export function AgentToolPicker({ selectedIds, onChange }: AgentToolPickerProps)
                 : "border-border bg-surface-alt text-text-secondary hover:text-text-primary hover:border-border-hover"
             )}
           >
-            <Icon weight="duotone" className="h-3.5 w-3.5" style={{ color: selected ? undefined : tool.iconColor }} />
+            <Icon className="h-3.5 w-3.5" style={{ color: selected ? undefined : tool.iconColor }} />
             {tool.name}
           </button>
         );

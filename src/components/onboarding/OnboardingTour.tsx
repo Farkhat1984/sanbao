@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CaretRight, Question } from "@phosphor-icons/react";
+import { X, ChevronRight, HelpCircle } from "lucide-react";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -109,7 +109,7 @@ export function OnboardingTour() {
         className="fixed bottom-4 right-4 z-50 h-9 w-9 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent/30 transition-colors cursor-pointer"
         title="Экскурсия по интерфейсу"
       >
-        <Question className="h-4.5 w-4.5" weight="duotone" />
+        <HelpCircle className="h-4.5 w-4.5" />
       </button>
     );
   }
@@ -236,7 +236,7 @@ export function OnboardingTour() {
               onClick={completeTour}
               className="h-6 w-6 rounded flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
             >
-              <X className="h-4 w-4" weight="duotone" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
@@ -261,7 +261,7 @@ export function OnboardingTour() {
               }`}
             >
               {isLastStep ? "Начать" : "Далее"}
-              {!isLastStep && <CaretRight className={isMobile ? "h-4 w-4" : "h-3 w-3"} weight="duotone" />}
+              {!isLastStep && <ChevronRight className={isMobile ? "h-4 w-4" : "h-3 w-3"} />}
             </button>
           </div>
         </motion.div>

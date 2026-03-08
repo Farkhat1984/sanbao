@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FloppyDisk, UploadSimple, Trash, Image } from "@phosphor-icons/react";
+import { Save, Upload, Trash2, Image } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const SETTING_FIELDS = [
@@ -87,7 +87,7 @@ export default function AdminSettingsPage() {
           <p className="text-sm text-text-secondary mt-1">Глобальная конфигурация приложения</p>
         </div>
         <Button variant="gradient" size="sm" onClick={handleSave} isLoading={saving}>
-          <FloppyDisk className="h-4 w-4" weight="duotone" /> Сохранить
+          <Save className="h-4 w-4" /> Сохранить
         </Button>
       </div>
 
@@ -99,17 +99,17 @@ export default function AdminSettingsPage() {
             <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-border bg-surface-alt p-1" />
           ) : (
             <div className="h-16 w-16 rounded-lg border border-border bg-surface-alt flex items-center justify-center">
-              <Image className="h-6 w-6 text-text-secondary" weight="duotone" />
+              <Image className="h-6 w-6 text-text-secondary" />
             </div>
           )}
           <div className="flex flex-col gap-2">
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={handleLogoUpload} className="hidden" />
             <Button variant="secondary" size="sm" onClick={() => logoInputRef.current?.click()} isLoading={uploadingLogo}>
-              <UploadSimple className="h-3.5 w-3.5" weight="duotone" /> Загрузить
+              <Upload className="h-3.5 w-3.5" /> Загрузить
             </Button>
             {logoUrl && (
               <Button variant="secondary" size="sm" onClick={handleLogoDelete}>
-                <Trash className="h-3.5 w-3.5" weight="duotone" /> Удалить
+                <Trash2 className="h-3.5 w-3.5" /> Удалить
               </Button>
             )}
             <p className="text-xs text-text-secondary">PNG, JPEG, SVG, WebP. Макс. 512 КБ.</p>

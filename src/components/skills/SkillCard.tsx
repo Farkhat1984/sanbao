@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilSimple, Copy, Trash, Users } from "@phosphor-icons/react";
+import { Pencil, Copy, Trash2, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
@@ -51,7 +51,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
           className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: skill.iconColor }}
         >
-          <Icon weight="duotone" className="h-5 w-5 text-white" />
+          <Icon className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-text-primary truncate">
@@ -65,7 +65,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
             )}
             {skill.usageCount > 0 && (
               <span className="inline-flex items-center gap-0.5 text-[10px] text-text-muted">
-                <Users weight="duotone" className="h-2.5 w-2.5" />
+                <Users className="h-2.5 w-2.5" />
                 {skill.usageCount} {skill.usageCount === 1 ? "агент" : "агентов"}
               </span>
             )}
@@ -108,14 +108,14 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
               onClick={() => router.push(`/skills/${skill.id}/edit`)}
               className="h-7 px-3 rounded-lg bg-surface-alt text-text-secondary text-xs font-medium hover:text-text-primary transition-colors cursor-pointer flex items-center gap-1"
             >
-              <PencilSimple weight="duotone" className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
               Изменить
             </button>
             <button
               onClick={() => onDelete?.(skill.id)}
               className="h-7 px-3 rounded-lg text-text-secondary text-xs hover:text-error hover:bg-error-light transition-colors cursor-pointer flex items-center gap-1"
             >
-              <Trash weight="duotone" className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" />
             </button>
           </>
         )}
@@ -124,7 +124,7 @@ export function SkillCard({ skill, isOwner, onClone, onDelete }: SkillCardProps)
             onClick={() => onClone(skill.id)}
             className="h-7 px-3 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover transition-colors cursor-pointer flex items-center gap-1"
           >
-            <Copy weight="duotone" className="h-3 w-3" />
+            <Copy className="h-3 w-3" />
             Клонировать
           </button>
         )}

@@ -9,14 +9,14 @@ import { Badge } from "@/components/ui/Badge";
 import { UsageBar } from "@/components/billing/UsageBar";
 import { PlanCard } from "@/components/billing/PlanCard";
 import {
-  SignOut,
-  Sparkle,
+  LogOut,
+  Sparkles,
   User,
   CreditCard,
-  ChartBar,
+  BarChart3,
   Brain,
   Lock,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemoryManager } from "@/components/memory/MemoryManager";
 
@@ -110,7 +110,7 @@ function TwoFactorSection({ isAdmin, autoSetup }: { isAdmin?: boolean; autoSetup
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
-        <Lock weight="duotone" className="h-4 w-4 text-text-secondary" />
+        <Lock className="h-4 w-4 text-text-secondary" />
         <h2 className="text-sm font-semibold text-text-primary">Двухфакторная аутентификация</h2>
       </div>
       <div className="p-4 rounded-xl bg-surface-alt border border-border space-y-3">
@@ -192,7 +192,7 @@ function SettingsContent() {
         {/* Profile */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <User weight="duotone" className="h-4 w-4 text-text-secondary" />
+            <User className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Профиль</h2>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5">
@@ -205,7 +205,7 @@ function SettingsContent() {
                 />
               ) : (
                 <div className="h-12 w-12 rounded-xl bg-accent-light flex items-center justify-center">
-                  <User weight="duotone" className="h-6 w-6 text-accent" />
+                  <User className="h-6 w-6 text-accent" />
                 </div>
               )}
               <div>
@@ -223,7 +223,7 @@ function SettingsContent() {
         {/* Usage */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <ChartBar weight="duotone" className="h-4 w-4 text-text-secondary" />
+            <BarChart3 className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Использование</h2>
           </div>
           {loadingBilling ? (
@@ -241,7 +241,7 @@ function SettingsContent() {
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-sm text-text-secondary">Текущий тариф:</span>
                   <Badge variant="accent">
-                    <Sparkle weight="duotone" className="h-3 w-3" />
+                    <Sparkles className="h-3 w-3" />
                     {currentPlan.name}
                   </Badge>
                 </div>
@@ -266,7 +266,7 @@ function SettingsContent() {
         {/* Billing / Plans */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <CreditCard weight="duotone" className="h-4 w-4 text-text-secondary" />
+            <CreditCard className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Тарифы</h2>
           </div>
           {loadingBilling ? (
@@ -291,7 +291,7 @@ function SettingsContent() {
         {/* Memory */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Brain weight="duotone" className="h-4 w-4 text-text-secondary" />
+            <Brain className="h-4 w-4 text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Память</h2>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5">
@@ -312,7 +312,7 @@ function SettingsContent() {
             onClick={() => { resetAllStores(); signOut({ callbackUrl: "/login" }); }}
             className="text-error hover:text-error hover:bg-error-light"
           >
-            <SignOut weight="duotone" className="h-4 w-4" />
+            <LogOut className="h-4 w-4" />
             Выйти из аккаунта
           </Button>
         </section>

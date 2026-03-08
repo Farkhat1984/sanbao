@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, FloppyDisk, SpinnerGap, Sparkle, CaretDown, CaretUp,
-  Plus, X, ChatTeardrop, Eye, PaperPlaneRight,
-} from "@phosphor-icons/react";
+  ArrowLeft, Save, Loader2, Sparkles, ChevronDown, ChevronUp,
+  Plus, X, MessageSquare, Eye, Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
 import { AgentSkillPicker } from "@/components/agents/AgentSkillPicker";
@@ -192,7 +192,7 @@ export default function AdminAgentEditPage({
         onClick={() => router.push("/admin/agents")}
         className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6 cursor-pointer"
       >
-        <ArrowLeft className="h-4 w-4" weight="duotone" />
+        <ArrowLeft className="h-4 w-4" />
         Назад к агентам
       </button>
 
@@ -205,7 +205,7 @@ export default function AdminAgentEditPage({
           size="sm"
           onClick={() => { setShowPreview(true); setPreviewMessages([]); setPreviewInput(""); }}
         >
-          <Eye className="h-3.5 w-3.5" weight="duotone" />
+          <Eye className="h-3.5 w-3.5" />
           Предпросмотр
         </Button>
       </div>
@@ -218,10 +218,10 @@ export default function AdminAgentEditPage({
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
         >
           <span className="flex items-center gap-2">
-            <Sparkle className="h-4 w-4 text-accent" weight="duotone" />
+            <Sparkles className="h-4 w-4 text-accent" />
             Сгенерировать с ИИ
           </span>
-          {showGenPanel ? <CaretUp className="h-4 w-4 text-text-secondary" weight="duotone" /> : <CaretDown className="h-4 w-4 text-text-secondary" weight="duotone" />}
+          {showGenPanel ? <ChevronUp className="h-4 w-4 text-text-secondary" /> : <ChevronDown className="h-4 w-4 text-text-secondary" />}
         </button>
         {showGenPanel && (
           <div className="px-5 pb-4 space-y-3 border-t border-border pt-3">
@@ -238,7 +238,7 @@ export default function AdminAgentEditPage({
               disabled={generating || !genDescription.trim()}
               className="h-9 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
-              {generating ? <SpinnerGap className="h-4 w-4 animate-spin" weight="bold" /> : <Sparkle className="h-4 w-4" weight="duotone" />}
+              {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {generating ? "Генерация..." : "Сгенерировать"}
             </button>
           </div>
@@ -311,7 +311,7 @@ export default function AdminAgentEditPage({
         <div>
           <label className="text-sm font-medium text-text-primary mb-2 block">
             <span className="flex items-center gap-1.5">
-              <ChatTeardrop className="h-4 w-4 text-text-secondary" weight="duotone" />
+              <MessageSquare className="h-4 w-4 text-text-secondary" />
               Стартовые подсказки
             </span>
           </label>
@@ -335,7 +335,7 @@ export default function AdminAgentEditPage({
                   onClick={() => setStarterPrompts(starterPrompts.filter((_, i) => i !== idx))}
                   className="h-9 w-9 rounded-xl flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer shrink-0"
                 >
-                  <X className="h-4 w-4" weight="duotone" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ))}
@@ -345,7 +345,7 @@ export default function AdminAgentEditPage({
                 onClick={() => setStarterPrompts([...starterPrompts, ""])}
                 className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover transition-colors cursor-pointer"
               >
-                <Plus className="h-3.5 w-3.5" weight="duotone" />
+                <Plus className="h-3.5 w-3.5" />
                 Добавить подсказку
               </button>
             )}
@@ -428,7 +428,7 @@ export default function AdminAgentEditPage({
             disabled={saving}
             className="h-10 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all shadow-sm disabled:opacity-60 cursor-pointer"
           >
-            {saving ? <SpinnerGap className="h-4 w-4 animate-spin" weight="bold" /> : <FloppyDisk className="h-4 w-4" weight="duotone" />}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Сохранить
           </button>
           <button
@@ -483,7 +483,7 @@ export default function AdminAgentEditPage({
                 className="flex-1 h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
               />
               <Button variant="gradient" size="sm" onClick={handlePreviewSend} isLoading={previewLoading}>
-                <PaperPlaneRight className="h-3.5 w-3.5" weight="duotone" />
+                <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>

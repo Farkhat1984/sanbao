@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 import {
   Plus,
-  MagnifyingGlass,
-  SidebarSimple,
-  GearSix,
+  Search,
+  PanelLeftClose,
+  Settings,
   ShieldCheck,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
@@ -108,7 +108,7 @@ export function Sidebar() {
               isMobile ? "h-9 w-9" : "h-7 w-7"
             )}
           >
-            <SidebarSimple weight="duotone" className="h-4 w-4" />
+            <PanelLeftClose className="h-4 w-4" />
           </button>
         </Tooltip>
       </div>
@@ -120,7 +120,7 @@ export function Sidebar() {
           aria-label="Создать новый чат"
           className="w-full h-9 rounded-xl bg-accent text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-accent-hover transition-all shadow-sm active:scale-[0.98] cursor-pointer"
         >
-          <Plus weight="duotone" className="h-4 w-4" />
+          <Plus className="h-4 w-4" />
           Новый чат
         </button>
       </div>
@@ -132,7 +132,7 @@ export function Sidebar() {
       {/* Search */}
       <div className="px-3 py-2">
         <div className="relative">
-          <MagnifyingGlass weight="duotone" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-secondary" />
           <input
             type="text"
             placeholder="Поиск чатов..."
@@ -179,7 +179,7 @@ export function Sidebar() {
                   isMobile ? "h-10 w-10" : "h-8 w-8"
                 )}
               >
-                <ShieldCheck weight="duotone" className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" />
               </button>
             </Tooltip>
           )}
@@ -192,7 +192,7 @@ export function Sidebar() {
                 isMobile ? "h-10 w-10" : "h-8 w-8"
               )}
             >
-              <GearSix weight="duotone" className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </button>
           </Tooltip>
           <ThemeToggle className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} />

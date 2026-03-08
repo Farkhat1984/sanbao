@@ -1,8 +1,8 @@
-import type { Icon } from "@phosphor-icons/react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
-  icon: Icon;
+  icon: LucideIcon;
   label: string;
   value: string | number;
   color?: string;
@@ -23,7 +23,7 @@ export function StatsCard({
             color
           )}
         >
-          <Icon className="h-4.5 w-4.5" weight="duotone" />
+          <Icon className="h-4.5 w-4.5" />
         </div>
         <span className="text-xs font-medium text-text-secondary uppercase tracking-wide">
           {label}

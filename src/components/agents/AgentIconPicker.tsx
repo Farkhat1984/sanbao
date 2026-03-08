@@ -2,43 +2,43 @@
 
 import { useRef } from "react";
 import {
-  Robot, Scales, Briefcase, Shield, BookOpen, Gavel, FileText,
-  Buildings, User, Heartbeat, GraduationCap, Bank,
-  Code, ChatTeardrop, Globe, Lightbulb, FileMagnifyingGlass,
-  ShieldCheck, ClipboardText, Brain, UploadSimple, X,
-  Wrench, Warning, ChartBar, CheckCircle, MagnifyingGlass, Sparkle, Triangle,
+  Bot, Scale, Briefcase, Shield, BookOpen, Gavel, FileText,
+  Building, User, HeartPulse, GraduationCap, Landmark,
+  Code, MessageSquare, Globe, Lightbulb, FileSearch,
+  ShieldCheck, ClipboardCheck, Brain, Upload, X,
+  Wrench, AlertTriangle, BarChart3, CheckCircle, Search, Sparkles, Triangle,
   Calculator, Package, Monitor,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VALID_COLORS } from "@/lib/constants";
 
 const ICONS = [
-  { name: "Bot", component: Robot },
-  { name: "Scale", component: Scales },
+  { name: "Bot", component: Bot },
+  { name: "Scale", component: Scale },
   { name: "Briefcase", component: Briefcase },
   { name: "Shield", component: Shield },
   { name: "BookOpen", component: BookOpen },
   { name: "Gavel", component: Gavel },
   { name: "FileText", component: FileText },
-  { name: "Building", component: Buildings },
+  { name: "Building", component: Building },
   { name: "User", component: User },
-  { name: "HeartPulse", component: Heartbeat },
+  { name: "HeartPulse", component: HeartPulse },
   { name: "GraduationCap", component: GraduationCap },
-  { name: "Landmark", component: Bank },
+  { name: "Landmark", component: Landmark },
   { name: "Code", component: Code },
-  { name: "MessageSquare", component: ChatTeardrop },
+  { name: "MessageSquare", component: MessageSquare },
   { name: "Globe", component: Globe },
   { name: "Lightbulb", component: Lightbulb },
-  { name: "FileSearch", component: FileMagnifyingGlass },
+  { name: "FileSearch", component: FileSearch },
   { name: "ShieldCheck", component: ShieldCheck },
-  { name: "ClipboardCheck", component: ClipboardText },
+  { name: "ClipboardCheck", component: ClipboardCheck },
   { name: "Brain", component: Brain },
   { name: "Wrench", component: Wrench },
-  { name: "AlertTriangle", component: Warning },
-  { name: "BarChart3", component: ChartBar },
+  { name: "AlertTriangle", component: AlertTriangle },
+  { name: "BarChart3", component: BarChart3 },
   { name: "CheckCircle", component: CheckCircle },
-  { name: "Search", component: MagnifyingGlass },
-  { name: "Sparkles", component: Sparkle },
+  { name: "Search", component: Search },
+  { name: "Sparkles", component: Sparkles },
   { name: "Triangle", component: Triangle },
   { name: "Calculator", component: Calculator },
   { name: "Package", component: Package },
@@ -48,7 +48,7 @@ const ICONS = [
 const COLORS = VALID_COLORS;
 
 // Reusable map for rendering agent icons by name
-export const ICON_MAP: Record<string, typeof Robot> = Object.fromEntries(
+export const ICON_MAP: Record<string, typeof Bot> = Object.fromEntries(
   ICONS.map((i) => [i.name, i.component])
 );
 
@@ -122,7 +122,7 @@ export function AgentIconPicker({
               onClick={() => onCustomImageChange?.(null)}
               className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-error text-white flex items-center justify-center cursor-pointer hover:bg-error/80 transition-colors"
             >
-              <X className="h-2.5 w-2.5" weight="duotone" />
+              <X className="h-2.5 w-2.5" />
             </button>
           </div>
         ) : (
@@ -131,8 +131,8 @@ export function AgentIconPicker({
             style={{ backgroundColor: selectedColor }}
           >
             {(() => {
-              const IconComp = ICON_MAP[selectedIcon] || Robot;
-              return <IconComp className="h-6 w-6 text-white" weight="duotone" />;
+              const IconComp = ICON_MAP[selectedIcon] || Bot;
+              return <IconComp className="h-6 w-6 text-white" />;
             })()}
           </div>
         )}
@@ -148,7 +148,7 @@ export function AgentIconPicker({
           onClick={() => fileRef.current?.click()}
           className="h-8 px-3 rounded-lg border border-border bg-surface text-xs text-text-secondary hover:text-text-primary flex items-center gap-1.5 cursor-pointer transition-colors"
         >
-          <UploadSimple className="h-3.5 w-3.5" weight="duotone" />
+          <Upload className="h-3.5 w-3.5" />
           Загрузить иконку
         </button>
       </div>
@@ -171,7 +171,7 @@ export function AgentIconPicker({
                   : "bg-surface-alt text-text-secondary hover:text-text-primary hover:bg-surface-hover"
               )}
             >
-              <Icon className="h-4 w-4" weight="duotone" />
+              <Icon className="h-4 w-4" />
             </button>
           ))}
         </div>

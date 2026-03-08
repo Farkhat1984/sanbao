@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Power, DotsSixVertical, Trash, PencilSimple, Wrench, Globe, BookOpen, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
@@ -102,7 +102,7 @@ export default function AdminAgentsPage() {
           <p className="text-sm text-text-secondary mt-1">Управление встроенными агентами ({total})</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => router.push("/admin/agents/new")}>
-          <Plus className="h-4 w-4" weight="duotone" />
+          <Plus className="h-4 w-4" />
           Добавить
         </Button>
       </div>
@@ -124,7 +124,7 @@ export default function AdminAgentsPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <DotsSixVertical className="h-4 w-4 text-text-secondary cursor-grab active:cursor-grabbing shrink-0" weight="duotone" />
+                  <GripVertical className="h-4 w-4 text-text-secondary cursor-grab active:cursor-grabbing shrink-0" />
                   <div
                     className="h-9 w-9 rounded-xl flex items-center justify-center text-white shrink-0"
                     style={{ backgroundColor: a.iconColor }}
@@ -142,19 +142,19 @@ export default function AdminAgentsPage() {
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                         {a.mcpServers?.length > 0 && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent/10 text-accent text-[10px] font-medium">
-                            <Globe className="h-2.5 w-2.5" weight="duotone" />
+                            <Globe className="h-2.5 w-2.5" />
                             MCP: {a.mcpServers.length}
                           </span>
                         )}
                         {a.tools?.length > 0 && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-warning/10 text-warning text-[10px] font-medium">
-                            <Wrench className="h-2.5 w-2.5" weight="duotone" />
+                            <Wrench className="h-2.5 w-2.5" />
                             {a.tools.length}
                           </span>
                         )}
                         {a.skills?.length > 0 && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-success/10 text-success text-[10px] font-medium">
-                            <BookOpen className="h-2.5 w-2.5" weight="duotone" />
+                            <BookOpen className="h-2.5 w-2.5" />
                             {a.skills.length}
                           </span>
                         )}
@@ -164,14 +164,14 @@ export default function AdminAgentsPage() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-3">
                   <Button variant="secondary" size="sm" onClick={() => handleToggle(a.id, a.isActive)}>
-                    {a.isActive ? <Power className="h-3.5 w-3.5" weight="light" /> : <Power className="h-3.5 w-3.5" weight="duotone" />}
+                    {a.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => router.push(`/admin/agents/${a.id}/edit`)}>
-                    <PencilSimple className="h-3.5 w-3.5" weight="duotone" />
+                    <Pencil className="h-3.5 w-3.5" />
                     Изменить
                   </Button>
                   <button onClick={() => handleDelete(a.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                    <Trash className="h-3.5 w-3.5" weight="duotone" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export default function AdminAgentsPage() {
                 disabled={page === 1}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretLeft className="h-4 w-4" weight="duotone" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
               <button
@@ -198,7 +198,7 @@ export default function AdminAgentsPage() {
                 disabled={page === totalPages}
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
               >
-                <CaretRight className="h-4 w-4" weight="duotone" />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
