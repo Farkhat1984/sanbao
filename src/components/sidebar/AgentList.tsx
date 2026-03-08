@@ -7,6 +7,7 @@ import {
   Bot,
   Zap,
   Cable,
+  Building2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -27,6 +28,13 @@ const PLAYGROUND_ITEMS = [
     href: "/skills",
     color: "bg-accent-light text-accent",
     description: "Шаблоны промптов",
+  },
+  {
+    label: "Организации",
+    icon: Building2,
+    href: "/organizations",
+    color: "bg-accent-light text-accent",
+    description: "Корпоративные агенты",
   },
   {
     label: "MCP",

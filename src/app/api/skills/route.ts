@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { skillCreateSchema } from "@/lib/validation";
+import { type Prisma } from "@prisma/client";
+
+const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
 
 export async function GET(req: Request) {
   const result = await requireAuth();
@@ -10,20 +13,33 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const marketplace = searchParams.get("marketplace") === "true";
+  const category = searchParams.get("category");
+  const sort = searchParams.get("sort"); // "popular" | default (newest)
 
   const cursor = searchParams.get("cursor");
   const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10) || 100, 200);
 
+  const where: Prisma.SkillWhereInput = marketplace
+    ? { isPublic: true }
+    : {
+        OR: [
+          { isBuiltIn: true },
+          { userId },
+        ],
+      };
+
+  if (category && VALID_CATEGORY_VALUES.includes(category as typeof VALID_CATEGORY_VALUES[number])) {
+    where.category = category as typeof VALID_CATEGORY_VALUES[number];
+  }
+
+  const orderBy: Prisma.SkillOrderByWithRelationInput[] =
+    sort === "popular"
+      ? [{ usageCount: "desc" }, { updatedAt: "desc" }]
+      : [{ isBuiltIn: "desc" }, { updatedAt: "desc" }];
+
   const skills = await prisma.skill.findMany({
-    where: marketplace
-      ? { isPublic: true }
-      : {
-          OR: [
-            { isBuiltIn: true },
-            { userId },
-          ],
-        },
-    orderBy: [{ isBuiltIn: "desc" }, { updatedAt: "desc" }],
+    where,
+    orderBy,
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     select: {
@@ -39,6 +55,10 @@ export async function GET(req: Request) {
       citationRules: true,
       templates: true,
       userId: true,
+      category: true,
+      tags: true,
+      usageCount: true,
+      version: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -63,7 +83,10 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
   }
-  const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor } = parsed.data;
+  const {
+    name, description, systemPrompt, templates, citationRules,
+    jurisdiction, icon, iconColor, category, tags,
+  } = parsed.data;
 
   const skill = await prisma.skill.create({
     data: {
@@ -76,6 +99,8 @@ export async function POST(req: Request) {
       jurisdiction,
       icon: icon || DEFAULT_SKILL_ICON,
       iconColor: iconColor || DEFAULT_ICON_COLOR,
+      category: category || "CUSTOM",
+      tags: tags || [],
     },
   });
 

@@ -1,42 +1,48 @@
-import { auth } from "@/lib/auth";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { prisma } from "@/lib/prisma";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
+import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import {
   VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES,
-  DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
+  DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE,
+  DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON,
 } from "@/lib/constants";
-import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 
 const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"];
 const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
 
+/**
+ * POST /api/skills/quick-create
+ * Combined generate + save in one request for inline creation from agent form.
+ * Input: { description: string, category?: string }
+ * Rate limit: 5 requests/minute per user
+ */
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
+  const result = await requireAuth();
+  if ("error" in result) return result.error;
+  const { userId } = result.auth;
+
+  if (!(await checkMinuteRateLimit(`skill-quick:${userId}`, 5))) {
+    return jsonError("Слишком много запросов. Подождите минуту.", 429);
   }
 
-  // Rate limit: 10 requests/minute per user
-  if (!(await checkMinuteRateLimit(`skill-gen:${session.user.id}`, 10))) {
-    return jsonError("Слишком много запросов", 429);
-  }
+  const body = await req.json().catch(() => null);
+  if (!body) return jsonError("Неверный JSON", 400);
 
-  const { description, jurisdiction, category } = await req.json();
+  const { description, category } = body as { description?: string; category?: string };
 
   if (!description?.trim() || description.length > 5000) {
     return jsonError("Описание обязательно (макс. 5000 символов)", 400);
   }
 
-  const validCategory = category && VALID_CATEGORY_VALUES.includes(category)
+  const validCategory = category && VALID_CATEGORY_VALUES.includes(category as typeof VALID_CATEGORY_VALUES[number])
     ? category
     : undefined;
 
   try {
-    let userMsg = jurisdiction
-      ? `Создай скилл: ${description.trim()}. Юрисдикция: ${jurisdiction}`
-      : `Создай скилл: ${description.trim()}`;
-
+    // Build user message with optional category context
+    let userMsg = `Создай скилл: ${description.trim()}`;
     if (validCategory) {
       userMsg += `. Категория: ${validCategory}`;
     }
@@ -45,6 +51,7 @@ export async function POST(req: Request) {
     if (!textModel) {
       return jsonError("Модель не настроена", 503);
     }
+
     const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
     const apiKey = textModel.provider.apiKey;
     const modelId = textModel.modelId;
@@ -58,12 +65,15 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: modelId,
         messages: [
-          { role: "system", content: interpolatePrompt(await getPrompt("prompt_gen_skill"), {
-            VALID_ICONS: VALID_ICONS.join(", "),
-            VALID_COLORS: VALID_COLORS.join(", "),
-            JURISDICTIONS: JURISDICTIONS.join(", "),
-            CATEGORIES: VALID_CATEGORY_VALUES.join(", "),
-          }) },
+          {
+            role: "system",
+            content: interpolatePrompt(await getPrompt("prompt_gen_skill"), {
+              VALID_ICONS: VALID_ICONS.join(", "),
+              VALID_COLORS: VALID_COLORS.join(", "),
+              JURISDICTIONS: JURISDICTIONS.join(", "),
+              CATEGORIES: VALID_CATEGORY_VALUES.join(", "),
+            }),
+          },
           { role: "user", content: userMsg },
         ],
         temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,
@@ -92,7 +102,6 @@ export async function POST(req: Request) {
     if (jsonMatch) {
       jsonStr = jsonMatch[1].trim();
     } else {
-      // Fallback: find first { to last } when no markdown code block
       const start = jsonStr.indexOf("{");
       const end = jsonStr.lastIndexOf("}");
       if (start >= 0 && end > start) {
@@ -104,37 +113,36 @@ export async function POST(req: Request) {
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      console.error("Skill generation: failed to parse JSON from response:", content.slice(0, 500));
-      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать описание скилла.", 422);
+      console.error("Quick-create: failed to parse JSON:", content.slice(0, 500));
+      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
     }
 
-    // Validate systemPrompt is focused and not too long
+    // Validate and sanitize AI output
     const systemPrompt = (parsed.systemPrompt || "").slice(0, 4000);
-
-    // Resolve category: prefer user-provided, then AI-generated, then default
     const resolvedCategory = validCategory
       || (VALID_CATEGORY_VALUES.includes(parsed.category) ? parsed.category : "CUSTOM");
-
-    // Parse tags from AI response
     const resolvedTags = Array.isArray(parsed.tags)
       ? parsed.tags.filter((t: unknown) => typeof t === "string" && t.length <= 50).slice(0, 20)
       : [];
 
-    const result = {
-      name: parsed.name || "Новый скилл",
-      description: parsed.description || "",
-      systemPrompt,
-      citationRules: parsed.citationRules || "",
-      jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction) ? parsed.jurisdiction : "RU",
-      icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : "Scale",
-      iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
-      category: resolvedCategory,
-      tags: resolvedTags,
-    };
+    const skill = await prisma.skill.create({
+      data: {
+        userId,
+        name: parsed.name || "Новый скилл",
+        description: parsed.description || "",
+        systemPrompt,
+        citationRules: parsed.citationRules || "",
+        jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction) ? parsed.jurisdiction : "RU",
+        icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : DEFAULT_SKILL_ICON,
+        iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
+        category: resolvedCategory,
+        tags: resolvedTags,
+      },
+    });
 
-    return jsonOk(result);
+    return jsonOk(serializeDates(skill), 201);
   } catch (e) {
-    console.error("Skill generation error:", e);
+    console.error("Quick-create error:", e);
     return jsonError("Ошибка генерации скилла. Попробуйте ещё раз.", 500);
   }
 }

@@ -4,20 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
-import { ArrowLeft, Save, Sparkles, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
 import type { Skill } from "@/types/skill";
-import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
 
 interface SkillFormProps {
   initial?: Skill;
 }
 
+/** Rough token estimate: ~4 chars per token */
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+}
+
 export function SkillForm({ initial }: SkillFormProps) {
   const router = useRouter();
+  const isNew = !initial;
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genDescription, setGenDescription] = useState("");
-  const [showGenPanel, setShowGenPanel] = useState(false);
+  const [showGenPanel, setShowGenPanel] = useState(isNew);
   const [genError, setGenError] = useState<string | null>(null);
 
   const [name, setName] = useState(initial?.name || "");
@@ -26,6 +33,30 @@ export function SkillForm({ initial }: SkillFormProps) {
   const [citationRules, setCitationRules] = useState(initial?.citationRules || "");
   const [icon, setIcon] = useState(initial?.icon || DEFAULT_SKILL_ICON);
   const [iconColor, setIconColor] = useState(initial?.iconColor || DEFAULT_ICON_COLOR);
+  const [category, setCategory] = useState(initial?.category || "CUSTOM");
+  const [tags, setTags] = useState<string[]>(initial?.tags || []);
+  const [tagInput, setTagInput] = useState("");
+
+  const promptTokens = estimateTokens(systemPrompt);
+
+  function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag();
+    }
+  }
+
+  function addTag() {
+    const val = tagInput.trim().replace(/,/g, "");
+    if (val && !tags.includes(val)) {
+      setTags([...tags, val]);
+    }
+    setTagInput("");
+  }
+
+  function removeTag(tag: string) {
+    setTags(tags.filter((t) => t !== tag));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +77,8 @@ export function SkillForm({ initial }: SkillFormProps) {
           citationRules,
           icon,
           iconColor,
+          category,
+          tags,
         }),
       });
 
@@ -76,6 +109,8 @@ export function SkillForm({ initial }: SkillFormProps) {
       if (data.citationRules) setCitationRules(data.citationRules);
       if (data.icon) setIcon(data.icon);
       if (data.iconColor) setIconColor(data.iconColor);
+      if (data.category) setCategory(data.category);
+      if (data.tags && Array.isArray(data.tags)) setTags(data.tags);
       setShowGenPanel(false);
     } catch {
       setGenError("Не удалось сгенерировать скилл");
@@ -104,7 +139,7 @@ export function SkillForm({ initial }: SkillFormProps) {
             <textarea
               value={genDescription}
               onChange={(e) => setGenDescription(e.target.value)}
-              placeholder="Опишите скилл. Например: «Анализ трудовых договоров на соответствие ТК РФ»"
+              placeholder="Опишите скилл. Например: «Анализ трудовых договоров на соответствие ТК РК»"
               rows={3}
               className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-none"
             />
@@ -169,6 +204,24 @@ export function SkillForm({ initial }: SkillFormProps) {
           />
         </div>
 
+        {/* Category */}
+        <div>
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
+            Категория
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full h-10 px-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer appearance-none"
+          >
+            {SKILL_CATEGORIES.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div>
           <label className="text-xs font-medium text-text-secondary mb-1.5 block">
             Системный промпт *
@@ -181,6 +234,11 @@ export function SkillForm({ initial }: SkillFormProps) {
             className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none"
             required
           />
+          <div className="flex items-center justify-end mt-1.5">
+            <span className="text-[11px] text-text-muted tabular-nums">
+              ~{promptTokens} токенов
+            </span>
+          </div>
         </div>
 
         <div>
@@ -193,6 +251,38 @@ export function SkillForm({ initial }: SkillFormProps) {
             placeholder="Как AI должен ссылаться на правовые нормы..."
             rows={3}
             className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent resize-none"
+          />
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="text-xs font-medium text-text-secondary mb-1.5 block">
+            Теги
+          </label>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-surface-alt text-text-secondary border border-border"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="text-text-muted hover:text-error transition-colors cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <input
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            onBlur={addTag}
+            placeholder="Введите тег и нажмите Enter"
+            className="w-full bg-surface-alt border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
           />
         </div>
       </div>

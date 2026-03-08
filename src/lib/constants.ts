@@ -21,6 +21,17 @@ export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// ─── Skill Categories ───
+export const SKILL_CATEGORIES = [
+  { value: "LEGAL", label: "Юридические", icon: "Scale" },
+  { value: "BUSINESS", label: "Бизнес", icon: "Briefcase" },
+  { value: "CODE", label: "Код", icon: "Code" },
+  { value: "CONTENT", label: "Контент", icon: "MessageSquare" },
+  { value: "ANALYSIS", label: "Аналитика", icon: "BarChart3" },
+  { value: "PRODUCTIVITY", label: "Продуктивность", icon: "Zap" },
+  { value: "CUSTOM", label: "Другое", icon: "Sparkles" },
+] as const;
+
 // ─── Defaults ───
 export const DEFAULT_ICON_COLOR = "#8FAF9F";
 export const DEFAULT_AGENT_ICON = "Bot";

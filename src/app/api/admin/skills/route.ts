@@ -1,8 +1,11 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON } from "@/lib/constants";
+import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
 import { parsePagination } from "@/lib/validation";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { type Prisma } from "@prisma/client";
+
+const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -10,15 +13,20 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // builtin | public | all
+  const category = searchParams.get("category");
   const { page, limit } = parsePagination(searchParams);
   const skip = (page - 1) * limit;
 
-  const where: Record<string, unknown> = {};
+  const where: Prisma.SkillWhereInput = {};
   if (type === "builtin") where.isBuiltIn = true;
   if (type === "public") where.isPublic = true;
   if (type === "pending") where.status = "PENDING";
   if (type === "approved") where.status = "APPROVED";
   if (type === "rejected") where.status = "REJECTED";
+
+  if (category && VALID_CATEGORY_VALUES.includes(category as typeof VALID_CATEGORY_VALUES[number])) {
+    where.category = category as typeof VALID_CATEGORY_VALUES[number];
+  }
 
   const [skills, total] = await Promise.all([
     prisma.skill.findMany({
@@ -42,11 +50,25 @@ export async function POST(req: Request) {
   if (result.error) return result.error;
 
   const body = await req.json();
-  const { name, description, systemPrompt, templates, citationRules, jurisdiction, icon, iconColor, isBuiltIn, isPublic } = body;
+  const {
+    name, description, systemPrompt, templates, citationRules,
+    jurisdiction, icon, iconColor, isBuiltIn, isPublic,
+    category, tags,
+  } = body;
 
   if (!name || !systemPrompt) {
     return jsonError("Обязательные поля: name, systemPrompt", 400);
   }
+
+  // Validate category if provided
+  const resolvedCategory = category && VALID_CATEGORY_VALUES.includes(category)
+    ? category
+    : "CUSTOM";
+
+  // Validate tags if provided
+  const resolvedTags = Array.isArray(tags)
+    ? tags.filter((t: unknown) => typeof t === "string" && (t as string).length <= 50).slice(0, 20)
+    : [];
 
   const skill = await prisma.skill.create({
     data: {
@@ -61,6 +83,8 @@ export async function POST(req: Request) {
       isBuiltIn: isBuiltIn ?? true,
       isPublic: isPublic ?? true,
       status: "APPROVED", // Admin-created skills are auto-approved
+      category: resolvedCategory,
+      tags: resolvedTags,
     },
   });
 

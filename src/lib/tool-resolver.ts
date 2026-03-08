@@ -175,14 +175,17 @@ export async function resolveAgentContext(
     if (seenSkillIds.has(skill.id)) return;
     seenSkillIds.add(skill.id);
 
-    let sp = `\n\n--- Скилл: ${skill.name} ---\n${skill.systemPrompt}`;
+    let sp = `\n\n--- Skill: ${skill.name} ---\n${skill.systemPrompt}`;
     if (skill.citationRules) {
-      sp += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
+      sp += `\n\nCITATION RULES:\n${skill.citationRules}`;
     }
     if (skill.jurisdiction) {
-      sp += `\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+      sp += `\nJURISDICTION: ${skill.jurisdiction}`;
     }
     skillPrompts.push(sp);
+
+    // Fire-and-forget usage tracking
+    prisma.skill.update({ where: { id: skill.id }, data: { usageCount: { increment: 1 } } }).catch(() => {});
 
     // Skill's tools
     for (const st of skill.tools) {

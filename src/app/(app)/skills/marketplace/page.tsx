@@ -5,22 +5,29 @@ import { ArrowLeft, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SkillCard } from "@/components/skills/SkillCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SKILL_CATEGORIES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { Skill } from "@/types/skill";
 
 export default function MarketplacePage() {
   const router = useRouter();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/skills?marketplace=true")
+    const params = new URLSearchParams({ marketplace: "true" });
+    if (categoryFilter) params.set("category", categoryFilter);
+
+    setLoading(true);
+    fetch(`/api/skills?${params}`)
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((data) => {
         const list = Array.isArray(data) ? data : data.items ?? [];
         setSkills(list);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [categoryFilter]);
 
   async function handleClone(id: string) {
     const res = await fetch(`/api/skills/${id}/clone`, { method: "POST" });
@@ -47,6 +54,37 @@ export default function MarketplacePage() {
             <p className="text-sm text-text-secondary mt-1">
               Клонируйте публичные скиллы в свою коллекцию
             </p>
+          </div>
+        </div>
+
+        {/* Category filter tabs */}
+        <div className="overflow-x-auto scrollbar-none mb-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCategoryFilter(null)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                categoryFilter === null
+                  ? "bg-accent text-white"
+                  : "text-text-secondary hover:bg-surface-alt",
+              )}
+            >
+              Все
+            </button>
+            {SKILL_CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setCategoryFilter(cat.value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                  categoryFilter === cat.value
+                    ? "bg-accent text-white"
+                    : "text-text-secondary hover:bg-surface-alt",
+                )}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -1,10 +1,12 @@
 import { create } from "zustand";
-import type { Skill, SkillSummary } from "@/types/skill";
+import type { SkillSummary } from "@/types/skill";
 
 interface SkillState {
   skills: SkillSummary[];
   activeSkillId: string | null;
   isLoading: boolean;
+  categoryFilter: string | null;
+  sortBy: "newest" | "popular";
 
   setSkills: (skills: SkillSummary[]) => void;
   setActiveSkillId: (id: string | null) => void;
@@ -12,12 +14,16 @@ interface SkillState {
   updateSkill: (id: string, data: Partial<SkillSummary>) => void;
   removeSkill: (id: string) => void;
   setLoading: (loading: boolean) => void;
+  setCategoryFilter: (cat: string | null) => void;
+  setSortBy: (sort: "newest" | "popular") => void;
 }
 
 export const useSkillStore = create<SkillState>((set) => ({
   skills: [],
   activeSkillId: null,
   isLoading: false,
+  categoryFilter: null,
+  sortBy: "newest",
 
   setSkills: (skills) => set({ skills }),
 
@@ -38,4 +44,8 @@ export const useSkillStore = create<SkillState>((set) => ({
     })),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setCategoryFilter: (categoryFilter) => set({ categoryFilter }),
+
+  setSortBy: (sortBy) => set({ sortBy }),
 }));

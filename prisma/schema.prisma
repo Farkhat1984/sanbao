@@ -366,9 +366,13 @@ model Skill {
   jurisdiction  String? @default("RU")
   icon          String  @default("Scale")
   iconColor     String  @default("#8FAF9F")
-  isBuiltIn     Boolean     @default(false)
-  isPublic      Boolean     @default(false)
-  status        SkillStatus @default(DRAFT)
+  isBuiltIn     Boolean       @default(false)
+  isPublic      Boolean       @default(false)
+  status        SkillStatus   @default(DRAFT)
+  category      SkillCategory @default(CUSTOM)
+  tags          String[]      @default([])
+  version       Int           @default(1)
+  usageCount    Int           @default(0)
 
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -382,6 +386,7 @@ model Skill {
 
   @@index([userId])
   @@index([isBuiltIn])
+  @@index([category])
 }
 
 model AgentSkill {
@@ -1302,6 +1307,16 @@ enum SkillStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum SkillCategory {
+  LEGAL
+  BUSINESS
+  CODE
+  CONTENT
+  ANALYSIS
+  PRODUCTIVITY
+  CUSTOM
 }
 
 enum ToolType {

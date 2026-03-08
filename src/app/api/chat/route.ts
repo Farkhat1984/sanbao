@@ -89,7 +89,7 @@ async function compactInBackground(
       body: JSON.stringify({
         model: modelId,
         messages: [
-          { role: "system", content: "Ты — ассистент для сжатия контекста разговора." },
+          { role: "system", content: "You are a context compaction assistant." },
           { role: "user", content: compactionPrompt },
         ],
         max_tokens: Math.min(maxTokens, DEFAULT_MAX_TOKENS_COMPACTION),
@@ -244,7 +244,7 @@ export async function POST(req: Request) {
       agentMcpTools.push(...ctx.mcpTools);
       // Custom (non-system) agents: suppress artifact creation unless explicitly requested
       if (!ctx.isSystem) {
-        systemPrompt += "\n\n⚠ ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО ДЛЯ ЭТОГО АГЕНТА: Ты работаешь как специализированный агент. НЕ создавай документы (<sanbao-doc>) без явной просьбы пользователя. Отвечай обычным текстом. Создавай документ ТОЛЬКО если пользователь прямо попросил: «создай», «составь», «оформи», «подготовь документ».";
+        systemPrompt += "\n\nIMPORTANT: You are a specialized agent. Do NOT create documents (<sanbao-doc>) without explicit user request. Respond with plain text. Create a document ONLY if the user explicitly asks.";
       }
     }
   }
@@ -310,21 +310,21 @@ export async function POST(req: Request) {
       }
 
       // Add system prompt for org agent
-      systemPrompt += `\n\nТы — AI-агент организации "${orgAgent.org.name}": ${orgAgent.name}.`;
+      systemPrompt += `\n\nYou are an AI agent of organization "${orgAgent.org.name}": ${orgAgent.name}.`;
       if (orgAgent.description) {
         systemPrompt += ` ${orgAgent.description}`;
       }
       if (orgAgent.instructions) {
         systemPrompt += `\n\n${orgAgent.instructions}`;
       }
-      systemPrompt += "\nИспользуй инструмент search для поиска в базе знаний организации. Используй get_source для получения полного контекста найденного фрагмента.";
-      systemPrompt += "\n\nПРАВИЛА ПОИСКА В БАЗЕ ЗНАНИЙ:";
-      systemPrompt += "\n- Делай ОДИН поисковый запрос (search) на вопрос пользователя. НЕ делай 3-4 запроса подряд — это переполняет контекст.";
-      systemPrompt += "\n- Если первый запрос не дал результатов, переформулируй и сделай ЕЩЁ ОДИН. Максимум 2 вызова search на сообщение.";
-      systemPrompt += "\n- Используй get_source ТОЛЬКО если нужен расширенный контекст конкретного найденного чанка.";
-      systemPrompt += "\n- Результаты поиска могут содержать OCR-артефакты (искажённый текст) — интерпретируй их по смыслу.";
-      systemPrompt += "\n\nПри цитировании данных из базы знаний ссылайся на источник в формате:\n[описание](source://домен/файл/номер_чанка)\nНапример: [Глава 3](source://ns_proj123/report.pdf/5)";
-      systemPrompt += "\n\n⚠ ДОПОЛНИТЕЛЬНОЕ ПРАВИЛО: Ты работаешь как специализированный агент организации. НЕ создавай документы (<sanbao-doc>) без явной просьбы пользователя. Отвечай обычным текстом.";
+      systemPrompt += "\nUse the search tool to find information in the organization's knowledge base. Use get_source for full context of a found chunk.";
+      systemPrompt += "\n\nKNOWLEDGE BASE SEARCH RULES:";
+      systemPrompt += "\n- Make ONE search query per user question. Do NOT make 3-4 queries in a row — it overflows context.";
+      systemPrompt += "\n- If the first query returns no results, rephrase and try ONE more. Max 2 search calls per message.";
+      systemPrompt += "\n- Use get_source ONLY when you need extended context of a specific found chunk.";
+      systemPrompt += "\n- Search results may contain OCR artifacts (distorted text) — interpret them by meaning.";
+      systemPrompt += "\n\nWhen citing data from the knowledge base, reference the source:\n[description](source://domain/file/chunk_number)\nExample: [Chapter 3](source://ns_proj123/report.pdf/5)";
+      systemPrompt += "\n\nIMPORTANT: You are a specialized organization agent. Do NOT create documents (<sanbao-doc>) without explicit user request. Respond with plain text.";
 
       // Load MCP tools from org agent's pipeline server
       const srv = orgAgent.mcpServer;
@@ -347,9 +347,9 @@ export async function POST(req: Request) {
       if (orgAgent.skills && orgAgent.skills.length > 0) {
         for (const as of orgAgent.skills) {
           const skill = as.skill;
-          let sp = `\n\n--- Скилл: ${skill.name} ---\n${skill.systemPrompt}`;
-          if (skill.citationRules) sp += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
-          if (skill.jurisdiction) sp += `\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+          let sp = `\n\n--- Skill: ${skill.name} ---\n${skill.systemPrompt}`;
+          if (skill.citationRules) sp += `\n\nCITATION RULES:\n${skill.citationRules}`;
+          if (skill.jurisdiction) sp += `\nJURISDICTION: ${skill.jurisdiction}`;
           systemPrompt += sp;
         }
       }
@@ -504,10 +504,10 @@ export async function POST(req: Request) {
     if (skill) {
       let skillPrompt = skill.systemPrompt;
       if (skill.citationRules) {
-        skillPrompt += `\n\nПРАВИЛА ЦИТИРОВАНИЯ:\n${skill.citationRules}`;
+        skillPrompt += `\n\nCITATION RULES:\n${skill.citationRules}`;
       }
       if (skill.jurisdiction) {
-        skillPrompt += `\n\nЮРИСДИКЦИЯ: ${skill.jurisdiction}`;
+        skillPrompt += `\n\nJURISDICTION: ${skill.jurisdiction}`;
       }
       systemPrompt = `${skillPrompt}\n\n${systemPrompt}`;
     }
@@ -595,7 +595,7 @@ export async function POST(req: Request) {
     const filesList = userFiles
       .map((f) => `- ${f.name}${f.description ? ` — ${f.description}` : ""} (${f.fileType})`)
       .join("\n");
-    systemPrompt += `\n\n--- ФАЙЛЫ ПОЛЬЗОВАТЕЛЯ ---\nУ пользователя есть загруженные файлы. Используй инструмент read_knowledge для поиска в них.\n${filesList}\n--- КОНЕЦ ФАЙЛОВ ---`;
+    systemPrompt += `\n\n--- USER FILES ---\nThe user has uploaded files. Use the read_knowledge tool to search in them.\n${filesList}\n--- END FILES ---`;
   }
 
   // ─── Resolve text model (needed for context window + max tokens) ──

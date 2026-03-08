@@ -10,6 +10,10 @@ export interface Skill {
   iconColor: string;
   isBuiltIn: boolean;
   isPublic: boolean;
+  category: string;
+  tags: string[];
+  version: number;
+  usageCount: number;
   userId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +28,9 @@ export interface SkillSummary {
   iconColor: string;
   isBuiltIn: boolean;
   isPublic: boolean;
+  category: string;
+  tags: string[];
+  usageCount: number;
 }
 
 export interface SkillFormData {
@@ -35,4 +42,6 @@ export interface SkillFormData {
   jurisdiction?: string;
   icon: string;
   iconColor: string;
+  category?: string;
+  tags?: string[];
 }

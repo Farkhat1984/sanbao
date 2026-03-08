@@ -12,7 +12,6 @@ import { ThinkingIndicator } from "./ThinkingIndicator";
 import { ContextIndicator } from "./ContextIndicator";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
-import { SanbaoFact } from "./SanbaoFact";
 import type { ChatMessage } from "@/types/chat";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -221,11 +220,6 @@ export function ChatArea() {
 
       <ClarifyModal />
 
-      {/* Historical facts about Zheng He during loading */}
-      <SanbaoFact
-        isVisible={isStreaming && !!streamingPhase}
-        messageCount={messages.length}
-      />
     </div>
   );
 }

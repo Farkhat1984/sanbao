@@ -1,20 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Zap, Store, Sparkles, Loader2, Search } from "lucide-react";
+import { Plus, Zap, Store, Sparkles, Loader2, Search, TrendingUp, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSkillStore } from "@/stores/skillStore";
 import { SkillCard } from "@/components/skills/SkillCard";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SKILL_CATEGORIES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { Skill } from "@/types/skill";
 
 const SKILLS_LIMIT = 20;
 
 export default function SkillsPage() {
   const router = useRouter();
-  const { setSkills, setLoading } = useSkillStore();
+  const { setSkills, setLoading, categoryFilter, sortBy, setCategoryFilter, setSortBy } = useSkillStore();
   const [skills, setLocalSkills] = useState<Skill[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,10 +28,26 @@ export default function SkillsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Initial fetch
+  // Build query params
+  const buildParams = useCallback(
+    (cursor?: string) => {
+      const params = new URLSearchParams({ limit: String(SKILLS_LIMIT) });
+      if (cursor) params.set("cursor", cursor);
+      if (categoryFilter) params.set("category", categoryFilter);
+      if (sortBy === "popular") params.set("sort", "popular");
+      return params.toString();
+    },
+    [categoryFilter, sortBy],
+  );
+
+  // Initial fetch (re-run when filters change)
   useEffect(() => {
     setIsLoading(true);
-    fetch(`/api/skills?limit=${SKILLS_LIMIT}`)
+    setLocalSkills([]);
+    setNextCursor(null);
+    setHasMore(false);
+
+    fetch(`/api/skills?${buildParams()}`)
       .then((res) => res.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : data.items ?? [];
@@ -38,19 +56,19 @@ export default function SkillsPage() {
         setNextCursor(data.nextCursor ?? null);
         setHasMore(!!data.nextCursor);
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => {
         setIsLoading(false);
         setLoaded(true);
         setLoading(false);
       });
-  }, [setSkills, setLoading]);
+  }, [setSkills, setLoading, buildParams]);
 
   // Load more skills
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore || !nextCursor) return;
     setLoadingMore(true);
-    fetch(`/api/skills?limit=${SKILLS_LIMIT}&cursor=${nextCursor}`)
+    fetch(`/api/skills?${buildParams(nextCursor)}`)
       .then((res) => res.json())
       .then((data) => {
         const newItems = Array.isArray(data) ? data : data.items ?? [];
@@ -62,9 +80,9 @@ export default function SkillsPage() {
         setNextCursor(data.nextCursor ?? null);
         setHasMore(!!data.nextCursor);
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoadingMore(false));
-  }, [loadingMore, hasMore, nextCursor, setSkills]);
+  }, [loadingMore, hasMore, nextCursor, setSkills, buildParams]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -151,6 +169,65 @@ export default function SkillsPage() {
             >
               <Plus className="h-4 w-4" />
               Создать скилл
+            </button>
+          </div>
+        </div>
+
+        {/* Category filter tabs + Sort toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <div className="flex-1 overflow-x-auto scrollbar-none">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCategoryFilter(null)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                  categoryFilter === null
+                    ? "bg-accent text-white"
+                    : "text-text-secondary hover:bg-surface-alt",
+                )}
+              >
+                Все
+              </button>
+              {SKILL_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategoryFilter(cat.value)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
+                    categoryFilter === cat.value
+                      ? "bg-accent text-white"
+                      : "text-text-secondary hover:bg-surface-alt",
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0 bg-surface-alt rounded-lg p-0.5 border border-border">
+            <button
+              onClick={() => setSortBy("newest")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                sortBy === "newest"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary",
+              )}
+            >
+              <Clock className="h-3 w-3" />
+              Новые
+            </button>
+            <button
+              onClick={() => setSortBy("popular")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                sortBy === "popular"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary",
+              )}
+            >
+              <TrendingUp className="h-3 w-3" />
+              Популярные
             </button>
           </div>
         </div>

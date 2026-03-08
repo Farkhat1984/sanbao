@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
-import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/lib/constants";
+import { MAX_AGENT_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/lib/constants";
 import { parseFileToText } from "@/lib/parse-file";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
@@ -32,8 +32,8 @@ export async function POST(
     return jsonError("Файл не найден", 400);
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    return jsonError("Файл слишком большой (макс. 10MB)", 400);
+  if (file.size > MAX_AGENT_FILE_SIZE) {
+    return jsonError("Файл слишком большой (макс. 100MB)", 400);
   }
 
   if (!ALLOWED_FILE_TYPES.includes(file.type)) {

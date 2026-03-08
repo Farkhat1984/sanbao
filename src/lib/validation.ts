@@ -80,6 +80,8 @@ export const skillCreateSchema = z.object({
   jurisdiction: z.string().max(10).optional().default("RU"),
   icon: z.string().max(50).optional(),
   iconColor: z.string().max(20).optional(),
+  category: z.enum(["LEGAL", "BUSINESS", "CODE", "CONTENT", "ANALYSIS", "PRODUCTIVITY", "CUSTOM"]).optional().default("CUSTOM"),
+  tags: z.array(z.string().max(50)).max(20).optional().default([]),
 });
 
 export const skillUpdateSchema = z.object({
@@ -92,6 +94,8 @@ export const skillUpdateSchema = z.object({
   icon: z.string().max(50),
   iconColor: z.string().max(20),
   isPublic: z.boolean(),
+  category: z.enum(["LEGAL", "BUSINESS", "CODE", "CONTENT", "ANALYSIS", "PRODUCTIVITY", "CUSTOM"]),
+  tags: z.array(z.string().max(50)).max(20),
 }).partial();
 
 // ─── Organization ───────────────────────────────────────
