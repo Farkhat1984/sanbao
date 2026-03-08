@@ -53,7 +53,7 @@ export function SystemAgentCard({ agent }: SystemAgentCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative p-5 rounded-2xl border border-border border-l-4 border-l-legal-ref bg-surface transition-all duration-200"
+      className="relative p-5 rounded-2xl border border-border bg-surface transition-all duration-200"
     >
       {/* System badge */}
       <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-legal-ref/10 text-legal-ref">

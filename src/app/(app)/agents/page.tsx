@@ -304,7 +304,7 @@ export default function AgentsPage() {
                               key={agent.id}
                               initial={{ opacity: 0, y: 12 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="relative p-5 rounded-2xl border border-border border-l-4 border-l-accent/60 bg-surface transition-all duration-200"
+                              className="relative p-5 rounded-2xl border border-border bg-surface transition-all duration-200"
                             >
                               {/* Org badge */}
                               <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-accent">

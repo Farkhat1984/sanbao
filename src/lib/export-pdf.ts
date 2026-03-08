@@ -43,6 +43,19 @@ export async function exportToPdf(
       clonedEl.style.overflow = "visible";
       clonedEl.style.height = "auto";
       clonedEl.style.maxHeight = "none";
+
+      // Strip decorative container styles for clean PDF
+      clonedEl.style.background = "white";
+      clonedEl.style.padding = "0";
+      // Strip inner card border/shadow
+      const card = clonedEl.querySelector(':scope > div') as HTMLElement | null;
+      if (card) {
+        card.style.border = "none";
+        card.style.boxShadow = "none";
+        card.style.borderRadius = "0";
+        card.style.maxWidth = "none";
+        card.style.width = "100%";
+      }
     },
   });
 
