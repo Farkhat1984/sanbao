@@ -6,8 +6,9 @@ export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  // Get all skills with their agent count
+  // Get only system/built-in skills with their agent count
   const skills = await prisma.skill.findMany({
+    where: { isBuiltIn: true },
     select: {
       id: true,
       name: true,
@@ -48,7 +49,6 @@ export async function GET() {
 
   const totalSkills = skills.length;
   const activeSkills = skills.filter((s) => s.status === "APPROVED" || s.isBuiltIn).length;
-  const pendingSkills = skills.filter((s) => s.status === "PENDING").length;
 
-  return jsonOk({ stats, totalSkills, activeSkills, pendingSkills });
+  return jsonOk({ stats, totalSkills, activeSkills });
 }

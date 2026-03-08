@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Save, Trash2, Shield, Globe, CheckCircle, XCircle, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Plus, Save, Trash2, Shield, Globe, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
@@ -25,13 +25,6 @@ interface Skill {
   user: { id: string; name: string | null; email: string } | null;
   _count?: { agents: number };
 }
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: "Черновик", color: "text-text-secondary" },
-  PENDING: { label: "На модерации", color: "text-warning" },
-  APPROVED: { label: "Одобрен", color: "text-success" },
-  REJECTED: { label: "Отклонён", color: "text-error" },
-};
 
 const CATEGORY_COLORS: Record<string, string> = {
   LEGAL: "bg-accent-light text-accent",
@@ -63,7 +56,7 @@ export default function AdminSkillsPage() {
   const [total, setTotal] = useState(0);
   const SKILLS_PER_PAGE = 30;
 
-  const [stats, setStats] = useState<{ totalSkills: number; activeSkills: number; pendingSkills: number } | null>(null);
+  const [stats, setStats] = useState<{ totalSkills: number; activeSkills: number } | null>(null);
 
   const fetchSkills = useCallback(async () => {
     setLoading(true);
@@ -130,7 +123,7 @@ export default function AdminSkillsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Скиллы</h1>
-          <p className="text-sm text-text-secondary mt-1">Системные и пользовательские скиллы</p>
+          <p className="text-sm text-text-secondary mt-1">Системные скиллы</p>
         </div>
         <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
           <Plus className="h-4 w-4" /> Добавить
@@ -138,7 +131,7 @@ export default function AdminSkillsPage() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-surface border border-border rounded-xl p-3 text-center">
             <p className="text-lg font-bold text-text-primary">{stats.totalSkills}</p>
             <p className="text-xs text-text-secondary">Всего</p>
@@ -147,16 +140,12 @@ export default function AdminSkillsPage() {
             <p className="text-lg font-bold text-success">{stats.activeSkills}</p>
             <p className="text-xs text-text-secondary">Активных</p>
           </div>
-          <div className="bg-surface border border-border rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-warning">{stats.pendingSkills}</p>
-            <p className="text-xs text-text-secondary">На модерации</p>
-          </div>
         </div>
       )}
 
       {/* Status filter */}
       <div className="flex gap-1 mb-3 flex-wrap">
-        {[["all", "Все"], ["builtin", "Системные"], ["public", "Публичные"], ["pending", "На модерации"], ["approved", "Одобренные"], ["rejected", "Отклонённые"]].map(([val, label]) => (
+        {[["all", "Все"], ["public", "Публичные"]].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${filter === val ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}>{label}</button>
         ))}
       </div>
@@ -253,11 +242,6 @@ export default function AdminSkillsPage() {
                           {CATEGORY_LABEL_MAP[s.category] || s.category}
                         </span>
                       )}
-                      {!s.isBuiltIn && s.status && (
-                        <span className={`text-xs font-medium ${STATUS_LABELS[s.status]?.color || "text-text-secondary"}`}>
-                          {STATUS_LABELS[s.status]?.label || s.status}
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-text-secondary mt-0.5">
                       {s.jurisdiction} &middot; {s._count?.agents || 0} агентов
@@ -269,26 +253,6 @@ export default function AdminSkillsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  {!s.isBuiltIn && s.status === "PENDING" && (
-                    <>
-                      <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, { status: "APPROVED" })}>
-                        <CheckCircle className="h-3.5 w-3.5" /> Одобрить
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => handleUpdate(s.id, { status: "REJECTED" })}>
-                        <XCircle className="h-3.5 w-3.5" /> Отклонить
-                      </Button>
-                    </>
-                  )}
-                  {!s.isBuiltIn && s.status === "REJECTED" && (
-                    <Button variant="gradient" size="sm" onClick={() => handleUpdate(s.id, { status: "APPROVED" })}>
-                      <CheckCircle className="h-3.5 w-3.5" /> Одобрить
-                    </Button>
-                  )}
-                  {!s.isBuiltIn && s.status === "APPROVED" && (
-                    <Button variant="secondary" size="sm" onClick={() => handleUpdate(s.id, { status: "REJECTED" })}>
-                      <XCircle className="h-3.5 w-3.5" /> Отклонить
-                    </Button>
-                  )}
                   <Button variant="secondary" size="sm" onClick={() => { setEditId(s.id); setEditForm({}); }}>Изменить</Button>
                   <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>

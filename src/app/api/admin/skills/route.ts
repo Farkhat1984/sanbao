@@ -17,12 +17,9 @@ export async function GET(req: Request) {
   const { page, limit } = parsePagination(searchParams);
   const skip = (page - 1) * limit;
 
-  const where: Prisma.SkillWhereInput = {};
-  if (type === "builtin") where.isBuiltIn = true;
+  // Only show system/built-in skills — custom user skills are managed by users themselves
+  const where: Prisma.SkillWhereInput = { isBuiltIn: true };
   if (type === "public") where.isPublic = true;
-  if (type === "pending") where.status = "PENDING";
-  if (type === "approved") where.status = "APPROVED";
-  if (type === "rejected") where.status = "REJECTED";
 
   if (category && VALID_CATEGORY_VALUES.includes(category as typeof VALID_CATEGORY_VALUES[number])) {
     where.category = category as typeof VALID_CATEGORY_VALUES[number];
