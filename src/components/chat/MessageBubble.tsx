@@ -186,12 +186,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               : isRichMd
                 ? "rounded-2xl px-4 py-3 bg-surface-alt text-text-primary rounded-tl-md border border-border"
                 : "text-text-primary py-1",
-            isAssistant && !isExpanded && "overflow-hidden relative",
-            isAssistant && isExpanded && "overflow-x-auto",
+            isAssistant && !isCurrentlyStreaming && !isExpanded && "overflow-hidden relative",
+            isAssistant && !isCurrentlyStreaming && isExpanded && "overflow-x-auto",
             isUser && !isUserExpanded && isUserOverflowing && "overflow-hidden relative",
           )}
           style={{
-            ...(isAssistant && !isExpanded ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
+            ...(isAssistant && !isCurrentlyStreaming && !isExpanded ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
             ...(isUser && !isUserExpanded && isUserOverflowing ? { maxHeight: USER_COLLAPSE_HEIGHT } : {}),
           }}
         >
@@ -211,7 +211,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
           {isUser && !isUserExpanded && isUserOverflowing && (
             <CollapseOverlay variant="user" onToggle={() => setIsUserExpanded(true)} isExpanded={false} />
           )}
-          {isAssistant && !isExpanded && isOverflowing && (
+          {isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing && (
             <CollapseOverlay variant="assistant" isRichMd={isRichMd} onToggle={() => setIsExpanded(true)} isExpanded={false} />
           )}
         </div>

@@ -38,6 +38,7 @@ export const chatRequestSchema = z.object({
   conversationId: z.string().optional(),
   swarmMode: z.boolean().default(false),
   swarmOrgId: z.string().optional(),
+  multiAgentId: z.string().optional(),
 });
 
 // ─── Types ──────────────────────────────────────────────
@@ -54,6 +55,7 @@ export interface ChatRequestBody {
   conversationId?: string;
   swarmMode: boolean;
   swarmOrgId?: string;
+  multiAgentId?: string;
 }
 
 /** All dynamic settings loaded once per request. */

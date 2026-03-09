@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Search, Bot, Sparkles, Loader2, Building2, MessageSquare } from "lucide-react";
+import { Plus, Search, Bot, Sparkles, Loader2, Building2, MessageSquare, Network, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAgentStore } from "@/stores/agentStore";
@@ -34,16 +34,27 @@ interface OrgAgentItem {
   mcpServer: { url: string } | null;
 }
 
+interface MultiAgentItem {
+  id: string;
+  orgId: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  iconColor: string | null;
+  members: Array<{ agentType: string; agentId: string }>;
+}
+
 const USER_AGENTS_LIMIT = 20;
 
 export default function AgentsPage() {
   const router = useRouter();
   const { agents, setAgents, isLoading, setLoading } = useAgentStore();
-  const { addConversation, setActiveConversation, setMessages, setActiveAgentId, setOrgAgentId } =
+  const { addConversation, setActiveConversation, setMessages, setActiveAgentId, setOrgAgentId, setSwarmMode } =
     useChatStore();
   const [loaded, setLoaded] = useState(false);
   const [systemAgents, setSystemAgents] = useState<SystemAgentInfo[]>([]);
   const [orgAgents, setOrgAgents] = useState<OrgAgentItem[]>([]);
+  const [multiAgents, setMultiAgents] = useState<MultiAgentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Infinite scroll state for user agents
@@ -66,8 +77,27 @@ export default function AgentsPage() {
 
     const orgFetch = fetch("/api/organizations/my-agents")
       .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setOrgAgents(data);
+      .then(async (data) => {
+        if (Array.isArray(data)) {
+          setOrgAgents(data);
+          // Fetch multi-agents for each unique org
+          const orgIds = [...new Set(data.map((a: OrgAgentItem) => a.orgId))];
+          const allMultiAgents: MultiAgentItem[] = [];
+          await Promise.allSettled(
+            orgIds.map((orgId) =>
+              fetch(`/api/organizations/${orgId}/multiagents`)
+                .then((r) => r.json())
+                .then((maData) => {
+                  if (Array.isArray(maData)) {
+                    for (const ma of maData) {
+                      allMultiAgents.push({ ...ma, orgId });
+                    }
+                  }
+                }),
+            ),
+          );
+          setMultiAgents(allMultiAgents);
+        }
       })
       .catch(() => {
         // Org agents are optional — silently ignore failures
@@ -157,6 +187,15 @@ export default function AgentsPage() {
     filteredSystemAgents.length === 0 &&
     filteredOrgAgents.length === 0 &&
     filteredUserAgents.length === 0;
+
+  const handleMultiAgentChat = (orgId: string, multiAgentId: string) => {
+    setActiveConversation(null);
+    setActiveAgentId(null);
+    setOrgAgentId(null);
+    setMessages([]);
+    setSwarmMode(orgId, multiAgentId);
+    router.push("/chat");
+  };
 
   const handleOrgAgentChat = async (agent: OrgAgentItem) => {
     try {
@@ -286,6 +325,64 @@ export default function AgentsPage() {
                         </h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Custom Multi-Agent cards */}
+                        {multiAgents
+                          .filter((ma) => ma.orgId === orgId)
+                          .map((ma) => {
+                            const MaIcon = (ma.icon && ICON_MAP[ma.icon]) || Network;
+                            return (
+                              <motion.div
+                                key={ma.id}
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="relative p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 transition-all duration-200 hover:border-amber-500/40 hover:shadow-sm"
+                              >
+                                <div className="flex items-start gap-3 mb-3">
+                                  <div
+                                    className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-md"
+                                    style={{ backgroundColor: ma.iconColor || "#f59e0b" }}
+                                  >
+                                    <MaIcon className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="text-sm font-semibold text-text-primary truncate">
+                                      {ma.name}
+                                    </h3>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                      {ma.members.length} агентов
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => router.push(`/organizations/${orgId}/multiagent/${ma.id}/edit`)}
+                                    className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
+                                    title="Редактировать"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                </div>
+
+                                <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 mb-4">
+                                  {ma.description || "Команда агентов для совместной работы"}
+                                </p>
+
+                                <div className="flex items-center justify-between pt-3 border-t border-amber-500/20">
+                                  <div className="flex items-center gap-1 text-[10px] text-text-secondary">
+                                    <Network className="h-3 w-3 text-amber-500" />
+                                    {orgName}
+                                  </div>
+                                  <button
+                                    onClick={() => handleMultiAgentChat(orgId, ma.id)}
+                                    className="h-7 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors cursor-pointer"
+                                  >
+                                    <span className="flex items-center gap-1.5">
+                                      <MessageSquare className="h-3 w-3" />
+                                      Начать чат
+                                    </span>
+                                  </button>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         {orgGroupAgents.map((agent) => {
                           const Icon = (agent.icon && ICON_MAP[agent.icon]) || ICON_MAP.Bot || Bot;
                           return (

@@ -21,6 +21,11 @@ export function resetAllStores() {
   useChatStore.setState({
     activeConversationId: null,
     activeAgentId: null,
+    orgAgentId: null,
+    swarmMode: false,
+    swarmOrgId: null,
+    multiAgentId: null,
+    swarmAgentResponses: [],
     conversations: [],
     messages: [],
     isStreaming: false,

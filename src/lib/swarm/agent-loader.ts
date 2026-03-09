@@ -126,6 +126,94 @@ export async function loadOrgAgentContext(
 }
 
 /**
+ * Universal agent context loader for multi-agent mode.
+ * Supports system agents (Agent table, isSystem=true), user agents (Agent table), and org agents (OrgAgent table).
+ */
+export async function loadAgentContext(
+  agentType: string,
+  agentId: string,
+  userId: string,
+): Promise<OrgAgentContext | null> {
+  if (agentType === "org") {
+    return loadOrgAgentContext(agentId, userId);
+  }
+
+  // Load from Agent table (system or user agent)
+  const agent = await prisma.agent.findUnique({
+    where: { id: agentId },
+    include: {
+      mcpServers: {
+        include: {
+          mcpServer: {
+            select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true },
+          },
+        },
+      },
+      skills: {
+        include: {
+          skill: {
+            include: { tools: { include: { tool: true } } },
+          },
+        },
+      },
+    },
+  });
+
+  if (!agent) return null;
+
+  // Build system prompt
+  let systemPrompt = `You are ${agent.name}.`;
+  if (agent.description) systemPrompt += ` ${agent.description}`;
+  if (agent.instructions) systemPrompt += `\n\n${agent.instructions}`;
+
+  // Load MCP tools
+  const mcpTools: McpToolContext[] = [];
+  if (agent.mcpServers) {
+    for (const ams of agent.mcpServers) {
+      const srv = ams.mcpServer;
+      if (srv.status === "CONNECTED" && Array.isArray(srv.discoveredTools)) {
+        const tools = srv.discoveredTools as Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>;
+        for (const tool of tools) {
+          if (!mcpTools.some((t) => t.name === tool.name)) {
+            mcpTools.push({
+              url: srv.url,
+              transport: srv.transport as "SSE" | "STREAMABLE_HTTP",
+              apiKey: srv.apiKey,
+              mcpServerId: srv.id,
+              name: tool.name,
+              description: tool.description || "",
+              inputSchema: tool.inputSchema || {},
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Load skill prompts
+  const skillPrompts: string[] = [];
+  if (agent.skills) {
+    for (const as2 of agent.skills) {
+      const skill = as2.skill;
+      let sp = `\n\n--- Skill: ${skill.name} ---\n${skill.systemPrompt}`;
+      if (skill.citationRules) sp += `\n\nCITATION RULES:\n${skill.citationRules}`;
+      if (skill.jurisdiction) sp += `\nJURISDICTION: ${skill.jurisdiction}`;
+      skillPrompts.push(sp);
+    }
+  }
+
+  return {
+    agentId: agent.id,
+    name: agent.name,
+    description: agent.description,
+    orgName: agent.isSystem ? "Sanbao" : "Personal",
+    systemPrompt,
+    mcpTools,
+    skillPrompts,
+  };
+}
+
+/**
  * Check if a user has access to an org agent.
  * Returns true if accessible, false otherwise.
  */

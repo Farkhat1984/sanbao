@@ -40,6 +40,7 @@ export function useStreamChat({
   const orgAgentId = useChatStore((s) => s.orgAgentId);
   const swarmMode = useChatStore((s) => s.swarmMode);
   const swarmOrgId = useChatStore((s) => s.swarmOrgId);
+  const multiAgentId = useChatStore((s) => s.multiAgentId);
   const thinkingEnabled = useChatStore((s) => s.thinkingEnabled);
   const webSearchEnabled = useChatStore((s) => s.webSearchEnabled);
   const planningEnabled = useChatStore((s) => s.planningEnabled);
@@ -119,6 +120,7 @@ export function useStreamChat({
             orgAgentId: orgAgentId || undefined,
             isSwarmMode: swarmMode || undefined,
             swarmOrgId: swarmOrgId || undefined,
+            multiAgentId: multiAgentId || undefined,
           }),
         });
         if (convRes.ok) {
@@ -168,7 +170,7 @@ export function useStreamChat({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: apiMessages,
-          agentId: activeAgentId,
+          agentId: activeAgentId || undefined,
           orgAgentId: orgAgentId || undefined,
           conversationId: convId,
           thinkingEnabled,
@@ -177,6 +179,7 @@ export function useStreamChat({
           attachments: attachmentsPayload,
           swarmMode: swarmMode || undefined,
           swarmOrgId: swarmOrgId || undefined,
+          multiAgentId: multiAgentId || undefined,
         }),
         signal: abortRef.current.signal,
       });
@@ -415,6 +418,7 @@ export function useStreamChat({
     orgAgentId,
     swarmMode,
     swarmOrgId,
+    multiAgentId,
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,

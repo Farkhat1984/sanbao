@@ -174,11 +174,6 @@ export const NATIVE_TOOL_MAX_TURNS = 50;
 /** Max cumulative tokens per request across all tool-call loop iterations */
 export const MAX_REQUEST_TOKENS = 200_000;
 
-// ─── Swarm (Мать Роя) ───
-export const SWARM_CLASSIFY_TIMEOUT_MS = 60_000;
-export const SWARM_CONSULT_TIMEOUT_MS = 60_000;
-export const SWARM_CONSULT_MAX_TOOL_TURNS = 2;
-
 // ─── General LLM timeouts ───
 export const LLM_TIMEOUT_MS = 30_000;
 export const PROVIDER_TEST_TIMEOUT_MS = 10_000;

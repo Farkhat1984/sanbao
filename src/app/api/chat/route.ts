@@ -17,8 +17,7 @@ import type { NativeToolContext } from "@/lib/native-tools";
 
 import { streamMoonshot } from "@/lib/chat/moonshot-stream";
 import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
-import { classifySwarmRequest } from "@/lib/swarm/classify";
-import { loadOrgAgentContext } from "@/lib/swarm/agent-loader";
+import { loadAgentContext, type OrgAgentContext } from "@/lib/swarm/agent-loader";
 import { consultAndSynthesize } from "@/lib/swarm/consult";
 
 import { validateChatRequest } from "./validate";
@@ -58,22 +57,23 @@ export async function POST(req: Request) {
   const { plan } = planInfo;
   let { orgAgentId } = body;
 
-  // ─── Swarm Mother mode ─────────────────────────────
-  if (body.swarmMode && body.swarmOrgId) {
-    const swarmResult = await handleSwarmMode({
+  // ─── Multi-Agent mode ─────────────────────────────
+  if (body.swarmMode && body.swarmOrgId && body.multiAgentId) {
+    const maResult = await handleMultiAgentMode({
       messages: body.messages,
       swarmOrgId: body.swarmOrgId,
+      multiAgentId: body.multiAgentId,
       userId: session.user.id,
       planId: plan.id,
       requestId,
       requestStart: _requestStart,
       signal: req.signal,
     });
-    if (swarmResult.response) {
-      return swarmResult.response;
+    if (maResult.response) {
+      return maResult.response;
     }
-    if (swarmResult.orgAgentId) {
-      orgAgentId = swarmResult.orgAgentId;
+    if (maResult.orgAgentId) {
+      orgAgentId = maResult.orgAgentId;
     }
   }
 
@@ -232,136 +232,92 @@ export async function POST(req: Request) {
   }); // end runWithCorrelationId
 }
 
-// ─── Swarm Mother handler ────────────────────────────────
+// ─── Multi-Agent handler ─────────────────────────────────
 
-interface SwarmResult {
+interface MultiAgentResult {
   response?: Response;
   orgAgentId?: string;
 }
 
-async function handleSwarmMode(params: {
+async function handleMultiAgentMode(params: {
   messages: Array<{ role: string; content: string }>;
   swarmOrgId: string;
+  multiAgentId: string;
   userId: string;
   planId: string;
   requestId: string;
   requestStart: number;
   signal: AbortSignal;
-}): Promise<SwarmResult> {
-  const { messages, swarmOrgId, userId, planId, requestId, requestStart, signal } = params;
+}): Promise<MultiAgentResult> {
+  const { messages, swarmOrgId, multiAgentId, userId, planId, requestId, requestStart, signal } = params;
 
   // Verify user is org member
   const membership = await prisma.orgMember.findUnique({
     where: { orgId_userId: { orgId: swarmOrgId, userId } },
   });
   if (!membership) {
-    return {
-      response: jsonError("Нет доступа к организации", 403) as unknown as Response,
-    };
+    return { response: jsonError("Нет доступа к организации", 403) as unknown as Response };
   }
 
-  // Get all PUBLISHED org agents
-  const allAgents = await prisma.orgAgent.findMany({
-    where: { orgId: swarmOrgId, status: "PUBLISHED" },
-    select: {
-      id: true, name: true, description: true, accessMode: true,
-      members: { where: { userId }, select: { id: true } },
-    },
+  const multiAgent = await prisma.multiAgent.findUnique({
+    where: { id: multiAgentId },
+    include: { members: true, org: { select: { name: true } } },
   });
 
-  // Filter by access
-  const accessible = allAgents.filter((a) =>
-    a.accessMode === "ALL_MEMBERS" ||
-    membership.role === "OWNER" || membership.role === "ADMIN" ||
-    a.members.length > 0
-  );
-  const inaccessible = allAgents.filter((a) => !accessible.includes(a));
+  if (!multiAgent || multiAgent.orgId !== swarmOrgId) {
+    return { response: jsonError("Мультиагент не найден", 404) as unknown as Response };
+  }
 
-  // Resolve text model for classify + consult
   const textModel = await resolveModel("TEXT", planId);
   if (!textModel) {
-    return {
-      response: jsonError("Нет настроенной модели", 500) as unknown as Response,
-    };
+    return { response: jsonError("Нет настроенной модели", 500) as unknown as Response };
   }
 
-  // Shortcut: 0 agents -> fall through to default chat
-  if (accessible.length === 0) {
+  // Load all configured agent contexts using universal loader
+  const members = multiAgent.members as Array<{ agentType: string; agentId: string }>;
+  const agentContexts = (await Promise.all(
+    members.map((m) => loadAgentContext(m.agentType, m.agentId, userId))
+  )).filter((ctx): ctx is OrgAgentContext => ctx !== null);
+
+  if (agentContexts.length === 0) return {};
+  if (agentContexts.length === 1) {
+    const member = members[0];
+    if (member.agentType === "org") return { orgAgentId: member.agentId };
     return {};
   }
 
-  // 1 agent -> set orgAgentId and fall through to normal org agent handling
-  if (accessible.length === 1) {
-    return { orgAgentId: accessible[0].id };
-  }
+  const conversationHistory = messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role.toLowerCase(),
+      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+    }));
 
-  // 2+ agents: classify
-  const swarmLastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-  const lastUserMessage = typeof swarmLastUserMsg?.content === "string"
-    ? swarmLastUserMsg.content
-    : JSON.stringify(swarmLastUserMsg?.content || "");
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  const lastUserMessage = typeof lastUserMsg?.content === "string"
+    ? lastUserMsg.content
+    : JSON.stringify(lastUserMsg?.content || "");
 
-  const classify = await classifySwarmRequest(lastUserMessage, accessible, textModel);
+  const stream = consultAndSynthesize({
+    userMessage: lastUserMessage,
+    conversationHistory,
+    agentContexts,
+    orgName: multiAgent.org.name,
+    inaccessibleAgents: [],
+    model: textModel,
+    signal,
+  });
 
-  if (classify.mode === "single" && classify.agentIds.length === 1) {
-    return { orgAgentId: classify.agentIds[0] };
-  }
-
-  if (classify.mode === "single" && classify.agentIds.length === 0) {
-    // General question — fall through to default Sanbao chat
-    return {};
-  }
-
-  if (classify.mode === "multi" && classify.agentIds.length > 0) {
-    // Multi-agent mode: load contexts, consult, synthesize
-    const agentContexts = (await Promise.all(
-      classify.agentIds.map((id) => loadOrgAgentContext(id, userId))
-    )).filter((ctx): ctx is NonNullable<typeof ctx> => ctx !== null);
-
-    if (agentContexts.length === 0) {
-      return {};
-    }
-
-    if (agentContexts.length === 1) {
-      return { orgAgentId: agentContexts[0].agentId };
-    }
-
-    // Get org name
-    const org = await prisma.organization.findUnique({
-      where: { id: swarmOrgId },
-      select: { name: true },
-    });
-
-    const conversationHistory = messages
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({
-        role: m.role.toLowerCase(),
-        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-      }));
-
-    const stream = consultAndSynthesize({
-      userMessage: lastUserMessage,
-      conversationHistory,
-      agentContexts,
-      orgName: org?.name || "Organization",
-      inaccessibleAgents: inaccessible.map((a) => ({ name: a.name })),
-      model: textModel,
-      signal,
-    });
-
-    recordRequestDuration("/api/chat", Date.now() - requestStart);
-    return {
-      response: new Response(stream, {
-        headers: {
-          "Content-Type": "application/x-ndjson",
-          "Transfer-Encoding": "chunked",
-          "Cache-Control": "no-cache",
-          "X-Accel-Buffering": "no",
-          [CORRELATION_HEADER]: requestId,
-        },
-      }),
-    };
-  }
-
-  return {};
+  recordRequestDuration("/api/chat", Date.now() - requestStart);
+  return {
+    response: new Response(stream, {
+      headers: {
+        "Content-Type": "application/x-ndjson",
+        "Transfer-Encoding": "chunked",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        [CORRELATION_HEADER]: requestId,
+      },
+    }),
+  };
 }

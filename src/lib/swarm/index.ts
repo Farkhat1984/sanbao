@@ -1,3 +1,2 @@
-export { loadOrgAgentContext, checkOrgAgentAccess, type OrgAgentContext } from "./agent-loader";
-export { classifySwarmRequest, type ClassifyResult } from "./classify";
+export { loadOrgAgentContext, loadAgentContext, checkOrgAgentAccess, type OrgAgentContext } from "./agent-loader";
 export { consultAndSynthesize } from "./consult";

@@ -35,6 +35,7 @@ interface ChatState {
   orgAgentId: string | null;
   swarmMode: boolean;
   swarmOrgId: string | null;
+  multiAgentId: string | null;
   swarmAgentResponses: SwarmAgentResponse[];
   conversations: ConversationSummary[];
   messages: ChatMessage[];
@@ -69,7 +70,8 @@ interface ChatState {
   hasMoreMessages: boolean;
   isLoadingMoreMessages: boolean;
 
-  setSwarmMode: (orgId: string | null) => void;
+  setSwarmMode: (orgId: string | null, multiAgentId?: string | null) => void;
+  setMultiAgentId: (id: string | null) => void;
   addSwarmAgentResponse: (resp: SwarmAgentResponse) => void;
   clearSwarmAgentResponses: () => void;
 
@@ -120,6 +122,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   orgAgentId: null,
   swarmMode: false,
   swarmOrgId: null,
+  multiAgentId: null,
   swarmAgentResponses: [],
   conversations: [],
   messages: [],
@@ -154,7 +157,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
   setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
-  setSwarmMode: (orgId) => set({ swarmMode: !!orgId, swarmOrgId: orgId, orgAgentId: null }),
+  setSwarmMode: (orgId, multiAgentId) => set({ swarmMode: !!orgId, swarmOrgId: orgId, multiAgentId: multiAgentId ?? null, orgAgentId: null }),
+  setMultiAgentId: (multiAgentId) => set({ multiAgentId }),
   addSwarmAgentResponse: (resp) => set((s) => ({ swarmAgentResponses: [...s.swarmAgentResponses, resp] })),
   clearSwarmAgentResponses: () => set({ swarmAgentResponses: [] }),
 

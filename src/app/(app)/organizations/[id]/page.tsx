@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Bot, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, Bot, Trash2, Network } from "lucide-react";
 import { useOrgStore } from "@/stores/orgStore";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +70,6 @@ export default function OrganizationDetailPage({
   }
 
   const isOwner = org.role === "OWNER";
-  const isAdmin = org.role === "ADMIN" || isOwner;
 
   return (
     <div className="h-full">
@@ -115,6 +114,17 @@ export default function OrganizationDetailPage({
             description={`${org.agentCount as number} агентов`}
             onClick={async () => { const { id } = await params; router.push(`/organizations/${id}/agents`); }}
           />
+          <NavCard
+            icon={Network}
+            title="Мультиагент"
+            description="Создать или выбрать команду"
+            onClick={async () => {
+              const { id } = await params;
+              router.push(`/organizations/${id}/multiagent/new`);
+            }}
+            iconBg="bg-amber-500/10"
+            iconColor="text-amber-500"
+          />
         </div>
       </div>
     </div>
@@ -126,11 +136,15 @@ function NavCard({
   title,
   description,
   onClick,
+  iconBg,
+  iconColor,
 }: {
   icon: React.ElementType;
   title: string;
   description: string;
   onClick: () => void;
+  iconBg?: string;
+  iconColor?: string;
 }) {
   return (
     <button
@@ -140,8 +154,8 @@ function NavCard({
         "hover:border-border-hover hover:shadow-sm transition-all text-left cursor-pointer group"
       )}
     >
-      <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-        <Icon className="h-5 w-5 text-accent" />
+      <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center mb-3", iconBg || "bg-accent/10")}>
+        <Icon className={cn("h-5 w-5", iconColor || "text-accent")} />
       </div>
       <h3 className="font-semibold text-text-primary group-hover:text-accent transition-colors">
         {title}

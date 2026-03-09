@@ -90,6 +90,7 @@ model User {
   ownedOrgs      Organization[] @relation("OrgOwner")
   orgMembers     OrgMember[]
   orgAgentAccess OrgAgentMember[]
+  multiAgents    MultiAgent[] @relation("MultiAgentCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,6 +108,7 @@ model Conversation {
   orgAgentId    String?
   isSwarmMode   Boolean @default(false)
   swarmOrgId    String?
+  multiAgentId  String?
 
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   agent       Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
@@ -127,6 +129,7 @@ model Conversation {
   @@index([agentId])
   @@index([orgAgentId])
   @@index([swarmOrgId])
+  @@index([multiAgentId])
 }
 
 model Message {
@@ -1106,10 +1109,11 @@ model Organization {
   namespace String   @unique
   nsApiKey  String?  @db.Text
 
-  owner   User         @relation("OrgOwner", fields: [ownerId], references: [id])
-  members OrgMember[]
-  agents  OrgAgent[]
-  invites OrgInvite[]
+  owner       User         @relation("OrgOwner", fields: [ownerId], references: [id])
+  members     OrgMember[]
+  agents      OrgAgent[]
+  invites     OrgInvite[]
+  multiAgents MultiAgent[]
 
   swarmEnabled        Boolean  @default(true)
   swarmStarterPrompts String[] @default([])
@@ -1235,6 +1239,41 @@ model OrgAgentMcpServer {
   mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
 
   @@unique([orgAgentId, mcpServerId])
+}
+
+// ─── Multi-Agent (Swarm) ──────────────────────────────────
+
+model MultiAgent {
+  id             String   @id @default(cuid())
+  orgId          String
+  name           String
+  description    String?  @db.Text
+  icon           String?
+  iconColor      String?
+  starterPrompts String[] @default([])
+  createdById    String
+
+  org       Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy User              @relation("MultiAgentCreator", fields: [createdById], references: [id])
+  members   MultiAgentMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([createdById])
+}
+
+model MultiAgentMember {
+  id           String @id @default(cuid())
+  multiAgentId String
+  agentType    String // "system" | "user" | "org"
+  agentId      String // references Agent.id or OrgAgent.id
+
+  multiAgent MultiAgent @relation(fields: [multiAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([multiAgentId, agentId])
+  @@index([multiAgentId])
 }
 
 // ─── Integrations ──────────────────────────────────────
