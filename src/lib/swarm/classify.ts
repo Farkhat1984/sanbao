@@ -40,7 +40,7 @@ export async function classifySwarmRequest(
           { role: "user", content: userMessage },
         ],
         max_tokens: 200,
-        temperature: 0.1,
+        temperature: model.temperature ?? 1,
         stream: false,
       }),
       signal: AbortSignal.timeout(15_000),

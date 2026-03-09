@@ -68,7 +68,7 @@ async function consultAgent(
       model: model.modelId,
       messages,
       max_tokens: CONSULT_MAX_TOKENS,
-      temperature: 0.3,
+      temperature: model.temperature ?? 1,
       stream: false,
     };
     if (tools.length > 0) {
@@ -152,7 +152,7 @@ async function consultAgent(
       model: model.modelId,
       messages,
       max_tokens: CONSULT_MAX_TOKENS,
-      temperature: 0.3,
+      temperature: model.temperature ?? 1,
       stream: false,
     }),
     signal,
@@ -263,7 +263,7 @@ export function consultAndSynthesize(options: ConsultOptions): ReadableStream<Ui
               { role: "user", content: userMessage },
             ],
             max_tokens: 4096,
-            temperature: 0.4,
+            temperature: model.temperature ?? 1,
             stream: true,
           }),
           signal,
