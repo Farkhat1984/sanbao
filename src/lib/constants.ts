@@ -80,11 +80,11 @@ export const DEFAULT_TEMPERATURE = 0.6;
 export const DEFAULT_TEMPERATURE_CODE_FIX = 0.2;
 export const DEFAULT_TEMPERATURE_COMPACTION = 0.3;
 export const DEFAULT_TEMPERATURE_PREVIEW = 0.7;
-export const DEFAULT_MAX_TOKENS = 4096;
-export const DEFAULT_MAX_TOKENS_GENERATE = 2048;
-export const DEFAULT_MAX_TOKENS_FIX = 8192;
-export const DEFAULT_MAX_TOKENS_PREVIEW = 512;
-export const DEFAULT_MAX_TOKENS_COMPACTION = 2048;
+export const DEFAULT_MAX_TOKENS = 131072;
+export const DEFAULT_MAX_TOKENS_GENERATE = 131072;
+export const DEFAULT_MAX_TOKENS_FIX = 131072;
+export const DEFAULT_MAX_TOKENS_PREVIEW = 131072;
+export const DEFAULT_MAX_TOKENS_COMPACTION = 131072;
 export const DEFAULT_TOP_P = 0.95;
 export const DEFAULT_CONTEXT_WINDOW = 262144;
 
@@ -164,6 +164,16 @@ export const NATIVE_TOOL_CSV_MAX_ROWS = 10_000;
 export const NATIVE_TOOL_MAX_TURNS = 50;
 /** Max cumulative tokens per request across all tool-call loop iterations */
 export const MAX_REQUEST_TOKENS = 200_000;
+
+// ─── Swarm (Мать Роя) ───
+export const SWARM_CLASSIFY_TIMEOUT_MS = 60_000;
+export const SWARM_CONSULT_TIMEOUT_MS = 60_000;
+export const SWARM_CONSULT_MAX_TOOL_TURNS = 2;
+
+// ─── General LLM timeouts ───
+export const LLM_TIMEOUT_MS = 30_000;
+export const PROVIDER_TEST_TIMEOUT_MS = 10_000;
+export const HEALTH_CHECK_TIMEOUT_MS = 5_000;
 
 // ─── Misc ───
 export const MAX_AUTO_FIX_ATTEMPTS = 3;

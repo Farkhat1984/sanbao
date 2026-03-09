@@ -2,14 +2,9 @@ import type { OrgAgentContext } from "./agent-loader";
 import type { ResolvedModel } from "@/lib/model-router";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import { callMcpTool } from "@/lib/mcp-client";
-import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS } from "@/lib/constants";
+import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS, DEFAULT_MAX_TOKENS, SWARM_CONSULT_TIMEOUT_MS, SWARM_CONSULT_MAX_TOOL_TURNS } from "@/lib/constants";
 
-/** Max turns for tool calls within a single agent consult */
-const CONSULT_MAX_TOOL_TURNS = 2;
-/** Timeout per agent consultation */
-const CONSULT_TIMEOUT_MS = 30_000;
-/** Max response length per agent */
-const CONSULT_MAX_TOKENS = 2048;
+// All constants imported from @/lib/constants
 
 interface ConsultOptions {
   userMessage: string;
@@ -62,13 +57,13 @@ async function consultAgent(
     { role: "user", content: userMessage },
   ];
 
-  // Tool call loop (max CONSULT_MAX_TOOL_TURNS)
-  for (let turn = 0; turn < CONSULT_MAX_TOOL_TURNS; turn++) {
+  // Tool call loop (max SWARM_CONSULT_MAX_TOOL_TURNS)
+  for (let turn = 0; turn < SWARM_CONSULT_MAX_TOOL_TURNS; turn++) {
     const body: Record<string, unknown> = {
       model: model.modelId,
       messages,
-      max_tokens: CONSULT_MAX_TOKENS,
-      temperature: model.temperature ?? 1,
+      max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS,
+      temperature: 1,
       stream: false,
     };
     if (tools.length > 0) {
@@ -151,8 +146,8 @@ async function consultAgent(
     body: JSON.stringify({
       model: model.modelId,
       messages,
-      max_tokens: CONSULT_MAX_TOKENS,
-      temperature: model.temperature ?? 1,
+      max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS,
+      temperature: 1,
       stream: false,
     }),
     signal,
@@ -187,7 +182,7 @@ export function consultAndSynthesize(options: ConsultOptions): ReadableStream<Ui
             encoder.encode(JSON.stringify({ t: "s", v: "consulting", n: ctx.name }) + "\n")
           );
 
-          const timeoutSignal = AbortSignal.timeout(CONSULT_TIMEOUT_MS);
+          const timeoutSignal = AbortSignal.timeout(SWARM_CONSULT_TIMEOUT_MS);
           const combinedSignal = signal
             ? AbortSignal.any([signal, timeoutSignal])
             : timeoutSignal;
@@ -262,8 +257,8 @@ export function consultAndSynthesize(options: ConsultOptions): ReadableStream<Ui
               { role: "system", content: synthesizePrompt },
               { role: "user", content: userMessage },
             ],
-            max_tokens: 4096,
-            temperature: model.temperature ?? 1,
+            max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS,
+            temperature: 1,
             stream: true,
           }),
           signal,

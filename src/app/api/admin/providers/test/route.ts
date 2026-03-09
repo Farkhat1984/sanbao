@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { PROVIDER_TEST_TIMEOUT_MS } from "@/lib/constants";
 
 export async function POST(req: Request) {
   const result = await requireAdmin();
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(PROVIDER_TEST_TIMEOUT_MS),
     });
 
     const latency = Date.now() - start;

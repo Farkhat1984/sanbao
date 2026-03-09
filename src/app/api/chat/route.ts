@@ -95,7 +95,7 @@ async function compactInBackground(
           { role: "system", content: "You are a context compaction assistant." },
           { role: "user", content: compactionPrompt },
         ],
-        max_tokens: Math.min(maxTokens, DEFAULT_MAX_TOKENS_COMPACTION),
+        max_tokens: maxTokens,
         temperature: DEFAULT_TEMPERATURE_COMPACTION,
         stream: false,
       }),
@@ -238,7 +238,6 @@ export async function POST(req: Request) {
   // ─── Swarm Mother mode ───────────────────────────────────
   const swarmMode = !!rawSwarmMode;
   const swarmOrgId = rawSwarmOrgId as string | undefined;
-
   if (swarmMode && swarmOrgId) {
     // Verify user is org member
     const membership = await prisma.orgMember.findUnique({

@@ -6,6 +6,7 @@
  */
 
 import { resolveModel } from "@/lib/model-router";
+import { LLM_TIMEOUT_MS } from "@/lib/constants";
 
 const ODATA_PREFIXES = [
   "Catalog",
@@ -54,7 +55,6 @@ interface LLMDomainMapping {
 }
 
 const LLM_BATCH_SIZE = 500;
-const LLM_TIMEOUT_MS = 60_000;
 
 /**
  * Categorize OData entity names into business domains using an LLM.

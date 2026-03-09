@@ -1,5 +1,6 @@
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import type { ResolvedModel } from "@/lib/model-router";
+import { DEFAULT_MAX_TOKENS, SWARM_CLASSIFY_TIMEOUT_MS } from "@/lib/constants";
 
 export interface ClassifyResult {
   mode: "single" | "multi";
@@ -39,11 +40,12 @@ export async function classifySwarmRequest(
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        max_tokens: 200,
-        temperature: model.temperature ?? 1,
+        max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS,
+        temperature: 1,
         stream: false,
+        response_format: { type: "json_object" },
       }),
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(SWARM_CLASSIFY_TIMEOUT_MS),
     });
 
     if (!response.ok) {

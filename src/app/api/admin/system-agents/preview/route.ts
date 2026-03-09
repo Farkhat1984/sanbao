@@ -31,7 +31,7 @@ export async function POST(req: Request) {
           { role: "system", content: systemPrompt },
           { role: "user", content: message },
         ],
-        max_tokens: DEFAULT_MAX_TOKENS_PREVIEW,
+        max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS_PREVIEW,
         temperature: model.temperature ?? DEFAULT_TEMPERATURE_PREVIEW,
       }),
     });

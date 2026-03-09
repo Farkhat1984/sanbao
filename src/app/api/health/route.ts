@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonOk } from "@/lib/api-helpers";
 import { isRedisAvailable, getRedis } from "@/lib/redis";
 import { isShutdown } from "@/lib/shutdown";
+import { HEALTH_CHECK_TIMEOUT_MS } from "@/lib/constants";
 import { timingSafeEqual } from "crypto";
 
 function isTokenValid(header: string | null, token: string): boolean {
@@ -62,7 +63,7 @@ export async function GET(req: Request) {
         const start = Date.now();
         try {
           const res = await fetch(`${p.baseUrl}/models`, {
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
           });
           checks[`ai_${p.slug}`] = { status: res.ok ? "ok" : "degraded", latency: Date.now() - start };
         } catch {

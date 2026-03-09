@@ -2,7 +2,7 @@ import { registerNativeTool } from "./registry";
 import { prisma } from "../prisma";
 import { decrypt } from "../crypto";
 import { isUrlSafe } from "../ssrf";
-import { TOOL_RESULT_MAX_CHARS } from "../constants";
+import { TOOL_RESULT_MAX_CHARS, NATIVE_TOOL_HTTP_TIMEOUT_MS } from "../constants";
 import { parseHierarchicalCatalog } from "../odata-catalog";
 
 registerNativeTool({
@@ -81,7 +81,7 @@ registerNativeTool({
           Authorization: `Basic ${basicAuth}`,
           Accept: "application/json",
         },
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(NATIVE_TOOL_HTTP_TIMEOUT_MS),
       });
 
       if (!res.ok) {

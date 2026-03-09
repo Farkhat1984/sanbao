@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { decrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
+import { PROVIDER_TEST_TIMEOUT_MS } from "@/lib/constants";
 
 export async function POST(
   _req: Request,
@@ -29,7 +30,7 @@ export async function POST(
         Authorization: `Basic ${basicAuth}`,
         Accept: "application/json",
       },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(PROVIDER_TEST_TIMEOUT_MS),
     });
 
     if (!res.ok) {
