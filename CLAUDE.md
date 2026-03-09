@@ -68,11 +68,15 @@ Production: `docker compose -f docker-compose.prod.yml up -d` — adds Nginx LB 
 `POST /api/chat` → NDJSON stream of `{t, v}` objects:
 - `c` content, `r` reasoning, `p` plan, `s` status (search/tool), `x` context info, `e` error
 
-Chat logic split across 4 files (~1600 lines total):
-- `src/app/api/chat/route.ts` (~780 lines) — main handler, system prompt, tool dispatch
-- `src/lib/chat/moonshot-stream.ts` (~510 lines) — Moonshot/Kimi SSE with tool calling
-- `src/lib/chat/ai-sdk-stream.ts` (~200 lines) — OpenAI via Vercel AI SDK
+Chat logic split across 7 files (modular architecture):
+- `src/app/api/chat/route.ts` (~370 lines) — orchestrator: auth, swarm routing, provider dispatch
+- `src/app/api/chat/validate.ts` (~200 lines) — Zod schema, input validation, plan/usage checks, content filter
+- `src/app/api/chat/agent-resolver.ts` (~320 lines) — agent context, org agents, MCP tool loading & dedup, skills
+- `src/app/api/chat/context-loader.ts` (~270 lines) — conversation loading, context window, autocompaction
+- `src/lib/chat/moonshot-stream.ts` (~420 lines) — Moonshot/Kimi SSE with tool calling
+- `src/lib/chat/ai-sdk-stream.ts` (~120 lines) — OpenAI via Vercel AI SDK
 - `src/lib/chat/message-builder.ts` (~66 lines) — message/attachment formatting
+- `src/lib/chat/plan-parser.ts` (~80 lines) — shared `<sanbao-plan>` tag detection for both stream handlers
 
 ### Custom Tag System
 
@@ -99,7 +103,7 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 
 ### State Management
 
-11 Zustand stores in `src/stores/`: chatStore, artifactStore, articleStore, panelStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore.
+14 Zustand stores in `src/stores/`: chatStore, artifactStore, articleStore, sourceStore, panelStore, sidebarStore, taskStore, agentStore, skillStore, memoryStore, billingStore, onboardingStore, orgStore, integrationStore. All stores reset on logout via `resetAllStores()` in `resetStores.ts`.
 
 ### Security
 
@@ -114,13 +118,24 @@ Tags are defined in `SYSTEM_PROMPT` inside `src/app/api/chat/route.ts`. When add
 - **Content filter:** `src/lib/content-filter.ts` — SystemSetting-based with in-memory cache
 - **SSRF protection:** `src/lib/ssrf.ts`, `src/lib/webhook-dispatcher.ts`, `src/lib/tool-executor.ts`, `src/app/api/mcp/route.ts` — blocked private IP ranges
 - **Input validation:** `src/lib/validation.ts`; messages (max 200, 100KB/msg), MCP tools (max 100), email (254 chars), stream buffer (1MB cap)
+- **Chat request validation:** Zod schema in `src/app/api/chat/validate.ts` — typed body parsing with defaults
+- **SSRF:** All URL checks use `isUrlSafe()` from `src/lib/ssrf.ts` (IPv4 + IPv6 blocked ranges)
 
 ### Data Layer
 
 - **Prisma + PostgreSQL** — `prisma/schema.prisma`, 55 models, 14 enums
 - **PgBouncer** — connection pooling (transaction mode, pool 50)
 - **Read replicas** — `src/lib/prisma.ts` uses `@prisma/extension-read-replicas` when `DATABASE_REPLICA_URL` is set
-- Seed script (`prisma/seed.ts`): creates Free/Pro/Business plans, admin user, 4+ system agents (Sanbao, Legal, Customs, Accounting + specialized), 40+ tools with templates, Moonshot/DeepInfra providers, 3 AI models (Kimi K2.5, Flux Schnell, Qwen Image Edit), 4 built-in skills
+- Seed script (`prisma/seed.ts` → thin orchestrator, modules in `prisma/seeds/`):
+  - `seeds/plans.ts` — Free/Pro/Business plans + admin user
+  - `seeds/agents.ts` — 10 system agents + AGENT_IDS constant
+  - `seeds/tools.ts` — 40+ tools with templates + agent links
+  - `seeds/mcp.ts` — 4 MCP servers + discovery + cross-links
+  - `seeds/providers.ts` — AI providers + models + plan-model links
+  - `seeds/skills.ts` — 9 built-in skills
+  - `seeds/prompts.ts` — system prompt strings
+  - `seeds/settings.ts` — system settings from registry
+  - `seeds/utils.ts` — shared helpers (discoverMcpTools, upsertToolsWithAgentLink)
 - **Audit:** `src/lib/audit.ts` — `logAudit()`, `logError()`, `logTokenUsage()`
 - **Billing:** Plan → Subscription (trialEndsAt) → DailyUsage; `Plan.maxStorageMb` for file quota; Stripe + Freedom Pay (`src/lib/freedom-pay.ts`)
 - **Email:** `src/lib/email.ts` (Nodemailer), templates with `{{varName}}` interpolation
@@ -283,9 +298,23 @@ docker exec sanbao-app-4 wget -qO- http://orchestrator:8120/health
 - **Sentry:** `sentry.{client,server,edge}.config.ts` — active only when `SENTRY_DSN` is set
 - **MCP servers:** `scripts/start-mcp-servers.sh` — orchestrates 5 MCP servers via supergateway (GitHub, PostgreSQL, Brave Search, Filesystem, Playwright)
 
+### Shared Libraries (post-refactoring v9)
+
+- `src/lib/api-client.ts` — typed fetch wrapper (`api.get/post/put/delete<T>()`) with `ApiError`, used by admin pages and hooks
+- `src/lib/llm-generate.ts` — `callLlmForJson<T>()` for AI generation routes, handles model resolution + JSON extraction from markdown
+- `src/lib/auth-utils.ts` — `getClientIp()`, `verifyTotpCode()`, `handleOAuthLogin()` for auth DRY
+- `src/lib/stripe-client.ts` — shared `getStripe()` singleton
+- `src/lib/admin-crud-factory.ts` — `createAdminCrudHandlers()` for admin `[id]/route.ts` boilerplate
+- `src/lib/types/mcp.ts` — shared `McpToolContext` interface (single source of truth)
+- `src/lib/chat/plan-parser.ts` — shared `<sanbao-plan>` tag stream transformer
+- `src/lib/chat/tool-categories.ts` — `TOOL_CATEGORY_MAP`, `getToolCategory()`, `PHASE_PRIORITY`
+- `src/lib/api-helpers.ts` — `requireAuth()`, `requireAdmin()`, `jsonOk()`, `jsonError()`, `jsonValidationError()`, `jsonRateLimited()`, `parsePagination()`
+
 ### Key Patterns
 
 - **Admin API routes:** `const result = await requireAdmin(); if (result.error) return result.error;`
+- **Admin CRUD factory:** `createAdminCrudHandlers({ model, allowedUpdateFields, notFoundMsg })`
+- **User API routes:** `const result = await requireAuth(); if ('error' in result) return result.error;`
 - **Async params (Next.js 16):** `{ params }: { params: Promise<{ id: string }> }`
 - **Fire-and-forget:** `fireAndForget(promise, context)` from `src/lib/logger.ts`
 - **Graceful degradation:** Redis/BullMQ operations return null/no-op when unavailable (dev works without Redis)
@@ -313,9 +342,34 @@ docker exec sanbao-app-4 wget -qO- http://orchestrator:8120/health
 ### Frontend Structure
 
 - **17 component directories** in `src/components/`: admin, agents, artifacts, billing, chat, image-edit, layout, legal-tools, memory, onboarding, panel, providers, settings, sidebar, skills, tasks, ui
-- **69 component files** (.tsx)
-- **2 hooks** in `src/hooks/`: `useIsMobile.ts` (responsive breakpoint), `useTranslation.ts` (i18n hook)
+- **~90 component files** (.tsx)
+- **8 hooks** in `src/hooks/`: `useIsMobile.ts`, `useTranslation.ts`, `useAdminList.ts`, `useAdminCrud.ts`, `useCopyToClipboard.ts`, `useInfiniteScroll.ts`, `usePrintArtifact.ts`, `useArtifactExport.ts`
 - **Error boundaries:** `error.tsx` in (app) and (admin) route groups; no loading.tsx or not-found.tsx
+
+### Admin Shared Components
+
+Reusable abstractions for admin panel (replacing copy-paste across 29 pages):
+- `AdminPagination` — prev/next with page count and total label
+- `AdminPageHeader` — title (font-display) + subtitle + optional count + action slot
+- `AdminListSkeleton` — configurable skeleton loading (rows, height)
+- `AdminEmptyState` — empty state with optional icon and action
+- `AdminCreatePanel` — collapsible "add new" form wrapper with accent border
+- `AdminDeleteButton` — standardized trash icon button with error hover
+- `ModelForm` — unified create/edit form for AI models
+- `settings/SettingRow`, `settings/SettingInput`, `settings/LogoUpload` — settings page components
+- `src/components/ui/TabFilter.tsx` — pill-style tab filter with "all" option
+- `src/components/ui/NotificationBar.tsx` — reusable toast notification stack
+
+### Chat Sub-Components
+
+MessageBubble (248 lines) composed from:
+- `MessageAvatar` — user/agent/bot avatar rendering
+- `ReasoningBlock` — collapsible thinking/reasoning block
+- `MessageActions` — copy + regenerate buttons (uses `useCopyToClipboard`)
+- `CollapseOverlay` — gradient overlay + expand/collapse for long messages
+- `SwarmResponses` — collapsible swarm agent response list
+- `AssistantContent` — artifact cards, edit cards, markdown rendering
+- `StarterPromptsEditor` — shared between AgentForm and admin agent edit
 
 ### Path Alias
 
@@ -340,6 +394,14 @@ UI text primarily in Russian; Kazakh (kk) locale also supported.
 - Dates: `formatDate()` in `src/lib/utils.ts` (Сегодня, Вчера, X дн. назад)
 - Default currency: KZT (Kazakhstani Tenge)
 
+## Constants
+
+All magic numbers and hardcoded strings centralized in `src/lib/constants.ts`:
+- `DEFAULT_MAX_TOKENS` (131072), `DEFAULT_TIMEZONE` ("Asia/Almaty"), `DEFAULT_CONVERSATION_TITLE` ("Новый чат")
+- `DEFAULT_AGENT_NAME`, `DEFAULT_SKILL_NAME`, `SYSTEM_PROMPT_MAX_LENGTH` (4000)
+- `AI_GENERATION_DESCRIPTION_MAX_LENGTH` (5000), `BCRYPT_SALT_ROUNDS` (12)
+- `JURISDICTIONS` array, `NATIVE_TOOL_MAX_TURNS` (50), `CACHE_TTL` values
+
 ## Documentation
 
 - `docs/DEVOPS.md` — servers, ports, CI/CD, Telegram bot, troubleshooting
@@ -349,3 +411,4 @@ UI text primarily in Russian; Kazakh (kk) locale also supported.
 - `docs/ADVERTISING.md` — advertising system
 - `docs/FRAGMENTDB_PIPELINE.md` — AI Cortex (FragmentDB v3) integration: MCP endpoints, domains, architecture
 - `docs/HOTFIX.md`, `docs/HOTFIX2.md` — historical fixes
+- `TODOLIST.md` — full audit report with 55 refactoring tasks (all completed)
