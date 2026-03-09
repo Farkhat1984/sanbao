@@ -1,7 +1,8 @@
 "use client";
 
-import { X, Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
+import { Download, Copy, Printer, Check, Loader2, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { motion } from "framer-motion";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { usePanelStore } from "@/stores/panelStore";
@@ -13,13 +14,11 @@ const DocumentEditor = dynamic(() => import("@/components/artifacts/DocumentEdit
 const CodePreview = dynamic(() => import("@/components/artifacts/CodePreview").then(m => m.CodePreview), { ssr: false });
 import { isPythonCode } from "@/components/artifacts/CodePreview";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { usePrintArtifact } from "@/hooks/usePrintArtifact";
+import { useArtifactExport } from "@/hooks/useArtifactExport";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
-import { markdownToDocx } from "@/lib/export-docx";
-import { exportToPdf } from "@/lib/export-pdf";
-import { exportAsText, exportAsHtml, exportAsMarkdown, sanitizeFilename } from "@/lib/export-utils";
-import { exportAsXlsx } from "@/lib/export-xlsx";
 import type { ExportFormat } from "@/lib/export-utils";
 import type { ArtifactType } from "@/types/chat";
 
@@ -46,7 +45,7 @@ export function ArtifactContent() {
   const activeTabId = usePanelStore((s) => s.activeTabId);
   const tabs = usePanelStore((s) => s.tabs);
   const isMobile = useIsMobile();
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
 
   // Sync activeArtifact when panel tab switches
   useEffect(() => {
@@ -62,123 +61,22 @@ export function ArtifactContent() {
       });
     }
   }, [activeTabId, tabs]);
-  const [isExporting, setIsExporting] = useState(false);
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = async () => {
-    // Ensure preview tab is active so previewRef has content
-    if (activeTab !== "preview") {
-      setTab("preview");
-      await new Promise<void>((resolve) => {
-        const check = () => {
-          if (previewRef.current?.querySelector(".prose-legal")) resolve();
-          else requestAnimationFrame(check);
-        };
-        requestAnimationFrame(check);
-        setTimeout(resolve, 1000);
-      });
-    }
-
-    const proseLegal = previewRef.current?.querySelector(".prose-legal");
-    if (!proseLegal) {
-      window.print();
-      return;
-    }
-
-    // Clone prose-legal content to a direct child of <body> to avoid overflow clipping
-    const container = document.createElement("div");
-    container.id = "print-container";
-    container.className = "prose-legal";
-    container.innerHTML = proseLegal.innerHTML;
-    document.body.appendChild(container);
-
-    const cleanup = () => {
-      if (container.parentNode) container.remove();
-      window.removeEventListener("afterprint", cleanup);
-    };
-    window.addEventListener("afterprint", cleanup);
-    window.print();
-  };
+  const { handlePrint } = usePrintArtifact({ previewRef, activeTab, setTab });
+  const { isExporting, handleDownload } = useArtifactExport({
+    artifact: activeArtifact,
+    previewRef,
+    activeTab,
+    setTab,
+    downloadFormat,
+  });
 
   if (!activeArtifact) return null;
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(activeArtifact.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = async () => {
-    setIsExporting(true);
-    try {
-      // IMAGE type: download as PNG directly
-      if (activeArtifact.type === "IMAGE") {
-        const a = document.createElement("a");
-        a.href = activeArtifact.content;
-        a.download = `${sanitizeFilename(activeArtifact.title)}.png`;
-        a.click();
-        return;
-      }
-
-      // CODE type: download as .py or .tsx
-      if (activeArtifact.type === "CODE") {
-        const ext = isPythonCode(activeArtifact.content) ? ".py" : ".tsx";
-        exportAsText(activeArtifact.content, activeArtifact.title, ext);
-        return;
-      }
-
-      switch (downloadFormat) {
-        case "docx": {
-          const { saveAs } = await import("file-saver");
-          const blob = await markdownToDocx(
-            activeArtifact.content,
-            activeArtifact.title,
-            activeArtifact.type as ArtifactType
-          );
-          saveAs(blob, `${sanitizeFilename(activeArtifact.title)}.docx`);
-          break;
-        }
-        case "pdf": {
-          // Switch to preview tab so the DOM element is rendered
-          if (activeTab !== "preview") {
-            setTab("preview");
-            await new Promise<void>((resolve) => {
-              const check = () => {
-                if (previewRef.current) resolve();
-                else requestAnimationFrame(check);
-              };
-              requestAnimationFrame(check);
-              setTimeout(resolve, 1000);
-            });
-          }
-          if (previewRef.current) {
-            await exportToPdf(previewRef.current, activeArtifact.title);
-          }
-          break;
-        }
-        case "txt": {
-          exportAsText(activeArtifact.content, activeArtifact.title);
-          break;
-        }
-        case "xlsx": {
-          exportAsXlsx(activeArtifact.content, activeArtifact.title);
-          break;
-        }
-        case "html": {
-          exportAsHtml(activeArtifact.content, activeArtifact.title);
-          break;
-        }
-        case "md": {
-          exportAsMarkdown(activeArtifact.content, activeArtifact.title);
-          break;
-        }
-      }
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  const handleCopy = () => copy(activeArtifact.content);
 
   const handleSelectFormat = (format: ExportFormat) => {
     setDownloadFormat(format);

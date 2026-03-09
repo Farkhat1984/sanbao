@@ -1,62 +1,11 @@
 import { create } from "zustand";
 import type { ChatMessage, ConversationSummary } from "@/types/chat";
+import { PHASE_PRIORITY } from "@/lib/chat/tool-categories";
 
 /** Maximum conversations kept in memory to prevent unbounded growth */
 const MAX_CONVERSATIONS = 500;
 
 export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | "routing" | "consulting" | "synthesizing" | null;
-
-/** Tool categories for granular status icons */
-export type ToolCategory = "web_search" | "knowledge" | "calculation" | "memory" | "task" | "notification" | "scratchpad" | "chart" | "http" | "mcp" | "generic";
-
-const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
-  read_knowledge: "knowledge",
-  search_knowledge: "knowledge",
-  // MCP search tools → "Ищет в базе знаний"
-  lawyer_search: "knowledge",
-  accountant_search: "knowledge",
-  consultant_1c_search: "knowledge",
-  broker_search: "knowledge",
-  search: "knowledge",
-  // MCP article/law retrieval tools
-  get_article: "knowledge",
-  get_law: "knowledge",
-  accountant_get_1c_article: "knowledge",
-  consultant_1c_get_1c_article: "knowledge",
-  graph_traverse: "knowledge",
-  lookup: "knowledge",
-  // MCP SQL/query tools
-  sql_query: "calculation",
-  accountant_sql_query: "calculation",
-  calculate: "calculation",
-  analyze_csv: "calculation",
-  generate_chart_data: "chart",
-  save_memory: "memory",
-  create_task: "task",
-  send_notification: "notification",
-  write_scratchpad: "scratchpad",
-  read_scratchpad: "scratchpad",
-  http_request: "http",
-  get_current_time: "generic",
-  get_user_info: "generic",
-  get_conversation_context: "generic",
-};
-
-export function getToolCategory(toolName: string | null): ToolCategory {
-  if (!toolName) return "generic";
-  return TOOL_CATEGORY_MAP[toolName] || "mcp";
-}
-
-const PHASE_PRIORITY: Record<string, number> = {
-  thinking: 1,
-  searching: 2,
-  using_tool: 2,
-  routing: 2,
-  consulting: 2,
-  planning: 3,
-  synthesizing: 3,
-  answering: 4,
-};
 
 export interface ClarifyQuestion {
   id: string;

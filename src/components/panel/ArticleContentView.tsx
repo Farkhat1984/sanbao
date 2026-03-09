@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { BookOpen, Wrench, RotateCcw, Copy, Download, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useArticleStore } from "@/stores/articleStore";
 import { usePanelStore } from "@/stores/panelStore";
 import { exportAsText } from "@/lib/export-utils";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 const CODE_LABELS: Record<string, string> = {
   constitution: "Конституция РК",
@@ -103,7 +104,7 @@ export function ArticleContentView() {
   const { activeArticle, loading, error, retry, _lastRequest } = useArticleStore();
   const activeTabId = usePanelStore((s) => s.activeTabId);
   const tabs = usePanelStore((s) => s.tabs);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
 
   // Sync activeArticle when panel tab switches
   useEffect(() => {
@@ -154,11 +155,7 @@ export function ArticleContentView() {
 
   const HeaderIcon = is1c ? Wrench : BookOpen;
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(fullText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = () => copy(fullText);
 
   const handleDownload = () => {
     exportAsText(fullText, `${headerLabel} - ${activeArticle.title}`);

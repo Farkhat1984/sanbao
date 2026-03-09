@@ -5,6 +5,7 @@ import { getSettingNumber } from "@/lib/settings";
 import {
   VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES, JURISDICTIONS,
   DEFAULT_ICON_COLOR, AI_GENERATION_DESCRIPTION_MAX_LENGTH,
+  SYSTEM_PROMPT_MAX_LENGTH, DEFAULT_SKILL_NAME,
 } from "@/lib/constants";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import {
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     );
 
     // Validate systemPrompt is focused and not too long
-    const systemPrompt = (String(parsed.systemPrompt || "")).slice(0, 4000);
+    const systemPrompt = (String(parsed.systemPrompt || "")).slice(0, SYSTEM_PROMPT_MAX_LENGTH);
 
     // Resolve category: prefer user-provided, then AI-generated, then default
     const resolvedCategory = validCategory
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
       : [];
 
     const result = {
-      name: parsed.name || "Новый скилл",
+      name: parsed.name || DEFAULT_SKILL_NAME,
       description: parsed.description || "",
       systemPrompt,
       citationRules: parsed.citationRules || "",

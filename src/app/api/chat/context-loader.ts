@@ -18,7 +18,6 @@ import { getRedis } from "@/lib/redis";
 import { buildApiMessages, type ChatAttachment } from "@/lib/chat/message-builder";
 import {
   DEFAULT_TEMPERATURE_COMPACTION,
-  DEFAULT_MAX_TOKENS_COMPACTION,
 } from "@/lib/constants";
 
 // ─── Types ──────────────────────────────────────────────

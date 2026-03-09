@@ -5,6 +5,7 @@ import { getSettingNumber } from "@/lib/settings";
 import {
   VALID_ICONS, VALID_COLORS, DEFAULT_ICON_COLOR,
   AI_GENERATION_DESCRIPTION_MAX_LENGTH,
+  DEFAULT_AGENT_NAME,
 } from "@/lib/constants";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import {
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     );
 
     const result = {
-      name: parsed.name || "Новый агент",
+      name: parsed.name || DEFAULT_AGENT_NAME,
       description: parsed.description || "",
       instructions: parsed.instructions || "",
       icon: VALID_ICONS.includes(parsed.icon as string) ? parsed.icon : "Bot",

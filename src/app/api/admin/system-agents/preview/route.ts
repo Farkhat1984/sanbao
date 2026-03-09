@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import { resolveModel } from "@/lib/model-router";
-import { DEFAULT_MAX_TOKENS_PREVIEW, DEFAULT_TEMPERATURE_PREVIEW } from "@/lib/constants";
+import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE_PREVIEW } from "@/lib/constants";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(req: Request) {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
           { role: "system", content: systemPrompt },
           { role: "user", content: message },
         ],
-        max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS_PREVIEW,
+        max_tokens: model.maxTokens || DEFAULT_MAX_TOKENS,
         temperature: model.temperature ?? DEFAULT_TEMPERATURE_PREVIEW,
       }),
     });

@@ -84,6 +84,9 @@ export const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"] 
 
 // ─── AI Generation ───
 export const AI_GENERATION_DESCRIPTION_MAX_LENGTH = 5000;
+export const SYSTEM_PROMPT_MAX_LENGTH = 4000;
+export const DEFAULT_AGENT_NAME = "Новый агент";
+export const DEFAULT_SKILL_NAME = "Новый скилл";
 
 // ─── AI Defaults ───
 export const DEFAULT_TEMPERATURE = 0.6;
@@ -91,10 +94,6 @@ export const DEFAULT_TEMPERATURE_CODE_FIX = 0.2;
 export const DEFAULT_TEMPERATURE_COMPACTION = 0.3;
 export const DEFAULT_TEMPERATURE_PREVIEW = 0.7;
 export const DEFAULT_MAX_TOKENS = 131072;
-export const DEFAULT_MAX_TOKENS_GENERATE = 131072;
-export const DEFAULT_MAX_TOKENS_FIX = 131072;
-export const DEFAULT_MAX_TOKENS_PREVIEW = 131072;
-export const DEFAULT_MAX_TOKENS_COMPACTION = 131072;
 export const DEFAULT_TOP_P = 0.95;
 export const DEFAULT_CONTEXT_WINDOW = 262144;
 

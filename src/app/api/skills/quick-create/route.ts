@@ -9,6 +9,7 @@ import {
   VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES, JURISDICTIONS,
   DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON,
   AI_GENERATION_DESCRIPTION_MAX_LENGTH,
+  SYSTEM_PROMPT_MAX_LENGTH, DEFAULT_SKILL_NAME,
 } from "@/lib/constants";
 import {
   callLlmForJson,
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
     );
 
     // Validate and sanitize AI output
-    const systemPrompt = (String(parsed.systemPrompt || "")).slice(0, 4000);
+    const systemPrompt = (String(parsed.systemPrompt || "")).slice(0, SYSTEM_PROMPT_MAX_LENGTH);
     const resolvedCategory = validCategory
       || (VALID_CATEGORY_VALUES.includes(parsed.category as typeof VALID_CATEGORY_VALUES[number]) ? parsed.category : "CUSTOM");
     const resolvedTags = Array.isArray(parsed.tags)
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
     const skill = await prisma.skill.create({
       data: {
         userId,
-        name: String(parsed.name || "Новый скилл"),
+        name: String(parsed.name || DEFAULT_SKILL_NAME),
         description: String(parsed.description || ""),
         systemPrompt,
         citationRules: String(parsed.citationRules || ""),

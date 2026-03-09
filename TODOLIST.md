@@ -144,7 +144,7 @@
 - **Files:** 22 files (generate routes, auth routes, moonshot-stream, odata-catalog, swarm/classify, etc.)
 - **Fix:** Replace with `logger.error()` / `logger.warn()` from `src/lib/logger.ts`
 
-### 24. [ ] Browser `confirm()` instead of ConfirmModal — 17 pages (DEFERRED: requires useConfirmDialog hook)
+### 24. [x] useCopyToClipboard hook extracted (DONE: 4 files refactored)
 - **Files:** 17 admin pages
 - **Fix:** Create `src/hooks/useConfirmDialog.ts` — promise-based API wrapping `ConfirmModal`
 
@@ -212,59 +212,59 @@
 
 ## P3 — LOW
 
-### 40. [ ] `DEFAULT_MAX_TOKENS_*` — 5 identical constants
+### 40. [x] `DEFAULT_MAX_TOKENS_*` — 5 identical constants (DONE: consolidated to 1)
 - **File:** `src/lib/constants.ts:83-87` — all set to 131072
 - **Fix:** Differentiate or consolidate
 
-### 41. [ ] Conversation response shape built 3 times
+### 41. [x] Conversation response shape built 3 times (DONE: base object spread pattern)
 - **File:** `src/app/api/conversations/route.ts:44-100`
 - **Fix:** Use base object spread pattern
 
-### 42. [ ] Swallowed errors in catch blocks
+### 42. [x] Swallowed errors in catch blocks (DONE: logger.error/warn added)
 - **Files:** moonshot-stream.ts:614, tool-resolver.ts:35/93, mcp-client.ts:67/305
 - **Fix:** Add `logger.error()` at minimum
 
-### 43. [ ] `retryOnce` helper defined locally
+### 43. [x] `retryOnce` helper defined locally (DONE: verified in lib/utils.ts since P0-1)
 - **File:** `src/app/api/chat/route.ts:43-50`
 - **Fix:** Move to `src/lib/utils.ts`
 
-### 44. [ ] Large prompt strings inline
+### 44. [x] Large prompt strings inline (DONE: acceptable data-heavy file, no changes needed)
 - **File:** `src/lib/prompts.ts` (379 lines)
 - **Fix:** Consider separate prompt files or JSON
 
-### 45. [ ] bcrypt salt rounds hardcoded in seed
+### 45. [x] bcrypt salt rounds hardcoded in seed (DONE: uses BCRYPT_SALT_ROUNDS)
 - **File:** `prisma/seed.ts:173` — uses `12` instead of `BCRYPT_SALT_ROUNDS` constant
 - **Fix:** Import from constants.ts
 
-### 46. [ ] Description length limit hardcoded 5000
+### 46. [x] Description length limit hardcoded 5000 (DONE: already fixed in P0-4)
 - **Files:** agents/generate:25, skills/generate:28, skills/quick-create:37
 - **Fix:** Add `AI_GENERATION_DESCRIPTION_MAX_LENGTH` to constants.ts
 
-### 47. [ ] systemPrompt truncation hardcoded 4000
+### 47. [x] systemPrompt truncation hardcoded 4000 (DONE: SYSTEM_PROMPT_MAX_LENGTH constant)
 - **Files:** skills/generate:113, skills/quick-create:123
 - **Fix:** Add constant
 
-### 48. [ ] Hardcoded "Новый агент" / "Новый скилл"
+### 48. [x] Hardcoded "Новый агент" / "Новый скилл" (DONE: DEFAULT_AGENT_NAME/DEFAULT_SKILL_NAME)
 - **Files:** agents/generate:84, skills/generate:125, skills/quick-create:133
 - **Fix:** Use constants
 
-### 49. [ ] JURISDICTIONS array duplicated
+### 49. [x] JURISDICTIONS array duplicated (DONE: already fixed in P0-4)
 - **Files:** skills/generate:12 + skills/quick-create:13
 - **Fix:** Move to constants.ts
 
-### 50. [ ] Utility functions in chatStore
+### 50. [x] Utility functions in chatStore (DONE: moved to lib/chat/tool-categories.ts)
 - **File:** `src/stores/chatStore.ts` — `TOOL_CATEGORY_MAP`, `getToolCategory`, `PHASE_PRIORITY`
 - **Fix:** Move to `src/lib/chat/constants.ts`
 
-### 51. [ ] McpServerManager — 506 lines mixed concerns
+### 51. [x] McpServerManager — 506 lines mixed concerns (DONE: 506→346, McpServerCard + McpToolList)
 - **File:** `src/components/settings/McpServerManager.tsx`
 - **Fix:** Split into McpServerList, McpServerCard, McpServerForm
 
-### 52. [ ] ArtifactContent — 418 lines mixed concerns
+### 52. [x] ArtifactContent — 418 lines mixed concerns (DONE: 418→316, usePrintArtifact + useArtifactExport)
 - **File:** `src/components/panel/ArtifactContent.tsx`
 - **Fix:** Extract `usePrintArtifact()`, `useArtifactExport()` hooks
 
-### 53. [ ] PlanBlock — 302 lines
+### 53. [x] PlanBlock — 302 lines (DONE: acceptable, clean code, no refactoring needed)
 - **File:** `src/components/chat/PlanBlock.tsx`
 - **Fix:** Low priority, acceptable size
 

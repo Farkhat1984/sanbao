@@ -1,5 +1,5 @@
 import { resolveModel } from "@/lib/model-router";
-import { DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE } from "@/lib/constants";
+import { DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS } from "@/lib/constants";
 
 interface LlmMessage {
   role: "system" | "user" | "assistant";
@@ -7,7 +7,7 @@ interface LlmMessage {
 }
 
 interface CallLlmOptions {
-  /** Override max_tokens (defaults to model config or DEFAULT_MAX_TOKENS_GENERATE) */
+  /** Override max_tokens (defaults to model config or DEFAULT_MAX_TOKENS) */
   maxTokens?: number;
   /** Override temperature (defaults to model config or DEFAULT_TEMPERATURE) */
   temperature?: number;
@@ -63,7 +63,7 @@ export async function callLlmForJson<T = unknown>(
       model: textModel.modelId,
       messages,
       temperature: options?.temperature ?? textModel.temperature ?? DEFAULT_TEMPERATURE,
-      max_tokens: options?.maxTokens ?? textModel.maxTokens ?? DEFAULT_MAX_TOKENS_GENERATE,
+      max_tokens: options?.maxTokens ?? textModel.maxTokens ?? DEFAULT_MAX_TOKENS,
       stream: false,
       thinking: { type: "disabled" },
     }),

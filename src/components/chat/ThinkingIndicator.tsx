@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { StreamingPhase } from "@/stores/chatStore";
-import { getToolCategory, type ToolCategory } from "@/stores/chatStore";
+import { getToolCategory, type ToolCategory } from "@/lib/chat/tool-categories";
 
 interface ThinkingIndicatorProps {
   phase: StreamingPhase;

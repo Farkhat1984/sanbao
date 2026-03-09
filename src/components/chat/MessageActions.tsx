@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Copy, Check, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 interface MessageActionsProps {
   /** Raw text content to copy to clipboard */
@@ -19,13 +19,7 @@ interface MessageActionsProps {
 
 /** Action buttons (copy, regenerate) shown on hover for both user and assistant messages. */
 export function MessageActions({ content, messageId, isUser, isMobile, onRetry }: MessageActionsProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, copy: handleCopy } = useCopyToClipboard();
 
   const buttonClass = cn(
     "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
@@ -39,7 +33,7 @@ export function MessageActions({ content, messageId, isUser, isMobile, onRetry }
       isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
     )}>
       <button
-        onClick={handleCopy}
+        onClick={() => handleCopy(content)}
         aria-label="Копировать сообщение"
         className={buttonClass}
       >

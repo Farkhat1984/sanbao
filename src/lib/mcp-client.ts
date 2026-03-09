@@ -64,8 +64,11 @@ async function evictEntry(key: string, entry: PoolEntry): Promise<void> {
   pool.delete(key);
   try {
     await entry.client.close();
-  } catch {
-    // Already disconnected — ignore
+  } catch (err) {
+    logger.warn("MCP pool: error closing connection", {
+      key,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

@@ -463,8 +463,12 @@ export function streamMoonshot(
                       setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${mcpToolTimeoutMs / 1000}s` }), mcpToolTimeoutMs)
                     ),
                   ]);
-                } catch {
-                  mcpResult = { error: `MCP tool ${tc.function.name} timed out after ${mcpToolTimeoutMs / 1000}s` };
+                } catch (mcpErr) {
+                  logger.warn("MCP tool call failed", {
+                    tool: tc.function.name,
+                    error: mcpErr instanceof Error ? mcpErr.message : String(mcpErr),
+                  });
+                  mcpResult = { error: `MCP tool ${tc.function.name} failed: ${mcpErr instanceof Error ? mcpErr.message : "unknown error"}` };
                 }
                 currentMessages.push({
                   role: "tool",
@@ -525,7 +529,12 @@ export function streamMoonshot(
         if (onUsage && (totalInputTokens > 0 || totalOutputTokens > 0)) {
           onUsage({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
         }
-      } catch {
+      } catch (err) {
+        // Log the actual error for debugging — the user gets a generic message
+        logger.error("Moonshot stream error", {
+          error: err instanceof Error ? err.message : String(err),
+          model: textModel?.modelId,
+        });
         controller.enqueue(
           encoder.encode(
             JSON.stringify({

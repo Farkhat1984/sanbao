@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Trash2, RefreshCw, Circle, ChevronDown, ChevronUp, Loader2, Wrench, Power, PowerOff, Globe, ToggleLeft, ToggleRight, Search } from "lucide-react";
+import { Plus, Loader2, Search, Globe } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { McpServerCard } from "./McpServerCard";
 
 interface McpToolInfo {
   name: string;
@@ -159,18 +160,6 @@ export function McpServerManager() {
     }
   };
 
-  const statusColor: Record<string, string> = {
-    CONNECTED: "text-success",
-    DISCONNECTED: "text-text-secondary",
-    ERROR: "text-error",
-  };
-
-  const statusLabel: Record<string, string> = {
-    CONNECTED: "Подключён",
-    DISCONNECTED: "Отключён",
-    ERROR: "Ошибка",
-  };
-
   // Filtered servers
   const allSystem = useMemo(() => servers.filter((s) => s.isGlobal), [servers]);
   const allUser = useMemo(() => servers.filter((s) => !s.isGlobal), [servers]);
@@ -201,178 +190,6 @@ export function McpServerManager() {
   const hasServers = servers.length > 0;
   const hasResults = filteredSystem.length > 0 || filteredUser.length > 0;
 
-  const renderSystemServer = (srv: McpServer) => {
-    const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
-    const isExpanded = expandedId === srv.id;
-    const isActive = srv.userActive ?? false;
-
-    return (
-      <div key={srv.id} className={cn("rounded-xl bg-surface-alt border border-border overflow-hidden transition-opacity", !isActive && "opacity-50")}>
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Globe className="h-3.5 w-3.5 text-accent shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
-              <p className="text-xs text-text-secondary truncate">
-                {tools.length > 0 ? `${tools.length} инструментов` : srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {isActive && tools.length > 0 && (
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : srv.id)}
-                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
-              >
-                <Wrench className="h-3 w-3" />
-                {tools.length}
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </button>
-            )}
-            <button
-              onClick={() => handleToggleGlobal(srv.id, isActive)}
-              disabled={togglingId === srv.id}
-              title={isActive ? "Отключить" : "Подключить"}
-              className={cn(
-                "h-9 w-9 sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 flex items-center justify-center gap-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50",
-                isActive
-                  ? "text-success hover:text-warning hover:bg-warning-light"
-                  : "text-text-secondary hover:text-success hover:bg-success-light"
-              )}
-            >
-              {togglingId === srv.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : isActive ? (
-                <ToggleRight className="h-4 w-4" />
-              ) : (
-                <ToggleLeft className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline text-xs">{isActive ? "Вкл" : "Выкл"}</span>
-            </button>
-          </div>
-        </div>
-
-        {isActive && isExpanded && tools.length > 0 && (
-          <div className="border-t border-border px-3 py-2 space-y-1">
-            {tools.map((tool) => (
-              <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-xs font-medium text-text-primary">{tool.name}</span>
-                  {tool.description && (
-                    <p className="text-[11px] text-text-secondary">{tool.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderUserServer = (srv: McpServer) => {
-    const tools = Array.isArray(srv.discoveredTools) ? srv.discoveredTools : [];
-    const isExpanded = expandedId === srv.id;
-    const isConnected = srv.status === "CONNECTED";
-
-    return (
-      <div key={srv.id} className="rounded-xl bg-surface-alt border border-border overflow-hidden">
-        <div className="flex items-center justify-between p-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Circle
-              className={cn("h-2.5 w-2.5 fill-current shrink-0", statusColor[srv.status])}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">{srv.name}</p>
-              <p className="text-xs text-text-secondary truncate">
-                {srv.url}
-                <span className="ml-2 opacity-60">{srv.transport === "STREAMABLE_HTTP" ? "HTTP" : "SSE"}</span>
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {tools.length > 0 && (
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : srv.id)}
-                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary cursor-pointer px-1.5 py-1 rounded-md hover:bg-surface-hover transition-colors"
-              >
-                <Wrench className="h-3 w-3" />
-                {tools.length}
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </button>
-            )}
-            <span className={cn("text-xs", statusColor[srv.status])}>
-              {statusLabel[srv.status]}
-            </span>
-            {isConnected ? (
-              <button
-                onClick={() => handleDisconnect(srv.id)}
-                disabled={disconnectingId === srv.id}
-                title="Отключить"
-                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-warning-light text-text-secondary hover:text-warning cursor-pointer transition-colors disabled:opacity-50"
-              >
-                {disconnectingId === srv.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <PowerOff className="h-3.5 w-3.5" />
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={() => handleConnect(srv.id)}
-                disabled={connectingId === srv.id}
-                title="Подключить"
-                className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-success-light text-text-secondary hover:text-success cursor-pointer transition-colors disabled:opacity-50"
-              >
-                {connectingId === srv.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Power className="h-3.5 w-3.5" />
-                )}
-              </button>
-            )}
-            <button
-              onClick={() => handleConnect(srv.id)}
-              disabled={connectingId === srv.id}
-              title="Переподключить"
-              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-surface-hover text-text-secondary hover:text-text-primary cursor-pointer transition-colors disabled:opacity-50"
-            >
-              {connectingId === srv.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-            </button>
-            <button
-              onClick={() => handleRemove(srv.id)}
-              title="Удалить"
-              className="h-9 w-9 sm:h-auto sm:w-auto sm:p-1.5 flex items-center justify-center rounded-md hover:bg-error-light text-text-secondary hover:text-error cursor-pointer transition-colors"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {isExpanded && tools.length > 0 && (
-          <div className="border-t border-border px-3 py-2 space-y-1">
-            {tools.map((tool) => (
-              <div key={tool.name} className="flex items-start gap-2 py-1">
-                <Wrench className="h-3 w-3 text-text-secondary mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-xs font-medium text-text-primary">{tool.name}</span>
-                  {tool.description && (
-                    <p className="text-[11px] text-text-secondary">{tool.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-3">
       <p className="text-xs text-text-secondary">
@@ -380,7 +197,7 @@ export function McpServerManager() {
         законов, работа с API, файловые операции и другие функции.
       </p>
 
-      {/* ── Search & Filter ── */}
+      {/* Search & Filter */}
       {hasServers && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -416,7 +233,17 @@ export function McpServerManager() {
             Системные серверы
             <span className="text-text-secondary/60">({filteredSystem.length})</span>
           </div>
-          {filteredSystem.map(renderSystemServer)}
+          {filteredSystem.map((srv) => (
+            <McpServerCard
+              key={srv.id}
+              server={srv}
+              variant="system"
+              isExpanded={expandedId === srv.id}
+              onToggleExpand={() => setExpandedId(expandedId === srv.id ? null : srv.id)}
+              isToggling={togglingId === srv.id}
+              onToggleGlobal={handleToggleGlobal}
+            />
+          ))}
         </div>
       )}
 
@@ -428,7 +255,20 @@ export function McpServerManager() {
               <span className="text-text-secondary/60">({filteredUser.length})</span>
             </div>
           )}
-          {filteredUser.map(renderUserServer)}
+          {filteredUser.map((srv) => (
+            <McpServerCard
+              key={srv.id}
+              server={srv}
+              variant="user"
+              isExpanded={expandedId === srv.id}
+              onToggleExpand={() => setExpandedId(expandedId === srv.id ? null : srv.id)}
+              isConnecting={connectingId === srv.id}
+              isDisconnecting={disconnectingId === srv.id}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
+              onRemove={handleRemove}
+            />
+          ))}
         </div>
       )}
 

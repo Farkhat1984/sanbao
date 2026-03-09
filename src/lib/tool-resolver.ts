@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { BoundedMap } from "@/lib/bounded-map";
 import { cacheGet, cacheSet, cacheDel, getRedis } from "@/lib/redis";
 import { getSettingNumber } from "@/lib/settings";
+import { logger } from "@/lib/logger";
 
 const REDIS_PREFIX = "agent_ctx:";
 const agentContextCache = new BoundedMap<string, { context: ResolvedAgentContext; expiresAt: number }>(200);
@@ -32,7 +33,11 @@ export function invalidateAgentContextCache(agentId?: string) {
             cursor = next;
             if (keys.length > 0) await client.del(...keys);
           } while (cursor !== "0");
-        } catch { /* Redis unavailable */ }
+        } catch (err) {
+          logger.warn("Redis SCAN failed during agent context cache flush", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       })();
     }
   }
@@ -80,8 +85,12 @@ export async function resolveAgentContext(
       agentContextCache.set(agentId, { context: ctx, expiresAt: Date.now() + agentContextTtl });
       return ctx;
     }
-  } catch {
+  } catch (err) {
     // Redis unavailable or parse error — fall through to DB
+    logger.warn("Agent context L2 Redis cache miss", {
+      agentId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   const agent = await prisma.agent.findUnique({

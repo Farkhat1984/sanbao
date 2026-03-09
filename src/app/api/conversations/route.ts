@@ -42,47 +42,7 @@ export async function GET(req: Request) {
   });
 
   const items = conversations.map((c) => {
-    // Use agent relation if available
-    if (c.agent) {
-      return {
-        id: c.id,
-        title: c.title,
-        pinned: c.pinned,
-        archived: c.archived,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-        lastMessage: c.messages[0]?.content,
-        agentId: c.agent.id,
-        agentName: c.agent.name,
-        agentIcon: c.agent.icon,
-        agentIconColor: c.agent.iconColor,
-        isSystemAgent: c.agent.isSystem,
-        isSwarmMode: c.isSwarmMode,
-        swarmOrgId: c.swarmOrgId,
-      };
-    }
-
-    // Legacy fallback: systemAgentId without agent relation
-    if (c.systemAgentId) {
-      return {
-        id: c.id,
-        title: c.title,
-        pinned: c.pinned,
-        archived: c.archived,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-        lastMessage: c.messages[0]?.content,
-        agentId: resolveAgentId(c.systemAgentId),
-        agentName: c.systemAgentId === FEMIDA_ID ? "Фемида" : null,
-        agentIcon: c.systemAgentId === FEMIDA_ID ? "Scale" : null,
-        agentIconColor: c.systemAgentId === FEMIDA_ID ? "#B8956A" : null,
-        isSystemAgent: true,
-        isSwarmMode: c.isSwarmMode,
-        swarmOrgId: c.swarmOrgId,
-      };
-    }
-
-    return {
+    const base = {
       id: c.id,
       title: c.title,
       pinned: c.pinned,
@@ -90,13 +50,42 @@ export async function GET(req: Request) {
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
       lastMessage: c.messages[0]?.content,
+      isSwarmMode: c.isSwarmMode,
+      swarmOrgId: c.swarmOrgId,
+    };
+
+    // Use agent relation if available
+    if (c.agent) {
+      return {
+        ...base,
+        agentId: c.agent.id,
+        agentName: c.agent.name,
+        agentIcon: c.agent.icon,
+        agentIconColor: c.agent.iconColor,
+        isSystemAgent: c.agent.isSystem,
+      };
+    }
+
+    // Legacy fallback: systemAgentId without agent relation
+    if (c.systemAgentId) {
+      const isFemida = c.systemAgentId === FEMIDA_ID;
+      return {
+        ...base,
+        agentId: resolveAgentId(c.systemAgentId),
+        agentName: isFemida ? "Фемида" : null,
+        agentIcon: isFemida ? "Scale" : null,
+        agentIconColor: isFemida ? "#B8956A" : null,
+        isSystemAgent: true,
+      };
+    }
+
+    return {
+      ...base,
       agentId: null,
       agentName: null,
       agentIcon: null,
       agentIconColor: null,
       isSystemAgent: false,
-      isSwarmMode: c.isSwarmMode,
-      swarmOrgId: c.swarmOrgId,
     };
   });
 

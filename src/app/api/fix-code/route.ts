@@ -1,7 +1,7 @@
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
-import { DEFAULT_MAX_TOKENS_FIX } from "@/lib/constants";
+import { DEFAULT_MAX_TOKENS } from "@/lib/constants";
 import { getPrompt } from "@/lib/prompts";
 import { getSettingNumber } from "@/lib/settings";
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
             content: `Error:\n${error}\n\nCode:\n${code}`,
           },
         ],
-        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS_FIX,
+        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS,
         temperature: textModel?.temperature ?? temperatureCodeFix,
         stream: false,
       }),

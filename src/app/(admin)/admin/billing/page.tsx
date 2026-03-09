@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -59,11 +60,11 @@ interface BillingStats {
 const LIMIT = 25;
 
 function CopyId({ id }: { id: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard(1500);
   const short = id.length > 12 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(id); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      onClick={() => copy(id)}
       className="inline-flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
       title={id}
     >
