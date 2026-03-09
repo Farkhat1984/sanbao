@@ -16,18 +16,33 @@ function makeParams(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
-function makeUploadRequest(agentId: string, fileName: string, type: string, size?: number) {
-  const blob = new Blob(["file content"], { type });
-  const file = new File([blob], fileName, { type });
-  if (size) {
-    Object.defineProperty(file, "size", { value: size });
-  }
-  const formData = new FormData();
-  formData.append("file", file);
-  return new Request(`http://localhost/api/agents/${agentId}/files`, {
+/**
+ * Build a Request whose `.formData()` returns a mock FormData with a fake file.
+ * This avoids jsdom's broken `Request.formData()` which hangs on File bodies.
+ */
+function makeUploadRequest(
+  agentId: string,
+  fileName: string,
+  type: string,
+  size?: number,
+) {
+  const content = new Uint8Array([0x66, 0x69, 0x6c, 0x65]); // "file"
+  const fakeFile = {
+    name: fileName,
+    type,
+    size: size ?? content.byteLength,
+    arrayBuffer: () => Promise.resolve(content.buffer as ArrayBuffer),
+  };
+  const req = new Request(`http://localhost/api/agents/${agentId}/files`, {
     method: "POST",
-    body: formData,
   });
+  req.formData = async () => {
+    const fd = new FormData();
+    fd.get = (key: string) =>
+      key === "file" ? (fakeFile as unknown as FormDataEntryValue) : null;
+    return fd;
+  };
+  return req;
 }
 
 function makeDeleteRequest(agentId: string, fileId: string) {
@@ -68,35 +83,28 @@ describe("Agent Files API", () => {
 
     it("should return 400 if no file provided", async () => {
       vi.mocked(prisma.agent.findFirst).mockResolvedValueOnce({ id: "agent-1" } as never);
-      const formData = new FormData();
       const req = new Request("http://localhost/api/agents/agent-1/files", {
         method: "POST",
-        body: formData,
       });
+      req.formData = async () => {
+        const fd = new FormData();
+        fd.get = () => null;
+        return fd;
+      };
       const res = await POST(req, makeParams("agent-1"));
       expect(res.status).toBe(400);
       const body = await res.json();
       expect(body.error).toContain("Файл не найден");
     });
 
-    it("should return 400 if file exceeds 10MB", async () => {
+    it("should return 400 if file exceeds max size", async () => {
       vi.mocked(prisma.agent.findFirst).mockResolvedValueOnce({ id: "agent-1" } as never);
-      const fakeFile = {
-        name: "big.pdf",
-        type: "application/pdf",
-        size: 15 * 1024 * 1024,
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)),
-      };
-      const req = makeUploadRequest("agent-1", "big.pdf", "application/pdf");
-      req.formData = async () => {
-        const fd = new FormData();
-        fd.get = (key: string) => key === "file" ? fakeFile as unknown as FormDataEntryValue : null;
-        return fd;
-      };
+      // MAX_AGENT_FILE_SIZE = 100MB, so use 150MB to exceed it
+      const req = makeUploadRequest("agent-1", "big.pdf", "application/pdf", 150 * 1024 * 1024);
       const res = await POST(req, makeParams("agent-1"));
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toContain("10MB");
+      expect(body.error).toContain("100MB");
     });
 
     it("should return 400 for unsupported file type", async () => {
@@ -161,7 +169,7 @@ describe("Agent Files API", () => {
       const req = makeUploadRequest(
         "agent-1",
         "report.docx",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
       const res = await POST(req, makeParams("agent-1"));
       expect(res.status).toBe(200);
@@ -216,7 +224,7 @@ describe("Agent Files API", () => {
       const req = makeUploadRequest(
         "agent-1",
         "slides.pptx",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       );
       const res = await POST(req, makeParams("agent-1"));
       expect(res.status).toBe(200);

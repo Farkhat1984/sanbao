@@ -5,6 +5,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getSettingNumber } from "@/lib/settings";
 
 // System agent constants
 export const LAWYER_ID = "system-lawyer";
@@ -20,19 +21,28 @@ export const FEMIDA_AGENT_ID = LAWYER_AGENT_ID;
 
 // Cache for system agent IDs
 let systemAgentIdsCache: { ids: Set<string>; expiresAt: number } | null = null;
-const CACHE_TTL = 60_000;
+const CACHE_TTL_FALLBACK = 60_000;
+
+async function getCacheTtl(): Promise<number> {
+  try {
+    return await getSettingNumber("cache_system_agents_ttl_ms");
+  } catch {
+    return CACHE_TTL_FALLBACK;
+  }
+}
 
 async function getSystemAgentIds(): Promise<Set<string>> {
   if (systemAgentIdsCache && systemAgentIdsCache.expiresAt > Date.now()) {
     return systemAgentIdsCache.ids;
   }
+  const cacheTtl = await getCacheTtl();
   try {
     const agents = await prisma.agent.findMany({
       where: { isSystem: true, status: "APPROVED" },
       select: { id: true },
     });
     const ids = new Set(agents.map((a) => a.id));
-    systemAgentIdsCache = { ids, expiresAt: Date.now() + CACHE_TTL };
+    systemAgentIdsCache = { ids, expiresAt: Date.now() + cacheTtl };
     return ids;
   } catch {
     return new Set([LAWYER_AGENT_ID, BROKER_AGENT_ID, SANBAO_AGENT_ID, ACCOUNTANT_AGENT_ID, CONSULTANT_1C_AGENT_ID]);
@@ -79,9 +89,10 @@ export async function getSystemAgents() {
     });
 
     // Update cache
+    const cacheTtl = await getCacheTtl();
     systemAgentIdsCache = {
       ids: new Set(agents.map((a) => a.id)),
-      expiresAt: Date.now() + CACHE_TTL,
+      expiresAt: Date.now() + cacheTtl,
     };
 
     return agents.map((a) => ({

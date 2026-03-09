@@ -1,6 +1,10 @@
+import { getSettingNumber } from "@/lib/settings";
+
 const AI_CORTEX_URL = process.env.AI_CORTEX_URL || "http://orchestrator:8120";
-const TIMEOUT_DEFAULT = 30_000;
-const TIMEOUT_PROCESS = 120_000;
+
+/** Fallback values used when settings DB is unavailable */
+const TIMEOUT_DEFAULT_FALLBACK = 30_000;
+const TIMEOUT_PROCESS_FALLBACK = 120_000;
 
 class AiCortexError extends Error {
   constructor(
@@ -16,7 +20,9 @@ async function cortexFetch(
   path: string,
   options: RequestInit & { timeout?: number; apiKey?: string } = {}
 ): Promise<Response> {
-  const { timeout = TIMEOUT_DEFAULT, apiKey, ...fetchOptions } = options;
+  const defaultTimeout = await getSettingNumber("ai_cortex_timeout_default_ms")
+    .catch(() => TIMEOUT_DEFAULT_FALLBACK);
+  const { timeout = defaultTimeout, apiKey, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {
     ...(fetchOptions.headers as Record<string, string>),
@@ -109,10 +115,12 @@ export async function processProject(
   nsApiKey: string,
   projectId: string
 ): Promise<void> {
+  const timeoutProcess = await getSettingNumber("ai_cortex_timeout_process_ms")
+    .catch(() => TIMEOUT_PROCESS_FALLBACK);
   await cortexFetch(`/api/projects/${projectId}/process`, {
     method: "POST",
     apiKey: nsApiKey,
-    timeout: TIMEOUT_PROCESS,
+    timeout: timeoutProcess,
   });
 }
 
@@ -120,10 +128,12 @@ export async function reprocessProject(
   nsApiKey: string,
   projectId: string
 ): Promise<void> {
+  const timeoutProcess = await getSettingNumber("ai_cortex_timeout_process_ms")
+    .catch(() => TIMEOUT_PROCESS_FALLBACK);
   await cortexFetch(`/api/projects/${projectId}/reprocess`, {
     method: "POST",
     apiKey: nsApiKey,
-    timeout: TIMEOUT_PROCESS,
+    timeout: timeoutProcess,
   });
 }
 
@@ -132,13 +142,15 @@ export async function publishProject(
   projectId: string,
   agentName?: string
 ): Promise<{ endpoint: string; domain: string }> {
+  const timeoutProcess = await getSettingNumber("ai_cortex_timeout_process_ms")
+    .catch(() => TIMEOUT_PROCESS_FALLBACK);
   const body: Record<string, string> = {};
   if (agentName) body.agent_name = agentName;
 
   const res = await cortexFetch(`/api/projects/${projectId}/publish`, {
     method: "POST",
     apiKey: nsApiKey,
-    timeout: TIMEOUT_PROCESS,
+    timeout: timeoutProcess,
     body: JSON.stringify(body),
   });
   const data = await res.json();

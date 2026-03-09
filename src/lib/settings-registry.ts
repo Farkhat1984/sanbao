@@ -1,5 +1,5 @@
 /**
- * Complete metadata registry for all 113 runtime-configurable settings.
+ * Complete metadata registry for all 118 runtime-configurable settings.
  *
  * Each setting maps 1:1 to a `SystemSetting` row in the database.
  * Default values are kept in sync with `constants.ts`.
@@ -819,7 +819,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // cache (7)
+  // cache (8)
   // ═══════════════════════════════════════════════════════════════
   {
     key: "cache_ttl_ms",
@@ -901,9 +901,20 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     unit: "шт.",
     restartRequired: true,
   },
+  {
+    key: "cache_system_agents_ttl_ms",
+    label: "TTL кеша системных агентов",
+    description:
+      "Время жизни кеша списка системных агентов. При добавлении/удалении системного агента — ждать до TTL",
+    category: "cache",
+    type: "number",
+    defaultValue: "60000",
+    validation: { min: 5000, max: 600000 },
+    unit: "мс",
+  },
 
   // ═══════════════════════════════════════════════════════════════
-  // security_auth (8)
+  // security_auth (9)
   // ═══════════════════════════════════════════════════════════════
   {
     key: "auth_bcrypt_rounds",
@@ -936,6 +947,17 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     defaultValue: "720",
     validation: { min: 1, max: 8760 },
     unit: "часов",
+  },
+  {
+    key: "auth_session_cache_ttl_ms",
+    label: "TTL кеша сессии",
+    description:
+      "Время жизни локального кеша TTL сессии. Чем меньше — тем быстрее применяются изменения настройки session_ttl_hours, но чаще запросы к БД",
+    category: "security_auth",
+    type: "number",
+    defaultValue: "300000",
+    validation: { min: 30000, max: 1800000 },
+    unit: "мс",
   },
   {
     key: "auth_mobile_access_token_expiry_s",
@@ -1330,7 +1352,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // timeouts (3)
+  // timeouts (5)
   // ═══════════════════════════════════════════════════════════════
   {
     key: "llm_timeout_ms",
@@ -1363,6 +1385,28 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     type: "number",
     defaultValue: "5000",
     validation: { min: 1000, max: 30000 },
+    unit: "мс",
+  },
+  {
+    key: "ai_cortex_timeout_default_ms",
+    label: "Таймаут AI Cortex (по умолчанию)",
+    description:
+      "Таймаут стандартных запросов к AI Cortex (создание, получение, удаление). Влияет на все cortexFetch-вызовы без явного timeout",
+    category: "timeouts",
+    type: "number",
+    defaultValue: "30000",
+    validation: { min: 5000, max: 120000 },
+    unit: "мс",
+  },
+  {
+    key: "ai_cortex_timeout_process_ms",
+    label: "Таймаут AI Cortex (обработка)",
+    description:
+      "Таймаут длительных операций AI Cortex: обработка проекта, публикация. Выше из-за объёмных pipeline-задач",
+    category: "timeouts",
+    type: "number",
+    defaultValue: "120000",
+    validation: { min: 30000, max: 600000 },
     unit: "мс",
   },
 

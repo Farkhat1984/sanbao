@@ -19,6 +19,7 @@ import { BoundedMap } from "@/lib/bounded-map";
 import { redisRateLimit, cacheIncr, cacheGet, cacheSet, cacheDel, isRedisAvailable } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { getSettingNumber } from "@/lib/settings";
+import { SETTINGS_MAP } from "@/lib/settings-registry";
 
 // ─── Production Redis check ─────────────────────────────
 // In production, rate limiting without Redis is unsafe (per-process counters
@@ -39,7 +40,11 @@ if (typeof globalThis !== "undefined" && process.env.NODE_ENV === "production") 
   }, 5_000);
 }
 
-const RATE_LIMIT_MAX_ENTRIES = 50_000;
+// BoundedMap size is set at module load (synchronous). Uses registry default;
+// changing cache_rate_limit_max_entries in admin requires restart.
+const RATE_LIMIT_MAX_ENTRIES = Number(
+  SETTINGS_MAP.get("cache_rate_limit_max_entries")?.defaultValue ?? "50000"
+);
 
 /** Warn once per process about in-memory fallback to avoid log spam */
 let _loggedFallbackWarning = false;

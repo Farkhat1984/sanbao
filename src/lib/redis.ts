@@ -2,10 +2,26 @@
  * Redis client with graceful degradation.
  * If REDIS_URL is not set, all operations silently fall back to no-op.
  * This ensures dev environment works without Redis while production benefits.
+ *
+ * NOTE: Redis connection parameters (maxRetriesPerRequest, retryStrategy,
+ * connectTimeout) are configured at connection time from settings registry
+ * defaults. Since getSetting() is async and Redis is created lazily on first
+ * use, we use synchronous SETTINGS_MAP lookups for initial values.
+ * Changing these settings in the admin panel requires a process restart
+ * (all 4 settings have restartRequired: true in settings-registry.ts).
  */
 
 import Redis from "ioredis";
 import { logger } from "@/lib/logger";
+import { SETTINGS_MAP } from "@/lib/settings-registry";
+
+/** Read a numeric setting default from the registry (synchronous, no DB/Redis). */
+function registryDefault(key: string, fallback: number): number {
+  const def = SETTINGS_MAP.get(key);
+  if (!def) return fallback;
+  const n = Number(def.defaultValue);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 let redis: Redis | null = null;
 let isConnected = false;
@@ -16,15 +32,20 @@ function getClient(): Redis | null {
   const url = process.env.REDIS_URL;
   if (!url) return null;
 
+  const maxRetries = registryDefault("redis_max_retries_per_request", 3);
+  const retryMaxAttempts = registryDefault("redis_retry_max_attempts", 5);
+  const retryMaxDelay = registryDefault("redis_retry_max_delay_ms", 2000);
+  const connectTimeout = registryDefault("redis_connect_timeout_ms", 5000);
+
   redis = new Redis(url, {
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: maxRetries,
     retryStrategy(times) {
-      if (times > 5) return null; // stop retrying
-      return Math.min(times * 200, 2000);
+      if (times > retryMaxAttempts) return null; // stop retrying
+      return Math.min(times * 200, retryMaxDelay);
     },
     lazyConnect: false,
     enableReadyCheck: true,
-    connectTimeout: 5000,
+    connectTimeout,
   });
 
   redis.on("connect", () => {

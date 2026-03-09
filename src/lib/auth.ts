@@ -7,6 +7,7 @@ import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { decrypt } from "./crypto";
 import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
+import { getSettingNumber } from "./settings";
 
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -14,9 +15,18 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sanbao.local";
 
 // ─── Session TTL cache (avoid DB query on every JWT validation) ───
 let sessionTtlCache: { value: number; expiresAt: number } | null = null;
-const SESSION_TTL_CACHE_MS = 5 * 60_000; // 5 minutes
+const SESSION_TTL_CACHE_MS_FALLBACK = 5 * 60_000; // 5 minutes
+
+async function getSessionCacheTtlMs(): Promise<number> {
+  try {
+    return await getSettingNumber("auth_session_cache_ttl_ms");
+  } catch {
+    return SESSION_TTL_CACHE_MS_FALLBACK;
+  }
+}
 
 async function getSessionTtlHours(): Promise<number> {
+  const cacheTtlMs = await getSessionCacheTtlMs();
   if (sessionTtlCache && sessionTtlCache.expiresAt > Date.now()) {
     return sessionTtlCache.value;
   }
@@ -26,7 +36,7 @@ async function getSessionTtlHours(): Promise<number> {
     });
     const parsed = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
     const ttlHours = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 8760) : DEFAULT_SESSION_TTL_HOURS;
-    sessionTtlCache = { value: ttlHours, expiresAt: Date.now() + SESSION_TTL_CACHE_MS };
+    sessionTtlCache = { value: ttlHours, expiresAt: Date.now() + cacheTtlMs };
     return ttlHours;
   } catch {
     return DEFAULT_SESSION_TTL_HOURS;
