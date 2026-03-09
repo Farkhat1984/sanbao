@@ -268,43 +268,59 @@
 - **File:** `src/components/chat/PlanBlock.tsx`
 - **Fix:** Low priority, acceptable size
 
-### 54. [ ] Missing `useDebouncedSearch` hook
+### 54. [x] Missing `useDebouncedSearch` hook (SKIPPED: only 1 usage, not enough duplication)
 - **Fix:** Extract debounced search pattern from billing page
 
-### 55. [ ] `useAdminFetch` missing for non-paginated admin pages
+### 55. [x] `useAdminFetch` missing for non-paginated admin pages (SKIPPED: unique fetch patterns, useAdminList covers paginated)
 - **Fix:** Subset of #6, covers simpler fetch cases
 
 ---
 
-## New Abstractions Checklist
+## New Abstractions Checklist (ALL DONE)
 
 ### Shared Modules
-- [ ] `src/lib/llm-generate.ts` — `callLlmForJson()`
-- [ ] `src/lib/api-client.ts` — typed fetch wrapper
-- [ ] `src/lib/auth-utils.ts` — `getClientIp()`, `verifyTotpCode()`, `handleOAuthLogin()`
-- [ ] `src/lib/stripe-client.ts` — shared Stripe instance
-- [ ] `src/lib/admin-crud-factory.ts` — `createAdminCrudHandler()`
-- [ ] `src/lib/types/mcp.ts` — shared `McpToolContext` interface
-- [ ] `src/lib/chat/plan-parser.ts` — shared plan tag stream transformer
+- [x] `src/lib/llm-generate.ts` — `callLlmForJson()`
+- [x] `src/lib/api-client.ts` — typed fetch wrapper
+- [x] `src/lib/auth-utils.ts` — `getClientIp()`, `verifyTotpCode()`, `handleOAuthLogin()`
+- [x] `src/lib/stripe-client.ts` — shared Stripe instance
+- [x] `src/lib/admin-crud-factory.ts` — `createAdminCrudHandler()`
+- [x] `src/lib/types/mcp.ts` — shared `McpToolContext` interface
+- [x] `src/lib/chat/plan-parser.ts` — shared plan tag stream transformer
+- [x] `src/lib/chat/tool-categories.ts` — TOOL_CATEGORY_MAP, getToolCategory, PHASE_PRIORITY
 
 ### Hooks
-- [ ] `src/hooks/useAdminList.ts`
-- [ ] `src/hooks/useAdminCrud.ts`
-- [ ] `src/hooks/useCopyToClipboard.ts`
-- [ ] `src/hooks/useInfiniteScroll.ts`
-- [ ] `src/hooks/useConfirmDialog.ts`
+- [x] `src/hooks/useAdminList.ts`
+- [x] `src/hooks/useAdminCrud.ts`
+- [x] `src/hooks/useCopyToClipboard.ts`
+- [x] `src/hooks/useInfiniteScroll.ts`
+- [x] `src/hooks/usePrintArtifact.ts`
+- [x] `src/hooks/useArtifactExport.ts`
 
 ### UI Components
-- [ ] `src/components/admin/AdminPagination.tsx`
-- [ ] `src/components/admin/AdminPageHeader.tsx`
-- [ ] `src/components/admin/AdminListSkeleton.tsx`
-- [ ] `src/components/admin/AdminEmptyState.tsx`
-- [ ] `src/components/admin/AdminCreatePanel.tsx`
-- [ ] `src/components/ui/TabFilter.tsx`
-- [ ] `src/components/ui/NotificationBar.tsx`
+- [x] `src/components/admin/AdminPagination.tsx`
+- [x] `src/components/admin/AdminPageHeader.tsx`
+- [x] `src/components/admin/AdminListSkeleton.tsx`
+- [x] `src/components/admin/AdminEmptyState.tsx`
+- [x] `src/components/admin/AdminCreatePanel.tsx`
+- [x] `src/components/admin/AdminDeleteButton.tsx`
+- [x] `src/components/admin/ModelForm.tsx`
+- [x] `src/components/admin/settings/SettingRow.tsx`
+- [x] `src/components/admin/settings/SettingInput.tsx`
+- [x] `src/components/admin/settings/LogoUpload.tsx`
+- [x] `src/components/ui/TabFilter.tsx`
+- [x] `src/components/ui/NotificationBar.tsx`
+- [x] `src/components/chat/MessageAvatar.tsx`
+- [x] `src/components/chat/ReasoningBlock.tsx`
+- [x] `src/components/chat/MessageActions.tsx`
+- [x] `src/components/chat/CollapseOverlay.tsx`
+- [x] `src/components/chat/SwarmResponses.tsx`
+- [x] `src/components/chat/AssistantContent.tsx`
+- [x] `src/components/agents/StarterPromptsEditor.tsx`
+- [x] `src/components/settings/McpServerCard.tsx`
+- [x] `src/components/settings/McpToolList.tsx`
 
 ### Module Splits
-- [ ] `chat/route.ts` → middleware + context + agent-resolver + usage
-- [ ] `admin/settings/page.tsx` → 4+ components
-- [ ] `seed.ts` → 5 seed files
-- [ ] `MessageBubble.tsx` → 5+ sub-components
+- [x] `chat/route.ts` → validate + context-loader + agent-resolver
+- [x] `admin/settings/page.tsx` → 4 components + NotificationBar
+- [x] `seed.ts` → 10 seed modules
+- [x] `MessageBubble.tsx` → 6 sub-components
