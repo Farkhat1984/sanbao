@@ -11,6 +11,10 @@ import { useSkillStore } from "./skillStore";
 import { usePanelStore } from "./panelStore";
 import { useSidebarStore } from "./sidebarStore";
 import { useArticleStore } from "./articleStore";
+import { useOrgStore } from "./orgStore";
+import { useSourceStore } from "./sourceStore";
+import { useIntegrationStore } from "./integrationStore";
+import { useOnboardingStore } from "./onboardingStore";
 
 export function resetAllStores() {
   useChatStore.setState({
@@ -83,5 +87,31 @@ export function resetAllStores() {
     loading: false,
     error: null,
     cache: new Map(),
+  });
+
+  useOrgStore.setState({
+    organizations: [],
+    activeOrg: null,
+    members: [],
+    agents: [],
+    isLoading: false,
+  });
+
+  useSourceStore.setState({
+    activeSource: null,
+    loading: false,
+    error: null,
+    cache: new Map(),
+  });
+
+  useIntegrationStore.setState({
+    integrations: [],
+    isLoading: false,
+  });
+
+  useOnboardingStore.setState({
+    hasSeenTour: false,
+    _hydrated: false,
+    currentStep: null,
   });
 }

@@ -1,36 +1,22 @@
 "use client";
 
-import {
-  User,
-  Copy,
-  Check,
-  RotateCcw,
-  Brain,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  ExternalLink,
-  Pencil,
-  Network,
-  Bot,
-} from "lucide-react";
-import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
 import { PlanBlock } from "./PlanBlock";
+import { MessageAvatar } from "./MessageAvatar";
+import { ReasoningBlock } from "./ReasoningBlock";
+import { MessageActions } from "./MessageActions";
+import { CollapseOverlay } from "./CollapseOverlay";
+import { SwarmResponses } from "./SwarmResponses";
+import { AssistantContent } from "./AssistantContent";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useChatStore, type SwarmAgentResponse } from "@/stores/chatStore";
 import { openArtifactInPanel } from "@/lib/panel-actions";
-import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { ARTIFACT_TYPE_LABELS } from "@/lib/constants";
-import { parseContentWithArtifacts, CLARIFY_REGEX } from "@/lib/parse-message-content";
+import { parseContentWithArtifacts } from "@/lib/parse-message-content";
 import type { ParsedPart } from "@/lib/parse-message-content";
-import { markdownComponents, urlTransform } from "@/lib/markdown-components";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Constants ────────────────────────────────────────────
@@ -44,7 +30,7 @@ const ASSISTANT_COLLAPSE_HEIGHT = 500;
 /** Height threshold (px) above which user messages are collapsed */
 const USER_COLLAPSE_HEIGHT = 400;
 
-/** Detect if content contains rich markdown (code blocks, tables, lists, headers, images, blockquotes) */
+/** Detect if content contains rich markdown (code blocks, tables, lists, headers) */
 const RICH_MD_RE = /```|^\|.+\|/m;
 const RICH_MD_BLOCK_RE = /^(\s*[-*+]\s|#{1,6}\s|>\s|\d+\.\s)/m;
 
@@ -64,17 +50,13 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble = memo(function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
-  const [copied, setCopied] = useState(false);
-  const [reasoningOpen, setReasoningOpen] = useState(false);
-  const [swarmOpen, setSwarmOpen] = useState(false);
   const findByTitle = useArtifactStore((s) => s.findByTitle);
   const applyEdits = useArtifactStore((s) => s.applyEdits);
   const isMobile = useIsMobile();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
 
-  // During streaming, read from the lightweight streaming buffer instead of
-  // the full messages array (avoids O(n) array copy per chunk).
+  // During streaming, read from the lightweight streaming buffer
   const streamingContent = useChatStore((s) =>
     isLast && isAssistant && s.isStreaming ? s.streamingContent : null
   );
@@ -98,19 +80,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const bubbleRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
-  // Collapse long user messages (~20 lines ≈ 400px)
+  // Collapse long user messages (~20 lines = 400px)
   const [isUserExpanded, setIsUserExpanded] = useState(false);
   const userBubbleRef = useRef<HTMLDivElement>(null);
   const [isUserOverflowing, setIsUserOverflowing] = useState(false);
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Parse artifacts and edits from assistant messages (memoized — regex parsing is expensive).
-  // During streaming, skip expensive regex parsing — render plain markdown instead.
+  // Parse artifacts and edits from assistant messages (memoized)
   const parts = useMemo(
     () => (isAssistant && !isCurrentlyStreaming ? parseContentWithArtifacts(displayContent) : []),
     [isAssistant, isCurrentlyStreaming, displayContent]
@@ -126,7 +101,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     [isAssistant, hasSpecialParts, displayContent]
   );
 
-  // Detect overflow for assistant messages (skip during streaming to avoid layout thrashing)
+  // Detect overflow for assistant messages (skip during streaming)
   useEffect(() => {
     if (!isAssistant || isExpanded || isCurrentlyStreaming) return;
     const el = bubbleRef.current;
@@ -146,19 +121,14 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     });
   }, [displayContent, isUser, isUserExpanded]);
 
-  // Auto-apply edits to existing artifacts (run once per message).
-  // `parts` is derived from `displayContent` so it does not need to be a dep.
-  // `isAssistant` is derived from `message.role` which is stable per message instance.
-  // `appliedEditsRef` guards against re-application even if deps re-fire.
+  // Auto-apply edits to existing artifacts (run once per message)
   useEffect(() => {
     if (!isAssistant) return;
-
     const editParts = parts.filter((p) => p.type === "edit");
     for (const part of editParts) {
       const editKey = `${message.id}-${part.title}`;
       if (appliedEditsRef.current.has(editKey)) continue;
       appliedEditsRef.current.add(editKey);
-
       const target = findByTitle(part.title || "");
       if (target && part.edits) {
         applyEdits(target.id, part.edits);
@@ -168,28 +138,23 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   }, [message.id, displayContent, findByTitle, applyEdits]);
 
   const handleOpenArtifact = (part: ParsedPart) => {
-    // Reuse existing artifact if already tracked (prevents version increment on re-click)
     const existing = findByTitle(part.title || "");
     if (existing) {
       openArtifactInPanel(existing);
       return;
     }
-
-    const artifact = {
+    openArtifactInPanel({
       id: crypto.randomUUID(),
       type: (part.artifactType || "DOCUMENT") as ArtifactType,
       title: part.title || "Документ",
       content: part.content,
       version: 1,
-    };
-    openArtifactInPanel(artifact);
+    });
   };
 
   const handleOpenEditedArtifact = (title: string) => {
     const target = findByTitle(title);
-    if (target) {
-      openArtifactInPanel(target);
-    }
+    if (target) openArtifactInPanel(target);
   };
 
   return (
@@ -201,77 +166,15 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
       role="article"
       aria-label={isUser ? "Сообщение пользователя" : "Ответ ассистента"}
     >
-      {/* Avatar */}
-      {(() => {
-        const hasCustomIcon = agentIcon && ICON_MAP[agentIcon];
-        const AgentIcon = hasCustomIcon ? ICON_MAP[agentIcon] : null;
-        return (
-          <div
-            className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-              isUser
-                ? "bg-accent text-white"
-                : !agentIconColor && "bg-accent text-white"
-            )}
-            style={!isUser && agentIconColor ? { backgroundColor: agentIconColor, color: "white" } : undefined}
-          >
-            {isUser ? (
-              <User className="h-4 w-4" />
-            ) : AgentIcon ? (
-              <AgentIcon className="h-4 w-4" />
-            ) : (
-              <SanbaoCompass size={18} className="text-white" />
-            )}
-          </div>
-        );
-      })()}
+      <MessageAvatar isUser={isUser} agentIcon={agentIcon} agentIconColor={agentIconColor} />
 
-      {/* Content */}
-      <div
-        className={cn(
-          "flex-1 min-w-0",
-          isUser && "max-w-[85%] flex flex-col items-end"
-        )}
-      >
-        {/* Name */}
+      <div className={cn("flex-1 min-w-0", isUser && "max-w-[85%] flex flex-col items-end")}>
         <span className="text-[11px] font-medium text-text-secondary mb-1 block">
           {isUser ? "Вы" : (agentName || "Sanbao")}
         </span>
 
-        {/* Reasoning block */}
-        {isAssistant && displayReasoning && (
-          <div className="mb-2 w-full">
-            <button
-              onClick={() => setReasoningOpen(!reasoningOpen)}
-              className="flex items-center gap-1.5 text-[11px] text-legal-ref hover:text-[#A07D55] transition-colors cursor-pointer mb-1"
-            >
-              <Brain className="h-3 w-3" />
-              <span>Ход мысли</span>
-              <ChevronDown
-                className={cn(
-                  "h-3 w-3 transition-transform",
-                  reasoningOpen && "rotate-180"
-                )}
-              />
-            </button>
-            {reasoningOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="rounded-xl bg-legal-ref-bg border border-legal-ref/20 px-3 py-2 text-xs text-legal-ref leading-relaxed max-h-[300px] overflow-y-auto"
-              >
-                <pre className="whitespace-pre-wrap font-sans">
-                  {displayReasoning}
-                </pre>
-              </motion.div>
-            )}
-          </div>
-        )}
-
-        {/* Plan block */}
-        {isAssistant && message.planContent && (
-          <PlanBlock content={message.planContent} />
-        )}
+        {isAssistant && displayReasoning && <ReasoningBlock reasoning={displayReasoning} />}
+        {isAssistant && message.planContent && <PlanBlock content={message.planContent} />}
 
         {/* Message bubble */}
         <div
@@ -293,161 +196,33 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
           }}
         >
           {isAssistant ? (
-            <div className="prose-sanbao">
-              {hasSpecialParts ? (
-                // Render with inline artifact/edit cards
-                parts.map((part, i) => {
-                  if (part.type === "text") {
-                    return part.content.trim() ? (
-                      <ReactMarkdown
-                        key={i}
-                        remarkPlugins={[remarkGfm]}
-                        urlTransform={urlTransform}
-                        components={markdownComponents}
-                      >
-                        {part.content}
-                      </ReactMarkdown>
-                    ) : null;
-                  }
-
-                  if (part.type === "artifact") {
-                    return (
-                      <div key={i}>
-                        {/* Render artifact content inline as markdown */}
-                        {part.content.trim() && (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            urlTransform={urlTransform}
-                            components={markdownComponents}
-                          >
-                            {part.content}
-                          </ReactMarkdown>
-                        )}
-                        {/* Compact widget to open in artifact panel */}
-                        <button
-                          onClick={() => handleOpenArtifact(part)}
-                          className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-accent hover:shadow-sm transition-all cursor-pointer text-left group/artifact"
-                        >
-                          <div className="h-10 w-10 rounded-lg bg-accent-light flex items-center justify-center shrink-0">
-                            <FileText className="h-5 w-5 text-accent" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-text-primary truncate">
-                              {part.title}
-                            </p>
-                            <p className="text-xs text-text-secondary">
-                              {ARTIFACT_TYPE_LABELS[part.artifactType || ""] ||
-                                part.artifactType}{" "}
-                              &middot; Открыть в панели
-                            </p>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-text-secondary group-hover/artifact:text-accent transition-colors shrink-0" />
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  if (part.type === "edit") {
-                    const target = findByTitle(part.title || "");
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => handleOpenEditedArtifact(part.title || "")}
-                        className="my-2 w-full flex items-center gap-3 p-3 rounded-xl bg-success-light border border-success/20 hover:border-success/40 hover:shadow-sm transition-all cursor-pointer text-left group/edit"
-                      >
-                        <div className="h-10 w-10 rounded-lg bg-success-light flex items-center justify-center shrink-0">
-                          <Pencil className="h-5 w-5 text-success" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text-primary truncate">
-                            {part.title}
-                          </p>
-                          <p className="text-xs text-success">
-                            {part.edits?.length} {part.edits?.length === 1 ? "изменение" : "изменений"}
-                            {target ? ` · v${target.version}` : ""}
-                            {" "}&middot; Нажмите чтобы открыть
-                          </p>
-                        </div>
-                        <ExternalLink className="h-4 w-4 text-text-secondary group-hover/edit:text-success transition-colors shrink-0" />
-                      </button>
-                    );
-                  }
-
-                  return null;
-                })
-              ) : (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  urlTransform={urlTransform}
-                  components={markdownComponents}
-                >
-                  {displayContent.replace(CLARIFY_REGEX, "").trim()}
-                </ReactMarkdown>
-              )}
-            </div>
+            <AssistantContent
+              parts={parts}
+              hasSpecialParts={hasSpecialParts}
+              displayContent={displayContent}
+              onOpenArtifact={handleOpenArtifact}
+              onOpenEditedArtifact={handleOpenEditedArtifact}
+              findByTitle={findByTitle}
+            />
           ) : (
             <p className="whitespace-pre-wrap">{displayContent}</p>
           )}
 
-          {/* Gradient overlay + expand button for collapsed user messages */}
           {isUser && !isUserExpanded && isUserOverflowing && (
-            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-accent via-accent/90 to-transparent flex items-end justify-center pb-2">
-              <button
-                onClick={() => setIsUserExpanded(true)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-white/20 border border-white/30 shadow-sm text-white hover:bg-white/30 transition-colors cursor-pointer"
-              >
-                <ChevronDown className="h-3 w-3" />
-                Показать полностью
-              </button>
-            </div>
+            <CollapseOverlay variant="user" onToggle={() => setIsUserExpanded(true)} isExpanded={false} />
           )}
-
-          {/* Gradient overlay + expand button for collapsed messages */}
           {isAssistant && !isExpanded && isOverflowing && (
-            <div className={cn(
-              "absolute bottom-0 left-0 right-0 h-20 flex items-end justify-center pb-2",
-              isRichMd
-                ? "bg-gradient-to-t from-surface-alt via-surface-alt/90 to-transparent"
-                : "bg-gradient-to-t from-bg via-bg/90 to-transparent"
-            )}>
-              <button
-                onClick={() => setIsExpanded(true)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
-              >
-                <ChevronDown className="h-3 w-3" />
-                Показать полностью
-              </button>
-            </div>
+            <CollapseOverlay variant="assistant" isRichMd={isRichMd} onToggle={() => setIsExpanded(true)} isExpanded={false} />
           )}
         </div>
 
-        {/* Collapse button when expanded — assistant */}
         {isAssistant && isExpanded && isOverflowing && (
-          <div className="flex justify-center mt-2">
-            <button
-              onClick={() => setIsExpanded(false)}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
-            >
-              <ChevronDown className="h-3 w-3 rotate-180" />
-              Свернуть
-            </button>
-          </div>
+          <CollapseOverlay variant="assistant" onToggle={() => setIsExpanded(false)} isExpanded={true} />
         )}
-
-        {/* Collapse button when expanded — user */}
         {isUser && isUserExpanded && isUserOverflowing && (
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={() => setIsUserExpanded(false)}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-medium bg-surface border border-border shadow-sm text-text-primary hover:border-accent hover:text-accent transition-colors cursor-pointer"
-            >
-              <ChevronDown className="h-3 w-3 rotate-180" />
-              Свернуть
-            </button>
-          </div>
+          <CollapseOverlay variant="user" onToggle={() => setIsUserExpanded(false)} isExpanded={true} />
         )}
 
-        {/* Legal References */}
         {message.legalRefs && message.legalRefs.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {message.legalRefs.map((ref) => (
@@ -456,108 +231,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
           </div>
         )}
 
-        {/* Swarm agent responses (collapsible) */}
-        {isAssistant && swarmAgentResponses.length > 0 && (
-          <div className="mt-2 w-full">
-            <button
-              onClick={() => setSwarmOpen(!swarmOpen)}
-              className="flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 transition-colors cursor-pointer mb-1"
-            >
-              <Network className="h-3 w-3" />
-              <span>Ответы агентов ({swarmAgentResponses.length})</span>
-              <ChevronRight
-                className={cn(
-                  "h-3 w-3 transition-transform",
-                  swarmOpen && "rotate-90"
-                )}
-              />
-            </button>
-            {swarmOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="space-y-2"
-              >
-                {swarmAgentResponses.map((resp) => (
-                  <div
-                    key={resp.id}
-                    className="rounded-xl bg-amber-500/5 border border-amber-500/15 px-3 py-2"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Bot className="h-3 w-3 text-amber-500" />
-                      <span className="text-xs font-medium text-text-primary">
-                        {resp.name}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-                      {resp.content}
-                    </p>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </div>
-        )}
+        {isAssistant && <SwarmResponses responses={swarmAgentResponses} />}
 
-        {/* Actions — assistant */}
-        {isAssistant && (
-          <div className={cn(
-            "flex items-center gap-1 mt-1.5 transition-opacity",
-            isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          )}>
-            <button
-              onClick={handleCopy}
-              aria-label="Копировать сообщение"
-              className={cn(
-                "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
-                isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
-              )}
-            >
-              {copied ? (
-                <Check className="h-3 w-3 text-success" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-              {copied ? "Скопировано" : "Копировать"}
-            </button>
-            {onRetry && (
-              <button
-                onClick={() => onRetry(message.id)}
-                aria-label="Повторить запрос"
-                className={cn(
-                  "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
-                  isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
-                )}
-              >
-                <RotateCcw className="h-3 w-3" />
-                Повторить
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Actions — user (copy) */}
-        {isUser && (
-          <div className={cn(
-            "flex items-center gap-1 mt-1.5 transition-opacity justify-end",
-            isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          )}>
-            <button
-              onClick={handleCopy}
-              aria-label="Копировать сообщение"
-              className={cn(
-                "rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-alt flex items-center gap-1 transition-colors cursor-pointer",
-                isMobile ? "h-8 px-3 text-xs" : "h-6 px-2 text-[10px]"
-              )}
-            >
-              {copied ? (
-                <Check className="h-3 w-3 text-success" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-              {copied ? "Скопировано" : "Копировать"}
-            </button>
-          </div>
+        {(isUser || isAssistant) && (
+          <MessageActions
+            content={message.content}
+            messageId={message.id}
+            isUser={isUser}
+            isMobile={isMobile}
+            onRetry={isAssistant ? onRetry : undefined}
+          />
         )}
       </div>
     </motion.div>

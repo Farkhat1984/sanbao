@@ -17,6 +17,11 @@ import {
   TOOL_RESULT_TAIL_CHARS,
 } from "@/lib/constants";
 import { getSettingNumber } from "@/lib/settings";
+import {
+  createPlanDetectorState,
+  feedPlanDetector,
+  flushPlanDetector,
+} from "@/lib/chat/plan-parser";
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -25,20 +30,10 @@ const WEB_SEARCH_BUILTIN = {
   function: { name: "$web_search" },
 };
 
-// ─── MCP tool context type ───────────────────────────────
+// ─── MCP tool context type (shared) ──────────────────────
 
-export interface McpToolContext {
-  url: string;
-  transport: "SSE" | "STREAMABLE_HTTP";
-  apiKey: string | null;
-  name: string;
-  /** Original tool name on the MCP server (before namespace prefix). Used for dispatch. */
-  originalName?: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  /** MCP server ID from DB — used for tool call logging */
-  mcpServerId?: string;
-}
+import type { McpToolContext } from "@/lib/types/mcp";
+export type { McpToolContext } from "@/lib/types/mcp";
 
 // ─── Stream options ──────────────────────────────────────
 
@@ -213,9 +208,8 @@ export function streamMoonshot(
         const currentMessages = [...apiMessages];
         let searchNotified = false;
 
-        // Plan detection state
-        let insidePlan = false;
-        let planBuffer = "";
+        // Plan detection state (shared parser)
+        const planState = createPlanDetectorState();
 
         // Usage accumulation for token logging
         let totalInputTokens = 0;
@@ -379,102 +373,21 @@ export function streamMoonshot(
 
             // Stream content with plan detection
             if (delta?.content) {
-              planBuffer += delta.content;
-
-              // Check for plan opening tag
-              if (
-                !insidePlan &&
-                planBuffer.includes("<sanbao-plan>")
-              ) {
-                const idx = planBuffer.indexOf("<sanbao-plan>");
-                const before = planBuffer.slice(0, idx);
-                if (before) {
-                  controller.enqueue(
-                    encoder.encode(
-                      JSON.stringify({ t: "c", v: before }) + "\n"
-                    )
-                  );
-                }
-                planBuffer = planBuffer.slice(
-                  idx + "<sanbao-plan>".length
+              const { chunks } = feedPlanDetector(planState, delta.content);
+              for (const ch of chunks) {
+                controller.enqueue(
+                  encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
                 );
-                insidePlan = true;
-              }
-
-              if (insidePlan) {
-                // Check for plan closing tag
-                if (planBuffer.includes("</sanbao-plan>")) {
-                  const idx =
-                    planBuffer.indexOf("</sanbao-plan>");
-                  const planText = planBuffer.slice(0, idx);
-                  if (planText) {
-                    controller.enqueue(
-                      encoder.encode(
-                        JSON.stringify({ t: "p", v: planText }) +
-                          "\n"
-                      )
-                    );
-                  }
-                  planBuffer = planBuffer.slice(
-                    idx + "</sanbao-plan>".length
-                  );
-                  insidePlan = false;
-                  // Flush remaining as content
-                  if (planBuffer) {
-                    controller.enqueue(
-                      encoder.encode(
-                        JSON.stringify({
-                          t: "c",
-                          v: planBuffer,
-                        }) + "\n"
-                      )
-                    );
-                    planBuffer = "";
-                  }
-                } else if (planBuffer.length > 20) {
-                  // Flush accumulated plan content incrementally
-                  controller.enqueue(
-                    encoder.encode(
-                      JSON.stringify({ t: "p", v: planBuffer }) +
-                        "\n"
-                    )
-                  );
-                  planBuffer = "";
-                }
-              } else {
-                // Keep tail that could be a partial "<sanbao-plan>" tag
-                const TAG = "<sanbao-plan>";
-                let safeFlush = planBuffer;
-                let keepTail = "";
-                for (let k = 1; k < TAG.length; k++) {
-                  if (planBuffer.endsWith(TAG.slice(0, k))) {
-                    safeFlush = planBuffer.slice(0, -k);
-                    keepTail = planBuffer.slice(-k);
-                    break;
-                  }
-                }
-                if (safeFlush) {
-                  controller.enqueue(
-                    encoder.encode(
-                      JSON.stringify({ t: "c", v: safeFlush }) +
-                        "\n"
-                    )
-                  );
-                }
-                planBuffer = keepTail;
               }
             }
           }
 
           // Flush remaining plan buffer
-          if (planBuffer) {
-            const type = insidePlan ? "p" : "c";
+          const { chunks: finalChunks } = flushPlanDetector(planState);
+          for (const ch of finalChunks) {
             controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: type, v: planBuffer }) + "\n"
-              )
+              encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
             );
-            planBuffer = "";
           }
 
           // ─── Token budget check ──────────────────────────────

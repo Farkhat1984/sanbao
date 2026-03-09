@@ -1,12 +1,9 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
 
   const { code, planId } = await req.json();
   if (!code || typeof code !== "string") {

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { api } from "@/lib/api-client";
 
 interface Notification {
   id: string;
@@ -14,6 +15,12 @@ interface Notification {
   userId: string | null;
   isRead: boolean;
   createdAt: string;
+}
+
+interface NotificationsResponse {
+  notifications: Notification[];
+  nextCursor?: string;
+  hasMore?: boolean;
 }
 
 const TYPES = ["INFO", "WARNING", "ERROR", "MAINTENANCE", "UPDATE", "BILLING"];
@@ -34,8 +41,7 @@ export default function AdminNotificationsPage() {
   const fetchInitial = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}`);
-      const data = await res.json();
+      const data = await api.get<NotificationsResponse>(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}`);
       setNotifications(data.notifications || []);
       setNextCursor(data.nextCursor ?? null);
       setHasMore(data.hasMore ?? false);
@@ -52,8 +58,7 @@ export default function AdminNotificationsPage() {
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore || !nextCursor) return;
     setLoadingMore(true);
-    fetch(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}&cursor=${nextCursor}`)
-      .then((res) => res.json())
+    api.get<NotificationsResponse>(`/api/admin/notifications?limit=${NOTIFICATIONS_LIMIT}&cursor=${nextCursor}`)
       .then((data) => {
         const newItems = data.notifications || [];
         setNotifications((prev) => [...prev, ...newItems]);
@@ -84,11 +89,7 @@ export default function AdminNotificationsPage() {
   const handleSend = async () => {
     if (!form.title || !form.message) return;
     setSending(true);
-    await fetch("/api/admin/notifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    await api.post("/api/admin/notifications", form);
     setSending(false);
     setForm({ title: "", message: "", type: "INFO", isGlobal: true });
     // Reset and re-fetch from the beginning to show new notification at top

@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { useAdminList } from "@/hooks/useAdminList";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
 
 interface PromoCode {
   id: string;
@@ -32,6 +34,11 @@ export default function AdminPromoCodesPage() {
       dataKey: "codes",
     });
 
+  const { handleToggle, handleDelete } = useAdminCrud({
+    endpoint: "/api/admin/promo-codes",
+    refetch,
+  });
+
   const [adding, setAdding] = useState(false);
   const [newCode, setNewCode] = useState({ code: "", description: "", discount: 10, maxUses: 0, validUntil: "" });
 
@@ -46,21 +53,6 @@ export default function AdminPromoCodesPage() {
       setNewCode({ code: "", description: "", discount: 10, maxUses: 0, validUntil: "" });
       refetch();
     }
-  };
-
-  const handleToggle = async (id: string, isActive: boolean) => {
-    await fetch(`/api/admin/promo-codes/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
-    refetch();
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Удалить промокод?")) return;
-    await fetch(`/api/admin/promo-codes/${id}`, { method: "DELETE" });
-    refetch();
   };
 
   if (loading) return <AdminListSkeleton rows={3} height="h-16" />;
@@ -82,10 +74,10 @@ export default function AdminPromoCodesPage() {
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Новый промокод</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <input placeholder="Код (SUMMER2024)" value={newCode.code} onChange={(e) => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent font-mono" />
-            <input placeholder="Описание" value={newCode.description} onChange={(e) => setNewCode({ ...newCode, description: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
-            <input placeholder="Скидка %" type="number" min="1" max="100" value={newCode.discount} onChange={(e) => setNewCode({ ...newCode, discount: parseInt(e.target.value) || 0 })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
-            <input placeholder="Макс. использований (0=безлим)" type="number" value={newCode.maxUses} onChange={(e) => setNewCode({ ...newCode, maxUses: parseInt(e.target.value) || 0 })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
+            <Input placeholder="Код (SUMMER2024)" value={newCode.code} onChange={(e) => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })} className="h-9 bg-surface-alt font-mono" />
+            <Input placeholder="Описание" value={newCode.description} onChange={(e) => setNewCode({ ...newCode, description: e.target.value })} className="h-9 bg-surface-alt" />
+            <Input placeholder="Скидка %" type="number" min="1" max="100" value={newCode.discount} onChange={(e) => setNewCode({ ...newCode, discount: parseInt(e.target.value) || 0 })} className="h-9 bg-surface-alt" />
+            <Input placeholder="Макс. использований (0=безлим)" type="number" value={newCode.maxUses} onChange={(e) => setNewCode({ ...newCode, maxUses: parseInt(e.target.value) || 0 })} className="h-9 bg-surface-alt" />
           </div>
           <div className="mt-3">
             <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
@@ -114,7 +106,7 @@ export default function AdminPromoCodesPage() {
               <Button variant="secondary" size="sm" onClick={() => handleToggle(c.id, c.isActive)}>
                 {c.isActive ? "Откл." : "Вкл."}
               </Button>
-              <button onClick={() => handleDelete(c.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
+              <button onClick={() => handleDelete(c.id, "Удалить промокод?")} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>

@@ -1,17 +1,15 @@
 import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
 import { callMcpTool } from "@/lib/mcp-client";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 const UNIFIED_MCP_URL =
   process.env.UNIFIED_MCP_URL || "http://orchestrator:8120/mcp";
 const CORTEX_TOKEN = process.env.AI_CORTEX_AUTH_TOKEN || null;
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const authResult = await requireAuth();
+  if ('error' in authResult) return authResult.error;
+  const { userId } = authResult.auth;
 
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
@@ -21,7 +19,7 @@ export async function GET(request: NextRequest) {
     return jsonError("Missing code or article parameter", 400);
   }
 
-  const ctx = { userId: session.user.id };
+  const ctx = { userId };
 
   // source:// protocol — resolve via get_source tool
   if (code === "source") {

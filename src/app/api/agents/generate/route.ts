@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import {
@@ -14,13 +13,12 @@ import {
 } from "@/lib/llm-generate";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const rateLimit = await getSettingNumber('rate_agent_gen_per_minute');
-  if (!(await checkMinuteRateLimit(`agent-gen:${session.user.id}`, rateLimit))) {
+  if (!(await checkMinuteRateLimit(`agent-gen:${userId}`, rateLimit))) {
     return jsonError("Слишком много запросов", 429);
   }
 

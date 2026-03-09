@@ -49,18 +49,8 @@ export interface PromptTool {
   sortOrder: number;
 }
 
-export interface McpToolContext {
-  url: string;
-  transport: "SSE" | "STREAMABLE_HTTP";
-  apiKey: string | null;
-  name: string;
-  /** Original tool name on the MCP server (before namespace prefix). Used for dispatch. */
-  originalName?: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  /** MCP server ID from DB — used for tool call logging */
-  mcpServerId?: string;
-}
+import type { McpToolContext } from "@/lib/types/mcp";
+export type { McpToolContext } from "@/lib/types/mcp";
 
 export interface ResolvedAgentContext {
   systemPrompt: string;

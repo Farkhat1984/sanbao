@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Power, PowerOff, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { api } from "@/lib/api-client";
 
 interface Experiment {
   id: string;
@@ -34,38 +35,30 @@ export default function AdminExperimentsPage() {
   });
 
   const fetchData = async () => {
-    const res = await fetch("/api/admin/experiments");
-    setExperiments(await res.json());
+    const data = await api.get<Experiment[]>("/api/admin/experiments");
+    setExperiments(data);
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async () => {
-    const res = await fetch("/api/admin/experiments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
+    try {
+      await api.post("/api/admin/experiments", form);
       setAdding(false);
       setForm({ name: "", description: "", key: "prompt_system_global", variantA: "", variantB: "", trafficPct: 50 });
       fetchData();
-    }
+    } catch { /* validation error — stay on form */ }
   };
 
   const handleToggle = async (id: string, isActive: boolean) => {
-    await fetch(`/api/admin/experiments/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
+    await api.put(`/api/admin/experiments/${id}`, { isActive: !isActive });
     fetchData();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить эксперимент?")) return;
-    await fetch(`/api/admin/experiments/${id}`, { method: "DELETE" });
+    await api.delete(`/api/admin/experiments/${id}`);
     fetchData();
   };
 

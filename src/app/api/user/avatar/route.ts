@@ -1,13 +1,11 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isUrlSafe } from "@/lib/ssrf";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function PUT(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const { avatar } = await req.json();
 
@@ -22,7 +20,7 @@ export async function PUT(req: Request) {
   }
 
   await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: userId },
     data: { image: avatar || null },
   });
 

@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Plus, Key, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { useAdminList } from "@/hooks/useAdminList";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
 
 interface ApiKeyEntry {
   id: string;
@@ -33,20 +35,16 @@ export default function AdminApiKeysPage() {
       dataKey: "keys",
     });
 
+  const { handleToggle, handleDelete } = useAdminCrud({
+    endpoint: "/api/admin/api-keys",
+    refetch,
+  });
+
   const [adding, setAdding] = useState(false);
   const [newKey, setNewKey] = useState({ userId: "", name: "", rateLimit: 60 });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState(60);
-
-  const handleToggle = async (id: string, isActive: boolean) => {
-    await fetch(`/api/admin/api-keys/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
-    refetch();
-  };
 
   const handleUpdateRate = async (id: string) => {
     await fetch(`/api/admin/api-keys/${id}`, {
@@ -55,12 +53,6 @@ export default function AdminApiKeysPage() {
       body: JSON.stringify({ rateLimit: editRate }),
     });
     setEditId(null);
-    refetch();
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Удалить API-ключ?")) return;
-    await fetch(`/api/admin/api-keys/${id}`, { method: "DELETE" });
     refetch();
   };
 
@@ -105,9 +97,9 @@ export default function AdminApiKeysPage() {
       {adding && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
           <div className="grid grid-cols-3 gap-3">
-            <input placeholder="User ID" value={newKey.userId} onChange={(e) => setNewKey({ ...newKey, userId: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
-            <input placeholder="Название ключа" value={newKey.name} onChange={(e) => setNewKey({ ...newKey, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
-            <input placeholder="Rate limit (req/min)" type="number" value={newKey.rateLimit} onChange={(e) => setNewKey({ ...newKey, rateLimit: parseInt(e.target.value) || 60 })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
+            <Input placeholder="User ID" value={newKey.userId} onChange={(e) => setNewKey({ ...newKey, userId: e.target.value })} className="h-9 bg-surface-alt" />
+            <Input placeholder="Название ключа" value={newKey.name} onChange={(e) => setNewKey({ ...newKey, name: e.target.value })} className="h-9 bg-surface-alt" />
+            <Input placeholder="Rate limit (req/min)" type="number" value={newKey.rateLimit} onChange={(e) => setNewKey({ ...newKey, rateLimit: parseInt(e.target.value) || 60 })} className="h-9 bg-surface-alt" />
           </div>
           <div className="mt-3"><Button variant="gradient" size="sm" onClick={handleCreate}><Key className="h-3.5 w-3.5" /> Создать ключ</Button></div>
         </div>
@@ -135,7 +127,7 @@ export default function AdminApiKeysPage() {
             <div className="flex items-center gap-1">
               {editId === k.id ? (
                 <div className="flex items-center gap-1">
-                  <input type="number" value={editRate} onChange={(e) => setEditRate(parseInt(e.target.value) || 60)} className="h-8 w-20 px-2 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent" />
+                  <Input type="number" value={editRate} onChange={(e) => setEditRate(parseInt(e.target.value) || 60)} className="h-8 w-20 bg-surface-alt" />
                   <Button variant="gradient" size="sm" onClick={() => handleUpdateRate(k.id)}><Save className="h-3 w-3" /></Button>
                   <Button variant="secondary" size="sm" onClick={() => setEditId(null)}>X</Button>
                 </div>
@@ -145,7 +137,7 @@ export default function AdminApiKeysPage() {
               <Button variant="secondary" size="sm" onClick={() => handleToggle(k.id, k.isActive)}>
                 {k.isActive ? "Откл." : "Вкл."}
               </Button>
-              <button onClick={() => handleDelete(k.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
+              <button onClick={() => handleDelete(k.id, "Удалить API-ключ?")} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>

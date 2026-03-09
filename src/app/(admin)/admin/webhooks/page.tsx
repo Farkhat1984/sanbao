@@ -4,11 +4,14 @@ import { useState } from "react";
 import { Plus, Save, Trash2, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { useAdminList } from "@/hooks/useAdminList";
+import { useAdminCrud } from "@/hooks/useAdminCrud";
+import { api } from "@/lib/api-client";
 
 interface WebhookEntry {
   id: string;
@@ -35,6 +38,11 @@ export default function AdminWebhooksPage() {
       dataKey: "webhooks",
     });
 
+  const { handleToggle, handleDelete } = useAdminCrud({
+    endpoint: "/api/admin/webhooks",
+    refetch,
+  });
+
   const [adding, setAdding] = useState(false);
   const [newWh, setNewWh] = useState({ url: "", events: [] as string[] });
 
@@ -46,27 +54,12 @@ export default function AdminWebhooksPage() {
   };
 
   const handleCreate = async () => {
-    const res = await fetch("/api/admin/webhooks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newWh),
-    });
-    if (res.ok) { setAdding(false); setNewWh({ url: "", events: [] }); refetch(); }
-  };
-
-  const handleToggle = async (id: string, isActive: boolean) => {
-    await fetch(`/api/admin/webhooks/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
-    refetch();
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Удалить вебхук?")) return;
-    await fetch(`/api/admin/webhooks/${id}`, { method: "DELETE" });
-    refetch();
+    try {
+      await api.post("/api/admin/webhooks", newWh);
+      setAdding(false);
+      setNewWh({ url: "", events: [] });
+      refetch();
+    } catch { /* validation error — stay on form */ }
   };
 
   if (loading) return <AdminListSkeleton rows={2} height="h-24" />;
@@ -86,7 +79,7 @@ export default function AdminWebhooksPage() {
 
       {adding && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
-          <input placeholder="URL (https://...)" value={newWh.url} onChange={(e) => setNewWh({ ...newWh, url: e.target.value })} className="w-full h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent mb-3" />
+          <Input placeholder="URL (https://...)" value={newWh.url} onChange={(e) => setNewWh({ ...newWh, url: e.target.value })} className="h-9 bg-surface-alt mb-3" />
           <p className="text-xs text-text-secondary mb-2">События:</p>
           <div className="flex flex-wrap gap-2 mb-3">
             {AVAILABLE_EVENTS.map((ev) => (
@@ -108,7 +101,7 @@ export default function AdminWebhooksPage() {
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="secondary" size="sm" onClick={() => handleToggle(w.id, w.isActive)}>{w.isActive ? "Откл." : "Вкл."}</Button>
-                <button onClick={() => handleDelete(w.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={() => handleDelete(w.id, "Удалить вебхук?")} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </div>
             <div className="flex flex-wrap gap-1">

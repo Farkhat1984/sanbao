@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Save, Trash2, Power, PowerOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { api } from "@/lib/api-client";
 
 interface Provider {
   id: string;
@@ -31,8 +32,7 @@ export default function AdminProvidersPage() {
   });
 
   const fetchProviders = async () => {
-    const res = await fetch("/api/admin/providers");
-    const data = await res.json();
+    const data = await api.get<Provider[]>("/api/admin/providers");
     setProviders(data);
     setLoading(false);
   };
@@ -42,24 +42,16 @@ export default function AdminProvidersPage() {
   }, []);
 
   const handleCreate = async () => {
-    const res = await fetch("/api/admin/providers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newProvider),
-    });
-    if (res.ok) {
+    try {
+      await api.post("/api/admin/providers", newProvider);
       setNewProvider({ name: "", slug: "", baseUrl: "", apiKey: "", priority: 0, apiFormat: "OPENAI_COMPAT" });
       setAdding(false);
       fetchProviders();
-    }
+    } catch { /* validation error — stay on form */ }
   };
 
   const handleUpdate = async (id: string, data: Partial<Provider>) => {
-    await fetch(`/api/admin/providers/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    await api.put(`/api/admin/providers/${id}`, data);
     fetchProviders();
   };
 
@@ -69,12 +61,7 @@ export default function AdminProvidersPage() {
   const handleTest = async (id: string) => {
     setTesting(id);
     try {
-      const res = await fetch("/api/admin/providers/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerId: id }),
-      });
-      const data = await res.json();
+      const data = await api.post<{ success: boolean; latency?: number; error?: string; modelCount?: number }>("/api/admin/providers/test", { providerId: id });
       setTestResult((prev) => ({ ...prev, [id]: data }));
     } catch {
       setTestResult((prev) => ({ ...prev, [id]: { success: false, error: "Network error" } }));
@@ -84,7 +71,7 @@ export default function AdminProvidersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить провайдера и все его модели?")) return;
-    await fetch(`/api/admin/providers/${id}`, { method: "DELETE" });
+    await api.delete(`/api/admin/providers/${id}`);
     fetchProviders();
   };
 

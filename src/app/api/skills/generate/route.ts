@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import {
@@ -16,13 +15,12 @@ import {
 const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const rateLimit = await getSettingNumber('rate_skill_gen_per_minute');
-  if (!(await checkMinuteRateLimit(`skill-gen:${session.user.id}`, rateLimit))) {
+  if (!(await checkMinuteRateLimit(`skill-gen:${userId}`, rateLimit))) {
     return jsonError("Слишком много запросов", 429);
   }
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { McpToolContext } from "@/lib/chat/moonshot-stream";
+import type { McpToolContext } from "@/lib/types/mcp";
 
 export interface OrgAgentContext {
   agentId: string;

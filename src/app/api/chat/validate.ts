@@ -3,12 +3,42 @@
 // plan/usage checks, rate limiting, and content filtering.
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { jsonError } from "@/lib/api-helpers";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { checkContentFilter } from "@/lib/content-filter";
 import { getSettings } from "@/lib/settings";
 import type { ChatAttachment } from "@/lib/chat/message-builder";
+
+// ─── Zod Schemas ─────────────────────────────────────────
+
+const chatMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+});
+
+const chatAttachmentSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  base64: z.string().optional(),
+  textContent: z.string().optional(),
+});
+
+/** Runtime validation schema for the chat request body. */
+export const chatRequestSchema = z.object({
+  messages: z.array(chatMessageSchema).min(1),
+  agentId: z.string().optional(),
+  skillId: z.string().optional(),
+  orgAgentId: z.string().optional(),
+  thinkingEnabled: z.boolean().default(true),
+  webSearchEnabled: z.boolean().default(false),
+  planningEnabled: z.boolean().default(false),
+  attachments: z.array(chatAttachmentSchema).default([]),
+  conversationId: z.string().optional(),
+  swarmMode: z.boolean().default(false),
+  swarmOrgId: z.string().optional(),
+});
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -98,20 +128,16 @@ function parseSettings(cfg: Record<string, string>): ChatSettings {
 
 // ─── Body parser ────────────────────────────────────────
 
-export function parseChatBody(body: Record<string, unknown>): ChatRequestBody {
-  return {
-    messages: body.messages as Array<{ role: string; content: string }>,
-    agentId: body.agentId as string | undefined,
-    skillId: body.skillId as string | undefined,
-    orgAgentId: body.orgAgentId as string | undefined,
-    thinkingEnabled: (body.thinkingEnabled ?? true) as boolean,
-    webSearchEnabled: (body.webSearchEnabled ?? false) as boolean,
-    planningEnabled: (body.planningEnabled ?? false) as boolean,
-    attachments: (body.attachments ?? []) as ChatAttachment[],
-    conversationId: body.conversationId as string | undefined,
-    swarmMode: !!body.swarmMode,
-    swarmOrgId: body.swarmOrgId as string | undefined,
-  };
+/**
+ * Parse and validate the chat request body using Zod schema.
+ * Returns the validated body or null if validation fails.
+ */
+export function parseChatBody(body: Record<string, unknown>): ChatRequestBody | null {
+  const result = chatRequestSchema.safeParse(body);
+  if (!result.success) return null;
+  // Cast is safe: Zod schema matches ChatRequestBody structure,
+  // and ChatAttachment is a superset of the schema's attachment type.
+  return result.data as ChatRequestBody;
 }
 
 // ─── Validation pipeline ────────────────────────────────
@@ -127,13 +153,16 @@ export async function validateChatRequest(
   rawBody: Record<string, unknown>,
 ): Promise<{ data: ValidatedRequest } | { error: NextResponse | Response }> {
   const body = parseChatBody(rawBody);
+  if (!body) {
+    return { error: jsonError("Некорректный формат запроса", 400) };
+  }
 
   // Load dynamic settings (single DB query, cached)
   const cfg = await getSettings([...SETTINGS_KEYS]);
   const settings = parseSettings(cfg);
 
-  // Input validation
-  if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > settings.maxMessagesPerRequest) {
+  // Message count validation (Zod ensures min 1, check max against dynamic setting)
+  if (body.messages.length > settings.maxMessagesPerRequest) {
     return { error: jsonError("Некорректный массив сообщений", 400) };
   }
 

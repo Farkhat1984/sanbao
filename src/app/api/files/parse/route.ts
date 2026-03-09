@@ -1,15 +1,12 @@
-import { auth } from "@/lib/auth";
 import { parseFileToText } from "@/lib/parse-file";
 import { MAX_FILE_SIZE_PARSE, ALLOWED_FILE_TYPES } from "@/lib/constants";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 const MAX_FILE_SIZE = MAX_FILE_SIZE_PARSE;
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

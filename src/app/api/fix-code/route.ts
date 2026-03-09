@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { DEFAULT_MAX_TOKENS_FIX } from "@/lib/constants";
@@ -7,10 +6,9 @@ import { getPrompt } from "@/lib/prompts";
 import { getSettingNumber } from "@/lib/settings";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   // Rate limit
   const [rateFixCode, maxCodeBytes, maxErrorBytes] = await Promise.all([
@@ -18,7 +16,7 @@ export async function POST(req: Request) {
     getSettingNumber('fix_code_max_code_bytes'),
     getSettingNumber('fix_code_max_error_bytes'),
   ]);
-  if (!(await checkMinuteRateLimit(`fix-code:${session.user.id}`, rateFixCode))) {
+  if (!(await checkMinuteRateLimit(`fix-code:${userId}`, rateFixCode))) {
     return jsonError("Слишком много запросов", 429);
   }
 

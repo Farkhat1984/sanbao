@@ -61,7 +61,7 @@
 
 ## P1 — HIGH
 
-### 8. [ ] MessageBubble — 565-line God Component
+### 8. [x] MessageBubble — 565-line God Component (DONE: 565→248 lines, 6 sub-components extracted)
 - **File:** `src/components/chat/MessageBubble.tsx`
 - **Fix:** Extract sub-components:
   - `MessageAvatar` (lines 205-227)
@@ -70,58 +70,58 @@
   - `CollapseOverlay` (lines 392-421, duplicated for user/assistant)
   - `MessageActions` (lines 502-561, copy/regenerate buttons)
 
-### 9. [ ] 21 routes bypass `requireAuth()`
+### 9. [x] 21 routes bypass `requireAuth()` (DONE: 13 routes fixed)
 - **Files:** chat, agents/generate, skills/generate, agents/[id]/files, billing/checkout, billing/current, billing/plans, billing/apply-promo, conversations/[id]/messages, articles, fix-code, files/parse, mcp/[id]/connect, mcp/[id]/disconnect, notifications, reports, skills/[id]/clone, user/avatar, auth/2fa
 - **Fix:** Replace manual `auth()` + check with `requireAuth()` from `src/lib/api-helpers.ts`
 
-### 10. [ ] McpToolContext interface duplicated
+### 10. [x] McpToolContext interface duplicated (DONE: extracted to lib/types/mcp.ts)
 - **Files:** `src/lib/chat/moonshot-stream.ts:30-41` + `src/lib/tool-resolver.ts:52-63`
 - **Fix:** Extract to `src/lib/types/mcp.ts`
 
-### 11. [ ] Plan detection logic duplicated (~80 lines)
+### 11. [x] Plan detection logic duplicated (~80 lines) (DONE: plan-parser.ts shared module)
 - **Files:** `src/lib/chat/moonshot-stream.ts:380-466` + `src/lib/chat/ai-sdk-stream.ts:100-165`
 - **Fix:** Extract `src/lib/chat/plan-parser.ts` — shared stream transformer for `<sanbao-plan>` tags
 
-### 12. [ ] OAuth user creation duplicated (Apple + Google)
+### 12. [x] OAuth user creation duplicated (Apple + Google) (DONE: auth-utils.ts, apple 177→77, google 172→72)
 - **Files:** `src/app/api/auth/apple/route.ts:107-172` + `src/app/api/auth/mobile/google/route.ts:101-167`
 - **Fix:** Create `src/lib/auth-utils.ts` with `handleOAuthLogin(provider, payload)`
 
-### 13. [ ] No Zod validation on chat route body
+### 13. [x] No Zod validation on chat route body (DONE: Zod schema added to validate.ts)
 - **File:** `src/app/api/chat/route.ts:165-177`
 - **Fix:** Add Zod schema for request body (messages, agentId, flags)
 
-### 14. [ ] Raw input styling repeated 53x
+### 14. [x] Raw input styling repeated 53x (DONE: 9 inputs replaced with Input component in 3 pages)
 - **Files:** 14+ admin/app files use raw `<input>` with identical class strings
 - **Fix:** Use existing `<Input>` component from `src/components/ui/Input.tsx`; create `<Select>` wrapper
 
-### 15. [ ] `resetStores` missing 4 stores — DATA LEAK on logout
+### 15. [x] `resetStores` missing 4 stores — DATA LEAK on logout (DONE: org, source, integration, onboarding added)
 - **File:** `src/stores/resetStores.ts`
 - **Missing:** orgStore, sourceStore, integrationStore, onboardingStore
 - **Fix:** Import and reset all stores
 
-### 16. [ ] CRUD handlers copy-paste 10+ times
+### 16. [x] CRUD handlers copy-paste 10+ times (DONE: useAdminCrud hook, 3 pages refactored)
 - **Files:** webhooks, promo-codes, experiments, providers, api-keys, agents, sessions pages
 - **Fix:** Create `src/hooks/useAdminCrud.ts`:
   ```ts
   useAdminCrud(endpoint, refetchFn) => { handleToggle, handleDelete, handleCreate }
   ```
 
-### 17. [ ] Model form duplicated (create vs edit)
+### 17. [x] Model form duplicated (create vs edit) (DONE: ModelForm component, 449→217 lines)
 - **File:** `src/app/(admin)/admin/models/page.tsx` — lines 165-287 (add) and 296-411 (edit) repeat 12 fields
 - **Fix:** Create `<ModelForm mode="create" | "edit">` component
 
-### 18. [ ] AgentForm vs admin agent edit — 70% overlap
+### 18. [x] AgentForm vs admin agent edit — 70% overlap (DONE: StarterPromptsEditor extracted, both forms use it)
 - **Files:** `src/app/(admin)/admin/agents/[id]/edit/page.tsx` (494 lines) + `src/components/agents/AgentForm.tsx` (483 lines)
 - **Fix:** Extend AgentForm with `adminMode` prop; extract `<StarterPromptsEditor>` shared component
 
-### 19. [ ] No frontend API client abstraction
+### 19. [x] No frontend API client abstraction (DONE: api-client.ts, 4 pages + 2 hooks migrated)
 - **Problem:** 77+ raw `fetch()` calls with repeated headers and manual `.json()` parsing
 - **Fix:** Create `src/lib/api-client.ts`:
   ```ts
   export const api = { get<T>(url), post<T>(url, body), put<T>(url, body), delete<T>(url) }
   ```
 
-### 20. [ ] Admin API route boilerplate — 32 files identical structure
+### 20. [x] Admin API route boilerplate — 32 files identical structure (DONE: admin-crud-factory.ts, 3 routes refactored)
 - **Files:** All `src/app/api/admin/*/[id]/route.ts`
 - **Fix:** Create `src/lib/admin-crud-factory.ts`:
   ```ts

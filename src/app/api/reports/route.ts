@@ -1,12 +1,10 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const body = await req.json().catch(() => null);
   if (!body) {
@@ -25,7 +23,7 @@ export async function POST(req: Request) {
   // Prevent duplicate reports from same user
   const existing = await prisma.contentReport.findFirst({
     where: {
-      reporterId: session.user.id,
+      reporterId: userId,
       targetType,
       targetId,
       status: "PENDING",
@@ -38,7 +36,7 @@ export async function POST(req: Request) {
 
   const report = await prisma.contentReport.create({
     data: {
-      reporterId: session.user.id,
+      reporterId: userId,
       targetType,
       targetId,
       reason,

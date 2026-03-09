@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api-client";
 
 interface UseAdminListOptions {
   /** API endpoint path (e.g. "/api/admin/webhooks") */
@@ -45,10 +46,9 @@ export function useAdminList<T>({
         page: String(page),
         limit: String(perPage),
       });
-      const res = await fetch(`${endpoint}?${params}`);
-      const data = await res.json();
-      setItems(data[dataKey] || []);
-      setTotal(data[totalKey] || 0);
+      const data = await api.get<Record<string, unknown>>(`${endpoint}?${params}`);
+      setItems((data[dataKey] as T[]) || []);
+      setTotal((data[totalKey] as number) || 0);
     } finally {
       setLoading(false);
     }

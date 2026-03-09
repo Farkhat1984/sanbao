@@ -1,15 +1,13 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const { id } = await params;
 
@@ -26,7 +24,7 @@ export async function POST(
 
   const clone = await prisma.skill.create({
     data: {
-      userId: session.user.id,
+      userId: userId,
       name: `${source.name} (копия)`,
       description: source.description,
       systemPrompt: source.systemPrompt,

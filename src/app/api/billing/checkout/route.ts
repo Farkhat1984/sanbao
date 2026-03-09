@@ -1,8 +1,7 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -11,10 +10,9 @@ function getStripe(): Stripe | null {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const stripe = getStripe();
   if (!stripe) {
@@ -69,7 +67,7 @@ export async function POST(req: Request) {
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
-    client_reference_id: session.user.id,
+    client_reference_id: userId,
     metadata: { planSlug: plan.slug },
     line_items: [
       {

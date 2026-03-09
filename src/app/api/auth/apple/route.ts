@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyAppleToken } from "@/lib/mobile-auth";
-import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
+import { getClientIp, handleOAuthLogin, OAuthEmailRequiredError } from "@/lib/auth-utils";
 
 export async function POST(req: Request) {
   try {
     // Rate limit
-    const forwarded = req.headers.get("x-forwarded-for");
-    const cfIp = req.headers.get("cf-connecting-ip");
-    const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
 
     const rateCheck = await checkAuthRateLimit(`apple:${ip}`);
     if (!rateCheck.allowed) {
@@ -56,121 +53,26 @@ export async function POST(req: Request) {
         null
       : null;
 
-    // Look for existing Apple account link
-    const existingAccount = await prisma.account.findUnique({
-      where: {
-        provider_providerAccountId: {
-          provider: "apple",
-          providerAccountId: appleSub,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            image: true,
-            role: true,
-            twoFactorEnabled: true,
-          },
-        },
-      },
+    const result = await handleOAuthLogin({
+      provider: "apple",
+      providerAccountId: appleSub,
+      email: appleEmail,
+      name: displayName,
+      fallbackEmail: `apple_${appleSub}@privaterelay.appleid.com`,
     });
-
-    if (existingAccount) {
-      const user = existingAccount.user;
-      // OAuth provider verification counts as 2FA: Apple has already verified
-      // the user's identity through their own authentication mechanisms (Face ID,
-      // Touch ID, device passcode, or Apple ID password + SMS/device-based 2FA).
-      // Setting twoFactorVerified = true lets OAuth users skip our separate TOTP step.
-      const session = await mintSessionToken({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        image: user.image,
-        role: user.role,
-        twoFactorVerified: user.twoFactorEnabled || false,
-      });
-      const refreshToken = await mintRefreshToken(user.id);
-
-      return jsonOk({
-        accessToken: session.token,
-        refreshToken,
-        // Legacy field for backward compat
-        token: session.token,
-        user: { id: user.id, email: user.email, name: user.name },
-        expiresAt: session.expiresAt,
-      });
-    }
-
-    // No existing account — find or create user
-    let user;
-
-    // Try to link by email if user already exists
-    if (appleEmail) {
-      user = await prisma.user.findUnique({ where: { email: appleEmail } });
-    }
-
-    // Email is required in our schema — use Apple private relay or generate placeholder
-    const userEmail = appleEmail || `apple_${appleSub}@privaterelay.appleid.com`;
-
-    if (!user) {
-      // Create new user
-      user = await prisma.user.create({
-        data: {
-          email: userEmail,
-          name: displayName,
-          emailVerified: new Date(),
-        },
-      });
-
-      // Auto-assign free subscription
-      const freePlan = await prisma.plan.findFirst({
-        where: { isDefault: true },
-      });
-      if (freePlan) {
-        await prisma.subscription.create({
-          data: { userId: user.id, planId: freePlan.id },
-        });
-      }
-    }
-
-    // Create Apple account link
-    await prisma.account.create({
-      data: {
-        userId: user.id,
-        type: "oauth",
-        provider: "apple",
-        providerAccountId: appleSub,
-      },
-    });
-
-    // OAuth = 2FA: Apple's identity verification (Face ID / Touch ID / device passcode)
-    // serves as the second factor, so twoFactorVerified is set accordingly.
-    const session = await mintSessionToken({
-      id: user.id,
-      email: user.email,
-      name: user.name ?? displayName,
-      image: user.image,
-      role: user.role,
-      twoFactorVerified: user.twoFactorEnabled || false,
-    });
-    const refreshToken = await mintRefreshToken(user.id);
 
     return jsonOk({
-      accessToken: session.token,
-      refreshToken,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
       // Legacy field for backward compat
-      token: session.token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name ?? displayName,
-      },
-      expiresAt: session.expiresAt,
+      token: result.accessToken,
+      user: { id: result.user.id, email: result.user.email, name: result.user.name },
+      expiresAt: result.expiresAt,
     });
   } catch (error) {
+    if (error instanceof OAuthEmailRequiredError) {
+      return jsonError("Apple account has no email", 400);
+    }
     console.error("[AUTH:APPLE] error:", error);
     return jsonError("Internal server error", 500);
   }

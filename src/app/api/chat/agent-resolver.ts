@@ -10,7 +10,7 @@ import { resolveAgentContext } from "@/lib/tool-resolver";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
 import { getPrompt, PROMPT_REGISTRY } from "@/lib/prompts";
 import { loadOrgAgentContext, checkOrgAgentAccess } from "@/lib/swarm/agent-loader";
-import type { McpToolContext } from "@/lib/chat/moonshot-stream";
+import type { McpToolContext } from "@/lib/types/mcp";
 import type { NextResponse } from "next/server";
 
 // ─── Types ──────────────────────────────────────────────

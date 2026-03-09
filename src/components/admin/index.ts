@@ -8,3 +8,6 @@ export { StatsCard } from "./StatsCard";
 export { UsersTable } from "./UsersTable";
 export { UserEditModal } from "./UserEditModal";
 export { PlanForm } from "./PlanForm";
+export { ModelForm } from "./ModelForm";
+export type { ModelFormData, ModelFormProvider } from "./ModelForm";
+export { MODEL_CATEGORIES, MODEL_CATEGORY_LABELS } from "./ModelForm";

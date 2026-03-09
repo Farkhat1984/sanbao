@@ -1,13 +1,11 @@
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 
 /** GET — user's notifications with cursor-based pagination */
 export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
@@ -15,7 +13,7 @@ export async function GET(req: Request) {
 
   const where = {
     OR: [
-      { userId: session.user.id },
+      { userId },
       { isGlobal: true },
     ],
   };
@@ -36,10 +34,9 @@ export async function GET(req: Request) {
 
 /** PUT — mark notifications as read */
 export async function PUT(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return jsonError("Unauthorized", 401);
-  }
+  const result = await requireAuth();
+  if ('error' in result) return result.error;
+  const { userId } = result.auth;
 
   const body = await req.json().catch(() => null);
   const ids = body?.ids;
@@ -47,13 +44,13 @@ export async function PUT(req: Request) {
   if (ids && Array.isArray(ids)) {
     const safeIds = ids.slice(0, 500);
     await prisma.notification.updateMany({
-      where: { id: { in: safeIds }, userId: session.user.id },
+      where: { id: { in: safeIds }, userId },
       data: { isRead: true },
     });
   } else {
     // Mark all as read
     await prisma.notification.updateMany({
-      where: { userId: session.user.id, isRead: false },
+      where: { userId, isRead: false },
       data: { isRead: true },
     });
   }
