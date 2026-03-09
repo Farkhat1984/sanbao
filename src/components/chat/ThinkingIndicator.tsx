@@ -14,6 +14,9 @@ import {
   BarChart3,
   Send,
   Plug,
+  Network,
+  Users,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { StreamingPhase } from "@/stores/chatStore";
@@ -148,6 +151,18 @@ const ICON_ANIMATIONS: Record<
     animate: { rotateZ: [0, -8, 8, -4, 4, 0] },
     duration: 2,
   },
+  routing: {
+    animate: { scale: [1, 1.1, 0.95, 1.05, 1] },
+    duration: 1.2,
+  },
+  consulting: {
+    animate: { scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] },
+    duration: 1.5,
+  },
+  synthesizing: {
+    animate: { rotateZ: [0, -10, 10, -5, 5, 0] },
+    duration: 1.6,
+  },
 };
 
 export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndicatorProps) {
@@ -189,6 +204,24 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
     gradientClass = vis.gradient;
     dotColorClass = vis.dot;
     animKey = category;
+  } else if (phase === "routing") {
+    label = "Определяет агентов";
+    Icon = Network;
+    gradientClass = "from-amber-500 to-amber-600";
+    dotColorClass = "bg-amber-500";
+    animKey = "routing";
+  } else if (phase === "consulting") {
+    label = toolName ? `Консультирует: ${toolName}` : "Консультирует агентов";
+    Icon = Users;
+    gradientClass = "from-accent to-accent-hover";
+    dotColorClass = "bg-accent";
+    animKey = "consulting";
+  } else if (phase === "synthesizing") {
+    label = "Формирует решение";
+    Icon = Sparkles;
+    gradientClass = "from-amber-500 to-amber-600";
+    dotColorClass = "bg-amber-500";
+    animKey = "synthesizing";
   } else if (phase === "planning") {
     label = `${name} составляет план`;
     Icon = ListChecks;

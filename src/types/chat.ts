@@ -61,6 +61,8 @@ export interface ConversationSummary {
   agentName?: string | null;
   agentIcon?: string | null;
   agentIconColor?: string | null;
+  isSwarmMode?: boolean;
+  swarmOrgId?: string;
 }
 
 export interface Conversation extends ConversationSummary {

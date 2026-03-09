@@ -3,6 +3,7 @@ import { prisma } from "../prisma";
 import { decrypt } from "../crypto";
 import { isUrlSafe } from "../ssrf";
 import { TOOL_RESULT_MAX_CHARS } from "../constants";
+import { parseHierarchicalCatalog } from "../odata-catalog";
 
 registerNativeTool({
   name: "odata_query",
@@ -104,5 +105,60 @@ registerNativeTool({
       const message = err instanceof Error ? err.message : String(err);
       return JSON.stringify({ error: `Ошибка запроса: ${message}` });
     }
+  },
+});
+
+registerNativeTool({
+  name: "odata_catalog",
+  description:
+    "Загружает подробный каталог сущностей 1С по категории. " +
+    "Вызови без аргументов чтобы увидеть индекс всех категорий. " +
+    "Вызови с section чтобы получить список сущностей в категории.",
+  parameters: {
+    type: "object",
+    properties: {
+      section: {
+        type: "string",
+        description:
+          "Slug категории: warehouse, sales, purchases, finance, hr, production, crm, settings, other. " +
+          "Без аргумента — полный индекс категорий.",
+      },
+    },
+    required: [],
+  },
+  async execute(args, ctx) {
+    const section = args.section as string | undefined;
+
+    const integration = await prisma.integration.findFirst({
+      where: { userId: ctx.userId, type: "ODATA_1C", status: "CONNECTED" },
+      orderBy: { updatedAt: "desc" },
+      select: { catalog: true, name: true },
+    });
+
+    if (!integration?.catalog) {
+      return JSON.stringify({
+        error: "Нет подключённой интеграции 1С с каталогом. Выполните обнаружение сущностей.",
+      });
+    }
+
+    const parsed = parseHierarchicalCatalog(integration.catalog);
+    if (!parsed) {
+      // Legacy catalog — return as-is (truncated)
+      return integration.catalog.slice(0, 8000);
+    }
+
+    if (!section) {
+      return parsed.index;
+    }
+
+    const sectionContent = parsed.sections[section];
+    if (!sectionContent) {
+      const available = Object.keys(parsed.sections).join(", ");
+      return JSON.stringify({
+        error: `Секция "${section}" не найдена. Доступные: ${available}`,
+      });
+    }
+
+    return sectionContent;
   },
 });

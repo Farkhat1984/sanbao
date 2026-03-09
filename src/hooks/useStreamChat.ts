@@ -38,6 +38,8 @@ export function useStreamChat({
     activeConversationId,
     activeAgentId,
     orgAgentId,
+    swarmMode,
+    swarmOrgId,
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,
@@ -53,6 +55,8 @@ export function useStreamChat({
     setContextUsage,
     setPendingInput,
     setClarifyQuestions,
+    addSwarmAgentResponse,
+    clearSwarmAgentResponses,
   } = useChatStore();
 
   const { addTask } = useTaskStore();
@@ -100,6 +104,7 @@ export function useStreamChat({
 
     setStreaming(true);
     setCurrentPlan(null);
+    clearSwarmAgentResponses();
     // Phase is null — will be determined by the first stream chunk
 
     // Ensure we have a conversation for persistence
@@ -113,6 +118,8 @@ export function useStreamChat({
             title: trimmed.slice(0, 60) || "Новый чат",
             agentId: activeAgentId || undefined,
             orgAgentId: orgAgentId || undefined,
+            isSwarmMode: swarmMode || undefined,
+            swarmOrgId: swarmOrgId || undefined,
           }),
         });
         if (convRes.ok) {
@@ -169,6 +176,8 @@ export function useStreamChat({
           webSearchEnabled,
           planningEnabled,
           attachments: attachmentsPayload,
+          swarmMode: swarmMode || undefined,
+          swarmOrgId: swarmOrgId || undefined,
         }),
         signal: abortRef.current.signal,
       });
@@ -222,11 +231,24 @@ export function useStreamChat({
                 fullReasoning += data.v;
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
-              case "s": // status (searching / using_tool)
-                setStreamingPhase(
-                  data.v === "using_tool" ? "using_tool" : "searching",
-                  data.n || null
-                );
+              case "s": // status (searching / using_tool / swarm phases)
+                if (data.v === "routing") {
+                  setStreamingPhase("routing");
+                } else if (data.v === "consulting") {
+                  setStreamingPhase("consulting", data.n || null);
+                } else if (data.v === "synthesizing") {
+                  setStreamingPhase("synthesizing");
+                } else {
+                  setStreamingPhase(
+                    data.v === "using_tool" ? "using_tool" : "searching",
+                    data.n || null
+                  );
+                }
+                break;
+              case "a": // swarm agent response
+                if (data.v) {
+                  addSwarmAgentResponse(data.v);
+                }
                 break;
               case "c": // content
                 setStreamingPhase("answering");
@@ -279,13 +301,19 @@ export function useStreamChat({
       // Save messages to DB after stream completes (awaited so data is
       // persisted before setStreaming(false) triggers any re-fetch)
       if (convId && fullContent) {
+        const swarmResponses = useChatStore.getState().swarmAgentResponses;
         await fetch(`/api/conversations/${convId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: [
               { role: "USER", content: trimmed },
-              { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
+              {
+                role: "ASSISTANT",
+                content: fullContent,
+                planContent: fullPlan || undefined,
+                ...(swarmResponses.length > 0 ? { metadata: { swarmAgentResponses: swarmResponses } } : {}),
+              },
             ],
           }),
         }).catch(console.error);
@@ -386,6 +414,8 @@ export function useStreamChat({
     activeConversationId,
     activeAgentId,
     orgAgentId,
+    swarmMode,
+    swarmOrgId,
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,
@@ -401,6 +431,8 @@ export function useStreamChat({
     addTask,
     setPendingInput,
     setClarifyQuestions,
+    addSwarmAgentResponse,
+    clearSwarmAgentResponses,
     clearFiles,
     setInput,
     textareaRef,

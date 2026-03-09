@@ -275,13 +275,24 @@ export async function resolveAgentContext(
     processMcpServer(ams.mcpServer);
   }
 
-  // 4. Agent's integrations — inject connected catalogs into system prompt
+  // 4. Agent's integrations — inject compact catalog index into system prompt
   if ("integrations" in agent && Array.isArray(agent.integrations)) {
     for (const ai of agent.integrations as Array<{ integration: { status: string; catalog: string | null; name: string; baseUrl: string } }>) {
       const intg = ai.integration;
       if (intg.status === "CONNECTED" && intg.catalog) {
-        systemPrompt += `\n\n--- Интеграция: ${intg.name} (${intg.baseUrl}) ---\n${intg.catalog}`;
-        systemPrompt += `\n\nДля запросов к этой 1С используй инструмент odata_query.`;
+        let indexText: string;
+        try {
+          const parsed = JSON.parse(intg.catalog);
+          if (parsed.version === 2 && parsed.index) {
+            indexText = parsed.index;
+          } else {
+            indexText = intg.catalog.slice(0, 2000) + "\n... (каталог устарел, выполните повторное обнаружение)";
+          }
+        } catch {
+          indexText = intg.catalog.slice(0, 2000) + "\n... (каталог устарел, выполните повторное обнаружение)";
+        }
+        systemPrompt += `\n\n--- Интеграция: ${intg.name} (${intg.baseUrl}) ---\n${indexText}`;
+        systemPrompt += `\n\nДля просмотра сущностей в категории: odata_catalog(section="..."). Для запросов к данным: odata_query(entity="...").`;
       }
     }
   }

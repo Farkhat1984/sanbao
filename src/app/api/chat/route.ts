@@ -33,6 +33,9 @@ import { streamMoonshot, type McpToolContext } from "@/lib/chat/moonshot-stream"
 import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
 import { getPrompt, PROMPT_REGISTRY } from "@/lib/prompts";
 import { getRedis } from "@/lib/redis";
+import { classifySwarmRequest } from "@/lib/swarm/classify";
+import { loadOrgAgentContext } from "@/lib/swarm/agent-loader";
+import { consultAndSynthesize } from "@/lib/swarm/consult";
 
 // ─── Retry helper ────────────────────────────────────────
 
@@ -169,6 +172,8 @@ export async function POST(req: Request) {
     planningEnabled = false,
     attachments = [],
     conversationId: reqConvId,
+    swarmMode: rawSwarmMode = false,
+    swarmOrgId: rawSwarmOrgId,
   } = body;
 
   // ─── Input validation ─────────────────────────────────────
@@ -228,6 +233,111 @@ export async function POST(req: Request) {
     if (filterResult.blocked) {
       return jsonError("Сообщение содержит запрещённый контент и не может быть отправлено.", 400);
     }
+  }
+
+  // ─── Swarm Mother mode ───────────────────────────────────
+  const swarmMode = !!rawSwarmMode;
+  const swarmOrgId = rawSwarmOrgId as string | undefined;
+
+  if (swarmMode && swarmOrgId) {
+    // Verify user is org member
+    const membership = await prisma.orgMember.findUnique({
+      where: { orgId_userId: { orgId: swarmOrgId, userId: session.user.id } },
+    });
+    if (!membership) {
+      return jsonError("Нет доступа к организации", 403);
+    }
+
+    // Get all PUBLISHED org agents
+    const allAgents = await prisma.orgAgent.findMany({
+      where: { orgId: swarmOrgId, status: "PUBLISHED" },
+      select: {
+        id: true, name: true, description: true, accessMode: true,
+        members: { where: { userId: session.user.id }, select: { id: true } },
+      },
+    });
+
+    // Filter by access
+    const accessible = allAgents.filter((a) =>
+      a.accessMode === "ALL_MEMBERS" ||
+      membership.role === "OWNER" || membership.role === "ADMIN" ||
+      a.members.length > 0
+    );
+    const inaccessible = allAgents.filter((a) => !accessible.includes(a));
+
+    // Resolve text model for classify + consult
+    const textModel = await resolveModel("TEXT", plan.id);
+    if (!textModel) {
+      return jsonError("Нет настроенной модели", 500);
+    }
+
+    // Shortcut: 0 agents → fall through to default chat
+    // 1 agent → set orgAgentId and fall through to normal org agent handling
+    if (accessible.length === 1) {
+      orgAgentId = accessible[0].id;
+    } else if (accessible.length >= 2) {
+      // Classify
+      const swarmLastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+      const lastUserMessage = typeof swarmLastUserMsg?.content === "string"
+        ? swarmLastUserMsg.content
+        : JSON.stringify(swarmLastUserMsg?.content || "");
+
+      const classify = await classifySwarmRequest(lastUserMessage, accessible, textModel);
+
+      if (classify.mode === "single" && classify.agentIds.length === 1) {
+        // Single agent — fall through
+        orgAgentId = classify.agentIds[0];
+      } else if (classify.mode === "single" && classify.agentIds.length === 0) {
+        // General question — fall through to default Sanbao chat (no orgAgentId set)
+      } else if (classify.mode === "multi" && classify.agentIds.length > 0) {
+        // Multi-agent mode: load contexts, consult, synthesize
+        const agentContexts = (await Promise.all(
+          classify.agentIds.map((id) => loadOrgAgentContext(id, session.user.id))
+        )).filter((ctx): ctx is NonNullable<typeof ctx> => ctx !== null);
+
+        if (agentContexts.length === 0) {
+          // All agents failed to load — fall through
+        } else if (agentContexts.length === 1) {
+          // Only one loaded — treat as single
+          orgAgentId = agentContexts[0].agentId;
+        } else {
+          // Get org name
+          const org = await prisma.organization.findUnique({
+            where: { id: swarmOrgId },
+            select: { name: true },
+          });
+
+          const conversationHistory = messages
+            .filter((m: { role: string }) => m.role === "user" || m.role === "assistant")
+            .map((m: { role: string; content: string }) => ({
+              role: m.role.toLowerCase(),
+              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+            }));
+
+          const stream = consultAndSynthesize({
+            userMessage: lastUserMessage,
+            conversationHistory,
+            agentContexts,
+            orgName: org?.name || "Organization",
+            inaccessibleAgents: inaccessible.map((a) => ({ name: a.name })),
+            model: textModel,
+            signal: req.signal,
+          });
+
+          recordRequestDuration("/api/chat", Date.now() - _requestStart);
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "application/x-ndjson",
+              "Transfer-Encoding": "chunked",
+              "Cache-Control": "no-cache",
+              "X-Accel-Buffering": "no",
+              [CORRELATION_HEADER]: requestId,
+            },
+          });
+        }
+      }
+    }
+    // If we didn't return, fall through to normal chat (possibly with orgAgentId set)
   }
 
   // ─── Build system prompt & resolve agent context ────────

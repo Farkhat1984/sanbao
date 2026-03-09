@@ -24,7 +24,7 @@ export async function GET() {
       status: "PUBLISHED",
     },
     include: {
-      org: { select: { id: true, name: true, slug: true } },
+      org: { select: { id: true, name: true, slug: true, swarmEnabled: true } },
       mcpServer: { select: { id: true, name: true, url: true, status: true } },
     },
     orderBy: { updatedAt: "desc" },
@@ -58,5 +58,6 @@ export async function GET() {
     description: a.description,
     status: a.status,
     mcpServer: a.mcpServer,
+    swarmEnabled: a.org.swarmEnabled,
   })));
 }

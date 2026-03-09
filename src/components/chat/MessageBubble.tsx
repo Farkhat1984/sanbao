@@ -7,9 +7,12 @@ import {
   RotateCcw,
   Brain,
   ChevronDown,
+  ChevronRight,
   FileText,
   ExternalLink,
   Pencil,
+  Network,
+  Bot,
 } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
@@ -20,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
 import { PlanBlock } from "./PlanBlock";
 import { useArtifactStore } from "@/stores/artifactStore";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, type SwarmAgentResponse } from "@/stores/chatStore";
 import { openArtifactInPanel } from "@/lib/panel-actions";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -60,6 +63,7 @@ interface MessageBubbleProps {
 export const MessageBubble = memo(function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
+  const [swarmOpen, setSwarmOpen] = useState(false);
   const { trackArtifact, findByTitle, applyEdits } = useArtifactStore();
   const isMobile = useIsMobile();
   const isUser = message.role === "USER";
@@ -75,6 +79,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   );
   const isCurrentlyStreaming = useChatStore((s) =>
     isLast && isAssistant && s.isStreaming
+  );
+  const swarmAgentResponses = useChatStore((s) =>
+    isLast && isAssistant ? s.swarmAgentResponses : []
   );
   const displayContent = streamingContent ?? message.content;
   const displayReasoning = streamingReasoning ?? message.reasoning;
@@ -442,6 +449,49 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
             {message.legalRefs.map((ref) => (
               <LegalReference key={ref.id} reference={ref} />
             ))}
+          </div>
+        )}
+
+        {/* Swarm agent responses (collapsible) */}
+        {isAssistant && swarmAgentResponses.length > 0 && (
+          <div className="mt-2 w-full">
+            <button
+              onClick={() => setSwarmOpen(!swarmOpen)}
+              className="flex items-center gap-1.5 text-[11px] text-amber-600 hover:text-amber-700 transition-colors cursor-pointer mb-1"
+            >
+              <Network className="h-3 w-3" />
+              <span>Ответы агентов ({swarmAgentResponses.length})</span>
+              <ChevronRight
+                className={cn(
+                  "h-3 w-3 transition-transform",
+                  swarmOpen && "rotate-90"
+                )}
+              />
+            </button>
+            {swarmOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="space-y-2"
+              >
+                {swarmAgentResponses.map((resp) => (
+                  <div
+                    key={resp.id}
+                    className="rounded-xl bg-amber-500/5 border border-amber-500/15 px-3 py-2"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Bot className="h-3 w-3 text-amber-500" />
+                      <span className="text-xs font-medium text-text-primary">
+                        {resp.name}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+                      {resp.content}
+                    </p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
           </div>
         )}
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Network, Bot } from "lucide-react";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem, springTransition } from "@/lib/animations";
@@ -8,11 +9,49 @@ import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
+interface SwarmInfo {
+  orgName: string;
+  agents: Array<{ name: string; description: string | null }>;
+}
+
 export function WelcomeScreen() {
-  const { activeAgentId, setPendingInput } = useChatStore();
+  const { activeAgentId, setPendingInput, swarmMode, swarmOrgId } = useChatStore();
   const { activeAgent, agentTools } = useAgentStore();
 
   const hasAgent = !!activeAgentId && !!activeAgent;
+
+  // Swarm mode info — reset when leaving swarm mode, fetch when entering
+  const [swarmInfo, setSwarmInfo] = useState<SwarmInfo | null>(null);
+  const swarmKey = swarmMode && swarmOrgId ? swarmOrgId : null;
+
+  // Reset swarm info when not in swarm mode (derived, no effect needed)
+  if (!swarmKey && swarmInfo) {
+    setSwarmInfo(null);
+  }
+
+  useEffect(() => {
+    if (!swarmKey) return;
+    let cancelled = false;
+    fetch("/api/organizations/my-agents")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const orgAgents = data.filter((a: { orgId: string }) => a.orgId === swarmKey);
+        if (orgAgents.length > 0) {
+          setSwarmInfo({
+            orgName: orgAgents[0].orgName,
+            agents: orgAgents.map((a: { name: string; description: string | null }) => ({
+              name: a.name,
+              description: a.description,
+            })),
+          });
+        }
+      })
+      .catch(console.error);
+    return () => { cancelled = true; };
+  }, [swarmKey]);
+
+  const isSwarm = swarmMode && swarmInfo;
 
   const handleQuickAction = (prompt: string) => {
     setPendingInput(prompt);
@@ -45,8 +84,20 @@ export function WelcomeScreen() {
         transition={springTransition}
         className="text-center mb-10"
       >
-        {/* Logo / Agent Icon */}
-        {hasAgent ? (() => {
+        {/* Logo / Agent Icon / Swarm Icon */}
+        {isSwarm ? (
+          <>
+            <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-5 shadow-lg">
+              <Network className="h-8 w-8 text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              Мать Роя
+            </h2>
+            <p className="text-sm text-text-secondary max-w-md">
+              {swarmInfo.orgName} · {swarmInfo.agents.length} агентов доступно
+            </p>
+          </>
+        ) : hasAgent ? (() => {
           const AgentIcon = ICON_MAP[activeAgent.icon] || ICON_MAP.Bot;
           return (
             <>
@@ -78,6 +129,34 @@ export function WelcomeScreen() {
           </>
         )}
       </motion.div>
+
+      {/* Swarm agent cards */}
+      {isSwarm && swarmInfo.agents.length > 0 && toolActions.length === 0 && (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full"
+        >
+          {swarmInfo.agents.map((agent, i) => (
+            <motion.div
+              key={i}
+              variants={staggerItem}
+              className="text-left p-4 rounded-2xl border border-border bg-surface"
+            >
+              <div className="h-9 w-9 rounded-xl bg-amber-500/10 flex items-center justify-center mb-3">
+                <Bot className="h-4 w-4 text-amber-500" />
+              </div>
+              <h3 className="text-sm font-semibold text-text-primary mb-0.5">
+                {agent.name}
+              </h3>
+              <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
+                {agent.description || "AI-агент"}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
       {/* Starter prompts from agent */}
       {hasAgent && activeAgent.starterPrompts && activeAgent.starterPrompts.length > 0 && toolActions.length === 0 && (

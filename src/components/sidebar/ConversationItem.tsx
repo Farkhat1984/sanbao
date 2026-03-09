@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore, Network } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
@@ -159,6 +159,14 @@ export const ConversationItem = memo(function ConversationItem({
             </div>
           );
         })()}
+        {conversation.isSwarmMode && (
+          <div
+            className="h-4 w-4 rounded shrink-0 flex items-center justify-center bg-amber-500/10"
+            title="Мать Роя"
+          >
+            <Network className="h-2.5 w-2.5 text-amber-500" />
+          </div>
+        )}
         <span className="truncate flex-1">
           {truncate(conversation.title, 32)}
         </span>

@@ -27,6 +27,8 @@ export async function GET(req: Request) {
       updatedAt: true,
       agentId: true,
       systemAgentId: true,
+      isSwarmMode: true,
+      swarmOrgId: true,
       agent: { select: { id: true, name: true, icon: true, iconColor: true, isSystem: true } },
       messages: {
         orderBy: { createdAt: "desc" },
@@ -52,6 +54,8 @@ export async function GET(req: Request) {
         agentIcon: c.agent.icon,
         agentIconColor: c.agent.iconColor,
         isSystemAgent: c.agent.isSystem,
+        isSwarmMode: c.isSwarmMode,
+        swarmOrgId: c.swarmOrgId,
       };
     }
 
@@ -70,6 +74,8 @@ export async function GET(req: Request) {
         agentIcon: c.systemAgentId === FEMIDA_ID ? "Scale" : null,
         agentIconColor: c.systemAgentId === FEMIDA_ID ? "#B8956A" : null,
         isSystemAgent: true,
+        isSwarmMode: c.isSwarmMode,
+        swarmOrgId: c.swarmOrgId,
       };
     }
 
@@ -86,6 +92,8 @@ export async function GET(req: Request) {
       agentIcon: null,
       agentIconColor: null,
       isSystemAgent: false,
+      isSwarmMode: c.isSwarmMode,
+      swarmOrgId: c.swarmOrgId,
     };
   });
 
@@ -106,7 +114,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return jsonError("Неверный JSON", 400);
 
-  const { title, agentId, orgAgentId } = body;
+  const { title, agentId, orgAgentId, isSwarmMode, swarmOrgId } = body;
 
   // Check maxConversations limit (admins bypass)
   const { plan } = await getUserPlanAndUsage(userId);
@@ -142,6 +150,8 @@ export async function POST(req: Request) {
       userId,
       agentId: resolvedId,
       orgAgentId: orgAgentId || null,
+      isSwarmMode: isSwarmMode || false,
+      swarmOrgId: swarmOrgId || null,
     },
   });
 
@@ -166,5 +176,7 @@ export async function POST(req: Request) {
     agentIcon: agentInfo?.icon ?? null,
     agentIconColor: agentInfo?.iconColor ?? null,
     isSystemAgent: agentInfo?.isSystem ?? false,
+    isSwarmMode: conversation.isSwarmMode,
+    swarmOrgId: conversation.swarmOrgId,
   }, 201);
 }

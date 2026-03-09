@@ -105,6 +105,8 @@ model Conversation {
   systemAgentId String?
 
   orgAgentId    String?
+  isSwarmMode   Boolean @default(false)
+  swarmOrgId    String?
 
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   agent       Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
@@ -124,6 +126,7 @@ model Conversation {
   @@index([userId, archived, updatedAt])
   @@index([agentId])
   @@index([orgAgentId])
+  @@index([swarmOrgId])
 }
 
 model Message {
@@ -1107,6 +1110,9 @@ model Organization {
   members OrgMember[]
   agents  OrgAgent[]
   invites OrgInvite[]
+
+  swarmEnabled        Boolean  @default(true)
+  swarmStarterPrompts String[] @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

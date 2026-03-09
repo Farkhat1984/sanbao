@@ -61,7 +61,7 @@ describe("mobile-session", () => {
   });
 
   it("uses correct cookie salt in production", async () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
 
     // Re-import to get the production cookie name
     // Since the module is already loaded, we test the encode call salt

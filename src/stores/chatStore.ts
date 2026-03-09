@@ -4,7 +4,7 @@ import type { ChatMessage, ConversationSummary } from "@/types/chat";
 /** Maximum conversations kept in memory to prevent unbounded growth */
 const MAX_CONVERSATIONS = 500;
 
-export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | null;
+export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | "routing" | "consulting" | "synthesizing" | null;
 
 /** Tool categories for granular status icons */
 export type ToolCategory = "web_search" | "knowledge" | "calculation" | "memory" | "task" | "notification" | "scratchpad" | "chart" | "http" | "mcp" | "generic";
@@ -51,7 +51,10 @@ const PHASE_PRIORITY: Record<string, number> = {
   thinking: 1,
   searching: 2,
   using_tool: 2,
+  routing: 2,
+  consulting: 2,
   planning: 3,
+  synthesizing: 3,
   answering: 4,
 };
 
@@ -70,10 +73,20 @@ interface ContextUsage {
   isCompacting: boolean;
 }
 
+export interface SwarmAgentResponse {
+  id: string;
+  name: string;
+  icon?: string;
+  content: string;
+}
+
 interface ChatState {
   activeConversationId: string | null;
   activeAgentId: string | null;
   orgAgentId: string | null;
+  swarmMode: boolean;
+  swarmOrgId: string | null;
+  swarmAgentResponses: SwarmAgentResponse[];
   conversations: ConversationSummary[];
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -106,6 +119,10 @@ interface ChatState {
   messagesCursor: string | null;
   hasMoreMessages: boolean;
   isLoadingMoreMessages: boolean;
+
+  setSwarmMode: (orgId: string | null) => void;
+  addSwarmAgentResponse: (resp: SwarmAgentResponse) => void;
+  clearSwarmAgentResponses: () => void;
 
   setActiveConversation: (id: string | null) => void;
   setActiveAgentId: (id: string | null) => void;
@@ -152,6 +169,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeConversationId: null,
   activeAgentId: null,
   orgAgentId: null,
+  swarmMode: false,
+  swarmOrgId: null,
+  swarmAgentResponses: [],
   conversations: [],
   messages: [],
   isStreaming: false,
@@ -185,6 +205,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
   setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
+  setSwarmMode: (orgId) => set({ swarmMode: !!orgId, swarmOrgId: orgId, orgAgentId: null }),
+  addSwarmAgentResponse: (resp) => set((s) => ({ swarmAgentResponses: [...s.swarmAgentResponses, resp] })),
+  clearSwarmAgentResponses: () => set({ swarmAgentResponses: [] }),
 
   setConversations: (conversations, nextCursor) =>
     set({
