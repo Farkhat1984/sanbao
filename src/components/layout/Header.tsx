@@ -5,7 +5,7 @@ import { useSidebarStore } from "@/stores/sidebarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
-import { DEFAULT_ICON_COLOR } from "@/lib/constants";
+import { DEFAULT_ICON_COLOR, DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
@@ -49,7 +49,7 @@ export function Header() {
           );
         })()}
         <h1 className="text-sm font-semibold text-text-primary truncate">
-          {activeConv?.title || "Новый чат"}
+          {activeConv?.title || DEFAULT_CONVERSATION_TITLE}
         </h1>
       </div>
 

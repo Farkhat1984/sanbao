@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -9,6 +9,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { useAdminList } from "@/hooks/useAdminList";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 
@@ -106,9 +107,7 @@ export default function AdminPromoCodesPage() {
               <Button variant="secondary" size="sm" onClick={() => handleToggle(c.id, c.isActive)}>
                 {c.isActive ? "Откл." : "Вкл."}
               </Button>
-              <button onClick={() => handleDelete(c.id, "Удалить промокод?")} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <AdminDeleteButton onClick={() => handleDelete(c.id, "Удалить промокод?")} />
             </div>
           </div>
         ))}

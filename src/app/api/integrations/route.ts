@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { integrationCreateSchema } from "@/lib/validation";
 import { encrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
   const parsed = integrationCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
   const { name, type, baseUrl, username, password } = parsed.data;
 

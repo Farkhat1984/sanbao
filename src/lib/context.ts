@@ -1,4 +1,4 @@
-import { CONTEXT_COMPACTION_THRESHOLD, CONTEXT_KEEP_LAST_MESSAGES } from "@/lib/constants";
+import { CONTEXT_COMPACTION_THRESHOLD, CONTEXT_KEEP_LAST_MESSAGES, DEFAULT_TIMEZONE } from "@/lib/constants";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import { getSettingNumber } from "@/lib/settings";
 
@@ -85,11 +85,11 @@ export function buildSystemPromptWithContext(
   const dateStr = new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "full",
     timeStyle: "short",
-    timeZone: "Asia/Almaty",
+    timeZone: DEFAULT_TIMEZONE,
   }).format(now);
   const isoStr = now.toISOString();
 
-  let result = `Текущая дата и время: ${dateStr} (${isoStr}, Asia/Almaty)\n\n${base}`;
+  let result = `Текущая дата и время: ${dateStr} (${isoStr}, ${DEFAULT_TIMEZONE})\n\n${base}`;
 
   if (userMemory) {
     result += `\n\n--- ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ (предпочтения и стандарты) ---\n${userMemory}\n--- КОНЕЦ ПАМЯТИ ПОЛЬЗОВАТЕЛЯ ---`;

@@ -1,4 +1,4 @@
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { skillUpdateSchema } from "@/lib/validation";
 
@@ -51,7 +51,7 @@ export async function PUT(
   const body = await req.json();
   const parsed = skillUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
 
   const data: Record<string, unknown> = {};

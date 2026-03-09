@@ -1,4 +1,4 @@
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { agentUpdateSchema } from "@/lib/validation";
 
@@ -64,7 +64,7 @@ export async function PUT(
   if (!body) return jsonError("Неверный JSON", 400);
   const parsed = agentUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
   const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, toolIds, integrationIds } = parsed.data;
 

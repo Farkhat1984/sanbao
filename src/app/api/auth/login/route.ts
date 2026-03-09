@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { jsonOk, jsonError, jsonRateLimited } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { mintSessionToken } from "@/lib/mobile-session";
-import { decrypt } from "@/lib/crypto";
+import { getClientIp, verifyTotpCode } from "@/lib/auth-utils";
 import bcrypt from "bcryptjs";
 import { timingSafeEqual } from "crypto";
 import { BCRYPT_SALT_ROUNDS } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -20,19 +21,11 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sanbao.local";
  */
 export async function POST(req: Request) {
   try {
-    const forwarded = req.headers.get("x-forwarded-for");
-    const cfIp = req.headers.get("cf-connecting-ip");
-    const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
 
     const rateCheck = await checkAuthRateLimit(`login:${ip}`);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Too many attempts. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(rateCheck.retryAfterSeconds ?? 900) },
-        }
-      );
+      return jsonRateLimited(rateCheck.retryAfterSeconds);
     }
 
     const body = await req.json();
@@ -74,14 +67,8 @@ export async function POST(req: Request) {
             { status: 403 }
           );
         }
-        const { OTP } = await import("otplib");
-        const otpInstance = new OTP();
-        const decryptedSecret = decrypt(admin.twoFactorSecret);
-        const result2fa = await otpInstance.verify({
-          token: totpCode,
-          secret: decryptedSecret,
-        });
-        if (!result2fa.valid) {
+        const valid = await verifyTotpCode(admin.twoFactorSecret, totpCode);
+        if (!valid) {
           return NextResponse.json(
             { error: "Invalid 2FA code", code: "2FA_INVALID" },
             { status: 403 }
@@ -132,14 +119,8 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
-      const { OTP } = await import("otplib");
-      const otpInstance = new OTP();
-      const decryptedSecret = decrypt(user.twoFactorSecret);
-      const result2fa = await otpInstance.verify({
-        token: totpCode,
-        secret: decryptedSecret,
-      });
-      if (!result2fa.valid) {
+      const valid = await verifyTotpCode(user.twoFactorSecret, totpCode);
+      if (!valid) {
         return NextResponse.json(
           { error: "Invalid 2FA code", code: "2FA_INVALID" },
           { status: 403 }
@@ -167,7 +148,7 @@ export async function POST(req: Request) {
       expiresAt: session.expiresAt,
     });
   } catch (error) {
-    console.error("[AUTH:LOGIN] error:", error);
+    logger.error("Login error", { context: "AUTH:LOGIN", error: error instanceof Error ? error.message : String(error) });
     return jsonError("Internal server error", 500);
   }
 }

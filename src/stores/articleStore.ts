@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { BoundedMap } from "@/lib/bounded-map";
 
 export interface ArticleData {
   code: string;        // "criminal_code"
@@ -8,11 +9,14 @@ export interface ArticleData {
   annotation: string;  // notes/comments
 }
 
+/** Max cached articles before LRU eviction */
+const ARTICLE_CACHE_CAPACITY = 50;
+
 interface ArticleState {
   activeArticle: ArticleData | null;
   loading: boolean;
   error: string | null;
-  cache: Map<string, ArticleData>;
+  cache: BoundedMap<string, ArticleData>;
   /** Last requested code/article for retry on error */
   _lastRequest: { code: string; article: string } | null;
 
@@ -24,7 +28,7 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
   activeArticle: null,
   loading: false,
   error: null,
-  cache: new Map(),
+  cache: new BoundedMap(ARTICLE_CACHE_CAPACITY),
   _lastRequest: null,
 
   openArticle: async (code, article) => {
@@ -32,11 +36,7 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
     const cached = get().cache.get(key);
 
     if (cached) {
-      // LRU: move accessed entry to end of Map so it's evicted last
-      const newCache = new Map(get().cache);
-      newCache.delete(key);
-      newCache.set(key, cached);
-      set({ activeArticle: cached, error: null, loading: false, cache: newCache, _lastRequest: { code, article } });
+      set({ activeArticle: cached, error: null, loading: false, _lastRequest: { code, article } });
       return;
     }
 
@@ -53,16 +53,9 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
       }
 
       const data: ArticleData = await res.json();
-      const newCache = new Map(get().cache);
-      newCache.set(key, data);
+      get().cache.set(key, data);
 
-      // LRU eviction: cap cache to 50 entries, remove least recently used (first in Map)
-      if (newCache.size > 50) {
-        const lru = newCache.keys().next().value;
-        if (lru) newCache.delete(lru);
-      }
-
-      set({ activeArticle: data, loading: false, cache: newCache });
+      set({ activeArticle: data, loading: false });
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : "Не удалось загрузить статью",
@@ -75,9 +68,8 @@ export const useArticleStore = create<ArticleState>((set, get) => ({
     const { _lastRequest } = get();
     if (!_lastRequest) return;
     const key = `${_lastRequest.code}/${_lastRequest.article}`;
-    const newCache = new Map(get().cache);
-    newCache.delete(key);
-    set({ cache: newCache, error: null });
+    get().cache.delete(key);
+    set({ error: null });
     get().openArticle(_lastRequest.code, _lastRequest.article);
   },
 }));

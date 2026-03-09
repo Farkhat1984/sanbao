@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { agentCreateSchema } from "@/lib/validation";
 
 const AGENT_SELECT = {
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 
   const parsed = agentCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
   const { name, description, instructions, model, icon, iconColor, avatar, starterPrompts, skillIds, mcpServerIds, integrationIds } = parsed.data;
 

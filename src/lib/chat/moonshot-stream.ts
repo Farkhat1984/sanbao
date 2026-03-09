@@ -16,6 +16,7 @@ import {
   TOOL_RESULT_MAX_CHARS,
   TOOL_RESULT_TAIL_CHARS,
 } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 import { getSettingNumber } from "@/lib/settings";
 import {
   createPlanDetectorState,
@@ -294,7 +295,7 @@ export function streamMoonshot(
             if (chunk.type === "error" || chunk.error) {
               const errMsg =
                 chunk.error?.message || "Ошибка API провайдера";
-              console.error(chunk);
+              logger.error("SSE error from API provider", { chunk: JSON.stringify(chunk) });
               controller.enqueue(
                 encoder.encode(
                   JSON.stringify({ t: "e", v: errMsg }) + "\n"

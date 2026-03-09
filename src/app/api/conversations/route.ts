@@ -3,6 +3,7 @@ import { getUserPlanAndUsage } from "@/lib/usage";
 import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { getSettingNumber } from "@/lib/settings";
+import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
 
 export async function GET(req: Request) {
   const result = await requireAuth();
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
 
   const conversation = await prisma.conversation.create({
     data: {
-      title: title || "Новый чат",
+      title: title || DEFAULT_CONVERSATION_TITLE,
       userId,
       agentId: resolvedId,
       orgAgentId: orgAgentId || null,

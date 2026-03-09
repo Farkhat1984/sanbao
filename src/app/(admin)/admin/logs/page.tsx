@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 
 interface AuditEntry {
   id: string;
@@ -47,19 +50,19 @@ export default function AdminLogsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Аудит-лог</h1>
-          <p className="text-sm text-text-secondary">Все действия администраторов</p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={() => {
-          const params = new URLSearchParams({ format: "csv", limit: "10000" });
-          if (actionFilter) params.set("action", actionFilter);
-          window.open(`/api/admin/audit-log?${params}`, "_blank");
-        }}>
-          <Download className="h-4 w-4" /> CSV
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Аудит-лог"
+        subtitle="Все действия администраторов"
+        action={
+          <Button variant="secondary" size="sm" onClick={() => {
+            const params = new URLSearchParams({ format: "csv", limit: "10000" });
+            if (actionFilter) params.set("action", actionFilter);
+            window.open(`/api/admin/audit-log?${params}`, "_blank");
+          }}>
+            <Download className="h-4 w-4" /> CSV
+          </Button>
+        }
+      />
 
       <div className="flex gap-2 mb-4">
         <input placeholder="Фильтр по действию" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="h-9 w-64 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -67,7 +70,7 @@ export default function AdminLogsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-xl p-4 animate-pulse h-14" />)}</div>
+        <AdminListSkeleton rows={5} height="h-14" />
       ) : (
         <>
           <div className="space-y-2">
@@ -89,7 +92,7 @@ export default function AdminLogsPage() {
                 <span className="text-xs text-text-secondary">{new Date(l.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             ))}
-            {logs.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет записей</p>}
+            {logs.length === 0 && <AdminEmptyState message="Нет записей" />}
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">

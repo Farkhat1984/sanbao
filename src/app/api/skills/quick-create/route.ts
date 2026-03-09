@@ -1,4 +1,5 @@
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { SkillCategory } from "@prisma/client";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
     if (e instanceof LlmJsonParseError) {
       return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
     }
-    console.error("Quick-create error:", e);
+    logger.error("Quick-create skill error", { context: "skills/quick-create", error: e instanceof Error ? e.message : String(e) });
     return jsonError("Ошибка генерации скилла. Попробуйте ещё раз.", 500);
   }
 }

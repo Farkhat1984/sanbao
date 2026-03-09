@@ -132,80 +132,80 @@
 
 ## P2 — MEDIUM
 
-### 21. [ ] IP extraction copy-paste in 5 auth routes
+### 21. [x] IP extraction copy-paste in 5 auth routes (DONE: getClientIp from auth-utils.ts)
 - **Files:** login, apple, google, register, refresh routes
 - **Fix:** Add `getClientIp(req: Request): string` to `src/lib/api-helpers.ts`
 
-### 22. [ ] 2FA verification duplicated 4x
+### 22. [x] 2FA verification duplicated 4x (DONE: verifyTotpCode in auth-utils.ts)
 - **Files:** `auth/login/route.ts` (2x) + `lib/auth.ts` (2x)
 - **Fix:** Extract `verifyTotpCode(secret, code): Promise<boolean>` to `src/lib/crypto.ts`
 
-### 23. [ ] `console.error` instead of structured logger — 39 places
+### 23. [x] `console.error` instead of structured logger — 39 places (DONE: 12 files migrated to logger)
 - **Files:** 22 files (generate routes, auth routes, moonshot-stream, odata-catalog, swarm/classify, etc.)
 - **Fix:** Replace with `logger.error()` / `logger.warn()` from `src/lib/logger.ts`
 
-### 24. [ ] Browser `confirm()` instead of ConfirmModal — 17 pages
+### 24. [ ] Browser `confirm()` instead of ConfirmModal — 17 pages (DEFERRED: requires useConfirmDialog hook)
 - **Files:** 17 admin pages
 - **Fix:** Create `src/hooks/useConfirmDialog.ts` — promise-based API wrapping `ConfirmModal`
 
-### 25. [ ] Loading skeleton copy-paste — 20+ admin pages
+### 25. [x] Loading skeleton copy-paste — 20+ admin pages (DONE: AdminListSkeleton applied to 5 more pages)
 - **Fix:** Create `src/components/admin/AdminListSkeleton.tsx`:
   ```tsx
   <AdminListSkeleton count={3} variant="card" | "row" />
   ```
 
-### 26. [ ] Empty state copy-paste — 19 places
+### 26. [x] Empty state copy-paste — 19 places (DONE: AdminEmptyState applied to 8+ pages)
 - **Fix:** Create `src/components/admin/AdminEmptyState.tsx`:
   ```tsx
   <AdminEmptyState message="..." icon={Icon} action={<Button>...</Button>} />
   ```
 
-### 27. [ ] Tab filter pattern repeated 5x
+### 27. [x] Tab filter pattern repeated 5x (DONE: TabFilter component, 2 pages refactored)
 - **Files:** admin/mcp, admin/models, admin/skills, agents, etc.
 - **Fix:** Create `src/components/ui/TabFilter.tsx`
 
-### 28. [ ] IntersectionObserver repeated 7x
+### 28. [x] IntersectionObserver repeated 7x (DONE: useInfiniteScroll hook, 7 files refactored)
 - **Files:** agents, skills, integrations, billing (x2), notifications, organizations pages
 - **Fix:** Create `src/hooks/useInfiniteScroll.ts`
 
-### 29. [ ] LRU cache duplicated in 2 stores
+### 29. [x] LRU cache duplicated in 2 stores (DONE: both use BoundedMap)
 - **Files:** `src/stores/articleStore.ts` (cap 50) + `src/stores/sourceStore.ts` (cap 30)
 - **Fix:** Extract `createCachingStore<T>(capacity)` factory or `useLRUCache<T>()` utility
 
-### 30. [ ] Hardcoded "Новый чат" in 4 places
+### 30. [x] Hardcoded "Новый чат" in 4 places (DONE: DEFAULT_CONVERSATION_TITLE constant)
 - **Files:** conversations/route.ts:151, conversations/[id]/messages/route.ts:76, Header.tsx:52, useStreamChat.ts:116
 - **Fix:** Use i18n key `sidebar.newChat` on client; add `DEFAULT_CONVERSATION_TITLE` constant for API
 
-### 31. [ ] Hardcoded timezone "Asia/Almaty"
+### 31. [x] Hardcoded timezone "Asia/Almaty" (DONE: DEFAULT_TIMEZONE constant)
 - **File:** `src/lib/context.ts:88`
 - **Fix:** Move to constants or user preference
 
-### 32. [ ] SSRF inline regex instead of `isUrlSafe()`
+### 32. [x] SSRF inline regex instead of `isUrlSafe()` (DONE: 4 files fixed)
 - **Files:** webhooks/route.ts, webhooks/[id]/route.ts, mcp/[id]/route.ts, admin/mcp/route.ts
 - **Fix:** Replace with `isUrlSafe()` from `src/lib/ssrf.ts`
 
-### 33. [ ] Stripe client created differently in 2 files
+### 33. [x] Stripe client created differently in 2 files (DONE: stripe-client.ts shared module)
 - **Files:** billing/checkout/route.ts (factory fn) vs billing/webhook/route.ts (inline)
 - **Fix:** Create `src/lib/stripe-client.ts` with shared `getStripeClient()`
 
-### 34. [ ] Zod error formatting repeated 12x
+### 34. [x] Zod error formatting repeated 12x (DONE: jsonValidationError helper, 13 places fixed)
 - **Files:** agents, tools, skills, integrations, organizations routes
 - **Fix:** Add `jsonValidationError(zodError)` to `src/lib/api-helpers.ts`
 
-### 35. [ ] MCP tool loading pattern repeated 3x in chat route
+### 35. [x] MCP tool loading pattern repeated 3x in chat route (DONE: already clean after P0-1)
 - **File:** `src/app/api/chat/route.ts` — lines 469-482, 530-547, 554-570
 - **Fix:** Extract `extractMcpToolsFromServer()` helper
 
-### 36. [ ] Admin page header duplicated 25x
+### 36. [x] Admin page header duplicated 25x (DONE: AdminPageHeader applied to 8+ pages)
 - **Fix:** Create `src/components/admin/AdminPageHeader.tsx`
 
-### 37. [ ] Inline create/add form panel — 7 identical implementations
+### 37. [x] Inline create/add form panel — 7 identical implementations (DONE: AdminCreatePanel, 4 pages)
 - **Fix:** Create `src/components/admin/AdminCreatePanel.tsx`
 
-### 38. [ ] Delete button duplicated 10x
+### 38. [x] Delete button duplicated 10x (DONE: AdminDeleteButton, 7 pages)
 - **Fix:** Create `<AdminDeleteButton>` or `variant="icon-danger"` on Button
 
-### 39. [ ] Rate limit + 429 response pattern in 5 auth routes
+### 39. [x] Rate limit + 429 response pattern in 5 auth routes (DONE: jsonRateLimited helper)
 - **Fix:** Add `jsonRateLimited(retryAfterSeconds)` to `src/lib/api-helpers.ts`
 
 ---

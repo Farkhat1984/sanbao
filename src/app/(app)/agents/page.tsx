@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, Bot, Sparkles, Loader2, Building2, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -10,6 +10,7 @@ import { AgentCard } from "@/components/agents/AgentCard";
 import { SystemAgentCard } from "@/components/agents/SystemAgentCard";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 interface SystemAgentInfo {
   id: string;
@@ -49,7 +50,6 @@ export default function AgentsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -96,22 +96,11 @@ export default function AgentsPage() {
       .finally(() => setLoadingMore(false));
   }, [loadingMore, hasMore, nextCursor, agents, setAgents]);
 
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    loading: loadingMore,
+  });
 
   const normalizedQuery = searchQuery.toLowerCase().trim();
 

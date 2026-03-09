@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
 import { groupByDate } from "@/lib/utils";
 import { ConversationItem } from "./ConversationItem";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, Loader2 } from "lucide-react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 /** Number of conversations to fetch per page */
 const PAGE_SIZE = 30;
@@ -20,8 +21,6 @@ export function ConversationList() {
   const cursor = useChatStore((s) => s.conversationsCursor);
   const appendConversations = useChatStore((s) => s.appendConversations);
   const setIsLoadingMore = useChatStore((s) => s.setIsLoadingMoreConversations);
-
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
     if (!cursor || isLoadingMore) return;
@@ -40,23 +39,12 @@ export function ConversationList() {
     }
   }, [cursor, isLoadingMore, setIsLoadingMore, appendConversations]);
 
-  // Intersection Observer for infinite scroll sentinel
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          loadMore();
-        }
-      },
-      { rootMargin: "100px" }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, loadMore]);
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    loading: isLoadingMore,
+    rootMargin: "100px",
+  });
 
   // When searching, filter all loaded conversations client-side.
   // Infinite scroll only applies to non-search mode.

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { BoundedMap } from "@/lib/bounded-map";
 
 export interface SourceChunkContext {
   chunk_index: number;
@@ -21,11 +22,14 @@ export interface SourceData {
   context_after: SourceChunkContext[];
 }
 
+/** Max cached sources before LRU eviction */
+const SOURCE_CACHE_CAPACITY = 30;
+
 interface SourceState {
   activeSource: SourceData | null;
   loading: boolean;
   error: string | null;
-  cache: Map<string, SourceData>;
+  cache: BoundedMap<string, SourceData>;
 
   openSource: (domain: string, sourceFile: string, chunkIndex: number) => Promise<void>;
 }
@@ -34,17 +38,14 @@ export const useSourceStore = create<SourceState>((set, get) => ({
   activeSource: null,
   loading: false,
   error: null,
-  cache: new Map(),
+  cache: new BoundedMap(SOURCE_CACHE_CAPACITY),
 
   openSource: async (domain, sourceFile, chunkIndex) => {
     const key = `${domain}/${sourceFile}/${chunkIndex}`;
     const cached = get().cache.get(key);
 
     if (cached) {
-      const newCache = new Map(get().cache);
-      newCache.delete(key);
-      newCache.set(key, cached);
-      set({ activeSource: cached, error: null, loading: false, cache: newCache });
+      set({ activeSource: cached, error: null, loading: false });
       return;
     }
 
@@ -61,15 +62,9 @@ export const useSourceStore = create<SourceState>((set, get) => ({
       }
 
       const data: SourceData = await res.json();
-      const newCache = new Map(get().cache);
-      newCache.set(key, data);
+      get().cache.set(key, data);
 
-      if (newCache.size > 30) {
-        const lru = newCache.keys().next().value;
-        if (lru) newCache.delete(lru);
-      }
-
-      set({ activeSource: data, loading: false, cache: newCache });
+      set({ activeSource: data, loading: false });
     } catch (e) {
       set({
         error: e instanceof Error ? e.message : "Failed to load source",

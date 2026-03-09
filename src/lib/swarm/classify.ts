@@ -2,6 +2,7 @@ import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import type { ResolvedModel } from "@/lib/model-router";
 import { DEFAULT_MAX_TOKENS } from "@/lib/constants";
 import { getSettingNumber } from "@/lib/settings";
+import { logger } from "@/lib/logger";
 
 export interface ClassifyResult {
   mode: "single" | "multi";
@@ -53,7 +54,7 @@ export async function classifySwarmRequest(
     });
 
     if (!response.ok) {
-      console.error(`[swarm-classify] API error ${response.status}`);
+      logger.error("Swarm classify API error", { context: "swarm-classify", status: response.status });
       return { mode: "single", agentIds: [agents[0].id] };
     }
 
@@ -95,7 +96,7 @@ export async function classifySwarmRequest(
       agentIds: filteredIds,
     };
   } catch (err) {
-    console.error("[swarm-classify] Error:", err instanceof Error ? err.message : err);
+    logger.error("Swarm classify error", { context: "swarm-classify", error: err instanceof Error ? err.message : String(err) });
     return { mode: "single", agentIds: [agents[0].id] };
   }
 }

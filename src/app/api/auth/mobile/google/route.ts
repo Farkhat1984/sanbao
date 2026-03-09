@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { jsonOk, jsonError, jsonRateLimited } from "@/lib/api-helpers";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { verifyGoogleIdToken } from "@/lib/mobile-auth";
 import { getClientIp, handleOAuthLogin, OAuthEmailRequiredError } from "@/lib/auth-utils";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -11,15 +11,7 @@ export async function POST(req: Request) {
 
     const rateCheck = await checkAuthRateLimit(`google-mobile:${ip}`);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Too many attempts. Try again later." },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(rateCheck.retryAfterSeconds ?? 900),
-          },
-        }
-      );
+      return jsonRateLimited(rateCheck.retryAfterSeconds);
     }
 
     const body = await req.json();
@@ -67,7 +59,7 @@ export async function POST(req: Request) {
     if (error instanceof OAuthEmailRequiredError) {
       return jsonError("Google account has no email", 400);
     }
-    console.error("[AUTH:GOOGLE-MOBILE] error:", error);
+    logger.error("Google mobile auth error", { context: "AUTH:GOOGLE-MOBILE", error: error instanceof Error ? error.message : String(error) });
     return jsonError("Internal server error", 500);
   }
 }

@@ -1,10 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Star, StarOff, Brain, Grid3X3 } from "lucide-react";
+import { Plus, Star, StarOff, Brain, Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { TabFilter } from "@/components/ui/TabFilter";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminCreatePanel } from "@/components/admin/AdminCreatePanel";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { ModelForm, MODEL_CATEGORIES, MODEL_CATEGORY_LABELS } from "@/components/admin/ModelForm";
 import type { ModelFormData, ModelFormProvider } from "@/components/admin/ModelForm";
 
@@ -80,61 +86,44 @@ export default function AdminModelsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-20" />
-        ))}
-      </div>
-    );
+    return <AdminListSkeleton rows={4} />;
   }
+
+  const categoryOptions = MODEL_CATEGORIES.map((cat) => ({
+    value: cat,
+    label: MODEL_CATEGORY_LABELS[cat],
+  }));
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-модели</h1>
-          <p className="text-sm text-text-secondary mt-1">Настройки моделей, температура, токены, стоимость</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/admin/models/matrix">
-            <Button variant="secondary" size="sm"><Grid3X3 className="h-4 w-4" /> Матрица планов</Button>
-          </Link>
-          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-            <Plus className="h-4 w-4" /> Добавить
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="AI-модели"
+        subtitle="Настройки моделей, температура, токены, стоимость"
+        action={
+          <div className="flex items-center gap-2">
+            <Link href="/admin/models/matrix">
+              <Button variant="secondary" size="sm"><Grid3X3 className="h-4 w-4" /> Матрица планов</Button>
+            </Link>
+            <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+              <Plus className="h-4 w-4" /> Добавить
+            </Button>
+          </div>
+        }
+      />
 
       {/* Category filter */}
-      <div className="flex gap-1 mb-4 flex-wrap">
-        <button
-          onClick={() => setFilter("")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${!filter ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}
-        >
-          Все
-        </button>
-        {MODEL_CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${filter === cat ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-alt"}`}
-          >
-            {MODEL_CATEGORY_LABELS[cat]}
-          </button>
-        ))}
+      <div className="mb-4">
+        <TabFilter options={categoryOptions} value={filter} onChange={setFilter} />
       </div>
 
       {/* Add form */}
-      {adding && (
-        <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
-          <ModelForm
-            mode="create"
-            providers={providers}
-            onSubmit={handleCreate}
-          />
-        </div>
-      )}
+      <AdminCreatePanel isOpen={adding}>
+        <ModelForm
+          mode="create"
+          providers={providers}
+          onSubmit={handleCreate}
+        />
+      </AdminCreatePanel>
 
       {/* Models list */}
       <div className="space-y-2">
@@ -197,20 +186,13 @@ export default function AdminModelsPage() {
                   >
                     {m.isActive ? "Откл." : "Вкл."}
                   </Button>
-                  <button
-                    onClick={() => handleDelete(m.id)}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <AdminDeleteButton onClick={() => handleDelete(m.id)} />
                 </div>
               </div>
             )}
           </div>
         ))}
-        {models.length === 0 && (
-          <p className="text-sm text-text-secondary text-center py-8">Модели не найдены</p>
-        )}
+        {models.length === 0 && <AdminEmptyState message="Модели не найдены" />}
       </div>
     </div>
   );

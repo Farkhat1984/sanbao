@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -90,8 +91,6 @@ export default function AdminBillingPage() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("");
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const subsEndRef = useRef<HTMLDivElement>(null);
-  const paysEndRef = useRef<HTMLDivElement>(null);
 
   const fetchInitial = useCallback(async (q: string, pf: string) => {
     setLoading(true);
@@ -148,27 +147,21 @@ export default function AdminBillingPage() {
     setLoadingMorePays(false);
   }, [payCursor, loadingMorePays, search]);
 
-  // IntersectionObserver for subs
-  useEffect(() => {
-    if (!subsEndRef.current || !hasMoreSubs) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMoreSubs(); },
-      { threshold: 0.1 }
-    );
-    observer.observe(subsEndRef.current);
-    return () => observer.disconnect();
-  }, [hasMoreSubs, loadMoreSubs]);
+  const subsEndRef = useInfiniteScroll({
+    onLoadMore: loadMoreSubs,
+    hasMore: hasMoreSubs,
+    loading: loadingMoreSubs,
+    rootMargin: "0px",
+    threshold: 0.1,
+  });
 
-  // IntersectionObserver for pays
-  useEffect(() => {
-    if (!paysEndRef.current || !hasMorePays) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMorePays(); },
-      { threshold: 0.1 }
-    );
-    observer.observe(paysEndRef.current);
-    return () => observer.disconnect();
-  }, [hasMorePays, loadMorePays]);
+  const paysEndRef = useInfiniteScroll({
+    onLoadMore: loadMorePays,
+    hasMore: hasMorePays,
+    loading: loadingMorePays,
+    rootMargin: "0px",
+    threshold: 0.1,
+  });
 
   const handleRefund = async (userId: string) => {
     if (!confirm("Возврат средств и понижение до бесплатного тарифа?")) return;

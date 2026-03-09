@@ -3,13 +3,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus, Zap, Sparkles, Search, TrendingUp, Clock,
-  ChevronLeft, ChevronRight, Shield, Users,
+  Plus, Sparkles, Search, TrendingUp, Clock,
+  Shield, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SkillCard } from "@/components/skills/SkillCard";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { TabFilter } from "@/components/ui/TabFilter";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Skill } from "@/types/skill";
@@ -20,7 +23,7 @@ export default function AdminSkillsPage() {
   const router = useRouter();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -70,17 +73,15 @@ export default function AdminSkillsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Скиллы</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Управление системными и пользовательскими скиллами
-          </p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => router.push("/admin/skills/new")}>
-          <Plus className="h-4 w-4" /> Создать скилл
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Скиллы"
+        subtitle="Управление системными и пользовательскими скиллами"
+        action={
+          <Button variant="gradient" size="sm" onClick={() => router.push("/admin/skills/new")}>
+            <Plus className="h-4 w-4" /> Создать скилл
+          </Button>
+        }
+      />
 
       {/* Stats */}
       {stats && (
@@ -99,33 +100,11 @@ export default function AdminSkillsPage() {
       {/* Category filter tabs + Sort toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <div className="flex-1 overflow-x-auto scrollbar-none">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setCategoryFilter(null)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
-                categoryFilter === null
-                  ? "bg-accent text-white"
-                  : "text-text-secondary hover:bg-surface-alt",
-              )}
-            >
-              Все
-            </button>
-            {SKILL_CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setCategoryFilter(cat.value)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer",
-                  categoryFilter === cat.value
-                    ? "bg-accent text-white"
-                    : "text-text-secondary hover:bg-surface-alt",
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
+          <TabFilter
+            options={SKILL_CATEGORIES}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+          />
         </div>
         <div className="flex items-center gap-1 shrink-0 bg-surface-alt rounded-lg p-0.5 border border-border">
           <button
@@ -257,28 +236,13 @@ export default function AdminSkillsPage() {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4">
-              <span className="text-xs text-text-secondary">{total} скиллов</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="скиллов"
+            onPageChange={setPage}
+          />
         </>
       )}
 

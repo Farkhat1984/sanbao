@@ -1,8 +1,9 @@
-// ─── Shared OAuth login utilities ─────────────────────────
-// Extracted from Apple + Google mobile auth routes to eliminate duplication.
+// ─── Shared auth utilities ────────────────────────────────
+// Extracted from auth routes to eliminate duplication.
 
 import { prisma } from "@/lib/prisma";
 import { mintSessionToken, mintRefreshToken } from "@/lib/mobile-session";
+import { decrypt } from "@/lib/crypto";
 
 /**
  * Extract the client IP address from request headers.
@@ -14,6 +15,18 @@ export function getClientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
   return "unknown";
+}
+
+/**
+ * Verify a TOTP code against an encrypted 2FA secret.
+ * Uses dynamic import of otplib to keep it out of the client bundle.
+ */
+export async function verifyTotpCode(encryptedSecret: string, code: string): Promise<boolean> {
+  const { OTP } = await import("otplib");
+  const otpInstance = new OTP();
+  const decryptedSecret = decrypt(encryptedSecret);
+  const result = await otpInstance.verify({ token: code, secret: decryptedSecret });
+  return result.valid;
 }
 
 interface OAuthLoginParams {

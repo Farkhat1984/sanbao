@@ -2,8 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Power, PowerOff, GripVertical, Trash2, Pencil, Wrench, Globe, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Power, PowerOff, GripVertical, Pencil, Wrench, Globe, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 
 interface SystemAgent {
@@ -83,29 +88,24 @@ export default function AdminAgentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />
-        ))}
-      </div>
-    );
+    return <AdminListSkeleton rows={3} height="h-24" />;
   }
 
   const totalPages = Math.ceil(total / AGENTS_PER_PAGE);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Системные агенты</h1>
-          <p className="text-sm text-text-secondary mt-1">Управление встроенными агентами ({total})</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => router.push("/admin/agents/new")}>
-          <Plus className="h-4 w-4" />
-          Добавить
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Системные агенты"
+        subtitle="Управление встроенными агентами"
+        count={total}
+        action={
+          <Button variant="gradient" size="sm" onClick={() => router.push("/admin/agents/new")}>
+            <Plus className="h-4 w-4" />
+            Добавить
+          </Button>
+        }
+      />
 
       <div className="space-y-3">
         {agents.map((a) => {
@@ -170,39 +170,21 @@ export default function AdminAgentsPage() {
                     <Pencil className="h-3.5 w-3.5" />
                     Изменить
                   </Button>
-                  <button onClick={() => handleDelete(a.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <AdminDeleteButton onClick={() => handleDelete(a.id)} />
                 </div>
               </div>
             </div>
           );
         })}
-        {agents.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Системные агенты не найдены</p>}
+        {agents.length === 0 && <AdminEmptyState message="Системные агенты не найдены" />}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{total} агентов</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          label="агентов"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

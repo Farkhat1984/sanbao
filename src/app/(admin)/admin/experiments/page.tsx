@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Power, PowerOff, FlaskConical } from "lucide-react";
+import { Plus, Power, PowerOff, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminCreatePanel } from "@/components/admin/AdminCreatePanel";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { api } from "@/lib/api-client";
 
 interface Experiment {
@@ -62,23 +67,22 @@ export default function AdminExperimentsPage() {
     fetchData();
   };
 
-  if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />)}</div>;
+  if (loading) return <AdminListSkeleton rows={3} height="h-24" />;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">A/B эксперименты</h1>
-          <p className="text-sm text-text-secondary mt-1">Тестирование вариантов системного промпта</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" /> Создать
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="A/B эксперименты"
+        subtitle="Тестирование вариантов системного промпта"
+        action={
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" /> Создать
+          </Button>
+        }
+      />
 
-      {adding && (
-        <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
-          <div className="grid grid-cols-2 gap-3 mb-3">
+      <AdminCreatePanel isOpen={adding}>
+        <div className="grid grid-cols-2 gap-3 mb-3">
             <input placeholder="Название эксперимента" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <select value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent">
               <option value="prompt_system_global">Глобальный системный промпт</option>
@@ -99,11 +103,10 @@ export default function AdminExperimentsPage() {
             <label className="text-xs text-text-secondary">Трафик на вариант B: {form.trafficPct}%</label>
             <input type="range" min={5} max={95} step={5} value={form.trafficPct} onChange={(e) => setForm({ ...form, trafficPct: parseInt(e.target.value) })} className="flex-1" />
           </div>
-          <Button variant="gradient" size="sm" onClick={handleCreate}>
-            <FlaskConical className="h-3.5 w-3.5" /> Запустить эксперимент
-          </Button>
-        </div>
-      )}
+        <Button variant="gradient" size="sm" onClick={handleCreate}>
+          <FlaskConical className="h-3.5 w-3.5" /> Запустить эксперимент
+        </Button>
+      </AdminCreatePanel>
 
       <div className="space-y-3">
         {experiments.map((exp) => (
@@ -126,9 +129,7 @@ export default function AdminExperimentsPage() {
                 <Button variant="secondary" size="sm" onClick={() => handleToggle(exp.id, exp.isActive)}>
                   {exp.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                 </Button>
-                <button onClick={() => handleDelete(exp.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <AdminDeleteButton onClick={() => handleDelete(exp.id)} />
               </div>
             </div>
 
@@ -153,7 +154,7 @@ export default function AdminExperimentsPage() {
             </div>
           </div>
         ))}
-        {experiments.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Экспериментов нет</p>}
+        {experiments.length === 0 && <AdminEmptyState message="Экспериментов нет" />}
       </div>
     </div>
   );

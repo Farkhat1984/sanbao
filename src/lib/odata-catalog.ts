@@ -7,6 +7,7 @@
 
 import { resolveModel } from "@/lib/model-router";
 import { LLM_TIMEOUT_MS } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 const ODATA_PREFIXES = [
   "Catalog",
@@ -70,7 +71,7 @@ async function categorizeEntitiesWithLLM(
 
   const model = await resolveModel("TEXT");
   if (!model) {
-    console.log("[odata-catalog] No TEXT model configured, using single-domain fallback");
+    logger.info("No TEXT model configured, using single-domain fallback", { context: "odata-catalog" });
     return fallback;
   }
 
@@ -86,9 +87,7 @@ async function categorizeEntitiesWithLLM(
     const batch = batches[i];
     const isFirst = i === 0;
 
-    console.log(
-      `[odata-catalog] LLM batch ${i + 1}/${batches.length} — ${batch.length} entities`
-    );
+    logger.info(`LLM batch ${i + 1}/${batches.length} — ${batch.length} entities`, { context: "odata-catalog" });
 
     const systemPrompt = isFirst
       ? `Ты — эксперт по 1С. Тебе дан список OData-сущностей из базы 1С.
@@ -140,9 +139,7 @@ ${JSON.stringify(accumulatedDomains)}
 
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        console.error(
-          `[odata-catalog] LLM batch ${i + 1} failed: HTTP ${res.status} — ${errText.slice(0, 200)}`
-        );
+        logger.error(`LLM batch ${i + 1} failed`, { context: "odata-catalog", status: res.status, body: errText.slice(0, 200) });
         return fallback;
       }
 
@@ -151,7 +148,7 @@ ${JSON.stringify(accumulatedDomains)}
       const parsed = JSON.parse(content) as LLMDomainMapping;
 
       if (!parsed.domains || !parsed.mapping) {
-        console.error("[odata-catalog] LLM returned invalid structure, falling back");
+        logger.error("LLM returned invalid structure, falling back", { context: "odata-catalog" });
         return fallback;
       }
 
@@ -164,10 +161,7 @@ ${JSON.stringify(accumulatedDomains)}
         accumulatedMapping[slug].push(...names);
       }
     } catch (err) {
-      console.error(
-        `[odata-catalog] LLM batch ${i + 1} error:`,
-        err instanceof Error ? err.message : err
-      );
+      logger.error(`LLM batch ${i + 1} error`, { context: "odata-catalog", error: err instanceof Error ? err.message : String(err) });
       return fallback;
     }
   }

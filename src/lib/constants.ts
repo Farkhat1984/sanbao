@@ -45,6 +45,10 @@ export const CSV_EXPORT_MAX_ROWS = 10_000;
 
 // ─── Conversation ───
 export const CONVERSATION_TITLE_MAX_LENGTH = 60;
+export const DEFAULT_CONVERSATION_TITLE = "Новый чат";
+
+// ─── Locale ───
+export const DEFAULT_TIMEZONE = "Asia/Almaty";
 
 // ─── API Keys ───
 export const API_KEY_PREFIX = "lma_";

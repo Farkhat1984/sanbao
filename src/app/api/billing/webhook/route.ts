@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
-import Stripe from "stripe";
-import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
+import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { fireAndForget } from "@/lib/logger";
 import { invalidatePlanCache } from "@/lib/usage";
+import { getStripe } from "@/lib/stripe-client";
 
 /**
  * Stripe webhook handler.
@@ -18,7 +18,10 @@ export async function POST(req: Request) {
   let event: { type: string; data: { object: Record<string, unknown> } };
 
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: STRIPE_API_VERSION });
+  const stripe = getStripe();
+  if (!stripe) {
+    return jsonError("Stripe не настроен", 500);
+  }
 
   if (endpointSecret && sig) {
     try {

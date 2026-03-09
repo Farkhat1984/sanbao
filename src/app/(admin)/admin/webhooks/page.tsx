@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save, Trash2, Webhook } from "lucide-react";
+import { Plus, Save, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -9,6 +9,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { useAdminList } from "@/hooks/useAdminList";
 import { useAdminCrud } from "@/hooks/useAdminCrud";
 import { api } from "@/lib/api-client";
@@ -101,7 +102,7 @@ export default function AdminWebhooksPage() {
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="secondary" size="sm" onClick={() => handleToggle(w.id, w.isActive)}>{w.isActive ? "Откл." : "Вкл."}</Button>
-                <button onClick={() => handleDelete(w.id, "Удалить вебхук?")} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                <AdminDeleteButton onClick={() => handleDelete(w.id, "Удалить вебхук?")} />
               </div>
             </div>
             <div className="flex flex-wrap gap-1">

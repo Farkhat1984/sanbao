@@ -1,4 +1,4 @@
-import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireOrgMember } from "@/lib/org-auth";
 import { orgInviteSchema } from "@/lib/validation";
@@ -25,7 +25,7 @@ export async function POST(
 
   const parsed = orgInviteSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
 
   // Check if already a member

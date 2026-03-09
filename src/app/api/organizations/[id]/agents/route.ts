@@ -1,4 +1,4 @@
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { requireOrgMember } from "@/lib/org-auth";
 import { orgAgentCreateSchema } from "@/lib/validation";
@@ -72,7 +72,7 @@ export async function POST(
 
   const parsed = orgAgentCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
 
   // Check plan limits

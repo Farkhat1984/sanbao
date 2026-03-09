@@ -5,9 +5,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
-import { decrypt } from "./crypto";
 import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
 import { getSettingNumber } from "./settings";
+import { verifyTotpCode } from "./auth-utils";
+import { logger } from "./logger";
 
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
@@ -94,14 +95,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               if (!totpCode) {
                 throw new Error("2FA_REQUIRED");
               }
-              const { OTP } = await import("otplib");
-              const otpInstance = new OTP();
-              const decryptedSecret = decrypt(admin.twoFactorSecret);
-              const result2fa = await otpInstance.verify({
-                token: totpCode,
-                secret: decryptedSecret,
-              });
-              if (!result2fa.valid) {
+              const valid = await verifyTotpCode(admin.twoFactorSecret, totpCode);
+              if (!valid) {
                 throw new Error("2FA_INVALID");
               }
             }
@@ -130,11 +125,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (!totpCode) {
               throw new Error("2FA_REQUIRED");
             }
-            const { OTP } = await import("otplib");
-            const otpInstance = new OTP();
-            const decryptedSecret = decrypt(user.twoFactorSecret);
-            const result2fa = await otpInstance.verify({ token: totpCode, secret: decryptedSecret });
-            if (!result2fa.valid) {
+            const valid = await verifyTotpCode(user.twoFactorSecret, totpCode);
+            if (!valid) {
               throw new Error("2FA_INVALID");
             }
           }
@@ -150,7 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (error instanceof Error && (error.message === "2FA_REQUIRED" || error.message === "2FA_INVALID")) {
             throw error;
           }
-          console.error("[AUTH] authorize error:", error);
+          logger.error("Authorize error", { context: "AUTH", error: error instanceof Error ? error.message : String(error) });
           return null;
         }
       },

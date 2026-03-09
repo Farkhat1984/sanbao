@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON, SKILL_CATEGORIES } from "@/lib/constants";
-import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { skillCreateSchema } from "@/lib/validation";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { type Prisma } from "@prisma/client";
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
   const parsed = skillCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Ошибка валидации", 400);
+    return jsonValidationError(parsed.error);
   }
   const {
     name, description, systemPrompt, templates, citationRules,

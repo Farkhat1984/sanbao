@@ -1,9 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Save, Trash2, Power, PowerOff, Zap } from "lucide-react";
+import { Plus, Save, Power, PowerOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminCreatePanel } from "@/components/admin/AdminCreatePanel";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
 import { api } from "@/lib/api-client";
 
 interface Provider {
@@ -76,79 +81,70 @@ export default function AdminProvidersPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />
-        ))}
-      </div>
-    );
+    return <AdminListSkeleton rows={3} height="h-24" />;
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">AI-провайдеры</h1>
-          <p className="text-sm text-text-secondary mt-1">Управление подключениями к AI API</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" />
-          Добавить
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="AI-провайдеры"
+        subtitle="Управление подключениями к AI API"
+        action={
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" />
+            Добавить
+          </Button>
+        }
+      />
 
-      {adding && (
-        <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-3">Новый провайдер</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <input
-              placeholder="Название (OpenAI)"
-              value={newProvider.name}
-              onChange={(e) => setNewProvider({ ...newProvider, name: e.target.value })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
-            <input
-              placeholder="Slug (openai)"
-              value={newProvider.slug}
-              onChange={(e) => setNewProvider({ ...newProvider, slug: e.target.value })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
-            <input
-              placeholder="Base URL"
-              value={newProvider.baseUrl}
-              onChange={(e) => setNewProvider({ ...newProvider, baseUrl: e.target.value })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
-            <input
-              placeholder="API Key"
-              type="password"
-              value={newProvider.apiKey}
-              onChange={(e) => setNewProvider({ ...newProvider, apiKey: e.target.value })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
-            <input
-              placeholder="Приоритет (0-100)"
-              type="number"
-              value={newProvider.priority}
-              onChange={(e) => setNewProvider({ ...newProvider, priority: parseInt(e.target.value) || 0 })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-            />
-            <select
-              value={newProvider.apiFormat}
-              onChange={(e) => setNewProvider({ ...newProvider, apiFormat: e.target.value })}
-              className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
-            >
-              <option value="OPENAI_COMPAT">OpenAI Compatible</option>
-              <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
-            </select>
-            <Button variant="gradient" size="sm" onClick={handleCreate}>
-              <Save className="h-3.5 w-3.5" />
-              Создать
-            </Button>
-          </div>
+      <AdminCreatePanel isOpen={adding} title="Новый провайдер">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <input
+            placeholder="Название (OpenAI)"
+            value={newProvider.name}
+            onChange={(e) => setNewProvider({ ...newProvider, name: e.target.value })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+          <input
+            placeholder="Slug (openai)"
+            value={newProvider.slug}
+            onChange={(e) => setNewProvider({ ...newProvider, slug: e.target.value })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+          <input
+            placeholder="Base URL"
+            value={newProvider.baseUrl}
+            onChange={(e) => setNewProvider({ ...newProvider, baseUrl: e.target.value })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+          <input
+            placeholder="API Key"
+            type="password"
+            value={newProvider.apiKey}
+            onChange={(e) => setNewProvider({ ...newProvider, apiKey: e.target.value })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+          <input
+            placeholder="Приоритет (0-100)"
+            type="number"
+            value={newProvider.priority}
+            onChange={(e) => setNewProvider({ ...newProvider, priority: parseInt(e.target.value) || 0 })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
+          />
+          <select
+            value={newProvider.apiFormat}
+            onChange={(e) => setNewProvider({ ...newProvider, apiFormat: e.target.value })}
+            className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
+          >
+            <option value="OPENAI_COMPAT">OpenAI Compatible</option>
+            <option value="AI_SDK_OPENAI">AI SDK — OpenAI</option>
+          </select>
+          <Button variant="gradient" size="sm" onClick={handleCreate}>
+            <Save className="h-3.5 w-3.5" />
+            Создать
+          </Button>
         </div>
-      )}
+      </AdminCreatePanel>
 
       <div className="space-y-3">
         {providers.map((p) => (
@@ -181,12 +177,7 @@ export default function AdminProvidersPage() {
                   {p.isActive ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                   {p.isActive ? "Откл." : "Вкл."}
                 </Button>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <AdminDeleteButton onClick={() => handleDelete(p.id)} />
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">
@@ -224,9 +215,7 @@ export default function AdminProvidersPage() {
             </div>
           </div>
         ))}
-        {providers.length === 0 && (
-          <p className="text-sm text-text-secondary text-center py-8">Провайдеры не добавлены</p>
-        )}
+        {providers.length === 0 && <AdminEmptyState message="Провайдеры не добавлены" />}
       </div>
     </div>
   );

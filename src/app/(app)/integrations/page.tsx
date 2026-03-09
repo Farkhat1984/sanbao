@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Database, Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useIntegrationStore } from "@/stores/integrationStore";
 import { IntegrationCard } from "@/components/integrations/IntegrationCard";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import type { IntegrationSummary } from "@/types/integration";
 
 const LIMIT = 20;
@@ -22,7 +23,6 @@ export default function IntegrationsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchItems = useCallback(
@@ -70,15 +70,11 @@ export default function IntegrationsPage() {
       .finally(() => setLoadingMore(false));
   }, [loadingMore, hasMore, nextCursor, setIntegrations, fetchItems]);
 
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMore(); },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    loading: loadingMore,
+  });
 
   const normalizedQuery = searchQuery.toLowerCase().trim();
   const filtered = items.filter(

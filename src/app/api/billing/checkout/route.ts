@@ -1,13 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import Stripe from "stripe";
-import { STRIPE_API_VERSION, DEFAULT_CURRENCY } from "@/lib/constants";
+import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key, { apiVersion: STRIPE_API_VERSION });
-}
+import { getStripe } from "@/lib/stripe-client";
 
 export async function POST(req: Request) {
   const result = await requireAuth();

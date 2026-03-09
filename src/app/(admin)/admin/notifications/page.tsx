@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Bell, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { api } from "@/lib/api-client";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 interface Notification {
   id: string;
@@ -36,7 +40,6 @@ export default function AdminNotificationsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchInitial = async () => {
     setLoading(true);
@@ -69,22 +72,11 @@ export default function AdminNotificationsPage() {
       .finally(() => setLoadingMore(false));
   }, [loadingMore, hasMore, nextCursor]);
 
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    loading: loadingMore,
+  });
 
   const handleSend = async () => {
     if (!form.title || !form.message) return;
@@ -108,8 +100,10 @@ export default function AdminNotificationsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)] mb-1">Уведомления</h1>
-      <p className="text-sm text-text-secondary mb-6">Массовые и глобальные уведомления</p>
+      <AdminPageHeader
+        title="Уведомления"
+        subtitle="Массовые и глобальные уведомления"
+      />
 
       {/* Send form */}
       <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
@@ -130,7 +124,7 @@ export default function AdminNotificationsPage() {
 
       {/* History */}
       {loading ? (
-        <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-xl p-4 animate-pulse h-16" />)}</div>
+        <AdminListSkeleton rows={5} height="h-16" />
       ) : (
         <>
           <div className="space-y-2">
@@ -150,7 +144,7 @@ export default function AdminNotificationsPage() {
                 <span className="text-xs text-text-secondary">{new Date(n.createdAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             ))}
-            {notifications.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет уведомлений</p>}
+            {notifications.length === 0 && <AdminEmptyState message="Нет уведомлений" />}
           </div>
 
           {/* Infinite scroll sentinel */}

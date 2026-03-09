@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { incrementTokens } from "@/lib/usage";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { getSettingNumber } from "@/lib/settings";
+import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
 
 export async function POST(
   req: Request,
@@ -73,7 +74,7 @@ export async function POST(
   if (msgCount <= 2) {
     const firstUserMsg = messages.find((m: { role: string }) => m.role === "USER");
     if (firstUserMsg) {
-      updateData.title = firstUserMsg.content.slice(0, 60) || "Новый чат";
+      updateData.title = firstUserMsg.content.slice(0, 60) || DEFAULT_CONVERSATION_TITLE;
     }
   }
 

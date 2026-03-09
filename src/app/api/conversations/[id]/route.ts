@@ -1,4 +1,4 @@
-import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { requireAuth, jsonOk, jsonError, jsonValidationError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { conversationUpdateSchema } from "@/lib/validation";
 
@@ -84,7 +84,7 @@ export async function PUT(
 
   const parsed = conversationUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Invalid data", 400);
+    return jsonValidationError(parsed.error);
   }
 
   const conversation = await prisma.conversation.updateMany({

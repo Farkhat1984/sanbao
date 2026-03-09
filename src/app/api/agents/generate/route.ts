@@ -1,4 +1,5 @@
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import {
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     if (e instanceof LlmJsonParseError) {
       return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
     }
-    console.error("Agent generation error:", e);
+    logger.error("Agent generation error", { context: "agents/generate", error: e instanceof Error ? e.message : String(e) });
     return jsonError("Ошибка генерации агента", 500);
   }
 }

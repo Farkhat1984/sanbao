@@ -1,23 +1,19 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { jsonOk, jsonError, jsonRateLimited } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
+import { getClientIp } from "@/lib/auth-utils";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
     // Rate limit registration by IP
-    const forwarded = req.headers.get("x-forwarded-for");
-    const cfIp = req.headers.get("cf-connecting-ip");
-    const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
 
     const rateCheck = await checkAuthRateLimit(`reg:${ip}`);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Слишком много попыток. Попробуйте позже." },
-        { status: 429, headers: { "Retry-After": String(rateCheck.retryAfterSeconds ?? 900) } }
-      );
+      return jsonRateLimited(rateCheck.retryAfterSeconds);
     }
 
     const { name, email, password } = await req.json();
@@ -74,7 +70,7 @@ export async function POST(req: Request) {
 
     return jsonOk({ success: true }, 201);
   } catch (error) {
-    console.error("Registration error:", error);
+    logger.error("Registration error", { context: "AUTH:REGISTER", error: error instanceof Error ? error.message : String(error) });
     return jsonError("Внутренняя ошибка сервера", 500);
   }
 }

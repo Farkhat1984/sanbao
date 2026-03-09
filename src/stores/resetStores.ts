@@ -13,6 +13,7 @@ import { useSidebarStore } from "./sidebarStore";
 import { useArticleStore } from "./articleStore";
 import { useOrgStore } from "./orgStore";
 import { useSourceStore } from "./sourceStore";
+import { BoundedMap } from "@/lib/bounded-map";
 import { useIntegrationStore } from "./integrationStore";
 import { useOnboardingStore } from "./onboardingStore";
 
@@ -86,7 +87,7 @@ export function resetAllStores() {
     activeArticle: null,
     loading: false,
     error: null,
-    cache: new Map(),
+    cache: new BoundedMap(50),
   });
 
   useOrgStore.setState({
@@ -101,7 +102,7 @@ export function resetAllStores() {
     activeSource: null,
     loading: false,
     error: null,
-    cache: new Map(),
+    cache: new BoundedMap(30),
   });
 
   useIntegrationStore.setState({

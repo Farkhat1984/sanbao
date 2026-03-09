@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { openArtifactInPanel } from "@/lib/panel-actions";
 import type { ArtifactType } from "@/types/chat";
 import type { AttachedFile } from "@/hooks/useFileAttachment";
+import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ export function useStreamChat({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: trimmed.slice(0, 60) || "Новый чат",
+            title: trimmed.slice(0, 60) || DEFAULT_CONVERSATION_TITLE,
             agentId: activeAgentId || undefined,
             orgAgentId: orgAgentId || undefined,
             isSwarmMode: swarmMode || undefined,

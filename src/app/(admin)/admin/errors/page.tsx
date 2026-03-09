@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { AlertTriangle, Download } from "lucide-react";
 
 interface ErrorEntry {
@@ -62,15 +65,15 @@ export default function AdminErrorsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Логи ошибок</h1>
-          <p className="text-sm text-text-secondary mt-1">Ошибки API и системные сбои</p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={handleExport}>
-          <Download className="h-4 w-4" /> Экспорт CSV
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Логи ошибок"
+        subtitle="Ошибки API и системные сбои"
+        action={
+          <Button variant="secondary" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Экспорт CSV
+          </Button>
+        }
+      />
 
       <div className="flex gap-2 mb-4">
         <input placeholder="Фильтр по маршруту" value={routeFilter} onChange={(e) => setRouteFilter(e.target.value)} className="h-9 w-64 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -78,7 +81,7 @@ export default function AdminErrorsPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-xl p-4 animate-pulse h-16" />)}</div>
+        <AdminListSkeleton rows={5} height="h-16" />
       ) : (
         <>
           <div className="space-y-2">
@@ -121,7 +124,7 @@ export default function AdminErrorsPage() {
                 )}
               </div>
             ))}
-            {errors.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Ошибок не найдено</p>}
+            {errors.length === 0 && <AdminEmptyState message="Ошибок не найдено" />}
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4">

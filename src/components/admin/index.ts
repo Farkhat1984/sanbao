@@ -4,6 +4,8 @@ export { AdminPageHeader } from "./AdminPageHeader";
 export { AdminPagination } from "./AdminPagination";
 export { AdminListSkeleton } from "./AdminListSkeleton";
 export { AdminEmptyState } from "./AdminEmptyState";
+export { AdminCreatePanel } from "./AdminCreatePanel";
+export { AdminDeleteButton } from "./AdminDeleteButton";
 export { StatsCard } from "./StatsCard";
 export { UsersTable } from "./UsersTable";
 export { UserEditModal } from "./UserEditModal";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Zap, Store, Sparkles, Loader2, Search, TrendingUp, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import type { Skill } from "@/types/skill";
 
 const SKILLS_LIMIT = 20;
@@ -26,7 +27,6 @@ export default function SkillsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Build query params
   const buildParams = useCallback(
@@ -84,22 +84,11 @@ export default function SkillsPage() {
       .finally(() => setLoadingMore(false));
   }, [loadingMore, hasMore, nextCursor, setSkills, buildParams]);
 
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  const sentinelRef = useInfiniteScroll({
+    onLoadMore: loadMore,
+    hasMore,
+    loading: loadingMore,
+  });
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
 

@@ -1,4 +1,5 @@
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import {
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     if (e instanceof LlmJsonParseError) {
       return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать описание скилла.", 422);
     }
-    console.error("Skill generation error:", e);
+    logger.error("Skill generation error", { context: "skills/generate", error: e instanceof Error ? e.message : String(e) });
     return jsonError("Ошибка генерации скилла. Попробуйте ещё раз.", 500);
   }
 }

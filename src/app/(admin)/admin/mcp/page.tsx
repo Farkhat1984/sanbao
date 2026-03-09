@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Save, Trash2, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X, ToggleLeft, ToggleRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Save, Wifi, WifiOff, HeartPulse, FileText, ExternalLink, Copy, Check, Bookmark, Pencil, X, ToggleLeft, ToggleRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminCreatePanel } from "@/components/admin/AdminCreatePanel";
+import { AdminDeleteButton } from "@/components/admin/AdminDeleteButton";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 interface McpServer {
   id: string;
@@ -271,31 +277,25 @@ export default function AdminMcpPage() {
   const existingNames = new Set(servers.map((s) => s.name));
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />
-        ))}
-      </div>
-    );
+    return <AdminListSkeleton rows={3} height="h-24" />;
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Глобальные MCP-серверы</h1>
-          <p className="text-sm text-text-secondary mt-1">Серверы доступные всем пользователям</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={handleHealthCheck} isLoading={checking}>
-            <HeartPulse className="h-4 w-4" /> Health Check
-          </Button>
-          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-            <Plus className="h-4 w-4" /> Добавить
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Глобальные MCP-серверы"
+        subtitle="Серверы доступные всем пользователям"
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleHealthCheck} isLoading={checking}>
+              <HeartPulse className="h-4 w-4" /> Health Check
+            </Button>
+            <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+              <Plus className="h-4 w-4" /> Добавить
+            </Button>
+          </div>
+        }
+      />
 
       {/* ── Tabs ── */}
       <div className="flex gap-1 mb-4">
@@ -361,17 +361,20 @@ export default function AdminMcpPage() {
               </div>
             </div>
           ))}
-          {toolLogs.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет логов вызовов</p>}
-          {totalLogPages > 1 && (
-            <Pagination page={logPage} total={totalLogPages} count={logTotal} perPage={LOGS_PER_PAGE} onChange={setLogPage} />
-          )}
+          {toolLogs.length === 0 && <AdminEmptyState message="Нет логов вызовов" />}
+          <AdminPagination
+            page={logPage}
+            totalPages={totalLogPages}
+            total={logTotal}
+            label="логов"
+            onPageChange={setLogPage}
+          />
         </div>
       )}
 
       {/* ── Add Server Form ── */}
-      {tab === "servers" && adding && (
-        <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-3">Новый MCP-сервер</h3>
+      {tab === "servers" && (
+        <AdminCreatePanel isOpen={adding} title="Новый MCP-сервер">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <input placeholder="Название" value={newServer.name} onChange={(e) => setNewServer({ ...newServer, name: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
             <input placeholder="URL (http://...)" value={newServer.url} onChange={(e) => setNewServer({ ...newServer, url: e.target.value })} className="h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -384,7 +387,7 @@ export default function AdminMcpPage() {
           <div className="mt-3">
             <Button variant="gradient" size="sm" onClick={handleCreate}><Save className="h-3.5 w-3.5" /> Создать</Button>
           </div>
-        </div>
+        </AdminCreatePanel>
       )}
 
       {/* ── Servers List ── */}
@@ -454,19 +457,23 @@ export default function AdminMcpPage() {
                       {s.isEnabled ? <ToggleRight className="h-4.5 w-4.5" /> : <ToggleLeft className="h-4.5 w-4.5" />}
                     </button>
                     <button onClick={() => handleStartEdit(s)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"><Pencil className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => handleDelete(s.id)} className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <AdminDeleteButton onClick={() => handleDelete(s.id)} />
                   </div>
                 </div>
               )}
             </div>
           ))}
           {filteredServers.length === 0 && servers.length > 0 && (
-            <p className="text-sm text-text-secondary text-center py-8">Нет серверов по заданным фильтрам</p>
+            <AdminEmptyState message="Нет серверов по заданным фильтрам" />
           )}
-          {servers.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Глобальные MCP-серверы не добавлены</p>}
-          {totalServerPages > 1 && (
-            <Pagination page={serverPage} total={totalServerPages} count={filteredServers.length} perPage={SERVERS_PER_PAGE} onChange={setServerPage} />
-          )}
+          {servers.length === 0 && <AdminEmptyState message="Глобальные MCP-серверы не добавлены" />}
+          <AdminPagination
+            page={serverPage}
+            totalPages={totalServerPages}
+            total={filteredServers.length}
+            label="серверов"
+            onPageChange={setServerPage}
+          />
         </div>
       )}
 
@@ -548,34 +555,3 @@ export default function AdminMcpPage() {
   );
 }
 
-function Pagination({ page, total, count, perPage, onChange }: { page: number; total: number; count: number; perPage: number; onChange: (p: number) => void }) {
-  const from = (page - 1) * perPage + 1;
-  const to = Math.min(page * perPage, count);
-
-  return (
-    <div className="flex items-center justify-between pt-3">
-      <span className="text-xs text-text-secondary">
-        {from}&ndash;{to} из {count}
-      </span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onChange(page - 1)}
-          disabled={page <= 1}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-xs text-text-secondary px-2">
-          {page} / {total}
-        </span>
-        <button
-          onClick={() => onChange(page + 1)}
-          disabled={page >= total}
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}

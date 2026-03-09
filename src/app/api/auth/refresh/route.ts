@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { jsonOk, jsonError, jsonRateLimited } from "@/lib/api-helpers";
 import {
   mintSessionToken,
   validateRefreshToken,
 } from "@/lib/mobile-session";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/auth-utils";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/auth/refresh
@@ -17,19 +19,11 @@ import { checkAuthRateLimit } from "@/lib/rate-limit";
  */
 export async function POST(req: Request) {
   try {
-    const forwarded = req.headers.get("x-forwarded-for");
-    const cfIp = req.headers.get("cf-connecting-ip");
-    const ip = cfIp || forwarded?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
 
     const rateCheck = await checkAuthRateLimit(`refresh:${ip}`);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        { error: "Too many attempts. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(rateCheck.retryAfterSeconds ?? 900) },
-        }
-      );
+      return jsonRateLimited(rateCheck.retryAfterSeconds);
     }
 
     const body = await req.json().catch(() => ({}));
@@ -98,7 +92,7 @@ export async function POST(req: Request) {
       expiresAt: session.expiresAt,
     });
   } catch (error) {
-    console.error("[AUTH:REFRESH] error:", error);
+    logger.error("Token refresh error", { context: "AUTH:REFRESH", error: error instanceof Error ? error.message : String(error) });
     return jsonError("Internal server error", 500);
   }
 }
