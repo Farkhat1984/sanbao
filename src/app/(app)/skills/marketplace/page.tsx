@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SkillCard } from "@/components/skills/SkillCard";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { SKILL_CATEGORIES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { SkillCard } from "@sanbao/ui/components/skills/SkillCard";
+import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
+import { SKILL_CATEGORIES } from "@sanbao/shared/constants";
+import { cn } from "@sanbao/shared/utils";
 import type { Skill } from "@/types/skill";
 
 export default function MarketplacePage() {

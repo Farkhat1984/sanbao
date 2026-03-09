@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { AvatarUpload } from "@/components/agents/AvatarUpload";
+import { Badge } from "@sanbao/ui/components/ui/Badge";
+import { Button } from "@sanbao/ui/components/ui/Button";
+import { AvatarUpload } from "@sanbao/ui/components/agents/AvatarUpload";
 import { Mail, Calendar, Shield, Sparkles } from "lucide-react";
 
 export default function ProfilePage() {

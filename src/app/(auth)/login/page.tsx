@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { springTransition } from "@/lib/animations";
-import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
+import { springTransition } from "@sanbao/shared/animations";
+import { SanbaoCompass } from "@sanbao/ui/components/ui/SanbaoCompass";
 import Link from "next/link";
 
 export default function LoginPage() {

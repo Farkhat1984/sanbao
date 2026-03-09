@@ -1,9 +1,9 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
+import { SanbaoCompass } from "@sanbao/ui/components/ui/SanbaoCompass";
 import { motion } from "framer-motion";
-import { springTransition } from "@/lib/animations";
+import { springTransition } from "@sanbao/shared/animations";
 import Link from "next/link";
 
 export default function RegisterPage() {

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, Bot, Trash2, Network } from "lucide-react";
-import { useOrgStore } from "@/stores/orgStore";
-import { cn } from "@/lib/utils";
+import { useOrgStore } from "@sanbao/stores/orgStore";
+import { cn } from "@sanbao/shared/utils";
 
 export default function OrganizationDetailPage({
   params,

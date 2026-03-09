@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["TEAM_ID.com.sanbao.sanbaoai"],
+        "paths": ["/chat/*", "/agents/*", "/billing"]
+      }
+    ]
+  }
+}

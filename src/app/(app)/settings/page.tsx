@@ -3,11 +3,11 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { resetAllStores } from "@/stores/resetStores";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { UsageBar } from "@/components/billing/UsageBar";
-import { PlanCard } from "@/components/billing/PlanCard";
+import { resetAllStores } from "@sanbao/stores/resetStores";
+import { Button } from "@sanbao/ui/components/ui/Button";
+import { Badge } from "@sanbao/ui/components/ui/Badge";
+import { UsageBar } from "@sanbao/ui/components/billing/UsageBar";
+import { PlanCard } from "@sanbao/ui/components/billing/PlanCard";
 import {
   LogOut,
   Sparkles,
@@ -17,8 +17,8 @@ import {
   Brain,
   Lock,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { MemoryManager } from "@/components/memory/MemoryManager";
+import { cn } from "@sanbao/shared/utils";
+import { MemoryManager } from "@sanbao/ui/components/memory/MemoryManager";
 
 interface PlanInfo {
   slug: string;

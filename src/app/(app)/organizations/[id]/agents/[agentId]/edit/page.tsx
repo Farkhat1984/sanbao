@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { AgentForm } from "@/components/agents/AgentForm";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { AgentForm } from "@sanbao/ui/components/agents/AgentForm";
+import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
 
 export default function EditOrgAgentPage({
   params,

@@ -1,4 +1,4 @@
-import { SkillForm } from "@/components/skills/SkillForm";
+import { SkillForm } from "@sanbao/ui/components/skills/SkillForm";
 
 export default function NewSkillPage() {
   return (

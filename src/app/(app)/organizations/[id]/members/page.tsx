@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, UserPlus, Shield, Crown, User, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { useOrgStore, type OrgMemberInfo } from "@/stores/orgStore";
-import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
+import { useOrgStore, type OrgMemberInfo } from "@sanbao/stores/orgStore";
+import { Avatar } from "@sanbao/ui/components/ui/Avatar";
+import { cn } from "@sanbao/shared/utils";
 
 const MEMBERS_PER_PAGE = 20;
 

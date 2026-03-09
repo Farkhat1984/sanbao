@@ -19,7 +19,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sanbao/shared": ["./packages/shared/src"],
+      "@sanbao/shared/*": ["./packages/shared/src/*"],
+      "@sanbao/stores": ["./packages/stores/src"],
+      "@sanbao/stores/*": ["./packages/stores/src/*"],
+      "@sanbao/ui": ["./packages/ui/src"],
+      "@sanbao/ui/*": ["./packages/ui/src/*"]
     }
   },
   "include": [
@@ -28,7 +34,12 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "packages/shared/src/**/*.ts",
+    "packages/stores/src/**/*.ts",
+    "packages/stores/src/**/*.tsx",
+    "packages/ui/src/**/*.ts",
+    "packages/ui/src/**/*.tsx"
   ],
-  "exclude": ["node_modules", "prisma/seed.ts", "scripts/migrate-api-keys.ts"]
+  "exclude": ["node_modules", "prisma/seed.ts", "scripts/migrate-api-keys.ts", "apps/**"]
 }

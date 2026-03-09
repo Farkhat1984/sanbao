@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Database, Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useIntegrationStore } from "@/stores/integrationStore";
+import { useIntegrationStore } from "@sanbao/stores/integrationStore";
 import { IntegrationCard } from "@/components/integrations/IntegrationCard";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { ConfirmModal } from "@sanbao/ui/components/ui/ConfirmModal";
+import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
+import { useInfiniteScroll } from "@sanbao/ui/hooks/useInfiniteScroll";
 import type { IntegrationSummary } from "@/types/integration";
 
 const LIMIT = 20;

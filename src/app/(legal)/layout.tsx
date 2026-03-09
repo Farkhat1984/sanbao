@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
+import { SanbaoCompass } from "@sanbao/ui/components/ui/SanbaoCompass";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (

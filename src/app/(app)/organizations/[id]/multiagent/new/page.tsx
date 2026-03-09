@@ -1,4 +1,4 @@
-import { MultiAgentForm } from "@/components/agents/MultiAgentForm";
+import { MultiAgentForm } from "@sanbao/ui/components/agents/MultiAgentForm";
 
 export default async function NewMultiAgentPage({
   params,

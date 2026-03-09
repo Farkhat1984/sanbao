@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { SkillForm } from "@/components/skills/SkillForm";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { SkillForm } from "@sanbao/ui/components/skills/SkillForm";
+import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
 import type { Skill } from "@/types/skill";
 
 export default function EditSkillPage() {

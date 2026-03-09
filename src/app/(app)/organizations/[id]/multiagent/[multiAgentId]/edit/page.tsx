@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { MultiAgentForm } from "@/components/agents/MultiAgentForm";
+import { MultiAgentForm } from "@sanbao/ui/components/agents/MultiAgentForm";
 
 export default function EditMultiAgentPage() {
   const params = useParams<{ id: string; multiAgentId: string }>();

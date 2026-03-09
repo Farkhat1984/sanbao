@@ -1,18 +1,6 @@
 /**
- * Shared MCP tool context type — used across chat streaming, tool resolution,
- * agent loading, and chat route agent resolution.
+ * Re-export MCP types from @sanbao/shared.
+ * This file exists for backward compatibility — all existing `@/lib/types/mcp` imports continue working.
+ * New code should import directly from `@sanbao/shared/types/mcp`.
  */
-
-/** Context for a single MCP tool, including server connection details and schema. */
-export interface McpToolContext {
-  url: string;
-  transport: "SSE" | "STREAMABLE_HTTP";
-  apiKey: string | null;
-  name: string;
-  /** Original tool name on the MCP server (before namespace prefix). Used for dispatch. */
-  originalName?: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  /** MCP server ID from DB — used for tool call logging */
-  mcpServerId?: string;
-}
+export type { McpToolContext } from "@sanbao/shared/types/mcp";

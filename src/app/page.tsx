@@ -8,7 +8,7 @@ import { SpyglassIcon } from "@/components/icons/SpyglassIcon";
 import { LanternIcon } from "@/components/icons/LanternIcon";
 import { ShipWheelIcon } from "@/components/icons/ShipWheelIcon";
 import { SonarIcon } from "@/components/icons/SonarIcon";
-import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
+import { SanbaoCompass } from "@sanbao/ui/components/ui/SanbaoCompass";
 
 /* ────────────────────────────────────────────────────────
    Animation Variants

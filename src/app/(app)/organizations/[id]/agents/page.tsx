@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Bot, FileText, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { cn } from "@sanbao/shared/utils";
+import { useInfiniteScroll } from "@sanbao/ui/hooks/useInfiniteScroll";
 
 interface OrgAgentItem {
   id: string;

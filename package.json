@@ -2,6 +2,11 @@
   "name": "sanbao",
   "version": "0.1.1",
   "private": true,
+  "packageManager": "npm@11.8.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config tests/e2e/vitest.e2e.config.ts",
+    "turbo:build": "turbo run build",
+    "turbo:lint": "turbo run lint",
+    "turbo:test": "turbo run test",
+    "turbo:dev": "turbo run dev",
     "mobile:sync": "npx cap sync",
     "mobile:ios": "npx cap open ios",
     "mobile:android": "npx cap open android"
@@ -87,6 +96,7 @@
     "jsdom": "^28.1.0",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
+    "turbo": "^2.8.14",
     "typescript": "^5",
     "vitest": "^4.0.18"
   }

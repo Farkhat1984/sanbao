@@ -4,6 +4,8 @@ import { incrementTokens } from "@/lib/usage";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { getSettingNumber } from "@/lib/settings";
 import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
+import { sendPush } from "@/lib/push";
+import { fireAndForget } from "@/lib/logger";
 
 export async function POST(
   req: Request,
@@ -88,6 +90,16 @@ export async function POST(
   if (assistantMsg?.content) {
     const outputTokens = Math.ceil(assistantMsg.content.length / 3);
     await incrementTokens(session.user.id, outputTokens);
+
+    // Send push notification for assistant response (fire-and-forget)
+    const pushTitle = "Sanbao AI";
+    const pushBody = assistantMsg.content.length > 100
+      ? assistantMsg.content.slice(0, 100) + "..."
+      : assistantMsg.content;
+    fireAndForget(
+      sendPush(session.user.id, pushTitle, pushBody, { conversationId }),
+      "push-notification"
+    );
   }
 
   // Save planning data if present

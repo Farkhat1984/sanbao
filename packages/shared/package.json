@@ -1,0 +1,77 @@
+{
+  "name": "@sanbao/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./types/*": {
+      "types": "./src/types/*.ts",
+      "default": "./src/types/*.ts"
+    },
+    "./constants": {
+      "types": "./src/constants.ts",
+      "default": "./src/constants.ts"
+    },
+    "./utils": {
+      "types": "./src/utils.ts",
+      "default": "./src/utils.ts"
+    },
+    "./i18n": {
+      "types": "./src/i18n.ts",
+      "default": "./src/i18n.ts"
+    },
+    "./validation": {
+      "types": "./src/validation.ts",
+      "default": "./src/validation.ts"
+    },
+    "./bounded-map": {
+      "types": "./src/bounded-map.ts",
+      "default": "./src/bounded-map.ts"
+    },
+    "./animations": {
+      "types": "./src/animations.ts",
+      "default": "./src/animations.ts"
+    },
+    "./parse-message-content": {
+      "types": "./src/parse-message-content.ts",
+      "default": "./src/parse-message-content.ts"
+    },
+    "./csv-utils": {
+      "types": "./src/csv-utils.ts",
+      "default": "./src/csv-utils.ts"
+    },
+    "./chat/tool-categories": {
+      "types": "./src/chat/tool-categories.ts",
+      "default": "./src/chat/tool-categories.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.1"
+  },
+  "peerDependencies": {
+    "framer-motion": ">=11"
+  },
+  "peerDependenciesMeta": {
+    "framer-motion": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

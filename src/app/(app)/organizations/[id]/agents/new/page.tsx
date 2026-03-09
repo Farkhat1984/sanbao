@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { AgentForm } from "@/components/agents/AgentForm";
+import { AgentForm } from "@sanbao/ui/components/agents/AgentForm";
 
 export default function NewOrgAgentPage({
   params,

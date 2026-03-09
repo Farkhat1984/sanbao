@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ChatArea } from "@/components/chat/ChatArea";
-import { useChatStore } from "@/stores/chatStore";
+import { ChatArea } from "@sanbao/ui/components/chat/ChatArea";
+import { useChatStore } from "@sanbao/stores/chatStore";
 import type { ChatMessage } from "@/types/chat";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

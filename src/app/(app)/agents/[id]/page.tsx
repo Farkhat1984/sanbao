@@ -12,12 +12,12 @@ import {
   AlertCircle,
   ImageIcon,
 } from "lucide-react";
-import { useChatStore } from "@/stores/chatStore";
-import { AgentFileUpload } from "@/components/agents/AgentFileUpload";
-import { ICON_MAP } from "@/components/agents/AgentIconPicker";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { cn } from "@/lib/utils";
+import { useChatStore } from "@sanbao/stores/chatStore";
+import { AgentFileUpload } from "@sanbao/ui/components/agents/AgentFileUpload";
+import { ICON_MAP } from "@sanbao/ui/components/agents/AgentIconPicker";
+import { ConfirmModal } from "@sanbao/ui/components/ui/ConfirmModal";
+import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
+import { cn } from "@sanbao/shared/utils";
 import type { Agent, AgentFile } from "@/types/agent";
 
 export default function AgentDetailPage() {

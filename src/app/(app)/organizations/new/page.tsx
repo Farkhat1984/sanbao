@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2 } from "lucide-react";
-import { useOrgStore } from "@/stores/orgStore";
+import { useOrgStore } from "@sanbao/stores/orgStore";
 
 export default function NewOrganizationPage() {
   const router = useRouter();

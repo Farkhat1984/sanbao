@@ -2,7 +2,7 @@
 
 import { Cable, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { McpServerManager } from "@/components/settings/McpServerManager";
+import { McpServerManager } from "@sanbao/ui/components/settings/McpServerManager";
 
 export default function McpPage() {
   const router = useRouter();

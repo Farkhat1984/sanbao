@@ -1,0 +1,87 @@
+{
+  "name": "@sanbao/stores",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./chatStore": {
+      "types": "./src/chatStore.ts",
+      "default": "./src/chatStore.ts"
+    },
+    "./agentStore": {
+      "types": "./src/agentStore.ts",
+      "default": "./src/agentStore.ts"
+    },
+    "./artifactStore": {
+      "types": "./src/artifactStore.ts",
+      "default": "./src/artifactStore.ts"
+    },
+    "./articleStore": {
+      "types": "./src/articleStore.ts",
+      "default": "./src/articleStore.ts"
+    },
+    "./sourceStore": {
+      "types": "./src/sourceStore.ts",
+      "default": "./src/sourceStore.ts"
+    },
+    "./panelStore": {
+      "types": "./src/panelStore.ts",
+      "default": "./src/panelStore.ts"
+    },
+    "./sidebarStore": {
+      "types": "./src/sidebarStore.ts",
+      "default": "./src/sidebarStore.ts"
+    },
+    "./taskStore": {
+      "types": "./src/taskStore.ts",
+      "default": "./src/taskStore.ts"
+    },
+    "./skillStore": {
+      "types": "./src/skillStore.ts",
+      "default": "./src/skillStore.ts"
+    },
+    "./memoryStore": {
+      "types": "./src/memoryStore.ts",
+      "default": "./src/memoryStore.ts"
+    },
+    "./billingStore": {
+      "types": "./src/billingStore.ts",
+      "default": "./src/billingStore.ts"
+    },
+    "./onboardingStore": {
+      "types": "./src/onboardingStore.ts",
+      "default": "./src/onboardingStore.ts"
+    },
+    "./orgStore": {
+      "types": "./src/orgStore.ts",
+      "default": "./src/orgStore.ts"
+    },
+    "./integrationStore": {
+      "types": "./src/integrationStore.ts",
+      "default": "./src/integrationStore.ts"
+    },
+    "./resetStores": {
+      "types": "./src/resetStores.ts",
+      "default": "./src/resetStores.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "zustand": "*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

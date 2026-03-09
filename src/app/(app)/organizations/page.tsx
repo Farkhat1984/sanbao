@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Building2, Users, Bot } from "lucide-react";
-import { useOrgStore, type OrgSummary } from "@/stores/orgStore";
-import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
+import { useOrgStore, type OrgSummary } from "@sanbao/stores/orgStore";
+import { Avatar } from "@sanbao/ui/components/ui/Avatar";
+import { cn } from "@sanbao/shared/utils";
 
 function OrgCard({ org }: { org: OrgSummary }) {
   const router = useRouter();

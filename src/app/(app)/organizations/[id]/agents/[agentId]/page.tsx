@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Play, Rocket, Trash2, FileText, RefreshCw, MessageSquare, Upload, AlertTriangle, Zap, Server, Pencil } from "lucide-react";
 import { AgentProgressBar } from "@/components/organizations/AgentProgressBar";
 import { FileUploader } from "@/components/organizations/FileUploader";
-import { Modal } from "@/components/ui/Modal";
-import { cn } from "@/lib/utils";
+import { Modal } from "@sanbao/ui/components/ui/Modal";
+import { cn } from "@sanbao/shared/utils";
 
 interface AgentDetail {
   id: string;
