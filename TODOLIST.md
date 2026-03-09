@@ -7,7 +7,7 @@
 
 ## P0 — CRITICAL (Fix First)
 
-### 1. [ ] Chat route — 905-line God Function
+### 1. [x] Chat route — 905-line God Function (DONE: 905→367 lines, 3 modules extracted)
 - **File:** `src/app/api/chat/route.ts`
 - **Problem:** Single POST handler handles auth, validation, plan checks, content filtering, swarm routing, agent resolution, MCP loading, context management, compaction, and provider routing
 - **Fix:** Split into modules:
@@ -16,7 +16,7 @@
   - `src/app/api/chat/agent-resolver.ts` — agent context, org agent loading, MCP dedup
   - `src/app/api/chat/usage.ts` — plan checks, token estimation, usage tracking
 
-### 2. [ ] Admin Settings — 949-line God Page
+### 2. [x] Admin Settings — 949-line God Page (DONE: 949→630 lines, 6 components extracted)
 - **File:** `src/app/(admin)/admin/settings/page.tsx`
 - **Fix:** Extract:
   - `src/components/admin/settings/SettingRow.tsx` (lines 754-838)
@@ -25,11 +25,11 @@
   - `src/components/ui/NotificationBar.tsx` (lines 62-94, reusable)
   - `useSettingsForm()` hook for form state
 
-### 3. [ ] Org agent loading duplicated 2x
+### 3. [x] Org agent loading duplicated 2x (DONE: route.ts now uses loadOrgAgentContext())
 - **Files:** `src/app/api/chat/route.ts:407-517` + `src/lib/swarm/agent-loader.ts:22-125`
 - **Fix:** Route.ts should call `loadOrgAgentContext()` from swarm module, add access control as wrapper
 
-### 4. [ ] AI Generation routes — 3 files copy-paste (~250 lines)
+### 4. [x] AI Generation routes — 3 files copy-paste (~250 lines) (DONE: created llm-generate.ts, routes reduced 40%)
 - **Files:**
   - `src/app/api/agents/generate/route.ts` (97 lines)
   - `src/app/api/skills/generate/route.ts` (142 lines)
@@ -37,18 +37,18 @@
 - **Duplicated:** Model resolution, LLM fetch, JSON extraction from markdown, icon/color validation
 - **Fix:** Create `src/lib/llm-generate.ts` with `callLlmForJson(prompt, userMessage, options)`
 
-### 5. [ ] Pagination copy-paste in 9 admin pages (~200 lines)
+### 5. [x] Pagination copy-paste in 9 admin pages (~200 lines) (DONE: AdminPagination component, 5 pages refactored)
 - **Files:** webhooks, promo-codes, sessions, api-keys, files, agents, skills, agent-moderation, mcp pages
 - **Fix:** Create `src/components/admin/AdminPagination.tsx`
 
-### 6. [ ] Fetch-List-State boilerplate in 15+ pages (~400 lines)
+### 6. [x] Fetch-List-State boilerplate in 15+ pages (~400 lines) (DONE: useAdminList hook + 4 shared components, 5 pages refactored)
 - **Files:** webhooks, promo-codes, sessions, api-keys, files, agents, skills, agent-moderation, experiments, providers, errors, logs, moderation + more
 - **Fix:** Create `src/hooks/useAdminList.ts`:
   ```ts
   useAdminList<T>(endpoint, perPage) => { items, loading, page, total, totalPages, setPage, refetch }
   ```
 
-### 7. [ ] seed.ts — 3017 lines monolith
+### 7. [x] seed.ts — 3017 lines monolith (DONE: 3017→40 lines orchestrator + 10 seed modules)
 - **File:** `prisma/seed.ts`
 - **Fix:** Split into:
   - `prisma/seeds/plans.ts`

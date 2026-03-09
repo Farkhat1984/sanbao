@@ -75,6 +75,12 @@ export const VALID_COLORS = [
   "#C4857A","#EC4899","#06B6D4","#5E7A8A",
 ];
 
+// ─── Jurisdictions ───
+export const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"] as const;
+
+// ─── AI Generation ───
+export const AI_GENERATION_DESCRIPTION_MAX_LENGTH = 5000;
+
 // ─── AI Defaults ───
 export const DEFAULT_TEMPERATURE = 0.6;
 export const DEFAULT_TEMPERATURE_CODE_FIX = 0.2;

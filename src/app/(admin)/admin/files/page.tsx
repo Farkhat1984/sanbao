@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { File, HardDrive, Trash2, Recycle, ChevronLeft, ChevronRight } from "lucide-react";
+import { File, HardDrive, Trash2, Recycle } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 
 interface FileStats {
   totalFiles: number;
@@ -22,6 +26,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
+const FILES_PER_PAGE = 50;
+
 export default function AdminFilesPage() {
   const [stats, setStats] = useState<FileStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +35,6 @@ export default function AdminFilesPage() {
   const [cleanupResult, setCleanupResult] = useState<{ deletedFiles: number; deletedRecords: number; freedMb: number } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filePage, setFilePage] = useState(1);
-  const FILES_PER_PAGE = 50;
 
   const fetchStats = useCallback(() => {
     const params = new URLSearchParams({
@@ -66,27 +71,28 @@ export default function AdminFilesPage() {
     fetchStats();
   };
 
-  if (loading || !stats) {
-    return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />)}</div>;
-  }
+  if (loading || !stats) return <AdminListSkeleton rows={3} height="h-24" />;
+
+  const fileTotal = stats.recentTotal || stats.totalFiles;
+  const totalPages = Math.ceil(fileTotal / FILES_PER_PAGE);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Файлы</h1>
-          <p className="text-sm text-text-secondary mt-1">Загруженные файлы и использование хранилища</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={handleCleanup} isLoading={cleaning}>
-            <Recycle className="h-3.5 w-3.5" />
-            Очистка
-          </Button>
-          <Badge variant={stats.storageConfigured ? "accent" : "default"}>
-            {stats.storageConfigured ? "S3 подключён" : "S3 не настроен"}
-          </Badge>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Файлы"
+        subtitle="Загруженные файлы и использование хранилища"
+        action={
+          <>
+            <Button variant="secondary" size="sm" onClick={handleCleanup} isLoading={cleaning}>
+              <Recycle className="h-3.5 w-3.5" />
+              Очистка
+            </Button>
+            <Badge variant={stats.storageConfigured ? "accent" : "default"}>
+              {stats.storageConfigured ? "S3 подключён" : "S3 не настроен"}
+            </Badge>
+          </>
+        }
+      />
 
       {/* Cleanup result */}
       {cleanupResult && (
@@ -129,7 +135,7 @@ export default function AdminFilesPage() {
               </div>
             </div>
           ))}
-          {stats.byUser.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет загруженных файлов</p>}
+          {stats.byUser.length === 0 && <AdminEmptyState message="Нет загруженных файлов" />}
         </div>
       </div>
 
@@ -155,35 +161,15 @@ export default function AdminFilesPage() {
               </button>
             </div>
           ))}
-          {stats.recentFiles.length === 0 && <p className="text-sm text-text-secondary text-center py-4">Нет файлов</p>}
+          {stats.recentFiles.length === 0 && <AdminEmptyState message="Нет файлов" />}
 
-          {/* Pagination */}
-          {(() => {
-            const totalPages = Math.ceil((stats.recentTotal || stats.totalFiles) / FILES_PER_PAGE);
-            if (totalPages <= 1) return null;
-            return (
-              <div className="flex items-center justify-between pt-4">
-                <span className="text-xs text-text-secondary">{stats.recentTotal || stats.totalFiles} файлов</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setFilePage((p) => Math.max(1, p - 1))}
-                    disabled={filePage === 1}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <span className="text-sm text-text-secondary">{filePage} / {totalPages}</span>
-                  <button
-                    onClick={() => setFilePage((p) => Math.min(totalPages, p + 1))}
-                    disabled={filePage === totalPages}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
+          <AdminPagination
+            page={filePage}
+            totalPages={totalPages}
+            total={fileTotal}
+            label="файлов"
+            onPageChange={setFilePage}
+          />
         </div>
       </div>
     </div>

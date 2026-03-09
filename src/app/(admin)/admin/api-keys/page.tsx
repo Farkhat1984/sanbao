@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Key, Trash2, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Plus, Key, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { useAdminList } from "@/hooks/useAdminList";
 
 interface ApiKeyEntry {
   id: string;
@@ -21,30 +26,18 @@ interface ApiKeyEntry {
 const KEYS_PER_PAGE = 25;
 
 export default function AdminApiKeysPage() {
-  const [keys, setKeys] = useState<ApiKeyEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const { items: keys, loading, page, total, totalPages, setPage, refetch } =
+    useAdminList<ApiKeyEntry>({
+      endpoint: "/api/admin/api-keys",
+      perPage: KEYS_PER_PAGE,
+      dataKey: "keys",
+    });
+
   const [adding, setAdding] = useState(false);
   const [newKey, setNewKey] = useState({ userId: "", name: "", rateLimit: 60 });
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState(60);
-
-  const fetchKeys = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(KEYS_PER_PAGE),
-    });
-    const res = await fetch(`/api/admin/api-keys?${params}`);
-    const data = await res.json();
-    setKeys(data.keys || []);
-    setTotal(data.total || 0);
-    setLoading(false);
-  }, [page]);
-
-  useEffect(() => { fetchKeys(); }, [fetchKeys]);
 
   const handleToggle = async (id: string, isActive: boolean) => {
     await fetch(`/api/admin/api-keys/${id}`, {
@@ -52,7 +45,7 @@ export default function AdminApiKeysPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !isActive }),
     });
-    fetchKeys();
+    refetch();
   };
 
   const handleUpdateRate = async (id: string) => {
@@ -62,13 +55,13 @@ export default function AdminApiKeysPage() {
       body: JSON.stringify({ rateLimit: editRate }),
     });
     setEditId(null);
-    fetchKeys();
+    refetch();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить API-ключ?")) return;
     await fetch(`/api/admin/api-keys/${id}`, { method: "DELETE" });
-    fetchKeys();
+    refetch();
   };
 
   const handleCreate = async () => {
@@ -82,23 +75,24 @@ export default function AdminApiKeysPage() {
       setCreatedKey(data.key);
       setAdding(false);
       setNewKey({ userId: "", name: "", rateLimit: 60 });
-      fetchKeys();
+      refetch();
     }
   };
 
-  if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-20" />)}</div>;
-
-  const totalPages = Math.ceil(total / KEYS_PER_PAGE);
+  if (loading) return <AdminListSkeleton rows={3} height="h-20" />;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">API-ключи</h1>
-          <p className="text-sm text-text-secondary mt-1">Управление ключами доступа ({total})</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Создать</Button>
-      </div>
+      <AdminPageHeader
+        title="API-ключи"
+        subtitle="Управление ключами доступа"
+        count={total}
+        action={
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" /> Создать
+          </Button>
+        }
+      />
 
       {createdKey && (
         <div className="bg-success/10 border border-success/30 rounded-2xl p-5 mb-4">
@@ -157,31 +151,15 @@ export default function AdminApiKeysPage() {
             </div>
           </div>
         ))}
-        {keys.length === 0 && <p className="text-sm text-text-secondary text-center py-8">API-ключи не созданы</p>}
+        {keys.length === 0 && <AdminEmptyState message="API-ключи не созданы" />}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{total} ключей</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          label="ключей"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

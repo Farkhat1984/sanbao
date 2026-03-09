@@ -41,3 +41,13 @@ export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length) + "...";
 }
+
+/** Retry a function once after a short delay if the first attempt fails. */
+export async function retryOnce<T>(fn: () => Promise<T>, delayMs = 500): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    await new Promise((r) => setTimeout(r, delayMs));
+    return fn();
+  }
+}

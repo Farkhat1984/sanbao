@@ -1,16 +1,20 @@
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
-import { resolveModel } from "@/lib/model-router";
+import type { SkillCategory } from "@prisma/client";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import {
-  VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES,
-  DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE,
+  VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES, JURISDICTIONS,
   DEFAULT_ICON_COLOR, DEFAULT_SKILL_ICON,
+  AI_GENERATION_DESCRIPTION_MAX_LENGTH,
 } from "@/lib/constants";
+import {
+  callLlmForJson,
+  LlmModelUnavailableError,
+  LlmJsonParseError,
+} from "@/lib/llm-generate";
 
-const JURISDICTIONS = ["RU", "KZ", "BY", "EU", "EU/RU", "International"];
 const VALID_CATEGORY_VALUES = SKILL_CATEGORIES.map((c) => c.value);
 
 /**
@@ -34,7 +38,7 @@ export async function POST(req: Request) {
 
   const { description, category } = body as { description?: string; category?: string };
 
-  if (!description?.trim() || description.length > 5000) {
+  if (!description?.trim() || description.length > AI_GENERATION_DESCRIPTION_MAX_LENGTH) {
     return jsonError("Описание обязательно (макс. 5000 символов)", 400);
   }
 
@@ -49,101 +53,51 @@ export async function POST(req: Request) {
       userMsg += `. Категория: ${validCategory}`;
     }
 
-    const textModel = await resolveModel("TEXT");
-    if (!textModel) {
-      return jsonError("Модель не настроена", 503);
-    }
-
-    const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
-    const apiKey = textModel.provider.apiKey;
-    const modelId = textModel.modelId;
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          {
-            role: "system",
-            content: interpolatePrompt(await getPrompt("prompt_gen_skill"), {
-              VALID_ICONS: VALID_ICONS.join(", "),
-              VALID_COLORS: VALID_COLORS.join(", "),
-              JURISDICTIONS: JURISDICTIONS.join(", "),
-              CATEGORIES: VALID_CATEGORY_VALUES.join(", "),
-            }),
-          },
-          { role: "user", content: userMsg },
-        ],
-        temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,
-        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS_GENERATE,
-        stream: false,
-        thinking: { type: "disabled" },
-      }),
+    const systemContent = interpolatePrompt(await getPrompt("prompt_gen_skill"), {
+      VALID_ICONS: VALID_ICONS.join(", "),
+      VALID_COLORS: VALID_COLORS.join(", "),
+      JURISDICTIONS: JURISDICTIONS.join(", "),
+      CATEGORIES: VALID_CATEGORY_VALUES.join(", "),
     });
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      console.error("AI API error:", response.status, errText);
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("Empty response");
-    }
-
-    // Extract JSON from response (may be wrapped in ```json ... ```)
-    let jsonStr = content.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    } else {
-      const start = jsonStr.indexOf("{");
-      const end = jsonStr.lastIndexOf("}");
-      if (start >= 0 && end > start) {
-        jsonStr = jsonStr.slice(start, end + 1);
-      }
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      console.error("Quick-create: failed to parse JSON:", content.slice(0, 500));
-      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
-    }
+    const parsed = await callLlmForJson<Record<string, unknown>>(
+      [
+        { role: "system", content: systemContent },
+        { role: "user", content: userMsg },
+      ],
+    );
 
     // Validate and sanitize AI output
-    const systemPrompt = (parsed.systemPrompt || "").slice(0, 4000);
+    const systemPrompt = (String(parsed.systemPrompt || "")).slice(0, 4000);
     const resolvedCategory = validCategory
-      || (VALID_CATEGORY_VALUES.includes(parsed.category) ? parsed.category : "CUSTOM");
+      || (VALID_CATEGORY_VALUES.includes(parsed.category as typeof VALID_CATEGORY_VALUES[number]) ? parsed.category : "CUSTOM");
     const resolvedTags = Array.isArray(parsed.tags)
-      ? parsed.tags.filter((t: unknown) => typeof t === "string" && t.length <= 50).slice(0, 20)
+      ? parsed.tags.filter((t: unknown) => typeof t === "string" && (t as string).length <= 50).slice(0, 20)
       : [];
 
     const skill = await prisma.skill.create({
       data: {
         userId,
-        name: parsed.name || "Новый скилл",
-        description: parsed.description || "",
+        name: String(parsed.name || "Новый скилл"),
+        description: String(parsed.description || ""),
         systemPrompt,
-        citationRules: parsed.citationRules || "",
-        jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction) ? parsed.jurisdiction : "RU",
-        icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : DEFAULT_SKILL_ICON,
-        iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
-        category: resolvedCategory,
+        citationRules: String(parsed.citationRules || ""),
+        jurisdiction: JURISDICTIONS.includes(parsed.jurisdiction as typeof JURISDICTIONS[number]) ? String(parsed.jurisdiction) : "RU",
+        icon: VALID_ICONS.includes(parsed.icon as string) ? String(parsed.icon) : DEFAULT_SKILL_ICON,
+        iconColor: VALID_COLORS.includes(parsed.iconColor as string) ? String(parsed.iconColor) : DEFAULT_ICON_COLOR,
+        category: resolvedCategory as SkillCategory,
         tags: resolvedTags,
       },
     });
 
     return jsonOk(serializeDates(skill), 201);
   } catch (e) {
+    if (e instanceof LlmModelUnavailableError) {
+      return jsonError("Модель не настроена", 503);
+    }
+    if (e instanceof LlmJsonParseError) {
+      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
+    }
     console.error("Quick-create error:", e);
     return jsonError("Ошибка генерации скилла. Попробуйте ещё раз.", 500);
   }

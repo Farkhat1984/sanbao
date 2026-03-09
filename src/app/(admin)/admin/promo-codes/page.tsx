@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Save, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { useAdminList } from "@/hooks/useAdminList";
 
 interface PromoCode {
   id: string;
@@ -20,27 +25,15 @@ interface PromoCode {
 const CODES_PER_PAGE = 30;
 
 export default function AdminPromoCodesPage() {
-  const [codes, setCodes] = useState<PromoCode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const { items: codes, loading, page, total, totalPages, setPage, refetch } =
+    useAdminList<PromoCode>({
+      endpoint: "/api/admin/promo-codes",
+      perPage: CODES_PER_PAGE,
+      dataKey: "codes",
+    });
+
   const [adding, setAdding] = useState(false);
   const [newCode, setNewCode] = useState({ code: "", description: "", discount: 10, maxUses: 0, validUntil: "" });
-
-  const fetchCodes = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(CODES_PER_PAGE),
-    });
-    const res = await fetch(`/api/admin/promo-codes?${params}`);
-    const data = await res.json();
-    setCodes(data.codes || []);
-    setTotal(data.total || 0);
-    setLoading(false);
-  }, [page]);
-
-  useEffect(() => { fetchCodes(); }, [fetchCodes]);
 
   const handleCreate = async () => {
     const res = await fetch("/api/admin/promo-codes", {
@@ -51,7 +44,7 @@ export default function AdminPromoCodesPage() {
     if (res.ok) {
       setAdding(false);
       setNewCode({ code: "", description: "", discount: 10, maxUses: 0, validUntil: "" });
-      fetchCodes();
+      refetch();
     }
   };
 
@@ -61,32 +54,29 @@ export default function AdminPromoCodesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !isActive }),
     });
-    fetchCodes();
+    refetch();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить промокод?")) return;
     await fetch(`/api/admin/promo-codes/${id}`, { method: "DELETE" });
-    fetchCodes();
+    refetch();
   };
 
-  if (loading) {
-    return <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-16" />)}</div>;
-  }
-
-  const totalPages = Math.ceil(total / CODES_PER_PAGE);
+  if (loading) return <AdminListSkeleton rows={3} height="h-16" />;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Промокоды</h1>
-          <p className="text-sm text-text-secondary mt-1">Скидки и промо-акции ({total})</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
-          <Plus className="h-4 w-4" /> Создать
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Промокоды"
+        subtitle="Скидки и промо-акции"
+        count={total}
+        action={
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" /> Создать
+          </Button>
+        }
+      />
 
       {adding && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
@@ -130,31 +120,15 @@ export default function AdminPromoCodesPage() {
             </div>
           </div>
         ))}
-        {codes.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Промокоды не созданы</p>}
+        {codes.length === 0 && <AdminEmptyState message="Промокоды не созданы" />}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{total} промокодов</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          label="промокодов"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Save, Trash2, Webhook, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Plus, Save, Trash2, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { useAdminList } from "@/hooks/useAdminList";
 
 interface WebhookEntry {
   id: string;
@@ -23,27 +28,15 @@ const AVAILABLE_EVENTS = [
 const WEBHOOKS_PER_PAGE = 25;
 
 export default function AdminWebhooksPage() {
-  const [webhooks, setWebhooks] = useState<WebhookEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const { items: webhooks, loading, page, total, totalPages, setPage, refetch } =
+    useAdminList<WebhookEntry>({
+      endpoint: "/api/admin/webhooks",
+      perPage: WEBHOOKS_PER_PAGE,
+      dataKey: "webhooks",
+    });
+
   const [adding, setAdding] = useState(false);
   const [newWh, setNewWh] = useState({ url: "", events: [] as string[] });
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(WEBHOOKS_PER_PAGE),
-    });
-    const res = await fetch(`/api/admin/webhooks?${params}`);
-    const data = await res.json();
-    setWebhooks(data.webhooks || []);
-    setTotal(data.total || 0);
-    setLoading(false);
-  }, [page]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const toggleEvent = (ev: string) => {
     setNewWh((prev) => ({
@@ -58,7 +51,7 @@ export default function AdminWebhooksPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newWh),
     });
-    if (res.ok) { setAdding(false); setNewWh({ url: "", events: [] }); fetchData(); }
+    if (res.ok) { setAdding(false); setNewWh({ url: "", events: [] }); refetch(); }
   };
 
   const handleToggle = async (id: string, isActive: boolean) => {
@@ -67,28 +60,29 @@ export default function AdminWebhooksPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !isActive }),
     });
-    fetchData();
+    refetch();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить вебхук?")) return;
     await fetch(`/api/admin/webhooks/${id}`, { method: "DELETE" });
-    fetchData();
+    refetch();
   };
 
-  if (loading) return <div className="space-y-4">{[...Array(2)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-24" />)}</div>;
-
-  const totalPages = Math.ceil(total / WEBHOOKS_PER_PAGE);
+  if (loading) return <AdminListSkeleton rows={2} height="h-24" />;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Вебхуки</h1>
-          <p className="text-sm text-text-secondary mt-1">HTTP-уведомления о событиях ({total})</p>
-        </div>
-        <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" /> Добавить</Button>
-      </div>
+      <AdminPageHeader
+        title="Вебхуки"
+        subtitle="HTTP-уведомления о событиях"
+        count={total}
+        action={
+          <Button variant="gradient" size="sm" onClick={() => setAdding(!adding)}>
+            <Plus className="h-4 w-4" /> Добавить
+          </Button>
+        }
+      />
 
       {adding && (
         <div className="bg-surface border border-accent/30 rounded-2xl p-5 mb-4">
@@ -122,31 +116,15 @@ export default function AdminWebhooksPage() {
             </div>
           </div>
         ))}
-        {webhooks.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Вебхуки не настроены</p>}
+        {webhooks.length === 0 && <AdminEmptyState message="Вебхуки не настроены" />}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-text-secondary">{total} вебхуков</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          label="вебхуков"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

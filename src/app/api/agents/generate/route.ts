@@ -1,13 +1,17 @@
 import { auth } from "@/lib/auth";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
-import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
 import { getSettingNumber } from "@/lib/settings";
 import {
-  VALID_ICONS, VALID_COLORS,
-  DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
+  VALID_ICONS, VALID_COLORS, DEFAULT_ICON_COLOR,
+  AI_GENERATION_DESCRIPTION_MAX_LENGTH,
 } from "@/lib/constants";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
+import {
+  callLlmForJson,
+  LlmModelUnavailableError,
+  LlmJsonParseError,
+} from "@/lib/llm-generate";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -22,74 +26,39 @@ export async function POST(req: Request) {
 
   const { description } = await req.json();
 
-  if (!description?.trim() || description.length > 5000) {
+  if (!description?.trim() || description.length > AI_GENERATION_DESCRIPTION_MAX_LENGTH) {
     return jsonError("Описание обязательно (макс. 5000 символов)", 400);
   }
 
   try {
-    const textModel = await resolveModel("TEXT");
-    if (!textModel) {
-      return jsonError("Модель не настроена", 503);
-    }
-    const apiUrl = `${textModel.provider.baseUrl}/chat/completions`;
-    const apiKey = textModel.provider.apiKey;
-    const modelId = textModel.modelId;
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: modelId,
-        messages: [
-          { role: "system", content: interpolatePrompt(await getPrompt("prompt_gen_agent"), {
-            VALID_ICONS: VALID_ICONS.join(", "),
-            VALID_COLORS: VALID_COLORS.join(", "),
-          }) },
-          { role: "user", content: `Создай агента: ${description.trim()}` },
-        ],
-        temperature: textModel?.temperature ?? DEFAULT_TEMPERATURE,
-        max_tokens: textModel?.maxTokens || DEFAULT_MAX_TOKENS_GENERATE,
-        stream: false,
-        thinking: { type: "disabled" },
-      }),
+    const systemContent = interpolatePrompt(await getPrompt("prompt_gen_agent"), {
+      VALID_ICONS: VALID_ICONS.join(", "),
+      VALID_COLORS: VALID_COLORS.join(", "),
     });
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      console.error("AI API error:", response.status, errText);
-      throw new Error(`API error: ${response.status}`);
-    }
+    const parsed = await callLlmForJson<Record<string, unknown>>(
+      [
+        { role: "system", content: systemContent },
+        { role: "user", content: `Создай агента: ${description.trim()}` },
+      ],
+    );
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("Empty response");
-    }
-
-    // Extract JSON from response (may be wrapped in ```json ... ```)
-    let jsonStr = content.trim();
-    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    }
-
-    const parsed = JSON.parse(jsonStr);
-
-    // Validate and fallback
     const result = {
       name: parsed.name || "Новый агент",
       description: parsed.description || "",
       instructions: parsed.instructions || "",
-      icon: VALID_ICONS.includes(parsed.icon) ? parsed.icon : "Bot",
-      iconColor: VALID_COLORS.includes(parsed.iconColor) ? parsed.iconColor : DEFAULT_ICON_COLOR,
+      icon: VALID_ICONS.includes(parsed.icon as string) ? parsed.icon : "Bot",
+      iconColor: VALID_COLORS.includes(parsed.iconColor as string) ? parsed.iconColor : DEFAULT_ICON_COLOR,
     };
 
     return jsonOk(result);
   } catch (e) {
+    if (e instanceof LlmModelUnavailableError) {
+      return jsonError("Модель не настроена", 503);
+    }
+    if (e instanceof LlmJsonParseError) {
+      return jsonError("Модель вернула некорректный JSON. Попробуйте переформулировать.", 422);
+    }
     console.error("Agent generation error:", e);
     return jsonError("Ошибка генерации агента", 500);
   }

@@ -1,97 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import {
-  Save,
-  Search,
-  RotateCcw,
-  AlertTriangle,
-  Upload,
-  Trash2,
-  Image,
-  Check,
-  X,
-} from "lucide-react";
+import { Save, Search, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Switch } from "@/components/ui/Switch";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-
-// ─── Types matching API response ───
-
-interface SettingEntry {
-  key: string;
-  label: string;
-  description: string;
-  type: "number" | "string" | "boolean";
-  value: string;
-  defaultValue: string;
-  isOverridden: boolean;
-  validation?: {
-    min?: number;
-    max?: number;
-    step?: number;
-    allowedValues?: string[];
-    pattern?: string;
-  };
-  unit: string;
-  sensitive: boolean;
-  restartRequired: boolean;
-}
-
-interface SettingsCategory {
-  key: string;
-  label: string;
-  description: string;
-  order: number;
-  settings: SettingEntry[];
-}
-
-interface ApiResponse {
-  categories: SettingsCategory[];
-}
-
-// ─── Notification component (inline toast) ───
-
-interface Notification {
-  id: number;
-  type: "success" | "error";
-  message: string;
-}
-
-function NotificationBar({ notifications, onDismiss }: {
-  notifications: Notification[];
-  onDismiss: (id: number) => void;
-}) {
-  if (notifications.length === 0) return null;
-  return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm">
-      {notifications.map((n) => (
-        <div
-          key={n.id}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-in slide-in-from-right-5 ${
-            n.type === "success"
-              ? "bg-success-light text-success border-success/20"
-              : "bg-error-light text-error border-error/20"
-          }`}
-        >
-          {n.type === "success" ? (
-            <Check className="h-4 w-4 shrink-0" />
-          ) : (
-            <X className="h-4 w-4 shrink-0" />
-          )}
-          <span className="flex-1">{n.message}</span>
-          <button
-            onClick={() => onDismiss(n.id)}
-            className="shrink-0 opacity-60 hover:opacity-100 cursor-pointer"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+import { NotificationBar } from "@/components/ui/NotificationBar";
+import { SettingRow, LogoUpload } from "@/components/admin/settings";
+import type {
+  SettingsCategory,
+  ApiResponse,
+  Notification,
+} from "@/components/admin/settings";
 
 // ─── Main page ───
 
@@ -115,7 +34,6 @@ export default function AdminSettingsPage() {
   // Logo state
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const notifIdRef = useRef(0);
 
@@ -199,7 +117,6 @@ export default function AdminSettingsPage() {
       notify("error", "Ошибка загрузки логотипа");
     }
     setUploadingLogo(false);
-    if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
   const handleLogoDelete = async () => {
@@ -620,49 +537,12 @@ export default function AdminSettingsPage() {
 
                 {/* Logo upload (shown only in files_storage category) */}
                 {activeCategory === "files_storage" && (
-                  <div className="bg-surface border border-border rounded-2xl p-5 mb-4">
-                    <label className="text-sm font-semibold text-text-primary block mb-3">
-                      Логотип приложения
-                    </label>
-                    <div className="flex items-center gap-4">
-                      {logoUrl ? (
-                        <img
-                          src={logoUrl}
-                          alt="Logo"
-                          className="h-16 w-16 object-contain rounded-lg border border-border bg-surface-alt p-1"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 rounded-lg border border-border bg-surface-alt flex items-center justify-center">
-                          <Image className="h-6 w-6 text-text-secondary" />
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-2">
-                        <input
-                          ref={logoInputRef}
-                          type="file"
-                          accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                          onChange={handleLogoUpload}
-                          className="hidden"
-                        />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => logoInputRef.current?.click()}
-                          isLoading={uploadingLogo}
-                        >
-                          <Upload className="h-3.5 w-3.5" /> Загрузить
-                        </Button>
-                        {logoUrl && (
-                          <Button variant="secondary" size="sm" onClick={handleLogoDelete}>
-                            <Trash2 className="h-3.5 w-3.5" /> Удалить
-                          </Button>
-                        )}
-                        <p className="text-xs text-text-secondary">
-                          PNG, JPEG, SVG, WebP. Макс. 512 КБ.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <LogoUpload
+                    logoUrl={logoUrl}
+                    uploading={uploadingLogo}
+                    onUpload={handleLogoUpload}
+                    onDelete={handleLogoDelete}
+                  />
                 )}
 
                 {/* Settings list */}
@@ -745,205 +625,6 @@ export default function AdminSettingsPage() {
         notifications={notifications}
         onDismiss={dismissNotification}
       />
-    </div>
-  );
-}
-
-// ─── Setting row component ───
-
-function SettingRow({
-  setting,
-  value,
-  error,
-  isDirty,
-  onChange,
-  onReset,
-}: {
-  setting: SettingEntry;
-  value: string;
-  error?: string;
-  isDirty: boolean;
-  onChange: (key: string, value: string) => void;
-  onReset: (key: string) => void;
-}) {
-  const isDefault = value === setting.defaultValue && !setting.isOverridden;
-  const showResetButton = setting.isOverridden || isDirty;
-
-  return (
-    <div
-      className={`bg-surface border rounded-2xl p-5 transition-colors ${
-        error
-          ? "border-error/40"
-          : isDirty
-            ? "border-accent/30"
-            : "border-border"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          {/* Label row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-text-primary">
-              {setting.label}
-            </span>
-            {isDefault && !isDirty && (
-              <Badge variant="default">По умолчанию</Badge>
-            )}
-            {setting.isOverridden && !isDirty && (
-              <Badge variant="accent">Изменено</Badge>
-            )}
-            {isDirty && <Badge variant="warning">Не сохранено</Badge>}
-            {setting.restartRequired && (
-              <span className="inline-flex items-center gap-1 text-xs text-warning">
-                <AlertTriangle className="h-3 w-3" />
-                Требуется перезапуск
-              </span>
-            )}
-          </div>
-
-          {/* Description */}
-          <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-            {setting.description}
-          </p>
-
-          {/* Key (for devs) */}
-          <p className="text-[11px] text-text-muted mt-1 font-mono">
-            {setting.key}
-          </p>
-        </div>
-
-        {/* Reset button */}
-        {showResetButton && (
-          <button
-            onClick={() => onReset(setting.key)}
-            title="Сбросить к значению по умолчанию"
-            className="shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Input */}
-      <div className="mt-3">
-        <SettingInput
-          setting={setting}
-          value={value}
-          error={error}
-          onChange={(v) => onChange(setting.key, v)}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── Setting input component ───
-
-function SettingInput({
-  setting,
-  value,
-  error,
-  onChange,
-}: {
-  setting: SettingEntry;
-  value: string;
-  error?: string;
-  onChange: (value: string) => void;
-}) {
-  const inputClasses = `h-10 px-4 rounded-xl bg-surface border text-sm text-text-primary transition-all duration-150 outline-none focus:shadow-[var(--shadow-input-focus)] ${
-    error
-      ? "border-error focus:border-error"
-      : "border-border focus:border-accent"
-  }`;
-
-  // Boolean toggle
-  if (setting.type === "boolean") {
-    return (
-      <div className="flex items-center gap-3">
-        <Switch
-          checked={value === "true"}
-          onChange={(checked) => onChange(checked ? "true" : "false")}
-          size="md"
-        />
-        <span className="text-sm text-text-secondary">
-          {value === "true" ? "Включено" : "Выключено"}
-        </span>
-      </div>
-    );
-  }
-
-  // String with allowedValues — select dropdown
-  if (setting.type === "string" && setting.validation?.allowedValues) {
-    return (
-      <div className="space-y-1.5">
-        <div className="relative">
-          <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={`w-full sm:w-64 ${inputClasses} appearance-none pr-10 cursor-pointer`}
-          >
-            {setting.validation.allowedValues.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <svg
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-        {error && <p className="text-xs text-error">{error}</p>}
-      </div>
-    );
-  }
-
-  // Number input
-  if (setting.type === "number") {
-    return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            min={setting.validation?.min}
-            max={setting.validation?.max}
-            step={setting.validation?.step ?? (Number(value) % 1 !== 0 ? 0.1 : 1)}
-            className={`w-full sm:w-48 ${inputClasses}`}
-          />
-          {setting.unit && (
-            <span className="text-xs text-text-muted shrink-0">{setting.unit}</span>
-          )}
-        </div>
-        {setting.validation && (
-          <p className="text-[11px] text-text-muted">
-            {setting.validation.min !== undefined && `Мин: ${setting.validation.min}`}
-            {setting.validation.min !== undefined && setting.validation.max !== undefined && " / "}
-            {setting.validation.max !== undefined && `Макс: ${setting.validation.max.toLocaleString()}`}
-          </p>
-        )}
-        {error && <p className="text-xs text-error">{error}</p>}
-      </div>
-    );
-  }
-
-  // String input (default)
-  return (
-    <div className="space-y-1.5">
-      <input
-        type={setting.sensitive ? "password" : "text"}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={setting.defaultValue}
-        className={`w-full sm:w-96 ${inputClasses}`}
-      />
-      {error && <p className="text-xs text-error">{error}</p>}
     </div>
   );
 }

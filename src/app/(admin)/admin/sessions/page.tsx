@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { AdminListSkeleton } from "@/components/admin/AdminListSkeleton";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { useAdminList } from "@/hooks/useAdminList";
 
 interface SessionEntry {
   id: string;
@@ -14,27 +18,15 @@ interface SessionEntry {
   createdAt?: string;
 }
 
+const SESSIONS_PER_PAGE = 50;
+
 export default function AdminSessionsPage() {
-  const [sessions, setSessions] = useState<SessionEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const SESSIONS_PER_PAGE = 50;
-
-  const fetchSessions = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(SESSIONS_PER_PAGE),
+  const { items: sessions, loading, page, total, totalPages, setPage, refetch } =
+    useAdminList<SessionEntry>({
+      endpoint: "/api/admin/sessions",
+      perPage: SESSIONS_PER_PAGE,
+      dataKey: "sessions",
     });
-    const res = await fetch(`/api/admin/sessions?${params}`);
-    const data = await res.json();
-    setSessions(data.sessions || []);
-    setTotal(data.total || 0);
-    setLoading(false);
-  }, [page]);
-
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   const handleRevoke = async (id: string) => {
     if (!confirm("Завершить сессию пользователя?")) return;
@@ -43,7 +35,7 @@ export default function AdminSessionsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: id }),
     });
-    fetchSessions();
+    refetch();
   };
 
   const handleRevokeAll = async () => {
@@ -53,26 +45,25 @@ export default function AdminSessionsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true }),
     });
-    fetchSessions();
+    refetch();
   };
 
   const isExpired = (expires: string) => new Date(expires) < new Date();
 
-  if (loading) {
-    return <div className="space-y-4">{[...Array(5)].map((_, i) => <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse h-16" />)}</div>;
-  }
+  if (loading) return <AdminListSkeleton rows={5} height="h-16" />;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary font-[family-name:var(--font-display)]">Сессии</h1>
-          <p className="text-sm text-text-secondary mt-1">Активные сессии пользователей ({total})</p>
-        </div>
-        <Button variant="secondary" size="sm" onClick={handleRevokeAll}>
-          <LogOut className="h-4 w-4" /> Завершить все
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Сессии"
+        subtitle="Активные сессии пользователей"
+        count={total}
+        action={
+          <Button variant="secondary" size="sm" onClick={handleRevokeAll}>
+            <LogOut className="h-4 w-4" /> Завершить все
+          </Button>
+        }
+      />
 
       <div className="space-y-2">
         {sessions.map((s) => (
@@ -94,35 +85,15 @@ export default function AdminSessionsPage() {
             </button>
           </div>
         ))}
-        {sessions.length === 0 && <p className="text-sm text-text-secondary text-center py-8">Нет активных сессий</p>}
+        {sessions.length === 0 && <AdminEmptyState message="Нет активных сессий" />}
 
-        {/* Pagination */}
-        {(() => {
-          const totalPages = Math.ceil(total / SESSIONS_PER_PAGE);
-          if (totalPages <= 1) return null;
-          return (
-            <div className="flex items-center justify-between pt-4">
-              <span className="text-xs text-text-secondary">{total} сессий</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-surface-alt disabled:opacity-40 cursor-pointer disabled:cursor-default transition-colors"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          label="сессий"
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
