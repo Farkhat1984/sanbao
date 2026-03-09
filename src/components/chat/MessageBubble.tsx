@@ -35,6 +35,9 @@ import type { ChatMessage, ArtifactType } from "@/types/chat";
 
 // ─── Constants ────────────────────────────────────────────
 
+/** Stable empty array to avoid referential inequality in Zustand selectors */
+const EMPTY_RESPONSES: SwarmAgentResponse[] = [];
+
 /** Height threshold (px) above which assistant messages are collapsed */
 const ASSISTANT_COLLAPSE_HEIGHT = 500;
 
@@ -64,7 +67,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const [copied, setCopied] = useState(false);
   const [reasoningOpen, setReasoningOpen] = useState(false);
   const [swarmOpen, setSwarmOpen] = useState(false);
-  const { trackArtifact, findByTitle, applyEdits } = useArtifactStore();
+  const findByTitle = useArtifactStore((s) => s.findByTitle);
+  const applyEdits = useArtifactStore((s) => s.applyEdits);
   const isMobile = useIsMobile();
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
@@ -81,7 +85,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     isLast && isAssistant && s.isStreaming
   );
   const swarmAgentResponses = useChatStore((s) =>
-    isLast && isAssistant ? s.swarmAgentResponses : []
+    isLast && isAssistant ? s.swarmAgentResponses : EMPTY_RESPONSES
   );
   const displayContent = streamingContent ?? message.content;
   const displayReasoning = streamingReasoning ?? message.reasoning;

@@ -28,13 +28,22 @@ function mapMessages(raw: any[]): ChatMessage[] {
 }
 
 export function ChatArea() {
-  const { messages, isStreaming, streamingPhase, streamingToolName, contextUsage, activeConversationId, activeAgentId, conversations, setPendingInput } = useChatStore();
+  const messages = useChatStore((s) => s.messages);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const streamingPhase = useChatStore((s) => s.streamingPhase);
+  const streamingToolName = useChatStore((s) => s.streamingToolName);
+  const contextUsage = useChatStore((s) => s.contextUsage);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const activeAgentId = useChatStore((s) => s.activeAgentId);
+  const conversations = useChatStore((s) => s.conversations);
+  const setPendingInput = useChatStore((s) => s.setPendingInput);
   const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
   const isLoadingMoreMessages = useChatStore((s) => s.isLoadingMoreMessages);
   const messagesCursor = useChatStore((s) => s.messagesCursor);
   const prependMessages = useChatStore((s) => s.prependMessages);
   const setIsLoadingMoreMessages = useChatStore((s) => s.setIsLoadingMoreMessages);
-  const { setActiveAgent, setAgentTools } = useAgentStore();
+  const setActiveAgent = useAgentStore((s) => s.setActiveAgent);
+  const setAgentTools = useAgentStore((s) => s.setAgentTools);
   const { tasks } = useTaskStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [tasksExpanded, setTasksExpanded] = useState(false);

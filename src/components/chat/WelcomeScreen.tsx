@@ -24,13 +24,11 @@ export function WelcomeScreen() {
   const [swarmInfo, setSwarmInfo] = useState<SwarmInfo | null>(null);
   const swarmKey = swarmMode && swarmOrgId ? swarmOrgId : null;
 
-  // Reset swarm info when not in swarm mode (derived, no effect needed)
-  if (!swarmKey && swarmInfo) {
-    setSwarmInfo(null);
-  }
-
   useEffect(() => {
-    if (!swarmKey) return;
+    if (!swarmKey) {
+      setSwarmInfo(null);
+      return;
+    }
     let cancelled = false;
     fetch("/api/organizations/my-agents")
       .then((r) => r.json())

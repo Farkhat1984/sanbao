@@ -21,7 +21,11 @@ function mapMessages(raw: any[]): ChatMessage[] {
 
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
-  const { setActiveConversation, setActiveAgentId, setOrgAgentId, setMessages, setMessagesPagination } = useChatStore();
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const setActiveAgentId = useChatStore((s) => s.setActiveAgentId);
+  const setOrgAgentId = useChatStore((s) => s.setOrgAgentId);
+  const setMessages = useChatStore((s) => s.setMessages);
+  const setMessagesPagination = useChatStore((s) => s.setMessagesPagination);
   const isStreaming = useChatStore((s) => s.isStreaming);
   const wasStreamingRef = useRef(false);
   const hasLoadedRef = useRef(false);

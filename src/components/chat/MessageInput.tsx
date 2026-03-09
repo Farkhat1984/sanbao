@@ -29,13 +29,11 @@ export function MessageInput() {
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const {
-    isStreaming,
-    thinkingEnabled,
-    toggleThinking,
-  } = useChatStore();
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const thinkingEnabled = useChatStore((s) => s.thinkingEnabled);
+  const toggleThinking = useChatStore((s) => s.toggleThinking);
 
-  const { agentTools } = useAgentStore();
+  const agentTools = useAgentStore((s) => s.agentTools);
   const isMobile = useIsMobile();
 
   // ─── Extracted hooks ────────────────────────────────────

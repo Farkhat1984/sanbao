@@ -310,14 +310,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return { isStreaming, ...(isStreaming ? {} : { streamingPhase: null, streamingToolName: null }) };
     }),
 
-  setStreamingPhase: (phase, toolName) => set((s) => {
-    if (!phase) return { streamingPhase: null, streamingToolName: null };
+  setStreamingPhase: (phase, toolName) => {
+    if (!phase) {
+      set({ streamingPhase: null, streamingToolName: null });
+      return;
+    }
     // searching is an overlay — always allowed
-    if (phase === "searching") return { streamingPhase: phase, streamingToolName: toolName ?? null };
+    if (phase === "searching") {
+      set({ streamingPhase: phase, streamingToolName: toolName ?? null });
+      return;
+    }
+    const s = get();
     const curr = s.streamingPhase ? PHASE_PRIORITY[s.streamingPhase] || 0 : 0;
     const next = PHASE_PRIORITY[phase] || 0;
-    return next > curr ? { streamingPhase: phase, streamingToolName: toolName ?? null } : {};
-  }),
+    if (next > curr) {
+      set({ streamingPhase: phase, streamingToolName: toolName ?? null });
+    }
+    // If phase priority is not higher, do nothing (no empty set({}) call)
+  },
 
   setProvider: (provider) => set({ provider }),
   toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),

@@ -32,34 +32,32 @@ export function useStreamChat({
   clearFiles,
   textareaRef,
 }: UseStreamChatParams): UseStreamChatReturn {
-  const {
-    messages,
-    isStreaming,
-    activeConversationId,
-    activeAgentId,
-    orgAgentId,
-    swarmMode,
-    swarmOrgId,
-    thinkingEnabled,
-    webSearchEnabled,
-    planningEnabled,
-    pendingInput,
-    addMessage,
-    addConversation,
-    setActiveConversation,
-    updateLastAssistantMessage,
-    setStreaming,
-    setStreamingPhase,
-    updateCurrentPlan,
-    setCurrentPlan,
-    setContextUsage,
-    setPendingInput,
-    setClarifyQuestions,
-    addSwarmAgentResponse,
-    clearSwarmAgentResponses,
-  } = useChatStore();
+  const messages = useChatStore((s) => s.messages);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const activeAgentId = useChatStore((s) => s.activeAgentId);
+  const orgAgentId = useChatStore((s) => s.orgAgentId);
+  const swarmMode = useChatStore((s) => s.swarmMode);
+  const swarmOrgId = useChatStore((s) => s.swarmOrgId);
+  const thinkingEnabled = useChatStore((s) => s.thinkingEnabled);
+  const webSearchEnabled = useChatStore((s) => s.webSearchEnabled);
+  const planningEnabled = useChatStore((s) => s.planningEnabled);
+  const pendingInput = useChatStore((s) => s.pendingInput);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const addConversation = useChatStore((s) => s.addConversation);
+  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
+  const updateLastAssistantMessage = useChatStore((s) => s.updateLastAssistantMessage);
+  const setStreaming = useChatStore((s) => s.setStreaming);
+  const setStreamingPhase = useChatStore((s) => s.setStreamingPhase);
+  const updateCurrentPlan = useChatStore((s) => s.updateCurrentPlan);
+  const setCurrentPlan = useChatStore((s) => s.setCurrentPlan);
+  const setContextUsage = useChatStore((s) => s.setContextUsage);
+  const setPendingInput = useChatStore((s) => s.setPendingInput);
+  const setClarifyQuestions = useChatStore((s) => s.setClarifyQuestions);
+  const addSwarmAgentResponse = useChatStore((s) => s.addSwarmAgentResponse);
+  const clearSwarmAgentResponses = useChatStore((s) => s.clearSwarmAgentResponses);
 
-  const { addTask } = useTaskStore();
+  const addTask = useTaskStore((s) => s.addTask);
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
 
