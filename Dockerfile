@@ -64,7 +64,8 @@ COPY --from=deps /app/node_modules/node-abort-controller ./node_modules/node-abo
 # Prisma CLI with all dependencies (for db push/migrate at startup)
 COPY --from=prisma-cli /tmp/prisma-cli/node_modules /app/prisma-cli/node_modules
 COPY prisma/schema.prisma ./prisma/
-COPY --from=builder /app/prisma/out/seed.js ./prisma/
+COPY --from=builder /app/prisma/out/prisma/seed.js ./prisma/
+COPY --from=builder /app/prisma/out/src/lib/settings-registry.js ./src/lib/
 COPY --chmod=755 docker-entrypoint.sh ./
 
 # Sentry config files
