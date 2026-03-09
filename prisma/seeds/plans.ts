@@ -104,8 +104,7 @@ export async function seedPlans(prisma: PrismaClient): Promise<void> {
   if (!process.env.ADMIN_PASSWORD) {
     throw new Error("ADMIN_PASSWORD environment variable is required for seeding");
   }
-  const { BCRYPT_SALT_ROUNDS } = await import("../../src/lib/constants");
-  const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, BCRYPT_SALT_ROUNDS);
+  const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
