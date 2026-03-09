@@ -1,106 +1,280 @@
 import { requireAdmin, resetIpWhitelistCache } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { resetContentFilterCache } from "@/lib/content-filter";
+import { resetPromptCache } from "@/lib/prompts";
 import { resetTransporter } from "@/lib/email";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { logAudit } from "@/lib/audit";
+import {
+  SETTINGS_REGISTRY,
+  SETTINGS_MAP,
+  CATEGORY_META,
+  type SettingCategory,
+  type SettingDefinition,
+} from "@/lib/settings-registry";
+import { getAllSettingsWithValues, invalidateSettings } from "@/lib/settings";
+
+// ─── GET: Return all settings grouped by category with full metadata ───
 
 export async function GET() {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const settings = await prisma.systemSetting.findMany({ take: 500 });
-  const map: Record<string, string> = {};
-  for (const s of settings) map[s.key] = s.value;
+  try {
+    const settingsWithValues = await getAllSettingsWithValues();
+    const valueMap = new Map(
+      settingsWithValues.map((s) => [s.key, { value: s.value, isOverridden: s.isOverridden }]),
+    );
 
-  return jsonOk(map);
+    // Group settings by category
+    const categoryMap = new Map<
+      SettingCategory,
+      Array<{
+        key: string;
+        label: string;
+        description: string;
+        type: SettingDefinition["type"];
+        value: string;
+        defaultValue: string;
+        isOverridden: boolean;
+        validation?: SettingDefinition["validation"];
+        unit: string;
+        sensitive: boolean;
+        restartRequired: boolean;
+      }>
+    >();
+
+    for (const def of SETTINGS_REGISTRY) {
+      const resolved = valueMap.get(def.key);
+      const entry = {
+        key: def.key,
+        label: def.label,
+        description: def.description,
+        type: def.type,
+        value: resolved?.value ?? def.defaultValue,
+        defaultValue: def.defaultValue,
+        isOverridden: resolved?.isOverridden ?? false,
+        validation: def.validation,
+        unit: def.unit ?? "",
+        sensitive: def.sensitive ?? false,
+        restartRequired: def.restartRequired ?? false,
+      };
+
+      const existing = categoryMap.get(def.category);
+      if (existing) {
+        existing.push(entry);
+      } else {
+        categoryMap.set(def.category, [entry]);
+      }
+    }
+
+    // Build response sorted by category order
+    const categories = Array.from(categoryMap.entries())
+      .map(([key, settings]) => {
+        const meta = CATEGORY_META[key];
+        return {
+          key,
+          label: meta.label,
+          description: meta.description,
+          order: meta.order,
+          settings,
+        };
+      })
+      .sort((a, b) => a.order - b.order);
+
+    return jsonOk({ categories });
+  } catch (err) {
+    return jsonError(
+      `Ошибка загрузки настроек: ${err instanceof Error ? err.message : String(err)}`,
+      500,
+    );
+  }
 }
+
+// ─── PUT: Validate and upsert settings ─────────────────────────────────
 
 export async function PUT(req: Request) {
   const result = await requireAdmin();
   if (result.error) return result.error;
 
-  const body = await req.json();
+  try {
+    const body = (await req.json()) as { settings?: Record<string, string> };
+    const settings = body.settings;
 
-  // Whitelist allowed setting keys to prevent arbitrary config injection
-  const ALLOWED_KEYS = new Set([
-    "content_filter_enabled",
-    "content_filter_words",
-    "admin_ip_whitelist",
-    "smtp_host",
-    "smtp_port",
-    "smtp_user",
-    "smtp_password",
-    "smtp_pass",
-    "smtp_from",
-    "maintenance_mode",
-    "maintenance_message",
-    "registration_enabled",
-    "default_plan_id",
-    "max_file_upload_mb",
-    "max_upload_size_mb",
-    "max_file_count",
-    "app_name",
-    "app_description",
-    "default_language",
-    "welcome_title",
-    "welcome_message",
-    "onboarding_enabled",
-    "onboarding_steps",
-    "session_ttl_hours",
-    "google_oauth_enabled",
-  ]);
-
-  // Validate numeric settings to prevent NaN/Infinity/overflow
-  const NUMERIC_RANGES: Record<string, [number, number]> = {
-    smtp_port: [1, 65535],
-    max_file_upload_mb: [1, 500],
-  };
-  const BOOLEAN_KEYS = new Set([
-    "content_filter_enabled",
-    "maintenance_mode",
-    "registration_enabled",
-    "onboarding_enabled",
-    "google_oauth_enabled",
-  ]);
-
-  // body is { key: value, key2: value2, ... }
-  for (const [key, value] of Object.entries(body)) {
-    if (!ALLOWED_KEYS.has(key)) {
-      return jsonError(`Недопустимый ключ настройки: ${key}`, 400);
+    if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+      return jsonError('Тело запроса должно содержать объект "settings"', 400);
     }
 
-    let sanitized = String(value);
+    const entries = Object.entries(settings);
+    if (entries.length === 0) {
+      return jsonError("Пустой объект настроек", 400);
+    }
 
-    if (NUMERIC_RANGES[key]) {
-      const num = Number(sanitized);
-      const [min, max] = NUMERIC_RANGES[key];
-      if (!Number.isFinite(num) || num < min || num > max) {
-        return jsonError(`Значение "${key}" должно быть числом от ${min} до ${max}`, 400);
+    // Validate all keys and values before writing anything
+    const errors: Record<string, string> = {};
+
+    for (const [key, rawValue] of entries) {
+      const def = SETTINGS_MAP.get(key);
+      if (!def) {
+        errors[key] = `Неизвестный ключ настройки: ${key}`;
+        continue;
       }
-      sanitized = String(Math.floor(num));
+
+      const value = String(rawValue);
+      const validationError = validateSettingValue(def, value);
+      if (validationError) {
+        errors[key] = validationError;
+      }
     }
 
-    if (BOOLEAN_KEYS.has(key)) {
-      sanitized = sanitized === "true" || sanitized === "1" ? "true" : "false";
+    if (Object.keys(errors).length > 0) {
+      return jsonOk({ updated: [], errors }, 400);
     }
 
-    await prisma.systemSetting.upsert({
-      where: { key },
-      update: { value: sanitized },
-      create: { key, value: sanitized },
-    });
-  }
+    // All valid — upsert each setting
+    const updated: string[] = [];
 
-  // Reset caches for settings that affect runtime
-  if ("content_filter_enabled" in body || "content_filter_words" in body) {
+    for (const [key, rawValue] of entries) {
+      const value = String(rawValue);
+      await prisma.systemSetting.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      });
+      updated.push(key);
+    }
+
+    // Invalidate L1/L2 caches and notify other replicas
+    await invalidateSettings(updated);
+
+    // Legacy cache resets for backward compatibility
     resetContentFilterCache();
-  }
-  if (Object.keys(body).some((k) => k.startsWith("smtp_"))) {
-    resetTransporter();
-  }
-  if ("admin_ip_whitelist" in body) {
-    resetIpWhitelistCache();
-  }
+    resetPromptCache();
 
-  return jsonOk({ success: true });
+    // Targeted legacy resets
+    if (updated.some((k) => k.startsWith("smtp_") || k.startsWith("email_"))) {
+      resetTransporter();
+    }
+    if (updated.includes("admin_ip_whitelist")) {
+      resetIpWhitelistCache();
+    }
+
+    // Audit log
+    logAudit({
+      actorId: result.userId!,
+      action: "settings.update",
+      target: "SystemSetting",
+      details: { keys: updated, count: updated.length },
+    }).catch(() => {});
+
+    return jsonOk({ updated });
+  } catch (err) {
+    return jsonError(
+      `Ошибка сохранения настроек: ${err instanceof Error ? err.message : String(err)}`,
+      500,
+    );
+  }
+}
+
+// ─── DELETE: Reset settings to defaults ─────────────────────────────────
+
+export async function DELETE(req: Request) {
+  const result = await requireAdmin();
+  if (result.error) return result.error;
+
+  try {
+    const body = (await req.json()) as { keys?: string[] };
+    const keys = body.keys;
+
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return jsonError('Тело запроса должно содержать массив "keys"', 400);
+    }
+
+    // Validate all keys exist in registry
+    const unknownKeys = keys.filter((k) => !SETTINGS_MAP.has(k));
+    if (unknownKeys.length > 0) {
+      return jsonError(`Неизвестные ключи: ${unknownKeys.join(", ")}`, 400);
+    }
+
+    // Delete rows — values will fall back to registry defaults
+    await prisma.systemSetting.deleteMany({
+      where: { key: { in: keys } },
+    });
+
+    // Invalidate caches
+    await invalidateSettings(keys);
+
+    // Legacy cache resets
+    resetContentFilterCache();
+    resetPromptCache();
+
+    if (keys.some((k) => k.startsWith("smtp_") || k.startsWith("email_"))) {
+      resetTransporter();
+    }
+    if (keys.includes("admin_ip_whitelist")) {
+      resetIpWhitelistCache();
+    }
+
+    // Audit log
+    logAudit({
+      actorId: result.userId!,
+      action: "settings.reset",
+      target: "SystemSetting",
+      details: { keys, count: keys.length },
+    }).catch(() => {});
+
+    return jsonOk({ reset: keys });
+  } catch (err) {
+    return jsonError(
+      `Ошибка сброса настроек: ${err instanceof Error ? err.message : String(err)}`,
+      500,
+    );
+  }
+}
+
+// ─── Validation helper ──────────────────────────────────────────────────
+
+/**
+ * Validate a setting value against its registry definition.
+ * Returns an error message string, or null if valid.
+ */
+function validateSettingValue(def: SettingDefinition, value: string): string | null {
+  switch (def.type) {
+    case "boolean": {
+      if (value !== "true" && value !== "false") {
+        return `"${def.key}" должен быть "true" или "false"`;
+      }
+      return null;
+    }
+
+    case "number": {
+      const num = Number(value);
+      if (!Number.isFinite(num)) {
+        return `"${def.key}" должен быть числом`;
+      }
+      if (def.validation?.min !== undefined && num < def.validation.min) {
+        return `"${def.key}" не может быть меньше ${def.validation.min}`;
+      }
+      if (def.validation?.max !== undefined && num > def.validation.max) {
+        return `"${def.key}" не может быть больше ${def.validation.max}`;
+      }
+      return null;
+    }
+
+    case "string": {
+      if (def.validation?.allowedValues && !def.validation.allowedValues.includes(value)) {
+        return `"${def.key}" должен быть одним из: ${def.validation.allowedValues.join(", ")}`;
+      }
+      if (def.validation?.pattern) {
+        const regex = new RegExp(def.validation.pattern);
+        if (!regex.test(value)) {
+          return `"${def.key}" не соответствует формату: ${def.validation.pattern}`;
+        }
+      }
+      return null;
+    }
+
+    default:
+      return null;
+  }
 }

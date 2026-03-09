@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { getSettingNumber } from "@/lib/settings";
 
 export async function GET(req: Request) {
   const result = await requireAuth();
@@ -9,6 +10,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
 
+  const maxTasks = await getSettingNumber('pagination_tasks_max');
   const tasks = await prisma.task.findMany({
     where: {
       userId,
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
       conversation: { select: { title: true } },
     },
     orderBy: { updatedAt: "desc" },
-    take: 200,
+    take: maxTasks,
   });
 
   return jsonOk(tasks.map((t) => ({

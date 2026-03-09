@@ -29,8 +29,8 @@ describe("prompts.ts", () => {
   // ─── PROMPT_REGISTRY ──────────────────────────────────────
 
   describe("PROMPT_REGISTRY", () => {
-    it("has exactly 9 keys", () => {
-      expect(Object.keys(PROMPT_REGISTRY)).toHaveLength(9);
+    it("has exactly 11 keys", () => {
+      expect(Object.keys(PROMPT_REGISTRY)).toHaveLength(11);
     });
 
     it("contains all expected prompt keys", () => {
@@ -44,6 +44,8 @@ describe("prompts.ts", () => {
         "prompt_mode_planning",
         "prompt_mode_websearch",
         "prompt_mode_thinking",
+        "prompt_swarm_classify",
+        "prompt_swarm_synthesize",
       ];
       for (const key of expectedKeys) {
         expect(PROMPT_REGISTRY).toHaveProperty(key);
@@ -76,7 +78,7 @@ describe("prompts.ts", () => {
   // ─── PROMPT_META ──────────────────────────────────────────
 
   describe("PROMPT_META", () => {
-    it("has metadata for all 9 keys", () => {
+    it("has metadata for all 11 keys", () => {
       for (const key of Object.keys(PROMPT_REGISTRY)) {
         expect(PROMPT_META).toHaveProperty(key);
         expect(PROMPT_META[key].label).toBeTruthy();

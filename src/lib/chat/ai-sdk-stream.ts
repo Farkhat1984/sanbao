@@ -5,9 +5,16 @@
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 import type { ResolvedModel } from "@/lib/model-router";
 
 // ─── Options ─────────────────────────────────────────────
+
+/** Dynamic overrides for AI defaults from settings registry */
+interface AiSdkSettingsOverrides {
+  defaultTemperature?: number;
+  defaultTopP?: number;
+}
 
 export interface AiSdkStreamOptions {
   systemPrompt: string;
@@ -23,6 +30,8 @@ export interface AiSdkStreamOptions {
     compacting: boolean;
   };
   onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
+  /** Settings overrides from route.ts batch load — avoids redundant DB queries */
+  settingsOverrides?: AiSdkSettingsOverrides;
 }
 
 // ─── Plan detection wrapper for AI SDK streams ───────────
@@ -35,7 +44,8 @@ function createPlanDetectorStream(
     totalTokens: number;
     contextWindowSize: number;
     compacting: boolean;
-  }
+  },
+  sseMaxBuffer = 1_000_000,
 ): ReadableStream {
   const encoder = new TextEncoder();
 
@@ -78,8 +88,7 @@ function createPlanDetectorStream(
 
           planBuffer += chunk;
 
-          // Prevent unbounded buffer growth (max 1MB)
-          if (planBuffer.length > 1_000_000) {
+          if (planBuffer.length > sseMaxBuffer) {
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({ t: insidePlan ? "p" : "c", v: planBuffer }) + "\n"
@@ -183,7 +192,7 @@ function createPlanDetectorStream(
 
 // ─── Main AI SDK streaming function ──────────────────────
 
-export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
+export async function streamAiSdk(options: AiSdkStreamOptions): Promise<ReadableStream> {
   const {
     systemPrompt,
     messages,
@@ -192,15 +201,22 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
     textModel,
     contextInfo,
     onUsage,
+    settingsOverrides,
   } = options;
 
   if (!textModel) {
     throw new Error("No model resolved from DB — configure models via /admin/models");
   }
 
+  const sseMaxBuffer = await getSettingNumber("stream_sse_max_buffer");
+
+  // Resolve settings: prefer overrides from route.ts batch, fall back to constants
+  const cfgDefaultTemperature = settingsOverrides?.defaultTemperature ?? DEFAULT_TEMPERATURE;
+  const cfgDefaultTopP = settingsOverrides?.defaultTopP ?? DEFAULT_TOP_P;
+
   const model = openai(textModel.modelId);
-  const temperature = thinkingEnabled ? 1.0 : (textModel.temperature ?? DEFAULT_TEMPERATURE);
-  const topP = textModel.topP ?? DEFAULT_TOP_P;
+  const temperature = thinkingEnabled ? 1.0 : (textModel.temperature ?? cfgDefaultTemperature);
+  const topP = textModel.topP ?? cfgDefaultTopP;
 
   const result = streamText({
     model,
@@ -222,5 +238,5 @@ export function streamAiSdk(options: AiSdkStreamOptions): ReadableStream {
   }
 
   // Wrap AI SDK full stream with plan detection and reasoning
-  return createPlanDetectorStream(result.fullStream, contextInfo);
+  return createPlanDetectorStream(result.fullStream, contextInfo, sseMaxBuffer);
 }

@@ -4,6 +4,7 @@ import { decrypt } from "../crypto";
 import { isUrlSafe } from "../ssrf";
 import { TOOL_RESULT_MAX_CHARS, NATIVE_TOOL_HTTP_TIMEOUT_MS } from "../constants";
 import { parseHierarchicalCatalog } from "../odata-catalog";
+import { getSettingNumber } from "@/lib/settings";
 
 registerNativeTool({
   name: "odata_query",
@@ -144,7 +145,8 @@ registerNativeTool({
     const parsed = parseHierarchicalCatalog(integration.catalog);
     if (!parsed) {
       // Legacy catalog — return as-is (truncated)
-      return integration.catalog.slice(0, 8000);
+      const catalogMaxChars = await getSettingNumber('integration_odata_catalog_max_chars');
+      return integration.catalog.slice(0, catalogMaxChars);
     }
 
     if (!section) {

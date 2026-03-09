@@ -25,8 +25,8 @@ import type { NativeToolContext } from "@/lib/native-tools";
 import {
   DEFAULT_TEMPERATURE_COMPACTION,
   DEFAULT_MAX_TOKENS_COMPACTION,
-  CONTEXT_KEEP_LAST_MESSAGES,
 } from "@/lib/constants";
+import { getSettings, getSettingNumber } from "@/lib/settings";
 
 import { buildApiMessages, type ChatAttachment } from "@/lib/chat/message-builder";
 import { streamMoonshot, type McpToolContext } from "@/lib/chat/moonshot-stream";
@@ -60,12 +60,12 @@ async function compactInBackground(
   textModel?: ResolvedModel | null
 ) {
   const lockKey = `compact:${conversationId}`;
-  const LOCK_TTL_SECONDS = 60;
   try {
     // Acquire Redis lock to prevent parallel compactions on the same conversation
+    const lockTtl = await getSettingNumber('chat_compaction_lock_ttl_s');
     const redis = getRedis();
     if (redis) {
-      const acquired = await redis.set(lockKey, "1", "EX", LOCK_TTL_SECONDS, "NX");
+      const acquired = await redis.set(lockKey, "1", "EX", lockTtl, "NX");
       if (!acquired) {
         // Another compaction is already running for this conversation — skip
         return;
@@ -176,21 +176,50 @@ export async function POST(req: Request) {
     swarmOrgId: rawSwarmOrgId,
   } = body;
 
+  // ─── Load dynamic settings (single DB query, cached) ─────
+  const cfg = await getSettings([
+    'chat_max_messages_per_request',
+    'chat_max_message_size_bytes',
+    'tool_max_mcp_per_agent',
+    'tool_max_calls_per_request',
+    'tool_max_turns',
+    'ai_max_request_tokens',
+    'ai_default_temperature',
+    'ai_default_max_tokens',
+    'ai_default_top_p',
+    'ai_default_context_window',
+    'context_compaction_threshold',
+    'context_keep_last_messages',
+    'tool_result_max_chars',
+    'tool_result_tail_chars',
+    'chat_max_attachments',
+    'chat_user_files_context_limit',
+    'chat_compaction_lock_ttl_s',
+  ]);
+
+  const maxMessagesPerRequest = Number(cfg['chat_max_messages_per_request']);
+  const maxMessageSizeBytes = Number(cfg['chat_max_message_size_bytes']);
+  const maxMcpTools = Number(cfg['tool_max_mcp_per_agent']);
+  const keepLastMessages = Number(cfg['context_keep_last_messages']);
+  const maxAttachments = Number(cfg['chat_max_attachments']);
+  const userFilesContextLimit = Number(cfg['chat_user_files_context_limit']);
+  const compactionLockTtlS = Number(cfg['chat_compaction_lock_ttl_s']);
+
   // ─── Input validation ─────────────────────────────────────
 
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 200) {
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > maxMessagesPerRequest) {
     return jsonError("Некорректный массив сообщений", 400);
   }
 
   for (const msg of messages) {
     const content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
-    if (content.length > 100_000) {
+    if (content.length > maxMessageSizeBytes) {
       return jsonError("Сообщение превышает допустимый размер (100KB)", 400);
     }
   }
 
-  if (attachments.length > 20) {
-    return jsonError("Слишком много вложений (макс. 20)", 400);
+  if (attachments.length > maxAttachments) {
+    return jsonError(`Слишком много вложений (макс. ${maxAttachments})`, 400);
   }
 
   // ─── Plan & usage checks ────────────────────────────────
@@ -593,9 +622,8 @@ export async function POST(req: Request) {
   }
 
   // Cap MCP tools to prevent unbounded growth
-  const MAX_MCP_TOOLS = 100;
-  if (agentMcpTools.length > MAX_MCP_TOOLS) {
-    agentMcpTools.length = MAX_MCP_TOOLS;
+  if (agentMcpTools.length > maxMcpTools) {
+    agentMcpTools.length = maxMcpTools;
   }
 
   // Web search is always available — the model decides when to use it
@@ -671,7 +699,7 @@ export async function POST(req: Request) {
       where: { userId: session.user.id },
       select: { name: true, description: true, fileType: true },
       orderBy: { updatedAt: "desc" },
-      take: 30,
+      take: userFilesContextLimit,
     }),
   ]);
 
@@ -715,15 +743,15 @@ export async function POST(req: Request) {
 
   const systemTokens = estimateTokens(systemPrompt);
   const effectiveContextWindow = Math.min(plan.contextWindowSize, textModel?.contextWindow ?? Infinity);
-  const contextCheck = checkContextWindow(messages, systemTokens, effectiveContextWindow);
+  const contextCheck = await checkContextWindow(messages, systemTokens, effectiveContextWindow);
 
   let effectiveMessages = messages;
   let isCompacting = false;
 
   if (contextCheck.needsCompaction) {
-    const { messagesToSummarize, messagesToKeep } = splitMessagesForCompaction(
+    const { messagesToSummarize, messagesToKeep } = await splitMessagesForCompaction(
       messages,
-      CONTEXT_KEEP_LAST_MESSAGES
+      keepLastMessages
     );
     if (messagesToSummarize.length > 0) {
       effectiveMessages = messagesToKeep;
@@ -827,6 +855,14 @@ export async function POST(req: Request) {
       onUsage,
       signal: req.signal,
       mcpCallContext: { userId: session.user.id, conversationId: reqConvId || undefined },
+      settingsOverrides: {
+        defaultTemperature: Number(cfg['ai_default_temperature']),
+        defaultTopP: Number(cfg['ai_default_top_p']),
+        maxToolCallsPerRequest: Number(cfg['tool_max_calls_per_request']),
+        maxRequestTokens: Number(cfg['ai_max_request_tokens']),
+        toolResultMaxChars: Number(cfg['tool_result_max_chars']),
+        toolResultTailChars: Number(cfg['tool_result_tail_chars']),
+      },
     });
 
     recordRequestDuration("/api/chat", Date.now() - _requestStart);
@@ -843,7 +879,7 @@ export async function POST(req: Request) {
 
   // AI SDK path: maxTokens = plan content budget (no thinking budget needed here,
   // AI SDK handles thinking budget internally via provider options)
-  const stream = streamAiSdk({
+  const stream = await streamAiSdk({
     systemPrompt: enrichedSystemPrompt,
     messages: effectiveMessages,
     thinkingEnabled,
@@ -851,6 +887,10 @@ export async function POST(req: Request) {
     textModel,
     contextInfo,
     onUsage,
+    settingsOverrides: {
+      defaultTemperature: Number(cfg['ai_default_temperature']),
+      defaultTopP: Number(cfg['ai_default_top_p']),
+    },
   });
 
   recordRequestDuration("/api/chat", Date.now() - _requestStart);

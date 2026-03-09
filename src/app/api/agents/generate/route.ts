@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
+import { getSettingNumber } from "@/lib/settings";
 import {
   VALID_ICONS, VALID_COLORS,
   DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS_GENERATE, DEFAULT_ICON_COLOR,
@@ -14,8 +15,8 @@ export async function POST(req: Request) {
     return jsonError("Unauthorized", 401);
   }
 
-  // Rate limit: 10 requests/minute per user
-  if (!(await checkMinuteRateLimit(`agent-gen:${session.user.id}`, 10))) {
+  const rateLimit = await getSettingNumber('rate_agent_gen_per_minute');
+  if (!(await checkMinuteRateLimit(`agent-gen:${session.user.id}`, rateLimit))) {
     return jsonError("Слишком много запросов", 429);
   }
 

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { incrementTokens } from "@/lib/usage";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { getSettingNumber } from "@/lib/settings";
 
 export async function POST(
   req: Request,
@@ -35,11 +36,16 @@ export async function POST(
   }
 
   // Limit batch size and individual message size
-  if (messages.length > 50) {
+  const [batchMax, maxMsgSize, planMemoryMaxChars] = await Promise.all([
+    getSettingNumber('chat_messages_batch_max'),
+    getSettingNumber('chat_max_msg_size_bytes'),
+    getSettingNumber('chat_plan_memory_max_chars'),
+  ]);
+  if (messages.length > batchMax) {
     return jsonError("Too many messages in batch", 400);
   }
   const ALLOWED_ROLES = new Set(["USER", "ASSISTANT"]);
-  const MAX_MSG_SIZE = 200_000; // 200KB per message
+  const MAX_MSG_SIZE = maxMsgSize;
   for (const m of messages) {
     if (typeof m.content === "string" && m.content.length > MAX_MSG_SIZE) {
       return jsonError("Message too large", 400);
@@ -99,7 +105,7 @@ export async function POST(
         orderBy: { createdAt: "desc" },
       });
 
-      const MAX_PLAN_MEMORY_CHARS = 2000;
+      const MAX_PLAN_MEMORY_CHARS = planMemoryMaxChars;
       let newMemory = existing?.memory && decisions
         ? `${existing.memory}\n\n--- Обновление ---\n${decisions}`
         : decisions || existing?.memory || null;

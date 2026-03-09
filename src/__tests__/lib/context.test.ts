@@ -71,34 +71,34 @@ describe("checkContextWindow", () => {
     { role: "assistant", content: "b".repeat(600) },
   ];
 
-  it("calculates usage percent correctly", () => {
-    const result = checkContextWindow(messages, 100, 1000);
+  it("calculates usage percent correctly", async () => {
+    const result = await checkContextWindow(messages, 100, 1000);
     // (100 + 200 + 100) tokens / 1000 = 40%
     expect(result.usagePercent).toBeGreaterThan(0);
     expect(result.usagePercent).toBeLessThan(1);
     expect(result.contextWindowSize).toBe(1000);
   });
 
-  it("triggers compaction at 70% threshold", () => {
+  it("triggers compaction at 70% threshold", async () => {
     // Make large messages that exceed 70%
     const bigMessages = [
       { role: "user", content: "x".repeat(2100) }, // ~700 tokens
     ];
-    const result = checkContextWindow(bigMessages, 100, 1000, 0.7);
+    const result = await checkContextWindow(bigMessages, 100, 1000, 0.7);
     expect(result.needsCompaction).toBe(true);
     expect(result.usagePercent).toBeGreaterThanOrEqual(0.7);
   });
 
-  it("does not trigger compaction below threshold", () => {
+  it("does not trigger compaction below threshold", async () => {
     const smallMessages = [
       { role: "user", content: "hi" },
     ];
-    const result = checkContextWindow(smallMessages, 10, 1000, 0.7);
+    const result = await checkContextWindow(smallMessages, 10, 1000, 0.7);
     expect(result.needsCompaction).toBe(false);
   });
 
-  it("handles zero context window", () => {
-    const result = checkContextWindow(messages, 100, 0);
+  it("handles zero context window", async () => {
+    const result = await checkContextWindow(messages, 100, 0);
     expect(result.usagePercent).toBe(0);
     expect(result.needsCompaction).toBe(false);
   });
@@ -112,30 +112,30 @@ describe("splitMessagesForCompaction", () => {
     content: `message ${i}`,
   }));
 
-  it("keeps last N messages", () => {
-    const { messagesToKeep, messagesToSummarize } = splitMessagesForCompaction(msgs, 12);
+  it("keeps last N messages", async () => {
+    const { messagesToKeep, messagesToSummarize } = await splitMessagesForCompaction(msgs, 12);
     expect(messagesToKeep).toHaveLength(12);
     expect(messagesToSummarize).toHaveLength(8);
     expect(messagesToKeep[0].content).toBe("message 8");
     expect(messagesToKeep[11].content).toBe("message 19");
   });
 
-  it("returns all messages as keep if count <= keepLast", () => {
+  it("returns all messages as keep if count <= keepLast", async () => {
     const shortMsgs = msgs.slice(0, 5);
-    const { messagesToKeep, messagesToSummarize } = splitMessagesForCompaction(shortMsgs, 12);
+    const { messagesToKeep, messagesToSummarize } = await splitMessagesForCompaction(shortMsgs, 12);
     expect(messagesToKeep).toHaveLength(5);
     expect(messagesToSummarize).toHaveLength(0);
   });
 
-  it("handles exactly keepLast messages", () => {
+  it("handles exactly keepLast messages", async () => {
     const exactMsgs = msgs.slice(0, 12);
-    const { messagesToKeep, messagesToSummarize } = splitMessagesForCompaction(exactMsgs, 12);
+    const { messagesToKeep, messagesToSummarize } = await splitMessagesForCompaction(exactMsgs, 12);
     expect(messagesToKeep).toHaveLength(12);
     expect(messagesToSummarize).toHaveLength(0);
   });
 
-  it("handles empty messages", () => {
-    const { messagesToKeep, messagesToSummarize } = splitMessagesForCompaction([], 12);
+  it("handles empty messages", async () => {
+    const { messagesToKeep, messagesToSummarize } = await splitMessagesForCompaction([], 12);
     expect(messagesToKeep).toHaveLength(0);
     expect(messagesToSummarize).toHaveLength(0);
   });
@@ -207,21 +207,21 @@ describe("buildCompactionPrompt", () => {
     const result = await buildCompactionPrompt(null, messages);
     expect(result).toContain("[USER]: Создай договор аренды");
     expect(result).toContain("[ASSISTANT]: Вот договор аренды...");
-    expect(result).toContain("РАЗГОВОР:");
-    expect(result).not.toContain("ПРЕДЫДУЩЕЕ КРАТКОЕ СОДЕРЖАНИЕ");
+    expect(result).toContain("CONVERSATION:");
+    expect(result).not.toContain("PREVIOUS SUMMARY");
   });
 
   it("builds update prompt with existing summary", async () => {
     const result = await buildCompactionPrompt("User requested a rental agreement", messages);
-    expect(result).toContain("ПРЕДЫДУЩЕЕ КРАТКОЕ СОДЕРЖАНИЕ:");
+    expect(result).toContain("PREVIOUS SUMMARY:");
     expect(result).toContain("User requested a rental agreement");
-    expect(result).toContain("НОВЫЕ СООБЩЕНИЯ ДЛЯ ВКЛЮЧЕНИЯ:");
+    expect(result).toContain("NEW MESSAGES:");
     expect(result).toContain("[USER]: Создай договор аренды");
   });
 
   it("includes document preservation instruction", async () => {
     const result = await buildCompactionPrompt(null, messages);
     expect(result).toContain("sanbao-doc");
-    expect(result).toContain("800 слов");
+    expect(result).toContain("800 words");
   });
 });

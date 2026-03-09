@@ -9,9 +9,8 @@
 import { prisma } from "@/lib/prisma";
 import { BoundedMap } from "@/lib/bounded-map";
 import { cacheGet, cacheSet, cacheDel, getRedis } from "@/lib/redis";
+import { getSettingNumber } from "@/lib/settings";
 
-const AGENT_CONTEXT_TTL = 30_000; // 30 seconds
-const REDIS_AGENT_TTL = 60; // 60 seconds in Redis (shared L2)
 const REDIS_PREFIX = "agent_ctx:";
 const agentContextCache = new BoundedMap<string, { context: ResolvedAgentContext; expiresAt: number }>(200);
 
@@ -74,6 +73,9 @@ export interface ResolvedAgentContext {
 export async function resolveAgentContext(
   agentId: string
 ): Promise<ResolvedAgentContext> {
+  const agentContextTtl = await getSettingNumber("cache_agent_context_ttl_ms");
+  const redisAgentTtl = await getSettingNumber("cache_agent_context_redis_ttl_s");
+
   // L1: in-memory cache (per-process, ~30s TTL)
   const cached = agentContextCache.get(agentId);
   if (cached && cached.expiresAt > Date.now()) {
@@ -85,7 +87,7 @@ export async function resolveAgentContext(
     const redisVal = await cacheGet(`${REDIS_PREFIX}${agentId}`);
     if (redisVal) {
       const ctx = JSON.parse(redisVal) as ResolvedAgentContext;
-      agentContextCache.set(agentId, { context: ctx, expiresAt: Date.now() + AGENT_CONTEXT_TTL });
+      agentContextCache.set(agentId, { context: ctx, expiresAt: Date.now() + agentContextTtl });
       return ctx;
     }
   } catch {
@@ -111,7 +113,7 @@ export async function resolveAgentContext(
   let systemPrompt = agent.instructions;
 
   // In-context files: inject content directly into system prompt (with budget cap)
-  const MAX_CONTEXT_CHARS = 50_000; // ~12K tokens total budget for in-context files
+  const MAX_CONTEXT_CHARS = await getSettingNumber('tool_agent_max_context_chars');
 
   const wantInContext = agent.files.filter((f) => f.inContext !== false && f.extractedText);
   const explicitLazy = agent.files.filter((f) => f.inContext === false);
@@ -276,6 +278,7 @@ export async function resolveAgentContext(
   }
 
   // 4. Agent's integrations — inject compact catalog index into system prompt
+  const catalogPreviewChars = await getSettingNumber('tool_catalog_preview_chars');
   if ("integrations" in agent && Array.isArray(agent.integrations)) {
     for (const ai of agent.integrations as Array<{ integration: { status: string; catalog: string | null; name: string; baseUrl: string } }>) {
       const intg = ai.integration;
@@ -286,10 +289,10 @@ export async function resolveAgentContext(
           if (parsed.version === 2 && parsed.index) {
             indexText = parsed.index;
           } else {
-            indexText = intg.catalog.slice(0, 2000) + "\n... (каталог устарел, выполните повторное обнаружение)";
+            indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (каталог устарел, выполните повторное обнаружение)";
           }
         } catch {
-          indexText = intg.catalog.slice(0, 2000) + "\n... (каталог устарел, выполните повторное обнаружение)";
+          indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (каталог устарел, выполните повторное обнаружение)";
         }
         systemPrompt += `\n\n--- Интеграция: ${intg.name} (${intg.baseUrl}) ---\n${indexText}`;
         systemPrompt += `\n\nДля просмотра сущностей в категории: odata_catalog(section="..."). Для запросов к данным: odata_query(entity="...").`;
@@ -311,10 +314,10 @@ export async function resolveAgentContext(
   };
 
   // L1: in-memory
-  agentContextCache.set(agentId, { context: result, expiresAt: Date.now() + AGENT_CONTEXT_TTL });
+  agentContextCache.set(agentId, { context: result, expiresAt: Date.now() + agentContextTtl });
 
   // L2: Redis (fire-and-forget)
-  cacheSet(`${REDIS_PREFIX}${agentId}`, JSON.stringify(result), REDIS_AGENT_TTL).catch(() => {});
+  cacheSet(`${REDIS_PREFIX}${agentId}`, JSON.stringify(result), redisAgentTtl).catch(() => {});
 
   return result;
 }

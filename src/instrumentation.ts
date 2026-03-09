@@ -13,6 +13,10 @@ export async function register() {
     // Register BullMQ workers (webhook, email)
     await import("@/lib/workers");
 
+    // Initialize Redis pub/sub subscriber for cross-replica settings invalidation
+    const { initSettingsSubscriber } = await import("@/lib/settings");
+    initSettingsSubscriber();
+
     console.log("[instrumentation] Workers and shutdown handlers registered");
   }
 }

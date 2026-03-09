@@ -1,5 +1,6 @@
 import { CONTEXT_COMPACTION_THRESHOLD, CONTEXT_KEEP_LAST_MESSAGES } from "@/lib/constants";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
+import { getSettingNumber } from "@/lib/settings";
 
 // ─── Context management utilities for autocompact & planning ───
 
@@ -30,12 +31,13 @@ export interface ContextCheckResult {
   needsCompaction: boolean;
 }
 
-export function checkContextWindow(
+export async function checkContextWindow(
   messages: Array<{ role: string; content: string }>,
   systemPromptTokens: number,
   contextWindowSize: number,
-  threshold: number = CONTEXT_COMPACTION_THRESHOLD
-): ContextCheckResult {
+  threshold?: number
+): Promise<ContextCheckResult> {
+  const effectiveThreshold = threshold ?? await getSettingNumber("context_compaction_threshold");
   const messageTokens = estimateMessagesTokens(messages);
   const totalTokens = messageTokens + systemPromptTokens;
   const usagePercent = contextWindowSize > 0 ? totalTokens / contextWindowSize : 0;
@@ -43,7 +45,7 @@ export function checkContextWindow(
     totalTokens,
     contextWindowSize,
     usagePercent,
-    needsCompaction: usagePercent >= threshold,
+    needsCompaction: usagePercent >= effectiveThreshold,
   };
 }
 
@@ -54,14 +56,15 @@ export interface CompactionSplit {
   messagesToKeep: Array<{ role: string; content: string }>;
 }
 
-export function splitMessagesForCompaction(
+export async function splitMessagesForCompaction(
   messages: Array<{ role: string; content: string }>,
-  keepLast: number = CONTEXT_KEEP_LAST_MESSAGES
-): CompactionSplit {
-  if (messages.length <= keepLast) {
+  keepLast?: number
+): Promise<CompactionSplit> {
+  const effectiveKeepLast = keepLast ?? await getSettingNumber("context_keep_last_messages");
+  if (messages.length <= effectiveKeepLast) {
     return { messagesToSummarize: [], messagesToKeep: messages };
   }
-  const splitPoint = messages.length - keepLast;
+  const splitPoint = messages.length - effectiveKeepLast;
   return {
     messagesToSummarize: messages.slice(0, splitPoint),
     messagesToKeep: messages.slice(splitPoint),

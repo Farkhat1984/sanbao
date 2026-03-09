@@ -251,10 +251,11 @@ describe("Conversations API", () => {
 
     it("should verify user ownership", async () => {
       await GET_BY_ID(new Request("http://localhost"), makeParams("conv-1"));
-      expect(prisma.conversation.findFirst).toHaveBeenCalledWith({
-        where: { id: "conv-1", userId: "user-1" },
-        include: expect.any(Object),
-      });
+      expect(prisma.conversation.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "conv-1", userId: "user-1" },
+        }),
+      );
     });
   });
 

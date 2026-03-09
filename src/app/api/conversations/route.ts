@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
 import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { getSettingNumber } from "@/lib/settings";
 
 export async function GET(req: Request) {
   const result = await requireAuth();
@@ -10,7 +11,8 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200);
+  const maxPage = await getSettingNumber('pagination_conversations_max');
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, maxPage);
   const showArchived = searchParams.get("archived") === "true";
 
   const conversations = await prisma.conversation.findMany({

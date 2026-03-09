@@ -2,6 +2,7 @@ import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helper
 import { prisma } from "@/lib/prisma";
 import { resolveModel } from "@/lib/model-router";
 import { checkMinuteRateLimit } from "@/lib/rate-limit";
+import { getSettingNumber } from "@/lib/settings";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import {
   VALID_ICONS, VALID_COLORS, SKILL_CATEGORIES,
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
   if ("error" in result) return result.error;
   const { userId } = result.auth;
 
-  if (!(await checkMinuteRateLimit(`skill-quick:${userId}`, 5))) {
+  const rateLimit = await getSettingNumber('rate_skill_quick_per_minute');
+  if (!(await checkMinuteRateLimit(`skill-quick:${userId}`, rateLimit))) {
     return jsonError("Слишком много запросов. Подождите минуту.", 429);
   }
 

@@ -6,6 +6,7 @@
 import { closeRedis } from "@/lib/redis";
 import { closeQueues } from "@/lib/queue";
 import { closeMcpPool } from "@/lib/mcp-client";
+import { closeSettingsSubscriber } from "@/lib/settings";
 import { logger } from "@/lib/logger";
 
 let isShuttingDown = false;
@@ -35,6 +36,12 @@ async function gracefulShutdown(signal: string) {
   logger.info("Closing job queues");
   await closeQueues().catch((err) =>
     logger.error("Queue close error", { error: err instanceof Error ? err.message : String(err) })
+  );
+
+  // Close settings pub/sub subscriber (before Redis, since it uses a duplicate connection)
+  logger.info("Closing settings subscriber");
+  await closeSettingsSubscriber().catch((err) =>
+    logger.error("Settings subscriber close error", { error: err instanceof Error ? err.message : String(err) })
   );
 
   // Close Redis

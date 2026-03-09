@@ -18,6 +18,7 @@ import {
 import { BoundedMap } from "@/lib/bounded-map";
 import { redisRateLimit, cacheIncr, cacheGet, cacheSet, cacheDel, isRedisAvailable } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import { getSettingNumber } from "@/lib/settings";
 
 // ─── Production Redis check ─────────────────────────────
 // In production, rate limiting without Redis is unsafe (per-process counters
@@ -57,32 +58,40 @@ const userBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES);
 // ─── Abuse tracking ──────────────────────────────────────
 
 async function trackViolationRedis(key: string): Promise<boolean> {
+  const violationWindowMs = await getSettingNumber("rate_violation_window_ms");
+  const violationThreshold = await getSettingNumber("rate_violation_threshold");
+  const userBlockDurationMs = await getSettingNumber("rate_user_block_duration_ms");
+
   const vKey = `rl:viol:${key}`;
-  const count = await cacheIncr(vKey, Math.ceil(VIOLATION_WINDOW_MS / 1000));
+  const count = await cacheIncr(vKey, Math.ceil(violationWindowMs / 1000));
   if (count === null) {
     warnInMemoryFallback("trackViolation");
     return trackViolationMemory(key);
   }
-  if (count >= VIOLATION_THRESHOLD) {
+  if (count >= violationThreshold) {
     const blockKey = `rl:block:${key}`;
-    await cacheSet(blockKey, "1", Math.ceil(USER_BLOCK_DURATION_MS / 1000));
+    await cacheSet(blockKey, "1", Math.ceil(userBlockDurationMs / 1000));
     await cacheDel(vKey);
     return true;
   }
   return false;
 }
 
-function trackViolationMemory(key: string): boolean {
+async function trackViolationMemory(key: string): Promise<boolean> {
+  const violationWindowMs = await getSettingNumber("rate_violation_window_ms");
+  const violationThreshold = await getSettingNumber("rate_violation_threshold");
+  const userBlockDurationMs = await getSettingNumber("rate_user_block_duration_ms");
+
   const now = Date.now();
   const v = violationCounts.get(key);
-  if (!v || now - v.lastViolation > VIOLATION_WINDOW_MS) {
+  if (!v || now - v.lastViolation > violationWindowMs) {
     violationCounts.set(key, { count: 1, lastViolation: now });
     return false;
   }
   v.count++;
   v.lastViolation = now;
-  if (v.count >= VIOLATION_THRESHOLD) {
-    userBlocklist.set(key, now + USER_BLOCK_DURATION_MS);
+  if (v.count >= violationThreshold) {
+    userBlocklist.set(key, now + userBlockDurationMs);
     violationCounts.delete(key);
     return true;
   }
@@ -91,11 +100,13 @@ function trackViolationMemory(key: string): boolean {
 
 /** Check if a user is auto-blocked due to abuse. */
 export async function isUserBlocked(userId: string): Promise<{ blocked: boolean; retryAfterSeconds?: number }> {
+  const userBlockDurationMs = await getSettingNumber("rate_user_block_duration_ms");
+
   // Try Redis first
   const blockKey = `rl:block:${userId}`;
   const blocked = await cacheGet(blockKey);
   if (blocked) {
-    return { blocked: true, retryAfterSeconds: Math.ceil(USER_BLOCK_DURATION_MS / 1000) };
+    return { blocked: true, retryAfterSeconds: Math.ceil(userBlockDurationMs / 1000) };
   }
   // Fallback to in-memory
   const now = Date.now();
@@ -146,7 +157,7 @@ export async function checkMinuteRateLimit(
   const recent = timestamps.filter((t) => now - t < windowMs);
 
   if (recent.length >= maxPerMinute) {
-    trackViolationMemory(userId);
+    trackViolationMemory(userId).catch(() => {});
     return false;
   }
 
@@ -160,10 +171,6 @@ export async function checkMinuteRateLimit(
 const ipTimestamps = new BoundedMap<string, number[]>(RATE_LIMIT_MAX_ENTRIES);
 const ipBlocklist = new BoundedMap<string, number>(RATE_LIMIT_MAX_ENTRIES);
 
-const AUTH_MAX_PER_MINUTE = CONST_AUTH_MAX_PER_MINUTE;
-const AUTH_BLOCK_DURATION_MS = CONST_AUTH_BLOCK_DURATION_MS;
-const AUTH_BLOCK_SECONDS = Math.ceil(AUTH_BLOCK_DURATION_MS / 1000);
-
 /**
  * Rate-limit auth endpoints (login, register) by IP.
  * Redis-first for cross-replica consistency, in-memory fallback for dev/single-instance.
@@ -172,23 +179,27 @@ export async function checkAuthRateLimit(ip: string): Promise<{
   allowed: boolean;
   retryAfterSeconds?: number;
 }> {
+  const authMaxPerMinute = await getSettingNumber("rate_auth_max_per_minute");
+  const authBlockDurationMs = await getSettingNumber("rate_auth_block_duration_ms");
+  const authBlockSeconds = Math.ceil(authBlockDurationMs / 1000);
+
   // 1. Check Redis block first
   const blockKey = `rl:authblock:${ip}`;
   const blocked = await cacheGet(blockKey);
   if (blocked) {
-    return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
+    return { allowed: false, retryAfterSeconds: authBlockSeconds };
   }
 
   // 2. Try Redis rate limit
   const rlKey = `rl:auth:${ip}`;
-  const redisResult = await redisRateLimit(rlKey, AUTH_MAX_PER_MINUTE, 60);
+  const redisResult = await redisRateLimit(rlKey, authMaxPerMinute, 60);
 
   if (redisResult !== null) {
     // Redis is available
     if (!redisResult) {
       // Rate exceeded — block in Redis for sharing across replicas
-      await cacheSet(blockKey, "1", AUTH_BLOCK_SECONDS);
-      return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
+      await cacheSet(blockKey, "1", authBlockSeconds);
+      return { allowed: false, retryAfterSeconds: authBlockSeconds };
     }
     return { allowed: true };
   }
@@ -207,10 +218,10 @@ export async function checkAuthRateLimit(ip: string): Promise<{
   const timestamps = ipTimestamps.get(ip) ?? [];
   const recent = timestamps.filter((t) => now - t < windowMs);
 
-  if (recent.length >= AUTH_MAX_PER_MINUTE) {
-    ipBlocklist.set(ip, now + AUTH_BLOCK_DURATION_MS);
+  if (recent.length >= authMaxPerMinute) {
+    ipBlocklist.set(ip, now + authBlockDurationMs);
     ipTimestamps.delete(ip);
-    return { allowed: false, retryAfterSeconds: AUTH_BLOCK_SECONDS };
+    return { allowed: false, retryAfterSeconds: authBlockSeconds };
   }
 
   recent.push(now);

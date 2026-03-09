@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { CACHE_TTL } from "@/lib/constants";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getSettingNumber } from "@/lib/settings";
 
 // ─── IP whitelist cache ───
 let ipWhitelistCache: { ips: string[]; expiresAt: number } | null = null;
@@ -50,8 +51,9 @@ export async function requireAdmin() {
     return { error: NextResponse.json({ error: "2FA verification required" }, { status: 403 }) };
   }
 
-  // Admin rate limit: 60 requests/minute per admin user
-  const allowed = await checkRateLimit(`admin:${session.user.id}`, 60, 60_000);
+  // Admin rate limit
+  const rateAdmin = await getSettingNumber('rate_admin_per_minute');
+  const allowed = await checkRateLimit(`admin:${session.user.id}`, rateAdmin, 60_000);
   if (!allowed) {
     return { error: NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 }) };
   }

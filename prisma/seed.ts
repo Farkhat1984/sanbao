@@ -2989,6 +2989,23 @@ You are a presentation design strategist who creates compelling slide deck outli
   }
 
   console.log(`Built-in skills seeded: ${builtInSkills.length} skills`);
+
+  // ─── Seed system settings from registry ───────────────────
+  const { SETTINGS_REGISTRY } = await import("../src/lib/settings-registry");
+
+  for (const setting of SETTINGS_REGISTRY) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: {}, // Don't overwrite existing values — admin may have customized them
+      create: {
+        key: setting.key,
+        value: setting.defaultValue,
+        type: setting.type,
+      },
+    });
+  }
+  console.log(`✅ Seeded ${SETTINGS_REGISTRY.length} system settings`);
+
   console.log("Seed completed successfully!");
 }
 

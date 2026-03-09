@@ -1,5 +1,6 @@
 import { registerNativeTool } from "./registry";
 import { prisma } from "../prisma";
+import { getSettingNumber } from "@/lib/settings";
 
 // ─── read_knowledge ────────────────────────────────────
 
@@ -19,8 +20,12 @@ registerNativeTool({
   },
   async execute(args, ctx) {
     const query = (args.query as string).toLowerCase();
-    const MAX_FILES = 20;
-    const MAX_RESPONSE_SIZE = 30_000; // ~30KB total response cap
+    const [MAX_FILES, MAX_RESPONSE_SIZE, maxSnippetsSetting, snippetContext] = await Promise.all([
+      getSettingNumber('native_knowledge_max_files'),
+      getSettingNumber('native_knowledge_max_response'),
+      getSettingNumber('native_knowledge_max_snippets'),
+      getSettingNumber('native_knowledge_snippet_context'),
+    ]);
 
     // Search agent files (if in agent context)
     const agentFiles = ctx.agentId
@@ -47,7 +52,7 @@ registerNativeTool({
     let totalSize = 0;
 
     // Helper: extract snippets from text matching the query
-    function extractSnippets(text: string, maxSnippets = 5): string[] {
+    function extractSnippets(text: string, maxSnippets = maxSnippetsSetting): string[] {
       const lower = text.toLowerCase();
       const snippets: string[] = [];
       let pos = 0;
@@ -56,8 +61,8 @@ registerNativeTool({
         const idx = lower.indexOf(query, pos);
         if (idx === -1) break;
 
-        const start = Math.max(0, idx - 150);
-        const end = Math.min(text.length, idx + query.length + 150);
+        const start = Math.max(0, idx - snippetContext);
+        const end = Math.min(text.length, idx + query.length + snippetContext);
         const snippet =
           (start > 0 ? "..." : "") +
           text.slice(start, end) +
@@ -118,6 +123,7 @@ registerNativeTool({
   },
   async execute(args, ctx) {
     const query = (args.query as string).toLowerCase();
+    const searchLimit = await getSettingNumber('native_memory_search_limit');
 
     const memories = await prisma.userMemory.findMany({
       where: { userId: ctx.userId },
@@ -134,7 +140,7 @@ registerNativeTool({
     return JSON.stringify({
       query,
       totalMemories: memories.length,
-      matches: matches.slice(0, 20).map((m) => ({
+      matches: matches.slice(0, searchLimit).map((m) => ({
         key: m.key,
         content: m.content,
         updatedAt: m.updatedAt,

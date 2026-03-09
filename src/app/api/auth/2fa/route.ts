@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { getSettingNumber } from "@/lib/settings";
 
 const otp = new OTP();
 
@@ -52,8 +53,9 @@ export async function POST(req: Request) {
     return jsonError("Unauthorized", 401);
   }
 
-  // Rate limit: 5 attempts per minute per user to prevent TOTP brute-force
-  const allowed = await checkRateLimit(`2fa:${session.user.id}`, 5, 60_000);
+  // Rate limit: prevent TOTP brute-force
+  const rate2fa = await getSettingNumber('rate_2fa_per_minute');
+  const allowed = await checkRateLimit(`2fa:${session.user.id}`, rate2fa, 60_000);
   if (!allowed) {
     return jsonError("Слишком много попыток. Подождите минуту.", 429);
   }

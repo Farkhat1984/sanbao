@@ -5,11 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const {
   mockVerifyGoogleIdToken,
   mockMintSessionToken,
+  mockMintRefreshToken,
   mockCheckAuthRateLimit,
   mockPrisma,
 } = vi.hoisted(() => ({
   mockVerifyGoogleIdToken: vi.fn(),
   mockMintSessionToken: vi.fn(),
+  mockMintRefreshToken: vi.fn().mockResolvedValue("mock-refresh-token"),
   mockCheckAuthRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
   mockPrisma: {
     account: { findUnique: vi.fn(), create: vi.fn() },
@@ -24,6 +26,7 @@ vi.mock("@/lib/mobile-auth", () => ({
 }));
 vi.mock("@/lib/mobile-session", () => ({
   mintSessionToken: (...args: unknown[]) => mockMintSessionToken(...args),
+  mintRefreshToken: (...args: unknown[]) => mockMintRefreshToken(...args),
 }));
 vi.mock("@/lib/rate-limit", () => ({
   checkAuthRateLimit: (...args: unknown[]) => mockCheckAuthRateLimit(...args),

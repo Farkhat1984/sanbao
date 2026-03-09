@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
-import { PASSWORD_MIN_LENGTH, BCRYPT_SALT_ROUNDS } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 
 export async function POST(req: Request) {
   try {
@@ -22,24 +22,31 @@ export async function POST(req: Request) {
 
     const { name, email, password } = await req.json();
 
+    const [passwordMinLength, bcryptRounds, passwordMaxLength, nameMaxLength] = await Promise.all([
+      getSettingNumber("auth_password_min_length"),
+      getSettingNumber("auth_bcrypt_rounds"),
+      getSettingNumber("auth_password_max_length"),
+      getSettingNumber("auth_name_max_length"),
+    ]);
+
     // Validate email format + length (RFC 5321: max 254 chars)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || typeof email !== "string" || email.length > 254 || !emailRegex.test(email)) {
       return jsonError("Некорректный email", 400);
     }
 
-    if (!password || password.length < PASSWORD_MIN_LENGTH) {
-      return jsonError("Пароль должен быть минимум 8 символов", 400);
+    if (!password || password.length < passwordMinLength) {
+      return jsonError(`Пароль должен быть минимум ${passwordMinLength} символов`, 400);
     }
 
     // Prevent bcrypt DoS — bcrypt truncates at 72 bytes anyway
-    if (password.length > 128) {
-      return jsonError("Пароль не должен превышать 128 символов", 400);
+    if (password.length > passwordMaxLength) {
+      return jsonError(`Пароль не должен превышать ${passwordMaxLength} символов`, 400);
     }
 
     // Sanitize name (strip HTML tags)
     const sanitizedName = name
-      ? String(name).replace(/<[^>]*>/g, "").trim().slice(0, 100)
+      ? String(name).replace(/<[^>]*>/g, "").trim().slice(0, nameMaxLength)
       : null;
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -47,7 +54,7 @@ export async function POST(req: Request) {
       return jsonError("Пользователь с таким email уже существует", 409);
     }
 
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(password, bcryptRounds);
 
     const user = await prisma.user.create({
       data: {

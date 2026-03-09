@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { cacheGet, cacheSet, cacheDel, cacheIncr } from "@/lib/redis";
+import { getSettingNumber } from "@/lib/settings";
 
 function todayDate(): Date {
   const d = new Date();
@@ -27,11 +28,10 @@ function secondsUntilMidnight(): number {
   return Math.max(Math.ceil((tomorrow.getTime() - now.getTime()) / 1000), 1);
 }
 
-// ─── Plan cache (Redis-first, 5s TTL) ──────────────────
-
-const PLAN_CACHE_TTL = 5; // seconds (short TTL to reduce race window on usage checks)
+// ─── Plan cache (Redis-first, dynamic TTL) ──────────────
 
 export async function getUserPlanAndUsage(userId: string) {
+  const planCacheTtl = await getSettingNumber("cache_plan_ttl_s");
   // Try Redis cache for plan data (excluding message count — that uses atomic counter)
   const cacheKey = `plan:${userId}`;
   const cached = await cacheGet(cacheKey);
@@ -99,8 +99,8 @@ export async function getUserPlanAndUsage(userId: string) {
 
     planData = { plan, subscription: sub, monthlyUsage, expired };
 
-    // Cache plan data in Redis (5s TTL)
-    await cacheSet(cacheKey, JSON.stringify(planData), PLAN_CACHE_TTL);
+    // Cache plan data in Redis (dynamic TTL)
+    await cacheSet(cacheKey, JSON.stringify(planData), planCacheTtl);
   }
 
   // Get today's message count from atomic Redis counter (authoritative)

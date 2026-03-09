@@ -13,11 +13,10 @@ import type { ResolvedModel } from "@/lib/model-router";
 import {
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
-  MAX_TOOL_CALLS_PER_REQUEST,
-  MAX_REQUEST_TOKENS,
   TOOL_RESULT_MAX_CHARS,
   TOOL_RESULT_TAIL_CHARS,
 } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -43,6 +42,16 @@ export interface McpToolContext {
 
 // ─── Stream options ──────────────────────────────────────
 
+/** Dynamic overrides from settings registry (loaded by route.ts in a single batch) */
+export interface StreamSettingsOverrides {
+  defaultTemperature?: number;
+  defaultTopP?: number;
+  maxToolCallsPerRequest?: number;
+  maxRequestTokens?: number;
+  toolResultMaxChars?: number;
+  toolResultTailChars?: number;
+}
+
 export interface MoonshotStreamOptions {
   maxTokens: number;
   thinkingEnabled: boolean;
@@ -61,11 +70,13 @@ export interface MoonshotStreamOptions {
   signal?: AbortSignal;
   /** Context for MCP tool call logging (userId, conversationId) */
   mcpCallContext?: { userId: string; conversationId?: string };
+  /** Settings overrides from route.ts batch load — avoids redundant DB queries */
+  settingsOverrides?: StreamSettingsOverrides;
 }
 
 // ─── SSE Parser ──────────────────────────────────────────
 
-const SSE_MAX_BUFFER = 1024 * 1024; // 1MB max buffer for a single SSE line
+// SSE_MAX_BUFFER loaded per-stream from settings (stream_sse_max_buffer)
 
 /**
  * Truncate a tool result to fit within token budget.
@@ -93,7 +104,7 @@ function truncateToolResult(
   );
 }
 
-async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
+async function* parseSSEStream(body: ReadableStream<Uint8Array>, maxBuffer: number) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -104,7 +115,7 @@ async function* parseSSEStream(body: ReadableStream<Uint8Array>) {
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      if (buffer.length > SSE_MAX_BUFFER) {
+      if (buffer.length > maxBuffer) {
         throw new Error("SSE buffer overflow");
       }
 
@@ -145,7 +156,14 @@ export function streamMoonshot(
     onUsage,
     signal: incomingSignal,
     mcpCallContext,
+    settingsOverrides,
   } = options;
+
+  // Resolve settings: prefer overrides from route.ts batch, fall back to constants
+  const cfgDefaultTemperature = settingsOverrides?.defaultTemperature ?? DEFAULT_TEMPERATURE;
+  const cfgDefaultTopP = settingsOverrides?.defaultTopP ?? DEFAULT_TOP_P;
+  const cfgToolResultMaxChars = settingsOverrides?.toolResultMaxChars ?? TOOL_RESULT_MAX_CHARS;
+  const cfgToolResultTailChars = settingsOverrides?.toolResultTailChars ?? TOOL_RESULT_TAIL_CHARS;
   const nativeToolDefs = getNativeToolDefinitions();
 
   if (!textModel) {
@@ -170,6 +188,13 @@ export function streamMoonshot(
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const [sseMaxBuffer, mcpToolTimeoutMs] = await Promise.all([
+          getSettingNumber("stream_sse_max_buffer"),
+          getSettingNumber("mcp_tool_call_timeout_ms"),
+        ]);
+        const maxToolCallsPerRequest = settingsOverrides?.maxToolCallsPerRequest ?? 15;
+        const maxRequestTokens = settingsOverrides?.maxRequestTokens ?? 200_000;
+
         // Emit context info as first chunk
         if (contextInfo) {
           controller.enqueue(
@@ -197,7 +222,7 @@ export function streamMoonshot(
         let totalOutputTokens = 0;
 
         // Tool-call loop
-        for (let turn = 0; turn < MAX_TOOL_CALLS_PER_REQUEST; turn++) {
+        for (let turn = 0; turn < maxToolCallsPerRequest; turn++) {
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -208,8 +233,8 @@ export function streamMoonshot(
               model: modelId,
               messages: currentMessages,
               max_tokens: maxTokens,
-              temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? DEFAULT_TEMPERATURE),
-              top_p: textModel?.topP ?? DEFAULT_TOP_P,
+              temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? cfgDefaultTemperature),
+              top_p: textModel?.topP ?? cfgDefaultTopP,
               stream: true,
               stream_options: { include_usage: true },
               tools: [
@@ -270,7 +295,7 @@ export function streamMoonshot(
           let hasToolCallFinish = false;
           let turnReasoningContent = "";
 
-          for await (const chunk of parseSSEStream(response.body)) {
+          for await (const chunk of parseSSEStream(response.body, sseMaxBuffer)) {
             // Handle SSE error events from Moonshot API
             if (chunk.type === "error" || chunk.error) {
               const errMsg =
@@ -456,7 +481,7 @@ export function streamMoonshot(
           // Break the tool-call loop if cumulative tokens exceed the per-request budget.
           // This prevents runaway loops from consuming unbounded resources.
           const cumulativeTokens = totalInputTokens + totalOutputTokens;
-          if (cumulativeTokens > MAX_REQUEST_TOKENS) {
+          if (cumulativeTokens > maxRequestTokens) {
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
@@ -505,7 +530,6 @@ export function streamMoonshot(
                 } catch {
                   // fallback empty
                 }
-                const MCP_TOOL_TIMEOUT_MS = 30_000;
                 let mcpResult: { result?: string; error?: string };
                 try {
                   mcpResult = await Promise.race([
@@ -522,18 +546,18 @@ export function streamMoonshot(
                       }
                     ),
                     new Promise<{ error: string }>((resolve) =>
-                      setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${MCP_TOOL_TIMEOUT_MS / 1000}s` }), MCP_TOOL_TIMEOUT_MS)
+                      setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${mcpToolTimeoutMs / 1000}s` }), mcpToolTimeoutMs)
                     ),
                   ]);
                 } catch {
-                  mcpResult = { error: `MCP tool ${tc.function.name} timed out after ${MCP_TOOL_TIMEOUT_MS / 1000}s` };
+                  mcpResult = { error: `MCP tool ${tc.function.name} timed out after ${mcpToolTimeoutMs / 1000}s` };
                 }
                 currentMessages.push({
                   role: "tool",
                   tool_call_id: tc.id,
                   content: mcpResult.error
                     ? `Error: ${mcpResult.error}`
-                    : truncateToolResult(mcpResult.result ?? ""),
+                    : truncateToolResult(mcpResult.result ?? "", cfgToolResultMaxChars, cfgToolResultTailChars),
                 });
               } else if (
                 isNativeTool(tc.function.name) &&
@@ -565,7 +589,7 @@ export function streamMoonshot(
                 currentMessages.push({
                   role: "tool",
                   tool_call_id: tc.id,
-                  content: truncateToolResult(result),
+                  content: truncateToolResult(result, cfgToolResultMaxChars, cfgToolResultTailChars),
                 });
               } else {
                 // Built-in tool (web search) — pass arguments as content

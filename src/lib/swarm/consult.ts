@@ -2,9 +2,8 @@ import type { OrgAgentContext } from "./agent-loader";
 import type { ResolvedModel } from "@/lib/model-router";
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import { callMcpTool } from "@/lib/mcp-client";
-import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS, DEFAULT_MAX_TOKENS, SWARM_CONSULT_TIMEOUT_MS, SWARM_CONSULT_MAX_TOOL_TURNS } from "@/lib/constants";
-
-// All constants imported from @/lib/constants
+import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS, DEFAULT_MAX_TOKENS } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 
 interface ConsultOptions {
   userMessage: string;
@@ -34,6 +33,7 @@ async function consultAgent(
   userMessage: string,
   history: Array<{ role: string; content: string }>,
   model: ResolvedModel,
+  maxToolTurns: number,
   signal?: AbortSignal
 ): Promise<string> {
   const systemPrompt = agentCtx.systemPrompt + agentCtx.skillPrompts.join("");
@@ -57,8 +57,8 @@ async function consultAgent(
     { role: "user", content: userMessage },
   ];
 
-  // Tool call loop (max SWARM_CONSULT_MAX_TOOL_TURNS)
-  for (let turn = 0; turn < SWARM_CONSULT_MAX_TOOL_TURNS; turn++) {
+  // Tool call loop
+  for (let turn = 0; turn < maxToolTurns; turn++) {
     const body: Record<string, unknown> = {
       model: model.modelId,
       messages,
@@ -173,6 +173,11 @@ export function consultAndSynthesize(options: ConsultOptions): ReadableStream<Ui
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
+        const [consultTimeoutMs, maxToolTurns] = await Promise.all([
+          getSettingNumber("swarm_consult_timeout_ms"),
+          getSettingNumber("swarm_consult_max_tool_turns"),
+        ]);
+
         // Phase 1: Emit routing status
         controller.enqueue(encoder.encode(JSON.stringify({ t: "s", v: "routing" }) + "\n"));
 
@@ -182,13 +187,13 @@ export function consultAndSynthesize(options: ConsultOptions): ReadableStream<Ui
             encoder.encode(JSON.stringify({ t: "s", v: "consulting", n: ctx.name }) + "\n")
           );
 
-          const timeoutSignal = AbortSignal.timeout(SWARM_CONSULT_TIMEOUT_MS);
+          const timeoutSignal = AbortSignal.timeout(consultTimeoutMs);
           const combinedSignal = signal
             ? AbortSignal.any([signal, timeoutSignal])
             : timeoutSignal;
 
           try {
-            const content = await consultAgent(ctx, userMessage, conversationHistory, model, combinedSignal);
+            const content = await consultAgent(ctx, userMessage, conversationHistory, model, maxToolTurns, combinedSignal);
             // Emit agent response as t:"a" tag
             controller.enqueue(
               encoder.encode(

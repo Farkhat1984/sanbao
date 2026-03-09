@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
 import { getUserPlanAndUsage } from "@/lib/usage";
-
-const MAX_USER_FILES = 20;
-const MAX_FILE_SIZE = 100_000; // 100KB per file
-const MAX_NAME_LENGTH = 100;
-const MAX_DESCRIPTION_LENGTH = 500;
+import { getSettingNumber } from "@/lib/settings";
 
 export async function GET() {
   const result = await requireAuth();
@@ -38,6 +34,13 @@ export async function POST(req: Request) {
   if (!body) return jsonError("Неверный JSON", 400);
 
   const { name, description, content } = body;
+
+  const [MAX_USER_FILES, MAX_FILE_SIZE, MAX_NAME_LENGTH, MAX_DESCRIPTION_LENGTH] = await Promise.all([
+    getSettingNumber('user_files_max_count'),
+    getSettingNumber('user_files_max_size_bytes'),
+    getSettingNumber('user_files_max_name_length'),
+    getSettingNumber('user_files_max_description_length'),
+  ]);
 
   if (!name?.trim() || name.length > MAX_NAME_LENGTH) {
     return jsonError(`Название обязательно (макс. ${MAX_NAME_LENGTH} символов)`, 400);

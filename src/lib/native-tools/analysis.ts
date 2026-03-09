@@ -1,21 +1,17 @@
 import { registerNativeTool } from "./registry";
-import {
-  NATIVE_TOOL_CSV_MAX_BYTES,
-  NATIVE_TOOL_CSV_MAX_ROWS,
-} from "../constants";
+import { getSettingNumber } from "@/lib/settings";
 import { Parser } from "expr-eval";
 
 // ─── Safe math evaluator (expr-eval — no eval/new Function) ──
 
-const MAX_EXPRESSION_LENGTH = 500;
-
 const mathParser = new Parser();
 
-function safeEvaluate(expression: string): number {
+async function safeEvaluate(expression: string): Promise<number> {
   const expr = expression.trim();
+  const maxExprLen = await getSettingNumber('native_expression_max_length');
 
-  if (expr.length > MAX_EXPRESSION_LENGTH) {
-    throw new Error(`Выражение слишком длинное (макс. ${MAX_EXPRESSION_LENGTH} символов)`);
+  if (expr.length > maxExprLen) {
+    throw new Error(`Выражение слишком длинное (макс. ${maxExprLen} символов)`);
   }
 
   const result = mathParser.evaluate(expr);
@@ -46,7 +42,7 @@ registerNativeTool({
   async execute(args) {
     const expression = args.expression as string;
     try {
-      const result = safeEvaluate(expression);
+      const result = await safeEvaluate(expression);
       return JSON.stringify({ expression, result });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -156,17 +152,22 @@ registerNativeTool({
     const groupBy = args.group_by as string | undefined;
     const op = (args.operation as AggOp) || "sum";
 
+    const [csvMaxBytes, csvMaxRows] = await Promise.all([
+      getSettingNumber("native_csv_max_bytes"),
+      getSettingNumber("native_csv_max_rows"),
+    ]);
+
     // Size check
-    if (Buffer.byteLength(csv, "utf-8") > NATIVE_TOOL_CSV_MAX_BYTES) {
-      return JSON.stringify({ error: `CSV превышает лимит ${NATIVE_TOOL_CSV_MAX_BYTES / 1024}KB` });
+    if (Buffer.byteLength(csv, "utf-8") > csvMaxBytes) {
+      return JSON.stringify({ error: `CSV превышает лимит ${csvMaxBytes / 1024}KB` });
     }
 
     const rows = parseCSV(csv);
     if (rows.length < 2) {
       return JSON.stringify({ error: "CSV должен содержать заголовок и хотя бы одну строку данных" });
     }
-    if (rows.length - 1 > NATIVE_TOOL_CSV_MAX_ROWS) {
-      return JSON.stringify({ error: `CSV превышает лимит ${NATIVE_TOOL_CSV_MAX_ROWS} строк` });
+    if (rows.length - 1 > csvMaxRows) {
+      return JSON.stringify({ error: `CSV превышает лимит ${csvMaxRows} строк` });
     }
 
     const headers = rows[0];

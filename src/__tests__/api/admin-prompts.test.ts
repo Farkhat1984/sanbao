@@ -48,12 +48,12 @@ describe("GET /api/admin/prompts", () => {
     (prisma.systemSetting.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
-  it("returns all 9 prompts", async () => {
+  it("returns all 11 prompts", async () => {
     const res = await GET();
     const data = await res.json();
 
     expect(res.status).toBe(200);
-    expect(data).toHaveLength(9);
+    expect(data).toHaveLength(11);
     expect(data.map((p: { key: string }) => p.key)).toEqual(Object.keys(PROMPT_REGISTRY));
   });
 

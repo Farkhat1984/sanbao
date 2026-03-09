@@ -33,7 +33,7 @@ describe("buildCompactionPrompt (async)", () => {
       { role: "user", content: "Hello" },
     ]);
     expect(result).toContain("[USER]: Hello");
-    expect(result).toContain("краткое содержание");
+    expect(result).toContain("Create a summary");
     expect(result).not.toContain("{{CONVERSATION}}");
   });
 
@@ -45,7 +45,7 @@ describe("buildCompactionPrompt (async)", () => {
     expect(result).toContain("[USER]: New message");
     expect(result).not.toContain("{{SUMMARY}}");
     expect(result).not.toContain("{{CONVERSATION}}");
-    expect(result).toContain("обновлённое краткое содержание");
+    expect(result).toContain("updated summary");
   });
 
   it("formats multiple messages correctly", async () => {

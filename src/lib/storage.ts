@@ -1,8 +1,12 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3_DEFAULT_BUCKET, S3_DEFAULT_REGION, PRESIGNED_URL_EXPIRY } from "@/lib/constants";
+import { S3_DEFAULT_REGION } from "@/lib/constants";
+import { getSetting, getSettingNumber } from "@/lib/settings";
 
-const bucket = process.env.S3_BUCKET || S3_DEFAULT_BUCKET;
+async function resolveBucket(): Promise<string> {
+  if (process.env.S3_BUCKET) return process.env.S3_BUCKET;
+  return getSetting("s3_default_bucket");
+}
 
 let client: S3Client | null = null;
 
@@ -37,6 +41,7 @@ export async function uploadFile(
   const s3 = getClient();
   if (!s3) throw new Error("S3 not configured");
 
+  const bucket = await resolveBucket();
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -54,6 +59,7 @@ export async function deleteFile(key: string): Promise<void> {
   const s3 = getClient();
   if (!s3) throw new Error("S3 not configured");
 
+  const bucket = await resolveBucket();
   await s3.send(
     new DeleteObjectCommand({
       Bucket: bucket,
@@ -62,14 +68,19 @@ export async function deleteFile(key: string): Promise<void> {
   );
 }
 
-export async function getPresignedUrl(key: string, expiresIn = PRESIGNED_URL_EXPIRY): Promise<string> {
+export async function getPresignedUrl(key: string, expiresIn?: number): Promise<string> {
   const s3 = getClient();
   if (!s3) throw new Error("S3 not configured");
+
+  const [bucket, defaultExpiry] = await Promise.all([
+    resolveBucket(),
+    expiresIn != null ? Promise.resolve(expiresIn) : getSettingNumber("s3_presigned_url_expiry_s"),
+  ]);
 
   return getSignedUrl(
     s3,
     new GetObjectCommand({ Bucket: bucket, Key: key }),
-    { expiresIn }
+    { expiresIn: expiresIn ?? defaultExpiry }
   );
 }
 
@@ -77,6 +88,7 @@ export async function listFiles(prefix?: string): Promise<{ key: string; size: n
   const s3 = getClient();
   if (!s3) throw new Error("S3 not configured");
 
+  const bucket = await resolveBucket();
   const result = await s3.send(
     new ListObjectsV2Command({
       Bucket: bucket,

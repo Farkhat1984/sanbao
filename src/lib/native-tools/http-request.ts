@@ -1,9 +1,5 @@
 import { registerNativeTool } from "./registry";
-import {
-  NATIVE_TOOL_HTTP_TIMEOUT_MS,
-  NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS,
-  NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES,
-} from "../constants";
+import { getSettingNumber } from "@/lib/settings";
 import dns from "node:dns/promises";
 
 // ─── SSRF Protection ───────────────────────────────────
@@ -157,7 +153,7 @@ registerNativeTool({
       },
       timeout: {
         type: "number",
-        description: `Таймаут в миллисекундах (макс. ${NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS}). По умолчанию ${NATIVE_TOOL_HTTP_TIMEOUT_MS}.`,
+        description: "Таймаут в миллисекундах (макс. 60000). По умолчанию 30000.",
       },
     },
     required: ["url"],
@@ -167,9 +163,15 @@ registerNativeTool({
     const method = ((args.method as string) || "GET").toUpperCase();
     const headers = (args.headers as Record<string, string>) || {};
     const body = args.body as string | undefined;
+
+    const [httpDefaultTimeout, httpMaxTimeout, httpMaxResponseBytes] = await Promise.all([
+      getSettingNumber("native_http_timeout_ms"),
+      getSettingNumber("native_http_max_timeout_ms"),
+      getSettingNumber("native_http_max_response_bytes"),
+    ]);
     const timeout = Math.min(
-      Number(args.timeout) || NATIVE_TOOL_HTTP_TIMEOUT_MS,
-      NATIVE_TOOL_HTTP_MAX_TIMEOUT_MS
+      Number(args.timeout) || httpDefaultTimeout,
+      httpMaxTimeout
     );
 
     // SSRF check
@@ -220,10 +222,10 @@ registerNativeTool({
 
       if (contentType.includes("application/json")) {
         const text = await res.text();
-        responseBody = truncateResponse(text, NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES);
+        responseBody = truncateResponse(text, httpMaxResponseBytes);
       } else if (contentType.startsWith("text/")) {
         const text = await res.text();
-        responseBody = truncateResponse(text, NATIVE_TOOL_HTTP_MAX_RESPONSE_BYTES);
+        responseBody = truncateResponse(text, httpMaxResponseBytes);
       } else {
         // Binary / unknown — just report status
         responseBody = `[Бинарный ответ: ${contentType}, ${res.headers.get("content-length") || "?"} bytes]`;

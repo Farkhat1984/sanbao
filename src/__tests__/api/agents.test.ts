@@ -294,7 +294,7 @@ describe("POST /api/agents", () => {
 
     const call = mockAgent.create.mock.calls[0][0];
     expect(call.data.icon).toBe("Bot");
-    expect(call.data.iconColor).toBe("#4F6EF7");
+    expect(call.data.iconColor).toBe("#8FAF9F");
   });
 
   it("should filter empty starter prompts", async () => {

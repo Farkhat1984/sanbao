@@ -5,11 +5,9 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { fireAndForget, logger } from "@/lib/logger";
 import { isUrlSafeAsync } from "@/lib/ssrf";
+import { getSettingNumber } from "@/lib/settings";
 
-const MCP_CONNECT_TIMEOUT = 15_000; // 15s
-const MCP_TOOL_CALL_TIMEOUT = 30_000; // 30s
-const MCP_POOL_MAX_IDLE_MS = 5 * 60_000; // 5 min — close idle connections
-const MCP_POOL_CLEANUP_INTERVAL_MS = 60_000; // Check for stale connections every 60s
+const MCP_POOL_CLEANUP_INTERVAL_MS = 60_000; // Check for stale connections every 60s (compile-time, used in setInterval)
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -81,10 +79,14 @@ async function getOrConnect(
   transport: "SSE" | "STREAMABLE_HTTP",
   apiKey?: string | null
 ): Promise<PoolEntry> {
+  const mcpPoolMaxIdleMs = await getSettingNumber("mcp_pool_max_idle_ms");
+  const mcpConnectTimeout = await getSettingNumber("mcp_connect_timeout_ms");
+  const mcpToolCallTimeout = await getSettingNumber("mcp_tool_call_timeout_ms");
+
   const key = poolKey(url, transport, apiKey);
   const cached = pool.get(key);
 
-  if (cached && (Date.now() - cached.lastUsed) < MCP_POOL_MAX_IDLE_MS) {
+  if (cached && (Date.now() - cached.lastUsed) < mcpPoolMaxIdleMs) {
     cached.lastUsed = Date.now();
     return cached;
   }
@@ -96,9 +98,9 @@ async function getOrConnect(
 
   const transportInstance = createTransport(url, transport, apiKey);
   const client = new Client({ name: "sanbao", version: "1.0.0" });
-  await withTimeout(client.connect(transportInstance), MCP_CONNECT_TIMEOUT, "MCP connect");
+  await withTimeout(client.connect(transportInstance), mcpConnectTimeout, "MCP connect");
 
-  const { tools } = await withTimeout(client.listTools(), MCP_TOOL_CALL_TIMEOUT, "MCP listTools");
+  const { tools } = await withTimeout(client.listTools(), mcpToolCallTimeout, "MCP listTools");
   const toolInfos: McpToolInfo[] = tools.map((t) => ({
     name: t.name,
     description: t.description || "",
@@ -123,10 +125,11 @@ let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 function startCleanupInterval(): void {
   if (cleanupTimer) return;
-  cleanupTimer = setInterval(() => {
+  cleanupTimer = setInterval(async () => {
+    const mcpPoolMaxIdleMs = await getSettingNumber("mcp_pool_max_idle_ms");
     const now = Date.now();
     for (const [key, entry] of pool.entries()) {
-      if (now - entry.lastUsed > MCP_POOL_MAX_IDLE_MS) {
+      if (now - entry.lastUsed > mcpPoolMaxIdleMs) {
         logger.info("MCP pool: evicting idle connection", { key });
         evictEntry(key, entry);
       }
@@ -191,6 +194,7 @@ export async function callMcpTool(
   const start = Date.now();
   try {
     startCleanupInterval();
+    const mcpToolCallTimeout = await getSettingNumber("mcp_tool_call_timeout_ms");
 
     let entry: PoolEntry;
     try {
@@ -204,7 +208,7 @@ export async function callMcpTool(
     try {
       response = await withTimeout(
         entry.client.callTool({ name: toolName, arguments: args }),
-        MCP_TOOL_CALL_TIMEOUT,
+        mcpToolCallTimeout,
         `MCP callTool(${toolName})`
       );
     } catch (callErr) {
@@ -220,7 +224,7 @@ export async function callMcpTool(
       entry = await getOrConnect(url, transport, apiKey);
       response = await withTimeout(
         entry.client.callTool({ name: toolName, arguments: args }),
-        MCP_TOOL_CALL_TIMEOUT,
+        mcpToolCallTimeout,
         `MCP callTool(${toolName}) retry`
       );
     }
@@ -236,13 +240,14 @@ export async function callMcpTool(
 
     // Log tool call
     if (context?.mcpServerId) {
+      const logMax = await getSettingNumber('mcp_tool_log_max_chars');
       fireAndForget(
         prisma.mcpToolLog.create({
           data: {
             mcpServerId: context.mcpServerId,
             toolName,
             input: args as Prisma.InputJsonValue,
-            output: { text: textContent.slice(0, 10000) } as Prisma.InputJsonValue,
+            output: { text: textContent.slice(0, logMax) } as Prisma.InputJsonValue,
             durationMs: Date.now() - start,
             success: true,
             userId: context.userId || null,

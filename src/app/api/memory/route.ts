@@ -1,15 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, jsonOk, jsonError, serializeDates } from "@/lib/api-helpers";
+import { getSettingNumber } from "@/lib/settings";
 
 export async function GET() {
   const result = await requireAuth();
   if ("error" in result) return result.error;
   const { userId } = result.auth;
 
+  const maxMemory = await getSettingNumber('pagination_memory_max');
   const memories = await prisma.userMemory.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
-    take: 200,
+    take: maxMemory,
   });
 
   return jsonOk(memories.map(serializeDates));

@@ -1,6 +1,7 @@
 import { getPrompt, interpolatePrompt } from "@/lib/prompts";
 import type { ResolvedModel } from "@/lib/model-router";
-import { DEFAULT_MAX_TOKENS, SWARM_CLASSIFY_TIMEOUT_MS } from "@/lib/constants";
+import { DEFAULT_MAX_TOKENS } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 
 export interface ClassifyResult {
   mode: "single" | "multi";
@@ -25,7 +26,10 @@ export async function classifySwarmRequest(
       .map((a) => `- id: "${a.id}", name: "${a.name}", description: "${a.description || "N/A"}"`)
       .join("\n");
 
-    const promptTemplate = await getPrompt("prompt_swarm_classify");
+    const [promptTemplate, classifyTimeout] = await Promise.all([
+      getPrompt("prompt_swarm_classify"),
+      getSettingNumber("swarm_classify_timeout_ms"),
+    ]);
     const systemPrompt = interpolatePrompt(promptTemplate, { AGENTS: agentsText });
 
     const response = await fetch(`${model.provider.baseUrl}/chat/completions`, {
@@ -45,7 +49,7 @@ export async function classifySwarmRequest(
         stream: false,
         response_format: { type: "json_object" },
       }),
-      signal: AbortSignal.timeout(SWARM_CLASSIFY_TIMEOUT_MS),
+      signal: AbortSignal.timeout(classifyTimeout),
     });
 
     if (!response.ok) {
