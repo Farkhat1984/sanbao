@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sanbao AI</string>
+    <string name="title_activity_main">Sanbao AI</string>
+    <string name="package_name">com.sanbao.sanbaoai</string>
+    <string name="custom_url_scheme">com.sanbao.sanbaoai</string>
+</resources>
