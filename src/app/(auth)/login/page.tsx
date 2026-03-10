@@ -20,6 +20,23 @@ function getCapacitor(): CapacitorBridge | null {
   return cap?.isNativePlatform?.() ? cap : null;
 }
 
+/** Wait for Capacitor bridge (may be injected after page load on remote URLs) */
+function waitForCapacitor(maxMs = 1500): Promise<CapacitorBridge | null> {
+  const cap = getCapacitor();
+  if (cap) return Promise.resolve(cap);
+
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const iv = setInterval(() => {
+      const c = getCapacitor();
+      if (c || Date.now() - start > maxMs) {
+        clearInterval(iv);
+        resolve(c);
+      }
+    }, 50);
+  });
+}
+
 const SESSION_COOKIE =
   process.env.NODE_ENV === "production"
     ? "__Secure-authjs.session-token"
@@ -33,7 +50,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setIsNative(!!getCapacitor());
+    waitForCapacitor().then((cap) => {
+      const native = !!cap;
+      setIsNative(native);
+      // Debug: log to see if bridge is detected
+      console.log("[LoginPage] Capacitor detected:", native, "window.Capacitor:", typeof (window as Record<string, unknown>).Capacitor);
+    });
 
     fetch("/api/auth/csrf")
       .then((r) => r.json())
