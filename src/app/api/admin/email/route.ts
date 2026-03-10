@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, verifySmtp, invoiceEmail, subscriptionExpiringEmail } from "@/lib/email";
+import { sendEmail, verifySmtp } from "@/lib/email";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 /** GET — list email logs with pagination */
@@ -52,55 +52,6 @@ export async function POST(req: Request) {
       metadata: { test: true },
     });
     return jsonOk({ ok });
-  }
-
-  // Broadcast: invoice email to all users
-  if (action === "broadcast_invoice") {
-    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true } });
-    const planName = "Business";
-    const amount = "14 990 ₸";
-    const now = new Date();
-    const end = new Date(now);
-    end.setMonth(end.getMonth() + 1);
-    const fmt = (d: Date) => d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const period = `${fmt(now)} — ${fmt(end)}`;
-    const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-    const invoiceNumber = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${rand}`;
-
-    let sent = 0;
-    for (const user of users) {
-      const { subject, html } = await invoiceEmail({
-        userName: user.name || "Пользователь",
-        planName,
-        amount,
-        period,
-        invoiceNumber,
-      });
-      const ok = await sendEmail({ to: user.email, subject, html, type: "INVOICE", userId: user.id, metadata: { broadcast: true, invoiceNumber } });
-      if (ok) sent++;
-    }
-    return jsonOk({ total: users.length, sent });
-  }
-
-  // Broadcast: subscription expiring in 3 days
-  if (action === "broadcast_expiring") {
-    const users = await prisma.user.findMany({ select: { id: true, email: true, name: true } });
-    const planName = "Business";
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 3);
-    const fmtDate = expiresAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
-
-    let sent = 0;
-    for (const user of users) {
-      const { subject, html } = await subscriptionExpiringEmail({
-        userName: user.name || "Пользователь",
-        planName,
-        expiresAt: fmtDate,
-      });
-      const ok = await sendEmail({ to: user.email, subject, html, type: "SUBSCRIPTION_EXPIRING", userId: user.id, metadata: { broadcast: true } });
-      if (ok) sent++;
-    }
-    return jsonOk({ total: users.length, sent });
   }
 
   return jsonError("Неизвестное действие", 400);
