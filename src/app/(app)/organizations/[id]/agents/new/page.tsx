@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { AgentForm } from "@sanbao/ui/components/agents/AgentForm";
+import { useBillingStore } from "@/stores/billingStore";
 
 export default function NewOrgAgentPage({
   params,
@@ -9,5 +10,6 @@ export default function NewOrgAgentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  return <AgentForm orgId={id} />;
+  const canUseRag = useBillingStore((s) => s.plan?.canUseRag ?? false);
+  return <AgentForm orgId={id} canUseRag={canUseRag} />;
 }

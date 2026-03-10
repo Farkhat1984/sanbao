@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, FileText, Loader2, BookOpen, Archive, CheckCircle2, ImageIcon, AlertCircle } from "lucide-react";
+import { Upload, X, FileText, Loader2, BookOpen, Archive, CheckCircle2, ImageIcon, AlertCircle, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentFile } from "@/types/agent";
 import { MAX_FILE_SIZE } from "@/lib/constants";
@@ -13,6 +13,12 @@ interface AgentFileUploadProps {
   onFileRemoved: (fileId: string) => void;
   onFileUpdated?: (file: AgentFile) => void;
   onQueuedFilesChange?: (files: File[]) => void;
+  /** Override the default upload URL (e.g. for multi-agent files) */
+  uploadUrl?: string;
+  /** Whether the feature is disabled (e.g. subscription gating) */
+  disabled?: boolean;
+  /** Message shown when disabled */
+  disabledMessage?: string;
 }
 
 export function AgentFileUpload({
@@ -22,6 +28,9 @@ export function AgentFileUpload({
   onFileRemoved,
   onFileUpdated,
   onQueuedFilesChange,
+  uploadUrl,
+  disabled,
+  disabledMessage,
 }: AgentFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -29,10 +38,12 @@ export function AgentFileUpload({
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const baseUrl = uploadUrl || (agentId ? `/api/agents/${agentId}/files` : null);
+
   const queueFile = useCallback(
     (file: File) => {
       if (file.size > MAX_FILE_SIZE) {
-        setError("Файл слишком большой (макс. 10MB)");
+        setError("Файл слишком большой (макс. 100MB)");
         return;
       }
       setError(null);
@@ -55,13 +66,13 @@ export function AgentFileUpload({
 
   const uploadFile = useCallback(
     async (file: File) => {
-      if (!agentId) {
+      if (!baseUrl) {
         queueFile(file);
         return;
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        setError("Файл слишком большой (макс. 10MB)");
+        setError("Файл слишком большой (макс. 100MB)");
         return;
       }
 
@@ -72,7 +83,7 @@ export function AgentFileUpload({
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch(`/api/agents/${agentId}/files`, {
+        const res = await fetch(baseUrl, {
           method: "POST",
           body: formData,
         });
@@ -90,14 +101,14 @@ export function AgentFileUpload({
         setUploading(false);
       }
     },
-    [agentId, onFileAdded, queueFile]
+    [baseUrl, onFileAdded, queueFile]
   );
 
   const handleDelete = async (fileId: string) => {
-    if (!agentId) return;
+    if (!baseUrl) return;
 
     try {
-      const res = await fetch(`/api/agents/${agentId}/files`, {
+      const res = await fetch(baseUrl, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileId }),
@@ -112,9 +123,9 @@ export function AgentFileUpload({
   };
 
   const handleToggleContext = async (fileId: string, currentInContext: boolean) => {
-    if (!agentId) return;
+    if (!baseUrl) return;
     try {
-      const res = await fetch(`/api/agents/${agentId}/files`, {
+      const res = await fetch(baseUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileId, inContext: !currentInContext }),
@@ -149,6 +160,17 @@ export function AgentFileUpload({
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  if (disabled) {
+    return (
+      <div className="relative rounded-xl border-2 border-dashed border-border p-6 text-center opacity-60">
+        <Lock className="h-8 w-8 text-text-muted mx-auto mb-2" />
+        <p className="text-sm text-text-secondary">
+          {disabledMessage || "Файлы знаний доступны на тарифе Business"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -187,10 +209,10 @@ export function AgentFileUpload({
             : "Перетащите файл или нажмите для выбора"}
         </p>
         <p className="text-xs text-text-secondary mt-1">
-          PDF, DOCX, XLSX, TXT, MD, изображения до 10MB
+          PDF, DOCX, XLSX, TXT, MD, изображения до 100MB
         </p>
       </div>
-      {agentId && (
+      {baseUrl && (
         <p className="text-xs text-text-muted">
           Текст из файлов автоматически извлекается и используется агентом в чате как база знаний
         </p>

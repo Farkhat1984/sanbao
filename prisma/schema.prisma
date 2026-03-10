@@ -1257,12 +1257,31 @@ model MultiAgent {
   org       Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdBy User              @relation("MultiAgentCreator", fields: [createdById], references: [id])
   members   MultiAgentMember[]
+  files     MultiAgentFile[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
   @@index([createdById])
+}
+
+model MultiAgentFile {
+  id            String  @id @default(cuid())
+  multiAgentId  String
+  fileName      String
+  fileType      String
+  fileUrl       String
+  fileSize      Int
+  extractedText String? @db.Text
+  inContext      Boolean @default(true)
+  storageKey    String?
+
+  multiAgent MultiAgent @relation(fields: [multiAgentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([multiAgentId])
 }
 
 model MultiAgentMember {

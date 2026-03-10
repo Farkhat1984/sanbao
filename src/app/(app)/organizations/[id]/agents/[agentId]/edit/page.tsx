@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import { AgentForm } from "@sanbao/ui/components/agents/AgentForm";
 import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
+import { useBillingStore } from "@/stores/billingStore";
 
 export default function EditOrgAgentPage({
   params,
@@ -14,6 +15,7 @@ export default function EditOrgAgentPage({
   const [agent, setAgent] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const canUseRag = useBillingStore((s) => s.plan?.canUseRag ?? false);
 
   useEffect(() => {
     fetch(`/api/organizations/${id}/agents/${agentId}`)
@@ -65,5 +67,5 @@ export default function EditOrgAgentPage({
     updatedAt: agent.updatedAt as string,
   };
 
-  return <AgentForm agent={agentForForm} orgId={id} />;
+  return <AgentForm agent={agentForForm} orgId={id} canUseRag={canUseRag} />;
 }

@@ -107,7 +107,7 @@ export function OrgAgentList() {
                   className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <Network className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  <span className="truncate">Мать Роя</span>
+                  <span className="truncate">Мультиагент</span>
                 </button>
               )}
               {group.agents.map((agent) => (

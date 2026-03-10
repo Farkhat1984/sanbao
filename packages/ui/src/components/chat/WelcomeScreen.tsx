@@ -89,7 +89,7 @@ export function WelcomeScreen() {
               <Network className="h-8 w-8 text-amber-500" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">
-              Мать Роя
+              Мультиагент
             </h2>
             <p className="text-sm text-text-secondary max-w-md">
               {swarmInfo.orgName} · {swarmInfo.agents.length} агентов доступно

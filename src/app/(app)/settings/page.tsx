@@ -311,7 +311,17 @@ function SettingsContent() {
         <section className="pt-4 border-t border-border pb-8">
           <Button
             variant="ghost"
-            onClick={() => { resetAllStores(); signOut({ callbackUrl: "/login" }); }}
+            onClick={async () => {
+              resetAllStores();
+              // Clear cookies server-side (httpOnly) + client-side
+              await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+              const cookieNames = ["authjs.session-token", "__Secure-authjs.session-token", "authjs.callback-url", "__Secure-authjs.callback-url", "authjs.csrf-token", "__Secure-authjs.csrf-token"];
+              for (const name of cookieNames) {
+                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax`;
+              }
+              await signOut({ callbackUrl: "/login" });
+            }}
             className="text-error hover:text-error hover:bg-error-light"
           >
             <LogOut className="h-4 w-4" />

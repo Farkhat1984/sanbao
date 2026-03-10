@@ -4,9 +4,11 @@ import { useState } from "react";
 import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
+import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentPicker } from "./AgentPicker";
 import { StarterPromptsEditor } from "./StarterPromptsEditor";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import type { AgentFile } from "@/types/agent";
 
 interface MultiAgentFormProps {
   orgId: string;
@@ -18,10 +20,13 @@ interface MultiAgentFormProps {
     iconColor: string | null;
     starterPrompts: string[];
     members: Array<{ agentType: string; agentId: string }>;
+    files?: AgentFile[];
   };
+  /** Whether the user's plan supports knowledge files (canUseRag) */
+  canUseRag?: boolean;
 }
 
-export function MultiAgentForm({ orgId, multiAgent }: MultiAgentFormProps) {
+export function MultiAgentForm({ orgId, multiAgent, canUseRag = false }: MultiAgentFormProps) {
   const router = useRouter();
   const isEdit = !!multiAgent;
 
@@ -35,6 +40,8 @@ export function MultiAgentForm({ orgId, multiAgent }: MultiAgentFormProps) {
   const [selectedAgents, setSelectedAgents] = useState<Array<{ type: string; id: string }>>(
     multiAgent?.members?.map((m) => ({ type: m.agentType, id: m.agentId })) || [],
   );
+  const [files, setFiles] = useState<AgentFile[]>(multiAgent?.files || []);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +86,18 @@ export function MultiAgentForm({ orgId, multiAgent }: MultiAgentFormProps) {
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Ошибка сохранения");
+      }
+
+      const created = await res.json();
+
+      // Upload pending files after multi-agent creation
+      if (!isEdit && pendingFiles.length > 0 && created?.id) {
+        const filesUrl = `/api/organizations/${orgId}/multiagents/${created.id}/files`;
+        for (const file of pendingFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+          await fetch(filesUrl, { method: "POST", body: formData });
+        }
       }
 
       router.push(backUrl);
@@ -166,7 +185,28 @@ export function MultiAgentForm({ orgId, multiAgent }: MultiAgentFormProps) {
           <StarterPromptsEditor prompts={starterPrompts} onChange={setStarterPrompts} />
         </div>
 
-        {/* Section 3: Agent selection */}
+        {/* Section 3: Capabilities (Knowledge Files) */}
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-4">Возможности</h2>
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">
+              Файлы знаний
+            </label>
+            <AgentFileUpload
+              agentId={multiAgent?.id || null}
+              files={files}
+              onFileAdded={(f) => setFiles((prev) => [...prev, f])}
+              onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
+              onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
+              onQueuedFilesChange={!isEdit ? setPendingFiles : undefined}
+              uploadUrl={multiAgent?.id ? `/api/organizations/${orgId}/multiagents/${multiAgent.id}/files` : undefined}
+              disabled={!canUseRag}
+              disabledMessage="Файлы знаний доступны только на тарифе Business"
+            />
+          </div>
+        </div>
+
+        {/* Section 4: Agent selection */}
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
           <h2 className="text-sm font-semibold text-text-primary mb-4">Команда агентов</h2>
           <p className="text-xs text-text-secondary mb-4">

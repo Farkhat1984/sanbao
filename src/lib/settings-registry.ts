@@ -86,7 +86,7 @@ export const CATEGORY_META: Record<SettingCategory, CategoryMeta> = {
     order: 9,
   },
   swarm: {
-    label: "Мать Роя (Swarm)",
+    label: "Мультиагенты",
     description: "Мультиагентная маршрутизация: таймауты, итерации",
     order: 10,
   },
@@ -1178,7 +1178,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     key: "swarm_classify_timeout_ms",
     label: "Таймаут классификации",
     description:
-      "Время ожидания LLM при классификации запроса в Мать Роя. Увеличьте при медленных моделях",
+      "Время ожидания LLM при классификации запроса мультиагентом. Увеличьте при медленных моделях",
     category: "swarm",
     type: "number",
     defaultValue: "60000",
@@ -1189,7 +1189,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     key: "swarm_consult_timeout_ms",
     label: "Таймаут консультации агента",
     description:
-      "Время ожидания ответа от агента-специалиста в Мать Роя",
+      "Время ожидания ответа от агента-специалиста в мультиагенте",
     category: "swarm",
     type: "number",
     defaultValue: "60000",
@@ -1235,7 +1235,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // billing (2)
+  // billing (9)
   // ═══════════════════════════════════════════════════════════════
   {
     key: "billing_default_currency",
@@ -1256,6 +1256,55 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     defaultValue: "3",
     validation: { min: 1, max: 30 },
     unit: "дней",
+  },
+  {
+    key: "stripe_secret_key",
+    label: "Stripe Secret Key",
+    description:
+      "Секретный ключ Stripe API (sk_live_... или sk_test_...). Перезаписывает переменную STRIPE_SECRET_KEY",
+    category: "billing",
+    type: "string",
+    sensitive: true,
+    defaultValue: "",
+  },
+  {
+    key: "stripe_webhook_secret",
+    label: "Stripe Webhook Secret",
+    description:
+      "Секрет для проверки подписи вебхуков Stripe (whsec_...). Перезаписывает переменную STRIPE_WEBHOOK_SECRET",
+    category: "billing",
+    type: "string",
+    sensitive: true,
+    defaultValue: "",
+  },
+  {
+    key: "freedom_pay_merchant_id",
+    label: "Freedom Pay Merchant ID",
+    description:
+      "Числовой ID мерчанта в Freedom Pay. Перезаписывает переменную FREEDOM_PAY_MERCHANT_ID",
+    category: "billing",
+    type: "string",
+    defaultValue: "",
+  },
+  {
+    key: "freedom_pay_secret_key",
+    label: "Freedom Pay Secret Key",
+    description:
+      "Секретный ключ мерчанта Freedom Pay для подписи запросов. Перезаписывает переменную FREEDOM_PAY_SECRET_KEY",
+    category: "billing",
+    type: "string",
+    sensitive: true,
+    defaultValue: "",
+  },
+  {
+    key: "freedom_pay_testing_mode",
+    label: "Freedom Pay тестовый режим",
+    description:
+      "Включить тестовый режим Freedom Pay (1 = тест, 0 = прод). Перезаписывает переменную FREEDOM_PAY_TESTING_MODE",
+    category: "billing",
+    type: "string",
+    defaultValue: "0",
+    validation: { allowedValues: ["0", "1"] },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -1329,8 +1378,17 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // email (2)
+  // email (6)
   // ═══════════════════════════════════════════════════════════════
+  {
+    key: "smtp_host",
+    label: "SMTP хост",
+    description:
+      "Адрес SMTP сервера (например smtp.gmail.com). Перезаписывает переменную SMTP_HOST",
+    category: "email",
+    type: "string",
+    defaultValue: "",
+  },
   {
     key: "email_default_smtp_port",
     label: "SMTP порт",
@@ -1342,13 +1400,41 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     validation: { min: 1, max: 65535 },
   },
   {
+    key: "smtp_user",
+    label: "SMTP пользователь",
+    description:
+      "Email/логин для авторизации на SMTP сервере. Перезаписывает переменную SMTP_USER",
+    category: "email",
+    type: "string",
+    defaultValue: "",
+  },
+  {
+    key: "smtp_password",
+    label: "SMTP пароль",
+    description:
+      "Пароль (App Password) для SMTP авторизации. Перезаписывает переменную SMTP_PASS",
+    category: "email",
+    type: "string",
+    sensitive: true,
+    defaultValue: "",
+  },
+  {
     key: "email_default_from",
     label: "Email отправителя",
     description:
-      "Email адрес, от имени которого отправляются письма",
+      "Email адрес, от имени которого отправляются письма (например Sanbao <user@gmail.com>)",
     category: "email",
     type: "string",
     defaultValue: "noreply@sanbao.ai",
+  },
+  {
+    key: "smtp_from",
+    label: "Имя отправителя",
+    description:
+      "Полное имя отправителя с email (например: Sanbao <noreply@sanbao.ai>). Перезаписывает переменную SMTP_FROM",
+    category: "email",
+    type: "string",
+    defaultValue: "",
   },
 
   // ═══════════════════════════════════════════════════════════════

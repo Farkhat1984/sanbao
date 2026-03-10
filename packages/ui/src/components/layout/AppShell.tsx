@@ -8,6 +8,7 @@ import { UnifiedPanel } from "@/components/panel/UnifiedPanel";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { usePanelStore } from "@/stores/panelStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
+import { useBillingStore } from "@/stores/billingStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface AppShellProps {
@@ -24,6 +25,23 @@ export function AppShell({ children }: AppShellProps) {
 
   const sidebarDrawerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+
+  // Hydrate billing store on mount so plan gates (canUseRag, etc.) work
+  useEffect(() => {
+    fetch("/api/billing/current")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const { setPlan, setUsage, setMonthlyUsage } =
+          useBillingStore.getState();
+        if (data.plan) setPlan(data.plan);
+        if (data.usage) setUsage(data.usage);
+        if (data.monthlyUsage) setMonthlyUsage(data.monthlyUsage);
+      })
+      .catch(() => {
+        // Billing is non-critical — silently ignore fetch errors
+      });
+  }, []);
 
   // Auto-close sidebar when switching to mobile viewport.
   // `sidebarOpen` is intentionally excluded: including it would re-run

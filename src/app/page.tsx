@@ -168,7 +168,7 @@ function HeroSection() {
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <SonarIcon size={80} className="absolute -inset-6 m-auto animate-pulse text-accent opacity-30" />
-        <SanbaoCompass state="idle" size={64} className="text-[#F4EFE6]" />
+        <SanbaoCompass size={64} className="text-[#F4EFE6]" />
       </motion.div>
 
       {/* Heading */}
@@ -515,7 +515,7 @@ function FooterSection() {
           {/* Brand */}
           <div className="flex flex-col items-center md:items-start">
             <div className="mb-3 flex items-center gap-3">
-              <SanbaoCompass state="found" size={28} className="text-[#F4EFE6]" />
+              <SanbaoCompass size={28} className="text-[#F4EFE6]" />
               <span className="font-[family-name:var(--font-display)] text-xl font-bold text-[#F4EFE6]">
                 Sanbao
               </span>

@@ -162,7 +162,7 @@ export const ConversationItem = memo(function ConversationItem({
         {conversation.isSwarmMode && (
           <div
             className="h-4 w-4 rounded shrink-0 flex items-center justify-center bg-amber-500/10"
-            title="Мать Роя"
+            title="Мультиагент"
           >
             <Network className="h-2.5 w-2.5 text-amber-500" />
           </div>

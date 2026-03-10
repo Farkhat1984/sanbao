@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { MultiAgentForm } from "@sanbao/ui/components/agents/MultiAgentForm";
+import { useBillingStore } from "@/stores/billingStore";
 
 export default function EditMultiAgentPage() {
   const params = useParams<{ id: string; multiAgentId: string }>();
   const [multiAgent, setMultiAgent] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const canUseRag = useBillingStore((s) => s.plan?.canUseRag ?? false);
 
   useEffect(() => {
     fetch(`/api/organizations/${params.id}/multiagents/${params.multiAgentId}`)
@@ -44,6 +46,7 @@ export default function EditMultiAgentPage() {
   return (
     <MultiAgentForm
       orgId={params.id}
+      canUseRag={canUseRag}
       multiAgent={{
         id: multiAgent.id as string,
         name: multiAgent.name as string,
@@ -52,6 +55,7 @@ export default function EditMultiAgentPage() {
         iconColor: (multiAgent.iconColor as string | null) ?? null,
         starterPrompts: (multiAgent.starterPrompts as string[]) || [],
         members: (multiAgent.members as Array<{ agentType: string; agentId: string }>) || [],
+        files: (multiAgent.files as Array<{ id: string; fileName: string; fileType: string; fileUrl: string; fileSize: number; extractedText?: string | null; inContext?: boolean; createdAt: string }>) || [],
       }}
     />
   );

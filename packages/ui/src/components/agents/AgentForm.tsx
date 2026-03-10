@@ -16,9 +16,11 @@ import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 interface AgentFormProps {
   agent?: Agent;
   orgId?: string;
+  /** Whether the user's plan supports knowledge files (canUseRag) */
+  canUseRag?: boolean;
 }
 
-export function AgentForm({ agent, orgId }: AgentFormProps) {
+export function AgentForm({ agent, orgId, canUseRag = false }: AgentFormProps) {
   const router = useRouter();
   const isEdit = !!agent;
 
@@ -333,6 +335,8 @@ export function AgentForm({ agent, orgId }: AgentFormProps) {
                 onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
                 onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
                 onQueuedFilesChange={!isEdit ? setPendingFiles : undefined}
+                disabled={!canUseRag}
+                disabledMessage="Файлы знаний доступны только на тарифе Business"
               />
             </div>
 

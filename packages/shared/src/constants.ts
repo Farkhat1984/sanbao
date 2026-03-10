@@ -19,7 +19,7 @@ export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   ANALYSIS: "Правовой анализ",
 };
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 // ─── Skill Categories ───
 export const SKILL_CATEGORIES = [

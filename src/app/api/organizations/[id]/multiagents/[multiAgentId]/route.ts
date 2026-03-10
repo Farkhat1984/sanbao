@@ -19,6 +19,7 @@ export async function GET(
     where: { id: multiAgentId },
     include: {
       members: true,
+      files: { orderBy: { createdAt: "desc" } },
       createdBy: { select: { id: true, name: true } },
     },
   });
@@ -27,7 +28,13 @@ export async function GET(
     return jsonError("Мультиагент не найден", 404);
   }
 
-  return jsonOk(multiAgent);
+  return jsonOk({
+    ...multiAgent,
+    files: multiAgent.files.map((f) => ({
+      ...f,
+      createdAt: f.createdAt.toISOString(),
+    })),
+  });
 }
 
 export async function PUT(

@@ -127,7 +127,7 @@ export default function LoginPage() {
     >
       {/* Left panel — brand showcase (hidden on mobile) */}
       <div className="hidden md:flex w-[45%] bg-[#1C2B3A] flex-col items-center justify-center p-10 text-center">
-        <SanbaoCompass size={64} className="text-accent mx-auto mb-6" state="idle" />
+        <SanbaoCompass size={64} className="text-accent mx-auto mb-6" />
         <h2 className="text-2xl font-bold text-[#F4EFE6] mb-3 font-[family-name:var(--font-display)] tracking-wide">
           Sanbao<span className="text-accent">.ai</span>
         </h2>

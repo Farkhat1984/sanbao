@@ -31,7 +31,6 @@ export function Sidebar() {
   const setActiveAgentId = useChatStore((s) => s.setActiveAgentId);
   const setMessages = useChatStore((s) => s.setMessages);
   const setConversations = useChatStore((s) => s.setConversations);
-  const isStreaming = useChatStore((s) => s.isStreaming);
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -92,7 +91,7 @@ export function Sidebar() {
       <div className="flex items-center gap-2 p-3 h-14 shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center shrink-0 text-white">
-            <SanbaoCompass size={20} state={isStreaming ? "loading" : "idle"} />
+            <SanbaoCompass size={20} />
           </div>
           <span className="font-semibold text-text-primary text-base tracking-tight font-[family-name:var(--font-display)]">
             Sanbao<span className="text-accent font-normal">.ai</span>
