@@ -4,4 +4,5 @@
     <string name="title_activity_main">Sanbao AI</string>
     <string name="package_name">com.sanbao.sanbaoai</string>
     <string name="custom_url_scheme">com.sanbao.sanbaoai</string>
+    <string name="server_client_id">785998485085-ufi4mt9193bs4r5v6jtcc6f7k367po7s.apps.googleusercontent.com</string>
 </resources>

@@ -2,9 +2,11 @@
  * Login screen — email/password + social sign-in (Google, Apple).
  */
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
+import { Capacitor } from '@capacitor/core'
 import { useAuth } from '@/hooks'
 import { cn } from '@sanbao/shared/utils'
 
@@ -15,6 +17,16 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      GoogleAuth.initialize({
+        clientId: '785998485085-ufi4mt9193bs4r5v6jtcc6f7k367po7s.apps.googleusercontent.com',
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      })
+    }
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -29,10 +41,9 @@ export default function LoginScreen() {
   }
 
   async function handleGoogleLogin() {
-    /* In production, this would use @capacitor-community/google-auth
-       to get the ID token. For now, this is a placeholder. */
     try {
-      const idToken = '' /* GoogleAuth.signIn() → .authentication.idToken */
+      const result = await GoogleAuth.signIn()
+      const idToken = result.authentication?.idToken
       if (!idToken) return
       await googleLogin(idToken)
       navigate('/chat', { replace: true })
