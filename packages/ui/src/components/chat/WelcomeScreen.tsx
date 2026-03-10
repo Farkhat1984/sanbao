@@ -115,7 +115,7 @@ export function WelcomeScreen() {
           );
         })() : (
           <>
-            <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center mx-auto mb-5 shadow-lg sonar">
+            <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center mx-auto mb-5 shadow-lg">
               <SanbaoCompass size={32} className="text-white" />
             </div>
             <h2 className="text-2xl font-bold text-text-primary mb-2 font-[family-name:var(--font-display)]">
