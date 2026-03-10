@@ -107,30 +107,6 @@ export interface ToolDefinition {
   sortOrder: number;
 }
 
-/** Tool definition with agent binding */
-export interface ToolWithAgent extends ToolDefinition {
-  agentId: string;
-}
-
-/** Specialized agent definition with MCP server config */
-export interface SpecializedAgentDef {
-  id: string;
-  name: string;
-  description: string;
-  instructions: string;
-  icon: string;
-  iconColor: string;
-  sortOrder: number;
-  starterPrompts: string[];
-  mcp: {
-    id: string;
-    name: string;
-    url: string;
-    transport: "SSE" | "STREAMABLE_HTTP";
-    apiKey: string | null;
-  };
-}
-
 /**
  * Upsert a tool and optionally link it to an agent.
  * Shared logic to avoid repeating the upsert pattern.

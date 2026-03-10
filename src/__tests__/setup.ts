@@ -229,13 +229,9 @@ vi.mock("@/lib/usage", () => ({
 
 // ─── Mock system-agents ────────────────────────────────────
 vi.mock("@/lib/system-agents", () => ({
-  resolveAgentId: vi.fn((id: string) => id),
-  LAWYER_ID: "system-lawyer",
-  LAWYER_AGENT_ID: "system-femida-agent",
-  BROKER_AGENT_ID: "system-broker-agent",
-  SANBAO_AGENT_ID: "system-sanbao-agent",
-  FEMIDA_ID: "system-lawyer",
-  FEMIDA_AGENT_ID: "system-femida-agent",
+  isSystemAgent: vi.fn(() => false),
+  isSystemAgentAsync: vi.fn().mockResolvedValue(false),
+  getSystemAgents: vi.fn().mockResolvedValue([]),
 }));
 
 // ─── Mock fs (for agent file routes) ───────────────────────

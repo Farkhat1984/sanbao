@@ -92,41 +92,13 @@ function makeFakeAgent(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// All 9 system agent IDs (matches seed.ts)
-const SYSTEM_AGENT_IDS = [
-  "system-sanbao-agent",
-  "system-femida-agent",
-  "system-broker-agent",
-  "system-accountant-agent",
-  "system-github-agent",
-  "system-sql-agent",
-  "system-researcher-agent",
-  "system-filemanager-agent",
-  "system-qa-agent",
-];
+// No hardcoded system agents — managed via admin panel
+const SYSTEM_AGENT_IDS: string[] = [];
 
-const SYSTEM_AGENTS_DATA = [
-  { id: "system-sanbao-agent", name: "Sanbao", icon: "Bot", iconColor: "#4F6EF7", description: "универсальный AI-ассистент" },
-  { id: "system-femida-agent", name: "Нормативно правовые акты", icon: "Scale", iconColor: "#7C3AED", description: "AI-ассистент для работы с договорами, исками и НПА Республики Казахстан" },
-  { id: "system-broker-agent", name: "Таможенный брокер", icon: "Package", iconColor: "#0EA5E9", description: "AI-ассистент по таможенному оформлению, классификации товаров и расчёту пошлин ЕАЭС" },
-  { id: "system-accountant-agent", name: "Бухгалтер", icon: "Calculator", iconColor: "#059669", description: "AI-ассистент по бухгалтерскому и налоговому учёту для Республики Казахстан" },
-  { id: "system-github-agent", name: "GitHub Разработчик", icon: "Code", iconColor: "#4F6EF7", description: "code review, управление PR, issues и репозиториями через GitHub MCP" },
-  { id: "system-sql-agent", name: "SQL Аналитик", icon: "FileSearch", iconColor: "#10B981", description: "SQL запросы, анализ данных, оптимизация и отчёты через PostgreSQL MCP" },
-  { id: "system-researcher-agent", name: "Веб-Исследователь", icon: "Globe", iconColor: "#06B6D4", description: "глубокое исследование тем, fact-checking и аналитика через Brave Search MCP" },
-  { id: "system-filemanager-agent", name: "Файловый Ассистент", icon: "FileText", iconColor: "#F59E0B", description: "работа с файлами и директориями через Filesystem MCP" },
-  { id: "system-qa-agent", name: "QA Инженер", icon: "ShieldCheck", iconColor: "#EF4444", description: "тестирование веб-приложений и автоматизация через Playwright MCP" },
-];
+const SYSTEM_AGENTS_DATA: Array<{ id: string; name: string; icon: string; iconColor: string; description: string }> = [];
 
-const MCP_SERVER_IDS = [
-  "mcp-lawyer",
-  "mcp-broker",
-  "mcp-accountingdb",
-  "mcp-github",
-  "mcp-postgres",
-  "mcp-brave-search",
-  "mcp-filesystem",
-  "mcp-playwright",
-];
+// MCP servers are now user-created, no longer seeded
+const MCP_SERVER_IDS: string[] = [];
 
 // ═══════════════════════════════════════════════════════════
 // GET /api/agents — List agents
@@ -148,11 +120,10 @@ describe("GET /api/agents", () => {
   });
 
   it("should return systemAgents and userAgents arrays", async () => {
-    const systemAgent = makeFakeAgent({ id: "system-sanbao-agent", isSystem: true, status: "APPROVED" });
     const userAgent = makeFakeAgent({ id: "user-agent-1", userId: "user-1" });
 
     mockAgent.findMany
-      .mockResolvedValueOnce([systemAgent])
+      .mockResolvedValueOnce([])  // system agents (none seeded)
       .mockResolvedValueOnce([userAgent]);
 
     const res = await listAgents(new Request("http://localhost/api/agents"));
@@ -160,27 +131,22 @@ describe("GET /api/agents", () => {
     const data = await res.json();
     expect(data).toHaveProperty("systemAgents");
     expect(data).toHaveProperty("userAgents");
-    expect(data.systemAgents).toHaveLength(1);
+    expect(data.systemAgents).toHaveLength(0);
     expect(data.userAgents).toHaveLength(1);
   });
 
-  it("should return all 9 system agents when seeded", async () => {
-    const agents = SYSTEM_AGENTS_DATA.map((a) =>
-      makeFakeAgent({ ...a, isSystem: true, status: "APPROVED" })
-    );
+  it("should return system agents created via admin panel", async () => {
+    const adminAgent = makeFakeAgent({ id: "admin-created-agent", name: "Custom System", isSystem: true, status: "APPROVED" });
 
     mockAgent.findMany
-      .mockResolvedValueOnce(agents)
+      .mockResolvedValueOnce([adminAgent])
       .mockResolvedValueOnce([]);
 
     const res = await listAgents(new Request("http://localhost/api/agents"));
     const data = await res.json();
 
-    expect(data.systemAgents).toHaveLength(9);
-    const ids = data.systemAgents.map((a: { id: string }) => a.id);
-    for (const expectedId of SYSTEM_AGENT_IDS) {
-      expect(ids).toContain(expectedId);
-    }
+    expect(data.systemAgents).toHaveLength(1);
+    expect(data.systemAgents[0].id).toBe("admin-created-agent");
   });
 
   it("should serialize updatedAt as ISO string", async () => {
@@ -250,7 +216,7 @@ describe("POST /api/agents", () => {
       name: "Agent with MCP",
       instructions: "Test",
       skillIds: ["skill-1"],
-      mcpServerIds: ["mcp-github", "mcp-postgres"],
+      mcpServerIds: ["mcp-lawyer", "mcp-broker"],
     });
     await createAgent(req);
 
@@ -259,8 +225,8 @@ describe("POST /api/agents", () => {
     });
     expect(mockAgentMcpServer.createMany).toHaveBeenCalledWith({
       data: [
-        { agentId: "new-agent", mcpServerId: "mcp-github" },
-        { agentId: "new-agent", mcpServerId: "mcp-postgres" },
+        { agentId: "new-agent", mcpServerId: "mcp-lawyer" },
+        { agentId: "new-agent", mcpServerId: "mcp-broker" },
       ],
     });
   });
@@ -368,7 +334,7 @@ describe("GET /api/agents/[id]", () => {
   it("should include relations: files, skills, mcpServers, tools", async () => {
     const agent = makeFakeAgent({
       skills: [{ id: "as-1", skill: { id: "s-1", name: "Skill" } }],
-      mcpServers: [{ id: "ams-1", mcpServer: { id: "mcp-github", name: "GitHub", url: "http://localhost:3101/sse", status: "DISCONNECTED" } }],
+      mcpServers: [{ id: "ams-1", mcpServer: { id: "mcp-lawyer", name: "Юрист", url: "http://orchestrator:8120/lawyer", status: "CONNECTED" } }],
       tools: [{ id: "at-1", tool: { id: "t-1", name: "Tool" } }],
     });
     mockAgent.findFirst.mockResolvedValueOnce(agent);
@@ -437,15 +403,15 @@ describe("PUT /api/agents/[id]", () => {
     mockAgent.findUnique.mockResolvedValueOnce(updated);
 
     const req = makeJsonRequest("http://localhost/api/agents/agent-1", "PUT", {
-      mcpServerIds: ["mcp-github", "mcp-postgres"],
+      mcpServerIds: ["mcp-lawyer", "mcp-broker"],
     });
     await updateAgent(req, makeParams("agent-1"));
 
     expect(mockAgentMcpServer.deleteMany).toHaveBeenCalledWith({ where: { agentId: "agent-1" } });
     expect(mockAgentMcpServer.createMany).toHaveBeenCalledWith({
       data: [
-        { agentId: "agent-1", mcpServerId: "mcp-github" },
-        { agentId: "agent-1", mcpServerId: "mcp-postgres" },
+        { agentId: "agent-1", mcpServerId: "mcp-lawyer" },
+        { agentId: "agent-1", mcpServerId: "mcp-broker" },
       ],
     });
   });
@@ -551,8 +517,8 @@ describe("DELETE /api/agents/[id]", () => {
 // ═══════════════════════════════════════════════════════════
 
 describe("System Agents integrity", () => {
-  it("should have exactly 9 system agent IDs defined", () => {
-    expect(SYSTEM_AGENT_IDS).toHaveLength(9);
+  it("no hardcoded system agents (managed via admin)", () => {
+    expect(SYSTEM_AGENT_IDS).toHaveLength(0);
   });
 
   it("all system agents should have system- prefix", () => {
@@ -568,8 +534,7 @@ describe("System Agents integrity", () => {
 
   it("all system agents should have valid icon values", () => {
     const VALID_ICONS = [
-      "Bot", "Scale", "Package", "Calculator", "FileText",
-      "Code", "Globe", "FileSearch", "ShieldCheck",
+      "Bot", "Scale", "Package", "Calculator", "Wrench",
     ];
     for (const agent of SYSTEM_AGENTS_DATA) {
       expect(VALID_ICONS).toContain(agent.icon);
@@ -578,8 +543,7 @@ describe("System Agents integrity", () => {
 
   it("all system agents should have valid color values", () => {
     const VALID_COLORS = [
-      "#4F6EF7", "#7C3AED", "#0EA5E9", "#059669",
-      "#10B981", "#F59E0B", "#EF4444", "#06B6D4",
+      "#8FAF9F", "#059669", "#F97316",
     ];
     for (const agent of SYSTEM_AGENTS_DATA) {
       expect(VALID_COLORS).toContain(agent.iconColor);
@@ -597,26 +561,8 @@ describe("System Agents integrity", () => {
     expect(unique.size).toBe(MCP_SERVER_IDS.length);
   });
 
-  it("should have 8 MCP servers (lawyer, broker, accountingdb + 5 specialized)", () => {
-    expect(MCP_SERVER_IDS).toHaveLength(8);
-  });
-
-  it("each agent (not Sanbao) should have a matching MCP server", () => {
-    // Sanbao doesn't have MCP; НПА→lawyer, Broker→broker, Бухгалтер→accountingdb, 5 specialized
-    const agentMcpMap: Record<string, string> = {
-      "system-femida-agent": "mcp-lawyer",
-      "system-broker-agent": "mcp-broker",
-      "system-accountant-agent": "mcp-accountingdb",
-      "system-github-agent": "mcp-github",
-      "system-sql-agent": "mcp-postgres",
-      "system-researcher-agent": "mcp-brave-search",
-      "system-filemanager-agent": "mcp-filesystem",
-      "system-qa-agent": "mcp-playwright",
-    };
-    for (const [agentId, mcpId] of Object.entries(agentMcpMap)) {
-      expect(SYSTEM_AGENT_IDS).toContain(agentId);
-      expect(MCP_SERVER_IDS).toContain(mcpId);
-    }
+  it("MCP servers are now user-created, not seeded", () => {
+    expect(MCP_SERVER_IDS).toHaveLength(0);
   });
 });
 
@@ -653,34 +599,7 @@ describe("Admin MCP CRUD scenarios", () => {
 // ═══════════════════════════════════════════════════════════
 
 describe("Seed data quality", () => {
-  it("system agent names should be in Russian (except Sanbao)", () => {
-    const russianAgents = SYSTEM_AGENTS_DATA.filter((a) => a.id !== "system-sanbao-agent");
-    for (const agent of russianAgents) {
-      // Should contain at least one Cyrillic character
-      expect(agent.name).toMatch(/[\u0400-\u04FF]/);
-    }
-  });
-
-  it("system agent descriptions should be in Russian", () => {
-    for (const agent of SYSTEM_AGENTS_DATA) {
-      expect(agent.description).toMatch(/[\u0400-\u04FF]/);
-    }
-  });
-
-  it("specialized agents should mention MCP in description", () => {
-    const specializedIds = [
-      "system-github-agent", "system-sql-agent", "system-researcher-agent",
-      "system-filemanager-agent", "system-qa-agent",
-    ];
-    const specialized = SYSTEM_AGENTS_DATA.filter((a) => specializedIds.includes(a.id));
-    for (const agent of specialized) {
-      expect(agent.description.toLowerCase()).toContain("mcp");
-    }
-  });
-
-  it("sortOrder should be unique and sequential", () => {
-    const sortOrders = SYSTEM_AGENTS_DATA.map((_, i) => i);
-    const uniqueOrders = new Set(sortOrders);
-    expect(uniqueOrders.size).toBe(sortOrders.length);
+  it("no hardcoded system agents in seeds", () => {
+    expect(SYSTEM_AGENTS_DATA).toHaveLength(0);
   });
 });

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getUserPlanAndUsage } from "@/lib/usage";
-import { resolveAgentId, FEMIDA_ID } from "@/lib/system-agents";
+import { isSystemAgent } from "@/lib/system-agents";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
 import { getSettingNumber } from "@/lib/settings";
 import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
@@ -68,14 +68,13 @@ export async function GET(req: Request) {
 
     // Legacy fallback: systemAgentId without agent relation
     if (c.systemAgentId) {
-      const isFemida = c.systemAgentId === FEMIDA_ID;
       return {
         ...base,
-        agentId: resolveAgentId(c.systemAgentId),
-        agentName: isFemida ? "Фемида" : null,
-        agentIcon: isFemida ? "Scale" : null,
-        agentIconColor: isFemida ? "#B8956A" : null,
-        isSystemAgent: true,
+        agentId: c.systemAgentId,
+        agentName: null,
+        agentIcon: null,
+        agentIconColor: null,
+        isSystemAgent: isSystemAgent(c.systemAgentId),
       };
     }
 
@@ -119,8 +118,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // Resolve legacy IDs and use agentId for all agents
-  const resolvedId = agentId ? resolveAgentId(agentId) : null;
+  const resolvedId = agentId || null;
 
   // Validate agent access: only own agents or system agents
   if (resolvedId) {

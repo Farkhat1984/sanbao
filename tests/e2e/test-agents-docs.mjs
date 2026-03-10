@@ -14,11 +14,10 @@ const COOKIE_NAME = "__Secure-authjs.session-token";
 const AGENTS = [
   { id: null, name: "(без агента)" },
   { id: "system-sanbao-agent", name: "Sanbao" },
-  { id: "system-femida-agent", name: "Фемида" },
-  { id: "system-sql-agent", name: "SQL Аналитик" },
-  { id: "system-researcher-agent", name: "Веб-Исследователь" },
-  { id: "system-filemanager-agent", name: "Файловый Ассистент" },
-  { id: "cmlo679ot0001ykraxxvl04yg", name: "Аналитик 1С" },
+  { id: "system-femida-agent", name: "Юрист" },
+  { id: "system-broker-agent", name: "Таможенный брокер" },
+  { id: "system-accountant-agent", name: "Бухгалтер" },
+  { id: "system-1c-assistant-agent", name: "1С Ассистент" },
 ];
 
 const TEST_MESSAGE = "Создай таблицу ежемесячных расходов компании за I квартал с колонками: месяц, аренда, зарплата, коммуналка, итого";

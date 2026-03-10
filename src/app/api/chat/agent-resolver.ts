@@ -5,7 +5,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/api-helpers";
-import { resolveAgentId } from "@/lib/system-agents";
 import { resolveAgentContext } from "@/lib/tool-resolver";
 import { resolveWithExperiment } from "@/lib/ab-experiment";
 import { getPrompt, PROMPT_REGISTRY } from "@/lib/prompts";
@@ -224,8 +223,7 @@ export async function resolveAgentAndTools(params: {
 
   // ─── Regular agent resolution ───────────────────────
   if (agentId) {
-    const resolvedId = resolveAgentId(agentId);
-    const ctx = await resolveAgentContext(resolvedId);
+    const ctx = await resolveAgentContext(agentId);
     if (ctx.systemPrompt) {
       systemPrompt = ctx.systemPrompt + "\n\n" + PROMPT_REGISTRY.prompt_system_global + ctx.skillPrompts.join("");
       agentMcpTools.push(...ctx.mcpTools);
