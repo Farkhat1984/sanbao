@@ -169,6 +169,7 @@ services:
       - MOONSHOT_API_KEY=${MOONSHOT_API_KEY}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AI_CORTEX_ENABLE_NAMESPACES=true
       - AI_CORTEX_ENABLE_OCR=true
       - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
     depends_on:
