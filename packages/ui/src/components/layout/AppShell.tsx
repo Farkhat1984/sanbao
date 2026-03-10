@@ -97,7 +97,7 @@ export function AppShell({ children }: AppShellProps) {
   );
 
   return (
-    <div className="h-screen flex overflow-hidden bg-bg">
+    <div className="app-shell h-screen flex overflow-hidden bg-bg">
       {/* Onboarding Tour */}
       <OnboardingTour />
 

@@ -177,6 +177,23 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Capacitor native app — shift content below notch/status bar */
+body.capacitor-native {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+
+body.capacitor-native .app-shell {
+  height: calc(100dvh - var(--sat) - var(--sab));
+  margin-top: var(--sat);
+  margin-bottom: var(--sab);
+}
+
+body.capacitor-native .safe-area-pad {
+  padding-top: max(var(--sat), 1rem);
+  padding-bottom: max(var(--sab), 1rem);
+}
+
 .mobile-overlay-backdrop {
   background: rgba(0, 0, 0, 0.4);
   -webkit-backdrop-filter: blur(4px);

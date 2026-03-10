@@ -1,6 +1,9 @@
 package com.sanbao.sanbaoai;
 
 import android.os.Bundle;
+import android.view.View;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
 import com.codetrixstudio.capacitor.GoogleAuth.GoogleAuth;
 
@@ -10,9 +13,16 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GoogleAuth.class);
         super.onCreate(savedInstanceState);
 
-        // Initialize GoogleAuth after bridge is ready —
-        // the plugin's load() is empty, so signIn() crashes with NPE
-        // unless initialize() is called first from JS or here.
+        // Push WebView below status bar — add top padding equal to status bar height
+        View rootView = findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
+            int top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            v.setPadding(0, top, 0, bottom);
+            return insets;
+        });
+
+        // Initialize GoogleAuth — plugin's load() is empty, signIn() NPEs without this
         getBridge().executeOnMainThread(() -> {
             try {
                 GoogleAuth plugin = (GoogleAuth) getBridge().getPlugin("GoogleAuth").getInstance();
