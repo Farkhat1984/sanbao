@@ -6,6 +6,7 @@ import { ArrowLeft, UserPlus, Shield, Crown, User, X, ChevronLeft, ChevronRight 
 import { useOrgStore, type OrgMemberInfo } from "@sanbao/stores/orgStore";
 import { Avatar } from "@sanbao/ui/components/ui/Avatar";
 import { cn } from "@sanbao/shared/utils";
+import { Modal } from "@sanbao/ui/components/ui/Modal";
 
 const MEMBERS_PER_PAGE = 20;
 
@@ -23,6 +24,7 @@ export default function OrgMembersPage({
   const [inviting, setInviting] = useState(false);
   const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string>("");
+  const [removeMember, setRemoveMember] = useState<OrgMemberInfo | null>(null);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -91,18 +93,20 @@ export default function OrgMembersPage({
     }
   };
 
-  const handleRemove = async (member: OrgMemberInfo) => {
-    if (!confirm(`Удалить ${member.user.name || member.user.email}?`)) return;
+  const handleRemove = async () => {
+    if (!removeMember) return;
     try {
-      const res = await fetch(`/api/organizations/${orgId}/members/${member.userId}`, {
+      const res = await fetch(`/api/organizations/${orgId}/members/${removeMember.userId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setMembers(members.filter((m) => m.id !== member.id));
+        setMembers(members.filter((m) => m.id !== removeMember.id));
         setTotal((prev) => prev - 1);
       }
     } catch {
       // ignore
+    } finally {
+      setRemoveMember(null);
     }
   };
 
@@ -217,7 +221,7 @@ export default function OrgMembersPage({
                   </div>
                   {isAdmin && member.role !== "OWNER" && (
                     <button
-                      onClick={() => handleRemove(member)}
+                      onClick={() => setRemoveMember(member)}
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error-light transition-colors cursor-pointer"
                     >
                       <X className="h-4 w-4" />
@@ -265,6 +269,25 @@ export default function OrgMembersPage({
             </button>
           </div>
         )}
+        <Modal isOpen={!!removeMember} onClose={() => setRemoveMember(null)} title="Удалить участника">
+          <p className="text-sm text-text-secondary mb-6">
+            Удалить {removeMember?.user.name || removeMember?.user.email} из организации?
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setRemoveMember(null)}
+              className="h-9 px-4 rounded-xl border border-border text-sm font-medium text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleRemove}
+              className="h-9 px-4 rounded-xl bg-error text-white text-sm font-medium hover:bg-error/90 transition-colors cursor-pointer"
+            >
+              Удалить
+            </button>
+          </div>
+        </Modal>
       </div>
     </div>
   );

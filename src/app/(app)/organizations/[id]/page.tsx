@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, Bot, Trash2, Network } from "lucide-react";
 import { useOrgStore } from "@sanbao/stores/orgStore";
 import { cn } from "@sanbao/shared/utils";
+import { Modal } from "@sanbao/ui/components/ui/Modal";
 
 export default function OrganizationDetailPage({
   params,
@@ -17,6 +18,7 @@ export default function OrganizationDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     params.then(({ id }) => {
@@ -36,7 +38,7 @@ export default function OrganizationDetailPage({
   }, [params, setActiveOrg]);
 
   const handleDelete = async () => {
-    if (!org || !confirm("Удалить организацию? Все данные будут потеряны.")) return;
+    if (!org) return;
     setDeleting(true);
     const { id } = await params;
     try {
@@ -46,6 +48,7 @@ export default function OrganizationDetailPage({
       }
     } catch {
       setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -91,12 +94,11 @@ export default function OrganizationDetailPage({
           </div>
           {isOwner && (
             <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="h-9 px-4 rounded-xl border border-error/20 text-error text-sm font-medium flex items-center gap-2 hover:bg-error-light transition-colors disabled:opacity-50 cursor-pointer"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="h-9 px-4 rounded-xl border border-error/20 text-error text-sm font-medium flex items-center gap-2 hover:bg-error-light transition-colors cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
-              {deleting ? "Удаление..." : "Удалить"}
+              Удалить
             </button>
           )}
         </div>
@@ -126,6 +128,26 @@ export default function OrganizationDetailPage({
             iconColor="text-amber-500"
           />
         </div>
+        <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Удалить организацию">
+          <p className="text-sm text-text-secondary mb-6">
+            Все данные организации будут безвозвратно удалены. Это действие нельзя отменить.
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="h-9 px-4 rounded-xl border border-border text-sm font-medium text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="h-9 px-4 rounded-xl bg-error text-white text-sm font-medium hover:bg-error/90 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {deleting ? "Удаление..." : "Удалить"}
+            </button>
+          </div>
+        </Modal>
       </div>
     </div>
   );

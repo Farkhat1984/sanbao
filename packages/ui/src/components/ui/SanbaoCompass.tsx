@@ -5,6 +5,7 @@ interface SanbaoCompassProps {
 
 export function SanbaoCompass({ size = 32, className = "" }: SanbaoCompassProps) {
   const r = size / 2;
+  const sw = Math.max(size * 0.07, 1.2);
   const dot = Math.max(size * 0.09, 1.2);
   const gap = dot + 0.5;
 
@@ -16,6 +17,15 @@ export function SanbaoCompass({ size = 32, className = "" }: SanbaoCompassProps)
       className={className}
       aria-label="Sanbao compass"
     >
+      <circle
+        cx={r}
+        cy={r}
+        r={r - sw}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        opacity={0.5}
+      />
       <polygon
         points={`${r},${r * 0.28} ${r - r * 0.22},${r - gap} ${r + r * 0.22},${r - gap}`}
         fill="currentColor"
