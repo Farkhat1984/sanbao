@@ -20,7 +20,7 @@ export function Header() {
   const showMenuButton = isMobile || !sidebarOpen;
 
   return (
-    <header className="h-14 border-b border-[#B8956A]/30 flex items-center gap-3 px-4 shrink-0 bg-surface/50 backdrop-blur-sm">
+    <header className="h-14 flex items-center gap-3 px-4 shrink-0 bg-surface/50 backdrop-blur-sm">
       {/* Sidebar toggle */}
       {showMenuButton && (
         <Tooltip content="Открыть меню" side="bottom">
