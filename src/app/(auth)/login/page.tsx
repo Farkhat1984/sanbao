@@ -16,7 +16,7 @@ interface CapacitorBridge {
 
 function getCapacitor(): CapacitorBridge | null {
   if (typeof window === "undefined") return null;
-  const cap = (window as Record<string, unknown>).Capacitor as CapacitorBridge | undefined;
+  const cap = (window as unknown as Record<string, unknown>).Capacitor as CapacitorBridge | undefined;
   return cap?.isNativePlatform?.() ? cap : null;
 }
 

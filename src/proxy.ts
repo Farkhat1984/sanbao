@@ -46,8 +46,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://www.sanbao.ai",
   "http://localhost:3004",
   "http://localhost:3000",
-  "https://localhost",
-  "capacitor://localhost",
+  "https://localhost",        // Capacitor Android
+  "capacitor://localhost",    // Capacitor iOS
 ]);
 
 const authUrl = process.env.AUTH_URL;
@@ -64,6 +64,8 @@ const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const CSRF_EXEMPT_PATHS = [
   "/api/billing/webhook",
   "/api/billing/freedom/webhook",
+  "/api/auth/mobile/",
+  "/api/auth/apple",
   "/api/health",
   "/api/ready",
   "/api/metrics",
@@ -71,23 +73,6 @@ const CSRF_EXEMPT_PATHS = [
 
 function isCsrfExempt(pathname: string): boolean {
   return CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
-}
-
-// ─── CORS for mobile (Capacitor) clients ───
-
-const MOBILE_ORIGINS = new Set(["https://localhost", "capacitor://localhost"]);
-
-function isMobileOrigin(origin: string | null): boolean {
-  return !!origin && MOBILE_ORIGINS.has(origin);
-}
-
-function addCorsHeaders(response: NextResponse, origin: string): NextResponse {
-  response.headers.set("Access-Control-Allow-Origin", origin);
-  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-id");
-  response.headers.set("Access-Control-Allow-Credentials", "true");
-  response.headers.set("Access-Control-Max-Age", "86400");
-  return response;
 }
 
 // ─── CSP ───
@@ -175,25 +160,35 @@ const withAuth = auth((req) => {
   response.headers.set("Content-Security-Policy", CSP);
 
   addSecurityHeaders(response);
-
-  // Add CORS headers for mobile Capacitor clients
-  const reqOrigin = req.headers.get("origin");
-  if (reqOrigin && isMobileOrigin(reqOrigin)) {
-    addCorsHeaders(response, reqOrigin);
-  }
-
   return response;
 });
+
+// ─── CORS helpers for Capacitor mobile clients ───
+
+const MOBILE_ORIGINS = new Set(["https://localhost", "capacitor://localhost"]);
+
+function isMobileOrigin(origin: string | null): boolean {
+  return !!origin && MOBILE_ORIGINS.has(origin);
+}
+
+function addCorsHeaders(response: NextResponse, origin: string): NextResponse {
+  response.headers.set("Access-Control-Allow-Origin", origin);
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-id");
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  response.headers.set("Access-Control-Max-Age", "86400");
+  return response;
+}
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
   const { method } = req;
   const { pathname } = req.nextUrl;
   const origin = req.headers.get("origin");
 
-  // CORS preflight for mobile Capacitor clients
-  if (method === "OPTIONS" && pathname.startsWith("/api/") && isMobileOrigin(origin)) {
-    const preflight = new NextResponse(null, { status: 204 });
-    return addCorsHeaders(preflight, origin!);
+  // CORS preflight for mobile clients
+  if (method === "OPTIONS" && isMobileOrigin(origin)) {
+    const res = new NextResponse(null, { status: 204 });
+    return addCorsHeaders(res, origin!);
   }
 
   // P3-40: CSRF Origin check for state-changing methods (before auth)
@@ -202,7 +197,6 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
     const hasBearerToken = authHeader.toLowerCase().startsWith("bearer ");
 
     if (!hasBearerToken) {
-      const origin = req.headers.get("origin");
       if (!origin || !ALLOWED_ORIGINS.has(origin)) {
         return new NextResponse(
           JSON.stringify({ error: "CSRF validation failed: invalid origin" }),
@@ -222,8 +216,19 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
       req.cookies.set(SESSION_COOKIE, authHeader.slice(7));
     }
   }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (withAuth as any)(req, event);
+  const response = (withAuth as any)(req, event) as Promise<NextResponse> | NextResponse;
+
+  // Attach CORS headers for mobile origins
+  if (isMobileOrigin(origin)) {
+    if (response instanceof Promise) {
+      return response.then((res) => addCorsHeaders(res, origin!));
+    }
+    return addCorsHeaders(response, origin!);
+  }
+
+  return response;
 }
 
 export const config = {

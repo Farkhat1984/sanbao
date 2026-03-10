@@ -12,7 +12,7 @@ export function CapacitorBridge() {
   const router = useRouter();
 
   useEffect(() => {
-    const cap = (window as Record<string, unknown>).Capacitor as
+    const cap = (window as unknown as Record<string, unknown>).Capacitor as
       | {
           isNativePlatform: () => boolean;
           Plugins: Record<string, Record<string, (...args: unknown[]) => unknown>>;
