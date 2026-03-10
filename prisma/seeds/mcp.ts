@@ -18,7 +18,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
     create: {
@@ -27,7 +27,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.LAWYER_MCP_URL || "http://orchestrator:8120/lawyer",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
   });
@@ -50,7 +50,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.BROKER_MCP_URL || "http://orchestrator:8120/broker",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
     create: {
@@ -59,7 +59,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.BROKER_MCP_URL || "http://orchestrator:8120/broker",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
   });
@@ -130,7 +130,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
     create: {
@@ -139,7 +139,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.ACCOUNTINGDB_MCP_URL || "http://orchestrator:8120/accountant",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.ACCOUNTINGDB_MCP_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
   });
@@ -187,7 +187,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
     create: {
@@ -196,7 +196,7 @@ export async function seedMcp(prisma: PrismaClient): Promise<void> {
       url: process.env.CONSULTANT_1C_MCP_URL || "http://orchestrator:8120/consultant_1c",
       transport: "STREAMABLE_HTTP",
       apiKey: process.env.CONSULTANT_1C_MCP_TOKEN || process.env.AI_CORTEX_AUTH_TOKEN || null,
-      isGlobal: true,
+      isGlobal: false,
       status: "CONNECTED",
     },
   });

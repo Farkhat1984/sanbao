@@ -231,17 +231,31 @@ export async function resolveAgentContext(
     });
   };
 
-  // Helper: process MCP server
-  const processMcpServer = (srv: {
-    id: string;
-    url: string;
-    transport: string;
-    apiKey: string | null;
-    status: string;
-    discoveredTools: unknown;
-  }) => {
+  /** Domain mapping config from AgentMcpServer link */
+  interface DomainMappingsConfig {
+    defaultDomain?: string;
+    toolDomains?: Record<string, string>;
+  }
+
+  // Helper: process MCP server (with optional allowedTools filter and domain mappings)
+  const processMcpServer = (
+    srv: {
+      id: string;
+      url: string;
+      transport: string;
+      apiKey: string | null;
+      status: string;
+      discoveredTools: unknown;
+    },
+    allowedTools?: string[] | null,
+    domainMappings?: DomainMappingsConfig | null,
+  ) => {
     if (srv.status !== "CONNECTED" || !srv.discoveredTools || !Array.isArray(srv.discoveredTools) || mcpServerMap.has(srv.id)) return;
     mcpServerMap.set(srv.id, true);
+
+    const allowedSet = allowedTools && allowedTools.length > 0
+      ? new Set(allowedTools)
+      : null;
 
     const tools = srv.discoveredTools as Array<{
       name: string;
@@ -249,6 +263,9 @@ export async function resolveAgentContext(
       inputSchema: Record<string, unknown>;
     }>;
     for (const tool of tools) {
+      // Skip tools not in the whitelist (if whitelist is set)
+      if (allowedSet && !allowedSet.has(tool.name)) continue;
+
       mcpTools.push({
         url: srv.url,
         transport: srv.transport as "SSE" | "STREAMABLE_HTTP",
@@ -257,6 +274,8 @@ export async function resolveAgentContext(
         description: tool.description || "",
         inputSchema: tool.inputSchema || {},
         mcpServerId: srv.id,
+        defaultDomain: domainMappings?.defaultDomain,
+        toolDomains: domainMappings?.toolDomains,
       });
     }
   };
@@ -271,9 +290,13 @@ export async function resolveAgentContext(
     processSkill(as.skill);
   }
 
-  // 3. Agent's direct MCP servers
+  // 3. Agent's direct MCP servers (with allowedTools filter + domain mappings)
   for (const ams of agent.mcpServers) {
-    processMcpServer(ams.mcpServer);
+    processMcpServer(
+      ams.mcpServer,
+      ams.allowedTools as string[] | null,
+      ams.domainMappings as DomainMappingsConfig | null,
+    );
   }
 
   // 4. Agent's integrations — inject compact catalog index into system prompt

@@ -659,6 +659,9 @@ model AgentMcpServer {
   agentId     String
   mcpServerId String
 
+  allowedTools    Json?    // ["search","get_article","get_law",...] — tool whitelist
+  domainMappings  Json?    // {defaultDomain:"legal_kz", toolDomains:{get_law:"laws_kz",...}}
+
   agent     Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
 

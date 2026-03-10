@@ -15,4 +15,8 @@ export interface McpToolContext {
   inputSchema: Record<string, unknown>;
   /** MCP server ID from DB — used for tool call logging */
   mcpServerId?: string;
+  /** Default domain for this tool's MCP server context */
+  defaultDomain?: string;
+  /** Per-tool domain overrides: tool_name → domain_name */
+  toolDomains?: Record<string, string>;
 }

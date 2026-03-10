@@ -8,7 +8,6 @@ import "./native-tools/http-request";
 import "./native-tools/productivity";
 import "./native-tools/analysis";
 import "./native-tools/content";
-import "./native-tools/odata";
 
 // Re-export everything from registry
 export {

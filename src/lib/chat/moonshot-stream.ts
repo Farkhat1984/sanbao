@@ -444,6 +444,13 @@ export function streamMoonshot(
                 } catch {
                   // fallback empty
                 }
+
+                // Inject domain from agent config (only if not already set by LLM)
+                if (mcpDef.defaultDomain && !args.domain) {
+                  const toolName = mcpDef.originalName || tc.function.name;
+                  args.domain = mcpDef.toolDomains?.[toolName] ?? mcpDef.defaultDomain;
+                }
+
                 let mcpResult: { result?: string; error?: string };
                 try {
                   mcpResult = await Promise.race([

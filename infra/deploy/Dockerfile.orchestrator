@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir \
     pdfplumber \
     python-docx \
     PyMuPDF \
-    openpyxl
+    openpyxl \
+    PyJWT
 
 COPY ai_cortex/orchestrator/ /app/orchestrator/
 COPY ai_cortex/config/ /app/config/
