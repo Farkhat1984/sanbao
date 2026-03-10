@@ -50,11 +50,19 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    waitForCapacitor().then((cap) => {
+    waitForCapacitor().then(async (cap) => {
       const native = !!cap;
       setIsNative(native);
-      // Debug: log to see if bridge is detected
-      console.log("[LoginPage] Capacitor detected:", native, "window.Capacitor:", typeof (window as Record<string, unknown>).Capacitor);
+      console.log("[LoginPage] Capacitor detected:", native);
+      // Initialize GoogleAuth plugin — required for @codetrix-studio/capacitor-google-auth on Capacitor v7
+      if (native) {
+        try {
+          await cap.Plugins.GoogleAuth.initialize();
+          console.log("[LoginPage] GoogleAuth initialized");
+        } catch (e) {
+          console.warn("[LoginPage] GoogleAuth.initialize() failed:", e);
+        }
+      }
     });
 
     fetch("/api/auth/csrf")

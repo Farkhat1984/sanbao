@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Sanbao AI',
   webDir: 'dist',
   server: {
-    url: 'https://sanbao.ai',
+    url: 'https://www.sanbao.ai',
     androidScheme: 'https',
     cleartext: false,
     allowNavigation: ['sanbao.ai', '*.sanbao.ai'],
