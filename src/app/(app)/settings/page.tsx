@@ -313,7 +313,13 @@ function SettingsContent() {
             variant="ghost"
             onClick={async () => {
               resetAllStores();
-              await signOut({ redirect: false });
+              try { await signOut({ redirect: false }); } catch {}
+              await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+              const cookieNames = ["authjs.session-token", "__Secure-authjs.session-token", "authjs.callback-url", "__Secure-authjs.callback-url", "authjs.csrf-token", "__Secure-authjs.csrf-token"];
+              for (const name of cookieNames) {
+                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax`;
+              }
               window.location.href = "/login";
             }}
             className="text-error hover:text-error hover:bg-error-light"

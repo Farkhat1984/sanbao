@@ -62,10 +62,9 @@ if (authUrl) {
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 const CSRF_EXEMPT_PATHS = [
+  "/api/auth/",
   "/api/billing/webhook",
   "/api/billing/freedom/webhook",
-  "/api/auth/mobile/",
-  "/api/auth/apple",
   "/api/health",
   "/api/ready",
   "/api/metrics",
