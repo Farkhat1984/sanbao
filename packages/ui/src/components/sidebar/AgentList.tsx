@@ -57,7 +57,7 @@ export function AgentList() {
   const router = useRouter();
   const { close: closeSidebar } = useSidebarStore();
   const isMobile = useIsMobile();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const handleNavigate = (href: string) => {
     router.push(href);
@@ -76,7 +76,7 @@ export function AgentList() {
         ) : (
           <ChevronRight className="h-3 w-3" />
         )}
-        Playground
+        Инструменты
       </button>
 
       {expanded && (
