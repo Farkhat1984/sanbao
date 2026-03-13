@@ -202,9 +202,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
   return (
     <motion.div
-      initial={isLast && !isCurrentlyStreaming ? { opacity: 0, y: 8 } : false}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.15 }}
       className={cn("group flex gap-3 py-3", isUser && "flex-row-reverse")}
       role="article"
       aria-label={isUser ? "Сообщение пользователя" : "Ответ ассистента"}
@@ -221,7 +221,19 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
           {isUser ? "Вы" : streamingLabel ? (
             <span className="inline-flex items-center gap-1">
               <span>{agentName || "Sanbao"}</span>
-              <span className="text-accent">· {streamingLabel}</span>
+              <span className="text-accent">
+                · {streamingLabel}
+                <span className="inline-flex ml-0.5 gap-[2px]">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="inline-block w-[3px] h-[3px] rounded-full bg-accent"
+                      animate={{ opacity: [0.2, 1, 0.2] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
+                    />
+                  ))}
+                </span>
+              </span>
             </span>
           ) : (agentName || "Sanbao")}
         </span>

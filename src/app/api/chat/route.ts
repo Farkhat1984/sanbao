@@ -178,7 +178,7 @@ export async function POST(req: Request) {
     const stream = streamMoonshot(context.apiMessages, {
       maxTokens: effectiveMaxTokens,
       thinkingEnabled: body.thinkingEnabled,
-      webSearchEnabled: true,
+      webSearchEnabled: body.webSearchEnabled ?? false,
       mcpTools: mcpTools,
       nativeToolCtx,
       contextInfo: context.contextInfo,

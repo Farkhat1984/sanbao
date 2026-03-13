@@ -110,17 +110,10 @@ export default function ConversationPage() {
     fetchMessages(id);
   }, [id, fetchMessages]);
 
-  // Re-fetch when streaming ends (messages are saved to DB at end of stream).
-  // This picks up server-assigned message IDs and ensures consistency.
-  const prevStreamingRef = useRef(false);
-  useEffect(() => {
-    const wasStreaming = prevStreamingRef.current;
-    prevStreamingRef.current = isStreaming;
-
-    if (wasStreaming && !isStreaming && id && loadedIdRef.current === id) {
-      fetchMessages(id);
-    }
-  }, [isStreaming, id, fetchMessages]);
+  // No re-fetch on stream end — messages are already merged in store by
+  // setStreaming(false). Re-fetching caused race conditions: fetchMessages
+  // set isLoadingConversation=true (flashing skeleton) and could overwrite
+  // store with stale DB data if save hadn't completed yet.
 
   // Recover after mobile browser suspends the tab:
   // when the user returns and the stream was interrupted, re-fetch messages.
