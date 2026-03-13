@@ -343,20 +343,30 @@ export function streamMoonshot(
                 }
               }
 
-              // Send status notification once we know the tool name
-              const firstToolName = Object.values(toolCallMap).find(t => t.function.name)?.function.name || "";
-              if (!searchNotified && firstToolName) {
-                searchNotified = true;
-                const isWebSearch = firstToolName === "$web_search";
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify(
-                      isWebSearch
-                        ? { t: "s", v: "searching", n: "$web_search" }
-                        : { t: "s", v: "using_tool", n: firstToolName }
-                    ) + "\n"
-                  )
-                );
+              // Send status notification once we know the tool name.
+              // Prioritize: $web_search > knowledge/MCP tools > generic tools
+              // so the icon reflects the most meaningful tool in multi-tool calls.
+              if (!searchNotified) {
+                const toolNames = Object.values(toolCallMap)
+                  .map(t => t.function.name)
+                  .filter(Boolean);
+                const bestTool =
+                  toolNames.find(n => n === "$web_search") ||
+                  toolNames.find(n => n !== "get_current_time" && n !== "get_user_info" && n !== "get_conversation_context") ||
+                  toolNames[0] || "";
+                if (bestTool) {
+                  searchNotified = true;
+                  const isWebSearch = bestTool === "$web_search";
+                  controller.enqueue(
+                    encoder.encode(
+                      JSON.stringify(
+                        isWebSearch
+                          ? { t: "s", v: "searching", n: "$web_search" }
+                          : { t: "s", v: "using_tool", n: bestTool }
+                      ) + "\n"
+                    )
+                  );
+                }
               }
             }
 
@@ -567,6 +577,12 @@ export function streamMoonshot(
             continue;
           }
 
+          // Final turn (no tool calls) — signal client to show "answering" state
+          if (turn > 0) {
+            controller.enqueue(
+              encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
+            );
+          }
           break;
         }
 

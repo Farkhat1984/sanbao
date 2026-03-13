@@ -234,7 +234,9 @@ export function useStreamChat({
                 updateLastAssistantMessage(fullContent, fullReasoning);
                 break;
               case "s": // status (searching / using_tool / swarm phases)
-                if (data.v === "routing") {
+                if (data.v === "answering") {
+                  setStreamingPhase("answering");
+                } else if (data.v === "routing") {
                   setStreamingPhase("routing");
                 } else if (data.v === "consulting") {
                   setStreamingPhase("consulting", data.n || null);
@@ -252,14 +254,19 @@ export function useStreamChat({
                   addSwarmAgentResponse(data.v);
                 }
                 break;
-              case "c": // content
-                setStreamingPhase("answering");
+              case "c": { // content
+                // Only switch to "answering" from thinking/null — don't interrupt tool phases
+                const curPhase = useChatStore.getState().streamingPhase;
+                if (!curPhase || curPhase === "thinking") {
+                  setStreamingPhase("answering");
+                }
                 fullContent += data.v;
                 updateLastAssistantMessage(
                   fullContent,
                   fullReasoning || undefined
                 );
                 break;
+              }
               case "p": // plan content
                 setStreamingPhase("planning");
                 fullPlan += data.v;
