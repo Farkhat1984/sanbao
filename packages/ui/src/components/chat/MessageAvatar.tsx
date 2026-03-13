@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Search, Globe, DatabaseZap, Calculator, Bookmark, ClipboardList, Bell, StickyNote, BarChart3, Send, Plug, Brain } from "lucide-react";
+import { User, Search, Globe, DatabaseZap, Calculator, Bookmark, ClipboardList, Bell, StickyNote, BarChart3, Send, Plug } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ const STREAMING_ICONS: Record<string, typeof Search> = {
   chart: BarChart3,
   http: Send,
   mcp: Plug,
-  generic: Brain,
+  generic: Search,
 };
 
 interface MessageAvatarProps {
@@ -47,11 +47,13 @@ export function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCate
   const anim = isStreaming
     ? streamingCategory === "web_search"
       ? { rotateY: [0, 360] }         // spinning globe
-      : streamingCategory === "knowledge"
+      : streamingCategory === "knowledge" || streamingCategory === "mcp"
         ? { scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }  // pulsing database
         : streamingCategory === "calculation"
           ? { rotateZ: [0, -10, 10, -5, 5, 0] }
-          : { scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }  // default pulse
+          : streamingCategory === "generic"
+            ? { rotateZ: [0, 15, -15, 10, -10, 0] }  // searching wiggle
+            : { scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }  // default pulse
     : null;
 
   const animDuration = streamingCategory === "web_search" ? 2

@@ -80,14 +80,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const displayReasoning = streamingReasoning ?? message.reasoning;
 
   // Compute tool category for avatar streaming state
-  // During thinking phase, show a generic pulsing icon (replaces avatar like agents do)
+  // Only morph avatar during actual tool use (searching/using_tool)
   const isToolPhase = streamingPhase === "searching" || streamingPhase === "using_tool";
-  const streamingCategory = isCurrentlyStreaming
-    ? isToolPhase
-      ? getToolCategory(streamingToolName ?? null)
-      : streamingPhase === "thinking"
-        ? ("generic" as const)
-        : null
+  const streamingCategory = isCurrentlyStreaming && isToolPhase
+    ? getToolCategory(streamingToolName ?? null)
     : null;
 
   // Status label shown next to agent name during streaming
@@ -114,9 +110,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               ? "Составляю план"
               : isToolPhase
                 ? TOOL_LABELS[streamingCategory || "generic"] || "Ищу"
-                : streamingPhase === "thinking"
-                  ? "думает"
-                  : "отвечает"
+                : "отвечает"
     : null;
 
   // Track which edits we've already applied (by message id)
