@@ -381,34 +381,29 @@ export function useStreamChat({
     } catch (err) {
       const isAbort = err instanceof DOMException && err.name === "AbortError";
 
-      // Flush accumulated content to the store so partial response is visible
       if (fullContent) {
+        // Flush accumulated content to the store so partial response is visible
         updateLastAssistantMessage(fullContent, fullReasoning || undefined, fullPlan || undefined);
-      }
 
-      // Save partial content on any interruption (user stop, network error,
-      // mobile browser suspending the tab, etc.)
-      if (convId && fullContent) {
-        fetch(`/api/conversations/${convId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [
-              { role: "USER", content: trimmed },
-              { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
-            ],
-          }),
-        }).catch(console.error);
-      }
-
-      if (!isAbort && !fullContent) {
-        // Only show error if we have no partial content at all
-        addMessage({
-          id: crypto.randomUUID(),
-          role: "ASSISTANT",
-          content: "Ошибка подключения. Попробуйте позже.",
-          createdAt: new Date().toISOString(),
-        });
+        // Save partial content on any interruption
+        if (convId) {
+          fetch(`/api/conversations/${convId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [
+                { role: "USER", content: trimmed },
+                { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
+              ],
+            }),
+          }).catch(console.error);
+        }
+      } else if (isAbort) {
+        // User stopped before any content arrived — mark the empty message
+        updateLastAssistantMessage("_Ответ остановлен_");
+      } else {
+        // Network/server error with no content
+        updateLastAssistantMessage("Ошибка подключения. Попробуйте позже.");
       }
     } finally {
       abortRef.current = null;

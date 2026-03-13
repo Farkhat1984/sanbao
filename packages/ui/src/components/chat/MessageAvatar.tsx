@@ -1,7 +1,7 @@
 "use client";
 
 import { User, Search, Globe, DatabaseZap, Calculator, Bookmark, ClipboardList, Bell, StickyNote, BarChart3, Send, Plug } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
 import { cn } from "@/lib/utils";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
@@ -60,6 +60,33 @@ export function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCate
     : streamingCategory === "knowledge" ? 1.2
     : 1.5;
 
+  // Render the appropriate icon
+  const renderIcon = () => {
+    if (StreamIcon) {
+      return (
+        <motion.div
+          key={streamingCategory}
+          initial={{ scale: 0.9, opacity: 0.5 }}
+          animate={{
+            scale: 1,
+            opacity: 1,
+            ...anim,
+          }}
+          transition={{
+            scale: { duration: animDuration, repeat: Infinity, ease: "easeInOut" },
+            opacity: { duration: animDuration, repeat: Infinity, ease: "easeInOut" },
+            rotateY: anim?.rotateY ? { duration: animDuration, repeat: Infinity, ease: "linear" } : undefined,
+            rotateZ: anim?.rotateZ ? { duration: animDuration, repeat: Infinity, ease: "easeInOut" } : undefined,
+          }}
+        >
+          <StreamIcon className="h-4 w-4" />
+        </motion.div>
+      );
+    }
+    if (AgentIcon) return <AgentIcon className="h-4 w-4" />;
+    return <SanbaoCompass size={18} className="text-white" />;
+  };
+
   return (
     <div
       className={cn(
@@ -70,53 +97,7 @@ export function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCate
       )}
       style={!isUser && agentIconColor ? { backgroundColor: agentIconColor, color: "white" } : undefined}
     >
-      {isUser ? (
-        <User className="h-4 w-4" />
-      ) : (
-        <AnimatePresence initial={false} mode="wait">
-          {StreamIcon ? (
-            <motion.div
-              key={streamingCategory}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                ...anim,
-              }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{
-                layout: { duration: 0.1 },
-                scale: { duration: animDuration, repeat: Infinity, ease: "easeInOut" },
-                opacity: { duration: animDuration, repeat: Infinity, ease: "easeInOut" },
-                rotateY: anim?.rotateY ? { duration: animDuration, repeat: Infinity, ease: "linear" } : undefined,
-                rotateZ: anim?.rotateZ ? { duration: animDuration, repeat: Infinity, ease: "easeInOut" } : undefined,
-              }}
-            >
-              <StreamIcon className="h-4 w-4" />
-            </motion.div>
-          ) : AgentIcon ? (
-            <motion.div
-              key="agent"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <AgentIcon className="h-4 w-4" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="compass"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <SanbaoCompass size={18} className="text-white" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+      {isUser ? <User className="h-4 w-4" /> : renderIcon()}
     </div>
   );
 }

@@ -352,7 +352,7 @@ export function streamMoonshot(
                   encoder.encode(
                     JSON.stringify(
                       isWebSearch
-                        ? { t: "s", v: "searching" }
+                        ? { t: "s", v: "searching", n: "$web_search" }
                         : { t: "s", v: "using_tool", n: firstToolName }
                     ) + "\n"
                   )

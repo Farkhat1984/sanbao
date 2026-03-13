@@ -233,7 +233,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
         <div
           ref={isAssistant ? bubbleRef : isUser ? userBubbleRef : undefined}
           className={cn(
-            "text-sm leading-relaxed transition-[background-color,border-color,padding] duration-200",
+            "text-sm leading-relaxed transition-[background-color,border-color,padding,max-height] duration-300",
             isUser
               ? "rounded-2xl px-4 py-3 bg-accent text-white rounded-tr-md"
               : isRichMd
