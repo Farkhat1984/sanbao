@@ -424,16 +424,26 @@ export function streamMoonshot(
             if (!searchNotified) {
               searchNotified = true;
               const firstToolName = collectedCalls.find(t => t.function.name)?.function.name || "";
-              const isWebSearch = !firstToolName || firstToolName === "$web_search";
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify(
-                    isWebSearch
-                      ? { t: "s", v: "searching" }
-                      : { t: "s", v: "using_tool", n: firstToolName }
-                  ) + "\n"
-                )
-              );
+              if (firstToolName === "$web_search") {
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ t: "s", v: "searching", n: "$web_search" }) + "\n"
+                  )
+                );
+              } else if (firstToolName) {
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ t: "s", v: "using_tool", n: firstToolName }) + "\n"
+                  )
+                );
+              } else {
+                // Tool name unknown — send neutral status without assuming web search
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({ t: "s", v: "using_tool" }) + "\n"
+                  )
+                );
+              }
             }
             currentMessages.push({
               role: "assistant",

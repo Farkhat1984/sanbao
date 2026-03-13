@@ -103,9 +103,9 @@ export function useStreamChat({
     }
 
     setStreaming(true);
+    setStreamingPhase("thinking");
     setCurrentPlan(null);
     clearSwarmAgentResponses();
-    // Phase is null — will be determined by the first stream chunk
 
     // Ensure we have a conversation for persistence
     let convId = activeConversationId;
@@ -147,6 +147,7 @@ export function useStreamChat({
 
     let fullContent = "";
     let fullPlan = "";
+    let fullReasoning = "";
 
     try {
       const apiMessages = [...messages, userMessage]
@@ -212,7 +213,6 @@ export function useStreamChat({
       }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let fullReasoning = "";
       let buffer = "";
 
       while (true) {
@@ -379,6 +379,13 @@ export function useStreamChat({
         }
       }
     } catch (err) {
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
+
+      // Flush accumulated content to the store so partial response is visible
+      if (fullContent) {
+        updateLastAssistantMessage(fullContent, fullReasoning || undefined, fullPlan || undefined);
+      }
+
       // Save partial content on any interruption (user stop, network error,
       // mobile browser suspending the tab, etc.)
       if (convId && fullContent) {
@@ -394,7 +401,6 @@ export function useStreamChat({
         }).catch(console.error);
       }
 
-      const isAbort = err instanceof DOMException && err.name === "AbortError";
       if (!isAbort && !fullContent) {
         // Only show error if we have no partial content at all
         addMessage({
@@ -444,8 +450,9 @@ export function useStreamChat({
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
-    setStreaming(false);
-  }, [setStreaming]);
+    // Don't call setStreaming(false) here — the finally block in doSubmit handles it
+    // after the catch block has flushed partial content to the store.
+  }, []);
 
   return {
     doSubmit,

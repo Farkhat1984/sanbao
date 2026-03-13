@@ -16,6 +16,7 @@ import { useChatStore, type SwarmAgentResponse } from "@/stores/chatStore";
 import { openArtifactInPanel } from "@/lib/panel-actions";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { parseContentWithArtifacts } from "@/lib/parse-message-content";
+import { getToolCategory } from "@/lib/chat/tool-categories";
 import type { ParsedPart } from "@/lib/parse-message-content";
 import type { ChatMessage, ArtifactType } from "@/types/chat";
 
@@ -66,11 +67,57 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const isCurrentlyStreaming = useChatStore((s) =>
     isLast && isAssistant && s.isStreaming
   );
+  const streamingPhase = useChatStore((s) =>
+    isLast && isAssistant && s.isStreaming ? s.streamingPhase : null
+  );
+  const streamingToolName = useChatStore((s) =>
+    isLast && isAssistant && s.isStreaming ? s.streamingToolName : null
+  );
   const swarmAgentResponses = useChatStore((s) =>
     isLast && isAssistant ? s.swarmAgentResponses : EMPTY_RESPONSES
   );
   const displayContent = streamingContent ?? message.content;
   const displayReasoning = streamingReasoning ?? message.reasoning;
+
+  // Compute tool category for avatar streaming state
+  // During thinking phase, show a generic pulsing icon (replaces avatar like agents do)
+  const isToolPhase = streamingPhase === "searching" || streamingPhase === "using_tool";
+  const streamingCategory = isCurrentlyStreaming
+    ? isToolPhase
+      ? getToolCategory(streamingToolName ?? null)
+      : streamingPhase === "thinking"
+        ? ("generic" as const)
+        : null
+    : null;
+
+  // Status label shown next to agent name during streaming
+  const TOOL_LABELS: Record<string, string> = {
+    web_search: "Ищет в интернете",
+    knowledge: "Ищу в базе",
+    calculation: "Вычисляет",
+    memory: "Сохраняю",
+    task: "Создаю задачу",
+    chart: "Строю график",
+    mcp: "Плагин",
+    generic: "Ищу",
+  };
+  const streamingLabel = isCurrentlyStreaming && streamingPhase
+    ? streamingPhase === "answering"
+      ? null
+      : streamingPhase === "routing"
+        ? "Определяю агентов"
+        : streamingPhase === "consulting"
+          ? "Консультирую агентов"
+          : streamingPhase === "synthesizing"
+            ? "Формирую решение"
+            : streamingPhase === "planning"
+              ? "Составляю план"
+              : isToolPhase
+                ? TOOL_LABELS[streamingCategory || "generic"] || "Ищу"
+                : streamingPhase === "thinking"
+                  ? "думает"
+                  : "отвечает"
+    : null;
 
   // Track which edits we've already applied (by message id)
   const appliedEditsRef = useRef<Set<string>>(new Set());
@@ -85,10 +132,10 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const userBubbleRef = useRef<HTMLDivElement>(null);
   const [isUserOverflowing, setIsUserOverflowing] = useState(false);
 
-  // Parse artifacts and edits from assistant messages (memoized)
+  // Parse artifacts and edits from assistant messages (always, to avoid DOM flash on stream end)
   const parts = useMemo(
-    () => (isAssistant && !isCurrentlyStreaming ? parseContentWithArtifacts(displayContent) : []),
-    [isAssistant, isCurrentlyStreaming, displayContent]
+    () => (isAssistant ? parseContentWithArtifacts(displayContent) : []),
+    [isAssistant, displayContent]
   );
   const hasSpecialParts = useMemo(
     () => parts.some((p) => p.type === "artifact" || p.type === "edit"),
@@ -101,14 +148,18 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     [isAssistant, hasSpecialParts, displayContent]
   );
 
-  // Detect overflow for assistant messages (skip during streaming)
+  // Detect overflow for assistant messages (skip during streaming, delay after stream ends)
   useEffect(() => {
     if (!isAssistant || isExpanded || isCurrentlyStreaming) return;
     const el = bubbleRef.current;
     if (!el) return;
-    requestAnimationFrame(() => {
-      setIsOverflowing(el.scrollHeight > ASSISTANT_COLLAPSE_HEIGHT);
-    });
+    // Delay to let CSS transitions settle and avoid layout thrash
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (el) setIsOverflowing(el.scrollHeight > ASSISTANT_COLLAPSE_HEIGHT);
+      });
+    }, 250);
+    return () => clearTimeout(timer);
   }, [displayContent, isAssistant, isExpanded, isCurrentlyStreaming]);
 
   // Detect overflow for user messages
@@ -166,11 +217,21 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
       role="article"
       aria-label={isUser ? "Сообщение пользователя" : "Ответ ассистента"}
     >
-      <MessageAvatar isUser={isUser} agentIcon={agentIcon} agentIconColor={agentIconColor} />
+      <MessageAvatar
+        isUser={isUser}
+        agentIcon={agentIcon}
+        agentIconColor={agentIconColor}
+        streamingCategory={streamingCategory}
+      />
 
       <div className={cn("flex-1 min-w-0", isUser && "max-w-[85%] flex flex-col items-end")}>
         <span className="text-[11px] font-medium text-text-secondary mb-1 block">
-          {isUser ? "Вы" : (agentName || "Sanbao")}
+          {isUser ? "Вы" : streamingLabel ? (
+            <span className="inline-flex items-center gap-1">
+              <span>{agentName || "Sanbao"}</span>
+              <span className="text-accent">· {streamingLabel}</span>
+            </span>
+          ) : (agentName || "Sanbao")}
         </span>
 
         {isAssistant && displayReasoning && <ReasoningBlock reasoning={displayReasoning} />}
@@ -180,18 +241,18 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
         <div
           ref={isAssistant ? bubbleRef : isUser ? userBubbleRef : undefined}
           className={cn(
-            "text-sm leading-relaxed",
+            "text-sm leading-relaxed transition-[background-color,border-color,padding] duration-200",
             isUser
               ? "rounded-2xl px-4 py-3 bg-accent text-white rounded-tr-md"
               : isRichMd
                 ? "rounded-2xl px-4 py-3 bg-surface-alt text-text-primary rounded-tl-md border border-border"
                 : "text-text-primary py-1",
-            isAssistant && !isCurrentlyStreaming && !isExpanded && "overflow-hidden relative",
+            isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing && "overflow-hidden relative",
             isAssistant && !isCurrentlyStreaming && isExpanded && "overflow-x-auto",
             isUser && !isUserExpanded && isUserOverflowing && "overflow-hidden relative",
           )}
           style={{
-            ...(isAssistant && !isCurrentlyStreaming && !isExpanded ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
+            ...(isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
             ...(isUser && !isUserExpanded && isUserOverflowing ? { maxHeight: USER_COLLAPSE_HEIGHT } : {}),
           }}
         >

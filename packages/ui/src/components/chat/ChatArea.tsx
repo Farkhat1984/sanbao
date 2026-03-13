@@ -8,7 +8,6 @@ import { useTaskStore } from "@/stores/taskStore";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { WelcomeScreen } from "./WelcomeScreen";
-import { ThinkingIndicator } from "./ThinkingIndicator";
 import { ContextIndicator } from "./ContextIndicator";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { ClarifyModal } from "./ClarifyModal";
@@ -33,8 +32,6 @@ type ChatView = "welcome" | "loading" | "messages";
 export function ChatArea() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
-  const streamingPhase = useChatStore((s) => s.streamingPhase);
-  const streamingToolName = useChatStore((s) => s.streamingToolName);
   const contextUsage = useChatStore((s) => s.contextUsage);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const activeAgentId = useChatStore((s) => s.activeAgentId);
@@ -64,7 +61,7 @@ export function ChatArea() {
     } else {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isStreaming, streamingPhase]);
+  }, [messages, isStreaming]);
 
   /** Load older messages, preserving scroll position */
   const loadOlderMessages = useCallback(async () => {
@@ -224,15 +221,6 @@ export function ChatArea() {
                 onRetry={handleRetry}
               />
             ))}
-
-            {/* Thinking / Streaming Indicator */}
-            {isStreaming && streamingPhase && (
-              <ThinkingIndicator
-                phase={streamingPhase}
-                agentName={agentName}
-                toolName={streamingToolName}
-              />
-            )}
 
             <div ref={bottomRef} />
           </div>

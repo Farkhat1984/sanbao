@@ -17,6 +17,7 @@ import {
   Network,
   Users,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { StreamingPhase } from "@/stores/chatStore";
@@ -175,15 +176,15 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
   let dotColorClass: string;
   let animKey: string;
 
-  if (phase === "thinking") {
-    label = `${name} думает`;
-    Icon = Brain;
-    gradientClass = "from-legal-ref to-[#A07D55]";
-    dotColorClass = "bg-legal-ref";
-    animKey = "thinking";
-  } else if (phase === "searching") {
-    // Web search (no tool name) or specific tool
-    if (toolName && category !== "web_search") {
+  if (phase === "thinking" || phase === "searching" || phase === "using_tool") {
+    if (toolName === "$web_search" || (phase === "searching" && category === "web_search")) {
+      label = "Ищет в интернете";
+      Icon = Globe;
+      gradientClass = "from-accent to-accent-hover";
+      dotColorClass = "bg-accent";
+      animKey = "searching";
+    } else if (toolName && category !== "web_search" && category !== "knowledge" && category !== "generic") {
+      // Specific non-search tool (calculator, memory, chart, etc.)
       const vis = TOOL_VISUALS[category];
       label = vis.label;
       Icon = vis.Icon;
@@ -191,19 +192,13 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
       dotColorClass = vis.dot;
       animKey = category;
     } else {
-      label = "Ищет в интернете";
-      Icon = Globe;
+      // Default: initial state, knowledge search, or unknown tool
+      label = "Ищу";
+      Icon = Search;
       gradientClass = "from-accent to-accent-hover";
       dotColorClass = "bg-accent";
       animKey = "searching";
     }
-  } else if (phase === "using_tool") {
-    const vis = TOOL_VISUALS[category];
-    label = vis.label;
-    Icon = vis.Icon;
-    gradientClass = vis.gradient;
-    dotColorClass = vis.dot;
-    animKey = category;
   } else if (phase === "routing") {
     label = "Определяет агентов";
     Icon = Network;
@@ -223,13 +218,13 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
     dotColorClass = "bg-amber-500";
     animKey = "synthesizing";
   } else if (phase === "planning") {
-    label = `${name} составляет план`;
+    label = "Составляет план";
     Icon = ListChecks;
     gradientClass = "from-warning to-warning";
     dotColorClass = "bg-warning";
     animKey = "planning";
   } else {
-    label = `${name} отвечает`;
+    label = "Отвечает";
     Icon = MessageSquare;
     gradientClass = "from-accent to-accent-hover";
     dotColorClass = "bg-accent";
