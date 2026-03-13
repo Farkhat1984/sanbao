@@ -98,8 +98,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     generic: "Ищу",
   };
   const streamingLabel = isCurrentlyStreaming && streamingPhase
-    ? streamingPhase === "answering"
-      ? null
+    ? isToolPhase
+      ? TOOL_LABELS[streamingCategory || "generic"] || "Ищу"
       : streamingPhase === "routing"
         ? "Определяю агентов"
         : streamingPhase === "consulting"
@@ -108,9 +108,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
             ? "Формирую решение"
             : streamingPhase === "planning"
               ? "Составляю план"
-              : isToolPhase
-                ? TOOL_LABELS[streamingCategory || "generic"] || "Ищу"
-                : "отвечает"
+              : "отвечает"
     : null;
 
   // Track which edits we've already applied (by message id)
