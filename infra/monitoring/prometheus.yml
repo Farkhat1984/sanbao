@@ -11,3 +11,15 @@ scrape_configs:
     static_configs:
       - targets: ["host.docker.internal:3000"]
     scrape_interval: 30s
+
+  - job_name: "leemadb"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:8110"]
+    scrape_interval: 15s
+
+  - job_name: "orchestrator"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:8120"]
+    scrape_interval: 15s

@@ -9,7 +9,7 @@
 #
 # What's backed up:
 #   1. PostgreSQL (sanbao) — pg_dump compressed + integrity verified
-#   2. FragmentDB data — tar.gz of data directory
+#   2. LeemaDB data — tar.gz of data directory
 #   3. Deploy configs — .env files and compose
 #
 # Improvements (Feb 2026):
@@ -134,7 +134,7 @@ find_pg_container() {
         return 0
     fi
 
-    # Method 3: fallback — name pattern (excludes pgbouncer, fragmentdb)
+    # Method 3: fallback — name pattern (excludes pgbouncer, leemadb)
     container=$(docker ps --format '{{.Names}}' 2>/dev/null \
         | grep -E 'sanbao.*db|deploy.*db' \
         | grep -v pgbouncer \
@@ -203,16 +203,16 @@ else
     track_error "PostgreSQL" "контейнер не найден (compose/label/name)"
 fi
 
-# ── 2. FragmentDB Data Backup ───────────────────────────────────────────────
-FDB_FILE="${DAILY_DIR}/fragmentdb-${TIMESTAMP}.tar.gz"
-log "Backing up FragmentDB data..."
+# ── 2. LeemaDB Data Backup ───────────────────────────────────────────────
+FDB_FILE="${DAILY_DIR}/leemadb-${TIMESTAMP}.tar.gz"
+log "Backing up LeemaDB data..."
 
 # Check possible locations (ordered by likelihood)
 FDB_DATA=""
 for path in \
-    "/home/metadmin/faragj/ai_cortex/fragmentdb_data" \
-    "/home/faragj/faragj/fragmentdb/fragmentdb_data" \
-    "/home/metadmin/faragj/fragmentdb/fragmentdb_data"; do
+    "/home/metadmin/faragj/ai_cortex/leemadb_data" \
+    "/home/faragj/faragj/leemadb/leemadb_data" \
+    "/home/metadmin/faragj/leemadb/leemadb_data"; do
     if [ -d "${path}" ] && [ "$(ls -A "${path}" 2>/dev/null)" ]; then
         FDB_DATA="${path}"
         break
@@ -221,7 +221,7 @@ done
 
 # Check Docker volume
 if [ -z "${FDB_DATA}" ]; then
-    for vol_name in deploy_fragmentdb-data fragmentdb-data; do
+    for vol_name in deploy_leemadb-data leemadb-data; do
         vol_path=$(docker volume inspect "${vol_name}" --format '{{.Mountpoint}}' 2>/dev/null || true)
         if [ -n "${vol_path}" ] && [ -d "${vol_path}" ] && [ "$(ls -A "${vol_path}" 2>/dev/null)" ]; then
             FDB_DATA="${vol_path}"
@@ -231,27 +231,27 @@ if [ -z "${FDB_DATA}" ]; then
 fi
 
 if [ -n "${FDB_DATA}" ]; then
-    log "FragmentDB data found at ${FDB_DATA}"
+    log "LeemaDB data found at ${FDB_DATA}"
     if tar czf "${FDB_FILE}" -C "$(dirname "${FDB_DATA}")" "$(basename "${FDB_DATA}")" 2>>"${LOG_FILE}"; then
         FDB_SIZE=$(file_size_bytes "${FDB_FILE}")
         BACKUP_SIZE_TOTAL=$((BACKUP_SIZE_TOTAL + FDB_SIZE))
 
         if [ "${FDB_SIZE}" -lt 1024 ]; then
-            track_error "FragmentDB" "архив слишком маленький ($(human_size ${FDB_SIZE}))"
+            track_error "LeemaDB" "архив слишком маленький ($(human_size ${FDB_SIZE}))"
             rm -f "${FDB_FILE}"
         # Verify tar.gz integrity
         elif ! gzip -t "${FDB_FILE}" 2>/dev/null; then
-            track_error "FragmentDB" "повреждённый архив, не прошёл gzip -t"
+            track_error "LeemaDB" "повреждённый архив, не прошёл gzip -t"
             rm -f "${FDB_FILE}"
         else
-            log "FragmentDB: OK ($(human_size ${FDB_SIZE}), integrity verified)"
+            log "LeemaDB: OK ($(human_size ${FDB_SIZE}), integrity verified)"
         fi
     else
-        track_error "FragmentDB" "tar создание архива не удалось (permissions?)"
+        track_error "LeemaDB" "tar создание архива не удалось (permissions?)"
         rm -f "${FDB_FILE}"
     fi
 else
-    track_error "FragmentDB" "директория данных не найдена"
+    track_error "LeemaDB" "директория данных не найдена"
 fi
 
 # ── 3. Config Backup ───────────────────────────────────────────────────────
@@ -302,7 +302,7 @@ rotate_dir() {
     count=$(ls -1t "${dir}"/postgres-*.sql.gz 2>/dev/null | wc -l)
     if [ "${count}" -gt "${keep}" ]; then
         ls -1t "${dir}"/postgres-*.sql.gz | tail -n +$((keep + 1)) | xargs rm -f
-        ls -1t "${dir}"/fragmentdb-*.tar.gz 2>/dev/null | tail -n +$((keep + 1)) | xargs rm -f
+        ls -1t "${dir}"/leemadb-*.tar.gz 2>/dev/null | tail -n +$((keep + 1)) | xargs rm -f
         ls -1t "${dir}"/configs-*.tar.gz 2>/dev/null | tail -n +$((keep + 1)) | xargs rm -f
         log "Rotated ${dir}: kept ${keep}, removed $((count - keep))"
     fi
@@ -328,7 +328,7 @@ if [ ${ERRORS} -eq 0 ]; then
 📊 Свободно: ${DISK_FREE}
 
 ✔ PostgreSQL (gzip verified)
-✔ FragmentDB (gzip verified)
+✔ LeemaDB (gzip verified)
 ✔ Configs
 EOF
 )"

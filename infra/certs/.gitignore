@@ -1,0 +1,7 @@
+# Ignore all generated certificate and key files
+*.key
+*.pem
+*.crt
+
+# Keep the generation script
+!generate-certs.sh

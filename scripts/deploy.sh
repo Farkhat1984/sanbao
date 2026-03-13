@@ -8,7 +8,7 @@ set -e
 # Usage:
 #   ./scripts/deploy.sh              # Full rebuild (build + restart all + AI Cortex)
 #   ./scripts/deploy.sh app          # Rebuild only app (rolling restart, no AI Cortex)
-#   ./scripts/deploy.sh cortex       # Rebuild AI Cortex stack (fragmentdb, orchestrator, embedding)
+#   ./scripts/deploy.sh cortex       # Rebuild AI Cortex stack (leemadb, orchestrator, embedding)
 #   ./scripts/deploy.sh restart      # Restart without rebuild
 #   ./scripts/deploy.sh status       # Show container status
 #   ./scripts/deploy.sh logs [svc]   # Tail logs (default: app)
@@ -105,7 +105,7 @@ case "${1:-full}" in
     echo "=== Full rebuild & deploy (app + AI Cortex) ==="
     check_server2_cloudflared
     npm run build
-    $COMPOSE build app embedding-proxy fragmentdb orchestrator
+    $COMPOSE build app embedding-proxy leemadb orchestrator
     $COMPOSE up -d
     wait_for_app_healthy 3 36
     purge_cf_cache
@@ -115,19 +115,19 @@ case "${1:-full}" in
   cortex)
     echo "=== Rebuild AI Cortex stack ==="
     echo "--- Building AI Cortex images ---"
-    $COMPOSE build embedding-proxy fragmentdb orchestrator
+    $COMPOSE build embedding-proxy leemadb orchestrator
 
     echo "--- Restarting AI Cortex services ---"
-    $COMPOSE up -d --no-deps embedding-proxy fragmentdb
-    echo "  Waiting for FragmentDB to become healthy (this can take up to 10 min)..."
+    $COMPOSE up -d --no-deps embedding-proxy leemadb
+    echo "  Waiting for LeemaDB to become healthy (this can take up to 10 min)..."
     for i in $(seq 1 120); do
-      FRAG_HEALTHY=$($COMPOSE ps fragmentdb --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
+      LEEMA_HEALTHY=$($COMPOSE ps leemadb --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
       EMBED_HEALTHY=$($COMPOSE ps embedding-proxy --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
-      if [ "$FRAG_HEALTHY" -ge 1 ] && [ "$EMBED_HEALTHY" -ge 1 ]; then
-        echo "  FragmentDB + embedding-proxy healthy!"
+      if [ "$LEEMA_HEALTHY" -ge 1 ] && [ "$EMBED_HEALTHY" -ge 1 ]; then
+        echo "  LeemaDB + embedding-proxy healthy!"
         break
       fi
-      echo "  [$i/120] fragmentdb=$FRAG_HEALTHY, embedding=$EMBED_HEALTHY, waiting..."
+      echo "  [$i/120] leemadb=$LEEMA_HEALTHY, embedding=$EMBED_HEALTHY, waiting..."
       sleep 5
     done
 
@@ -144,7 +144,7 @@ case "${1:-full}" in
     done
 
     echo ""
-    $COMPOSE ps embedding-proxy fragmentdb orchestrator
+    $COMPOSE ps embedding-proxy leemadb orchestrator
     ;;
 
   app)

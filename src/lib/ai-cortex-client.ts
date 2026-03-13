@@ -1,6 +1,7 @@
 import { getSettingNumber } from "@/lib/settings";
 
 const AI_CORTEX_URL = process.env.AI_CORTEX_URL || "http://orchestrator:8120";
+const AI_CORTEX_MASTER_KEY = process.env.AI_CORTEX_AUTH_TOKEN || "";
 
 /** Fallback values used when settings DB is unavailable */
 const TIMEOUT_DEFAULT_FALLBACK = 30_000;
@@ -67,11 +68,13 @@ export async function createNamespace(
 ): Promise<{ name: string; apiKey: string }> {
   await cortexFetch("/api/namespaces", {
     method: "POST",
+    apiKey: AI_CORTEX_MASTER_KEY,
     body: JSON.stringify({ name, display_name: displayName }),
   });
 
   const keyRes = await cortexFetch(`/api/namespaces/${name}/keys`, {
     method: "POST",
+    apiKey: AI_CORTEX_MASTER_KEY,
     body: JSON.stringify({ description: `Sanbao org: ${displayName}` }),
   });
 
@@ -155,10 +158,10 @@ export async function publishProject(
   });
   const data = await res.json();
   const domain = data.domain || `project_${projectId}`;
-  // Use agent-specific endpoint if agent was created, otherwise unified /mcp
-  const registeredAgent = data.agent || agentName;
-  const endpoint = data.endpoint || data.mcp_endpoint || data.url
-    || (registeredAgent ? `${AI_CORTEX_URL}/${registeredAgent}` : `${AI_CORTEX_URL}/mcp`);
+  // Use per-domain MCP endpoint (auto-injects domain into tool args)
+  const endpoint = data.endpoint
+    ? `${AI_CORTEX_URL}${data.endpoint}`
+    : `${AI_CORTEX_URL}/mcp/${domain}`;
   return { endpoint, domain };
 }
 

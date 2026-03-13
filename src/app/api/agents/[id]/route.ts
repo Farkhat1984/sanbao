@@ -1,6 +1,8 @@
 import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
 import { agentUpdateSchema } from "@/lib/validation";
+import { decrypt } from "@/lib/crypto";
+import { deleteProject } from "@/lib/ai-cortex-client";
 
 const AGENT_INCLUDE = {
   files: true,
@@ -10,14 +12,21 @@ const AGENT_INCLUDE = {
   integrations: { include: { integration: { select: { id: true, name: true, type: true, status: true, entityCount: true } } } },
 };
 
-/** Strip heavy extractedText from files, replace with boolean hasText */
+/** Strip heavy extractedText from files, split into context vs fdb tiers */
 function stripFileText(agent: Record<string, unknown>) {
   if (!agent || !Array.isArray(agent.files)) return agent;
+  const allFiles = agent.files as Record<string, unknown>[];
+  const contextFiles = allFiles.filter((f) => (f.tier || "context") === "context");
+  const fdbFiles = allFiles.filter((f) => f.tier === "fdb");
   return {
     ...agent,
-    files: (agent.files as Record<string, unknown>[]).map((f) => {
+    files: contextFiles.map((f) => {
       const { extractedText, ...rest } = f;
       return { ...rest, extractedText: extractedText ? "1" : null };
+    }),
+    fdbFiles: fdbFiles.map((f) => {
+      const { extractedText, ...rest } = f;
+      return rest;
     }),
   };
 }
@@ -157,6 +166,22 @@ export async function DELETE(
 
   if (!existing) {
     return jsonError("Агент не найден", 404);
+  }
+
+  // Clean up AI Cortex project if one was created
+  if (existing.projectId) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { cortexNsApiKey: true },
+      });
+      if (user?.cortexNsApiKey) {
+        const nsApiKey = decrypt(user.cortexNsApiKey);
+        await deleteProject(nsApiKey, existing.projectId);
+      }
+    } catch {
+      // Non-critical: continue with agent deletion even if cortex cleanup fails
+    }
   }
 
   await prisma.agent.delete({ where: { id } });

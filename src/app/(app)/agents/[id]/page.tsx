@@ -12,8 +12,9 @@ import {
   AlertCircle,
   ImageIcon,
 } from "lucide-react";
-import { useChatStore } from "@sanbao/stores/chatStore";
+import { useChatStore } from "@/stores/chatStore";
 import { AgentFileUpload } from "@sanbao/ui/components/agents/AgentFileUpload";
+import { AgentKnowledgeSection } from "@sanbao/ui/components/agents/AgentKnowledgeSection";
 import { ICON_MAP } from "@sanbao/ui/components/agents/AgentIconPicker";
 import { ConfirmModal } from "@sanbao/ui/components/ui/ConfirmModal";
 import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
@@ -25,12 +26,15 @@ export default function AgentDetailPage() {
   const router = useRouter();
   const { addConversation, setActiveConversation, setMessages, setActiveAgentId } =
     useChatStore();
+  const [canUseRag, setCanUseRag] = useState(false);
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [knowledgeStatus, setKnowledgeStatus] = useState<"NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR">("NONE");
+  const [fdbFiles, setFdbFiles] = useState<Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>>([]);
 
   const loadAgent = useCallback(async () => {
     try {
@@ -38,6 +42,13 @@ export default function AgentDetailPage() {
       if (!res.ok) throw new Error("Агент не найден");
       const data = await res.json();
       setAgent(data);
+      // Extract FDB knowledge data if present
+      if (data.knowledgeStatus) {
+        setKnowledgeStatus(data.knowledgeStatus);
+      }
+      if (data.fdbFiles) {
+        setFdbFiles(data.fdbFiles);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
     } finally {
@@ -47,6 +58,13 @@ export default function AgentDetailPage() {
 
   useEffect(() => {
     loadAgent();
+    // Load billing plan for canUseRag check
+    fetch("/api/billing/current")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.plan?.canUseRag) setCanUseRag(true);
+      })
+      .catch(() => {});
   }, [loadAgent]);
 
   const handleStartChat = async () => {
@@ -344,10 +362,26 @@ export default function AgentDetailPage() {
           </div>
         )}
 
+        {/* FDB Knowledge Base */}
+        {isOwned && (
+          <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
+              База знаний FDB
+            </h2>
+            <AgentKnowledgeSection
+              agentId={id}
+              knowledgeStatus={knowledgeStatus}
+              fdbFiles={fdbFiles}
+              disabled={!canUseRag}
+              onRefresh={loadAgent}
+            />
+          </div>
+        )}
+
         {/* Files */}
         <div className="p-5 rounded-2xl border border-border bg-surface">
           <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Файлы знаний ({agent.files.length})
+            Документы в контексте ({agent.files.length})
           </h2>
 
           {/* AgentFileUpload renders both the file list and the dropzone */}

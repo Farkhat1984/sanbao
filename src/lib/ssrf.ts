@@ -10,7 +10,7 @@ import dns from "dns";
 
 /** Docker-internal service hostnames trusted by the platform (admin-configured, not user-supplied). */
 const TRUSTED_HOSTS = new Set(
-  (process.env.TRUSTED_INTERNAL_HOSTS || "orchestrator,fragmentdb,embedding-proxy,db,redis,pgbouncer")
+  (process.env.TRUSTED_INTERNAL_HOSTS || "orchestrator,leemadb,embedding-proxy,db,redis,pgbouncer")
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean)

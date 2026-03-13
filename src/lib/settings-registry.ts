@@ -549,10 +549,10 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     key: "tool_result_max_chars",
     label: "Макс. символов результата",
     description:
-      "Жёсткий лимит символов результата инструмента перед вставкой в контекст (~3K токенов)",
+      "Жёсткий лимит символов результата инструмента перед вставкой в контекст (~5-10K токенов)",
     category: "streaming_tools",
     type: "number",
-    defaultValue: "12000",
+    defaultValue: "15000",
     validation: { min: 1000, max: 100000 },
     unit: "символов",
   },

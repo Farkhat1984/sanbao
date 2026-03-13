@@ -115,6 +115,10 @@ export async function apiRequest(
   if (body !== undefined) {
     reqHeaders["Content-Type"] = "application/json";
   }
+  // CSRF: state-changing methods require Origin header
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase()) && !reqHeaders["Origin"]) {
+    reqHeaders["Origin"] = BASE_URL;
+  }
 
   try {
     const res = await fetch(url, {

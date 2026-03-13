@@ -56,7 +56,7 @@ if ! curl -sf --max-time 10 "http://localhost:13004/api/health" >/dev/null 2>&1;
         error "Aborting failback. Ensure Server 1 services are running first."
         exit 1
     fi
-    warn "Sanbao not responding on primary but FragmentDB is up. Proceeding cautiously..."
+    warn "Sanbao not responding on primary but LeemaDB is up. Proceeding cautiously..."
 fi
 
 log "Primary server is reachable."
@@ -79,18 +79,18 @@ if [ "${SKIP_SYNC}" = false ]; then
         warn "Local DB container not running, skipping PostgreSQL sync."
     fi
 
-    # FragmentDB: rsync local volume → primary
-    log "Syncing FragmentDB data to primary..."
-    VOLUME_PATH=$(docker volume inspect deploy_fragmentdb-data --format '{{.Mountpoint}}' 2>/dev/null || echo "")
+    # LeemaDB: rsync local volume → primary
+    log "Syncing LeemaDB data to primary..."
+    VOLUME_PATH=$(docker volume inspect deploy_leemadb-data --format '{{.Mountpoint}}' 2>/dev/null || echo "")
     if [ -n "${VOLUME_PATH}" ]; then
         sudo rsync -az \
             -e "ssh -o StrictHostKeyChecking=no" \
             "${VOLUME_PATH}/" \
-            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/fragmentdb_data/" 2>/dev/null \
-            && log "FragmentDB data synced back to primary." \
-            || warn "FragmentDB reverse sync failed."
+            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/leemadb_data/" 2>/dev/null \
+            && log "LeemaDB data synced back to primary." \
+            || warn "LeemaDB reverse sync failed."
     else
-        warn "FragmentDB volume not found, skipping."
+        warn "LeemaDB volume not found, skipping."
     fi
 else
     log "Skipping data sync (--skip-sync)."

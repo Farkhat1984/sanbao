@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AgentForm } from "@sanbao/ui/components/agents/AgentForm";
 import { Skeleton } from "@sanbao/ui/components/ui/Skeleton";
-import { useBillingStore } from "@/stores/billingStore";
 import type { Agent } from "@/types/agent";
 
 export default function EditAgentPage() {
@@ -12,7 +11,7 @@ export default function EditAgentPage() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const canUseRag = useBillingStore((s) => s.plan?.canUseRag ?? false);
+  const [canUseRag, setCanUseRag] = useState(false);
 
   useEffect(() => {
     fetch(`/api/agents/${id}`)
@@ -23,6 +22,12 @@ export default function EditAgentPage() {
       .then((data) => setAgent(data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+    fetch("/api/billing/current")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.plan?.canUseRag) setCanUseRag(true);
+      })
+      .catch(() => {});
   }, [id]);
 
   if (loading) {

@@ -18,6 +18,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "../../src"),
     },
   },
+  // Pass ALL env vars to tests (Vite strips non-prefixed by default)
+  envPrefix: [],
   test: {
     globals: true,
     environment: "node",
@@ -26,6 +28,9 @@ export default defineConfig({
     hookTimeout: 30_000,
     sequence: {
       concurrent: false,
+    },
+    env: {
+      BASE_URL: process.env.BASE_URL || "http://localhost:3004",
     },
   },
 });

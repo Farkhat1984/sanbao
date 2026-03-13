@@ -70,6 +70,9 @@ interface ChatState {
   hasMoreMessages: boolean;
   isLoadingMoreMessages: boolean;
 
+  /** True while fetching conversation messages (skeleton state) */
+  isLoadingConversation: boolean;
+
   setSwarmMode: (orgId: string | null, multiAgentId?: string | null) => void;
   setMultiAgentId: (id: string | null) => void;
   addSwarmAgentResponse: (resp: SwarmAgentResponse) => void;
@@ -88,6 +91,7 @@ interface ChatState {
   /** Prepend older messages to the beginning of the list */
   prependMessages: (messages: ChatMessage[], nextCursor: string | null) => void;
   setIsLoadingMoreMessages: (loading: boolean) => void;
+  setIsLoadingConversation: (loading: boolean) => void;
   setMessagesPagination: (cursor: string | null, hasMore: boolean) => void;
   updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   /** Get the latest content for the last assistant message (streaming or committed) */
@@ -149,10 +153,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messagesCursor: null,
   hasMoreMessages: false,
   isLoadingMoreMessages: false,
+  isLoadingConversation: false,
 
   setActiveConversation: (activeConversationId) =>
     set(activeConversationId === null
-      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null, messagesCursor: null, hasMoreMessages: false }
+      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null, messagesCursor: null, hasMoreMessages: false, isLoadingConversation: false }
       : { activeConversationId }),
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
@@ -212,6 +217,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setIsLoadingMoreMessages: (isLoadingMoreMessages) =>
     set({ isLoadingMoreMessages }),
 
+  setIsLoadingConversation: (isLoadingConversation) =>
+    set({ isLoadingConversation }),
+
   setMessagesPagination: (messagesCursor, hasMoreMessages) =>
     set({ messagesCursor, hasMoreMessages }),
 
@@ -268,8 +276,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ streamingPhase: null, streamingToolName: null });
       return;
     }
-    // searching is an overlay — always allowed
-    if (phase === "searching") {
+    // searching and using_tool are overlays — always allowed to update
+    // (tool type can change between web search and knowledge base within a turn)
+    if (phase === "searching" || phase === "using_tool") {
       set({ streamingPhase: phase, streamingToolName: toolName ?? null });
       return;
     }

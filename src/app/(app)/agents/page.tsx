@@ -5,7 +5,7 @@ import { Plus, Search, Bot, Sparkles, Loader2, Building2, MessageSquare, Network
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAgentStore } from "@sanbao/stores/agentStore";
-import { useChatStore } from "@sanbao/stores/chatStore";
+import { useChatStore } from "@/stores/chatStore";
 import { AgentCard } from "@sanbao/ui/components/agents/AgentCard";
 import { SystemAgentCard } from "@sanbao/ui/components/agents/SystemAgentCard";
 import { ICON_MAP } from "@sanbao/ui/components/agents/AgentIconPicker";

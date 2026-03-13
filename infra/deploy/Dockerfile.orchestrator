@@ -28,7 +28,7 @@ COPY ai_cortex/data/customs/ /app/data/customs/
 
 EXPOSE 8120
 
-ENV FRAGMENTDB_URL="http://fragmentdb:8080"
+ENV LEEMADB_URL="http://leemadb:8080"
 ENV AI_CORTEX_PORT="8120"
 ENV AI_CORTEX_AUTH_TOKEN=""
 ENV DEEPINFRA_API_KEY=""

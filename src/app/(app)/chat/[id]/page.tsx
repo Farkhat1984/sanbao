@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ChatArea } from "@sanbao/ui/components/chat/ChatArea";
-import { useChatStore } from "@sanbao/stores/chatStore";
+import { useChatStore } from "@/stores/chatStore";
 import type { ChatMessage } from "@/types/chat";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,76 +21,119 @@ function mapMessages(raw: any[]): ChatMessage[] {
 
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
-  const setActiveConversation = useChatStore((s) => s.setActiveConversation);
-  const setActiveAgentId = useChatStore((s) => s.setActiveAgentId);
-  const setOrgAgentId = useChatStore((s) => s.setOrgAgentId);
-  const setMessages = useChatStore((s) => s.setMessages);
-  const setMessagesPagination = useChatStore((s) => s.setMessagesPagination);
-  const isStreaming = useChatStore((s) => s.isStreaming);
   const wasStreamingRef = useRef(false);
-  const hasLoadedRef = useRef(false);
+  const loadedIdRef = useRef<string | null>(null);
+
+  const isStreaming = useChatStore((s) => s.isStreaming);
 
   // Track streaming state for visibilitychange handler
   useEffect(() => {
     wasStreamingRef.current = isStreaming;
   }, [isStreaming]);
 
-  const fetchMessages = useCallback(() => {
-    if (!id) return;
-    fetch(`/api/conversations/${id}?limit=50`)
+  const fetchMessages = useCallback((conversationId: string) => {
+    const store = useChatStore.getState();
+    // Skip if already streaming — messages are being built in-memory.
+    // They will be fetched from DB when streaming ends.
+    if (store.isStreaming) {
+      useChatStore.setState({ isLoadingConversation: false });
+      return;
+    }
+
+    useChatStore.setState({ isLoadingConversation: true });
+
+    fetch(`/api/conversations/${conversationId}?limit=50`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
       .then((data) => {
-        setActiveAgentId(data.agentId || null);
-        setOrgAgentId(data.orgAgentId || null);
-        if (data.messages && Array.isArray(data.messages)) {
-          setMessages(mapMessages(data.messages));
-        }
-        // Store pagination state for "load older" functionality
-        setMessagesPagination(data.nextCursor ?? null, data.hasMore ?? false);
+        // Verify this response is still for the active conversation
+        const currentState = useChatStore.getState();
+        if (currentState.activeConversationId !== conversationId) return;
+
+        useChatStore.setState({
+          activeAgentId: data.agentId || null,
+          orgAgentId: data.orgAgentId || null,
+          messages: data.messages && Array.isArray(data.messages)
+            ? mapMessages(data.messages)
+            : [],
+          messagesCursor: data.nextCursor ?? null,
+          hasMoreMessages: data.hasMore ?? false,
+          isLoadingConversation: false,
+        });
       })
       .catch(() => {
-        setActiveAgentId(null);
-        setOrgAgentId(null);
-        setMessages([]);
-        setMessagesPagination(null, false);
-      });
-  }, [id, setActiveAgentId, setOrgAgentId, setMessages, setMessagesPagination]);
+        const currentState = useChatStore.getState();
+        if (currentState.activeConversationId !== conversationId) return;
 
-  // Load messages on mount only — NOT when isStreaming changes.
-  // This prevents a race where fetchMessages() runs before the
-  // fire-and-forget DB save completes, overwriting the streamed message.
+        useChatStore.setState({
+          activeAgentId: null,
+          orgAgentId: null,
+          messages: [],
+          messagesCursor: null,
+          hasMoreMessages: false,
+          isLoadingConversation: false,
+        });
+      });
+  }, []);
+
+  // Set active conversation and load messages when ID changes.
   useEffect(() => {
     if (!id) return;
-    setActiveConversation(id);
-    if (isStreaming) return;
-    // Only fetch on initial mount, not after streaming ends
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      fetchMessages();
-    }
-  }, [id, isStreaming, setActiveConversation, fetchMessages]);
 
-  // Reset loaded flag when conversation changes
+    const isNewConversation = loadedIdRef.current !== id;
+    if (!isNewConversation) return;
+
+    loadedIdRef.current = id;
+
+    const store = useChatStore.getState();
+
+    // If streaming is actively building messages for this conversation
+    // (e.g., router.replace from useStreamChat after creating a new conversation),
+    // do NOT clear messages — they're being built by the active stream.
+    if (store.isStreaming && store.activeConversationId === id && store.messages.length > 0) {
+      return;
+    }
+
+    // Different conversation or no messages yet — set loading and fetch.
+    useChatStore.setState({
+      activeConversationId: id,
+      messages: [],
+      isLoadingConversation: true,
+      currentPlan: null,
+      contextUsage: null,
+      messagesCursor: null,
+      hasMoreMessages: false,
+    });
+
+    fetchMessages(id);
+  }, [id, fetchMessages]);
+
+  // Re-fetch when streaming ends (messages are saved to DB at end of stream).
+  // This picks up server-assigned message IDs and ensures consistency.
+  const prevStreamingRef = useRef(false);
   useEffect(() => {
-    hasLoadedRef.current = false;
-  }, [id]);
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = isStreaming;
+
+    if (wasStreaming && !isStreaming && id && loadedIdRef.current === id) {
+      fetchMessages(id);
+    }
+  }, [isStreaming, id, fetchMessages]);
 
   // Recover after mobile browser suspends the tab:
-  // when the user returns and the stream was interrupted, re-fetch messages from DB.
+  // when the user returns and the stream was interrupted, re-fetch messages.
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState !== "visible") return;
-      // Stream was active before tab was hidden but is now dead — recover
-      if (wasStreamingRef.current && !useChatStore.getState().isStreaming) {
-        fetchMessages();
+      if (wasStreamingRef.current && !useChatStore.getState().isStreaming && id) {
+        fetchMessages(id);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [fetchMessages]);
+  }, [fetchMessages, id]);
 
   return <ChatArea />;
 }

@@ -27,6 +27,9 @@ function mapMessages(raw: any[]): ChatMessage[] {
   }));
 }
 
+/** Determine which view to show based on store state */
+type ChatView = "welcome" | "loading" | "messages";
+
 export function ChatArea() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.isStreaming);
@@ -39,6 +42,7 @@ export function ChatArea() {
   const setPendingInput = useChatStore((s) => s.setPendingInput);
   const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
   const isLoadingMoreMessages = useChatStore((s) => s.isLoadingMoreMessages);
+  const isLoadingConversation = useChatStore((s) => s.isLoadingConversation);
   const messagesCursor = useChatStore((s) => s.messagesCursor);
   const prependMessages = useChatStore((s) => s.prependMessages);
   const setIsLoadingMoreMessages = useChatStore((s) => s.setIsLoadingMoreMessages);
@@ -53,7 +57,6 @@ export function ChatArea() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (isStreaming) {
-      // During streaming, scroll the container directly for reliable tracking
       const container = messagesContainerRef.current;
       if (container) {
         container.scrollTop = container.scrollHeight;
@@ -69,7 +72,6 @@ export function ChatArea() {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    // Capture scroll state before prepending
     const scrollHeightBefore = container.scrollHeight;
 
     setIsLoadingMoreMessages(true);
@@ -82,15 +84,13 @@ export function ChatArea() {
       if (data.messages && Array.isArray(data.messages)) {
         prependMessages(mapMessages(data.messages), data.nextCursor ?? null);
 
-        // Restore scroll position after React renders the prepended messages.
-        // requestAnimationFrame ensures DOM has been updated.
         requestAnimationFrame(() => {
           const scrollHeightAfter = container.scrollHeight;
           container.scrollTop = scrollHeightAfter - scrollHeightBefore;
         });
       }
     } catch {
-      /* silent — user can retry */
+      /* silent -- user can retry */
     } finally {
       setIsLoadingMoreMessages(false);
     }
@@ -104,13 +104,11 @@ export function ChatArea() {
       return;
     }
 
-    // Load agent info
     fetch(`/api/agents/${activeAgentId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((agent) => setActiveAgent(agent))
       .catch(() => setActiveAgent(null));
 
-    // Load agent tools
     fetch(`/api/agents/${activeAgentId}/tools`)
       .then((r) => (r.ok ? r.json() : []))
       .then((tools) => setAgentTools(Array.isArray(tools) ? tools : []))
@@ -119,6 +117,19 @@ export function ChatArea() {
 
   const hasMessages = messages.length > 0;
   const activeTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
+
+  // Determine the current view state with clear priority:
+  // 1. No active conversation -> welcome screen (new chat)
+  // 2. Loading conversation data -> skeleton
+  // 3. Has messages (or streaming) -> message list
+  // 4. Loaded but empty (edge case: empty conversation) -> welcome screen
+  const view: ChatView = !activeConversationId
+    ? "welcome"
+    : isLoadingConversation
+      ? "loading"
+      : hasMessages || isStreaming
+        ? "messages"
+        : "welcome";
 
   // Agent info from active conversation
   const activeConv = conversations.find((c) => c.id === activeConversationId);
@@ -130,7 +141,6 @@ export function ChatArea() {
   const handleRetry = useCallback((assistantMessageId: string) => {
     const idx = messages.findIndex((m) => m.id === assistantMessageId);
     if (idx <= 0) return;
-    // Walk backwards to find the preceding user message
     for (let i = idx - 1; i >= 0; i--) {
       if (messages[i].role === "USER" && messages[i].content.trim()) {
         setPendingInput(messages[i].content);
@@ -166,11 +176,26 @@ export function ChatArea() {
         </div>
       )}
 
-      {/* Messages or Welcome */}
+      {/* Messages / Welcome / Loading */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label="Сообщения чата">
-        {!hasMessages ? (
-          <WelcomeScreen />
-        ) : (
+        {view === "welcome" && <WelcomeScreen />}
+
+        {view === "loading" && (
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-4 animate-fade-in">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className={`flex gap-3 ${i % 2 === 0 ? "" : "flex-row-reverse"}`}>
+                <div className="h-8 w-8 rounded-full bg-surface-alt shrink-0 animate-pulse" />
+                <div className={`flex-1 space-y-2 ${i % 2 !== 0 ? "flex flex-col items-end" : ""}`}>
+                  <div className="h-4 bg-surface-alt rounded animate-pulse" style={{ width: `${65 + i * 8}%`, maxWidth: "100%", animationDelay: `${i * 100}ms` }} />
+                  <div className="h-4 bg-surface-alt rounded animate-pulse" style={{ width: `${45 + i * 5}%`, maxWidth: "85%", animationDelay: `${i * 100 + 50}ms` }} />
+                  {i === 0 && <div className="h-4 bg-surface-alt rounded animate-pulse" style={{ width: "30%", animationDelay: "150ms" }} />}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {view === "messages" && (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-1">
             {/* Load older messages button */}
             {hasMoreMessages && (

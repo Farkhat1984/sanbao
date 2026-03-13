@@ -43,7 +43,7 @@ AUTH_PASSWORD = os.getenv("BOT_PASSWORD", "Ckdshfh231161!")
 PRIMARY_IP = os.getenv("PRIMARY_IP", "128.127.102.170")
 STANDBY_IP = os.getenv("STANDBY_IP", "46.225.122.142")
 SANBAO_PORT = os.getenv("SANBAO_PORT", "3004")
-FRAGMENTDB_PORT = os.getenv("FRAGMENTDB_PORT", "8110")
+LEEMADB_PORT = os.getenv("LEEMADB_PORT", "8110")
 DEPLOY_DIR = os.getenv("DEPLOY_DIR", "/deploy")
 AUTH_FILE = "/data/authorized_users.json"
 SYNC_SSH_USER = os.getenv("SYNC_SSH_USER", "metadmin")
@@ -68,10 +68,10 @@ failover_active = False
 ORCHESTRATOR_PORT = os.getenv("ORCHESTRATOR_PORT", "8120")
 S2_ALERT_THRESHOLD = 2         # consecutive failures before alerting (60s)
 # Docker service names (bot runs in same compose network)
-# Internal ports: sanbao=3004, fragmentdb=8080, orchestrator=8120
+# Internal ports: sanbao=3004, leemadb=8080, orchestrator=8120
 S2_SERVICES: dict[str, dict] = {
     "Sanbao":      {"url": "http://sanbao:3004/api/ready"},
-    "FragmentDB":  {"url": "http://fragmentdb:8080/health"},
+    "LeemaDB":  {"url": "http://leemadb:8080/health"},
     "Orchestrator": {"url": "http://orchestrator:8120/health"},
 }
 # Track per-service: {"Sanbao": True/False/None} — None = unknown (first run)
@@ -80,7 +80,7 @@ s2_fail_counts: dict[str, int] = {n: 0 for n in S2_SERVICES}
 
 # ── Server 1 AI Cortex health state (checked via SSH) ────────────────────
 S1_CORTEX_SERVICES: dict[str, dict] = {
-    "FragmentDB":   {"port": FRAGMENTDB_PORT, "path": "/health"},
+    "LeemaDB":   {"port": LEEMADB_PORT, "path": "/health"},
     "Orchestrator": {"port": ORCHESTRATOR_PORT, "path": "/health"},
 }
 s1_cortex_health_state: dict[str, bool | None] = {n: None for n in S1_CORTEX_SERVICES}
@@ -467,8 +467,8 @@ HELP_TEXT = """
 
 <b>Авто-failover:</b> если Server 1 недоступен 90с → автопереключение.
 Авто-failback через 90с + 5мин cooldown после восстановления.
-<b>Авто-мониторинг S1:</b> AI Cortex (FragmentDB, Orchestrator) — алерт при падении/восстановлении.
-<b>Авто-мониторинг S2:</b> Sanbao, FragmentDB, Orchestrator — алерт при падении/восстановлении.
+<b>Авто-мониторинг S1:</b> AI Cortex (LeemaDB, Orchestrator) — алерт при падении/восстановлении.
+<b>Авто-мониторинг S2:</b> Sanbao, LeemaDB, Orchestrator — алерт при падении/восстановлении.
 """
 
 
@@ -505,10 +505,10 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     checks = await asyncio.gather(
         check_via_ssh(SANBAO_PORT, "/api/health"),
-        check_via_ssh(FRAGMENTDB_PORT, "/health"),
+        check_via_ssh(LEEMADB_PORT, "/health"),
         check_via_ssh(ORCHESTRATOR_PORT, "/health"),
         check_url("http://sanbao:3004/api/health"),
-        check_url("http://fragmentdb:8080/health"),
+        check_url("http://leemadb:8080/health"),
         check_url("http://orchestrator:8120/health"),
     )
 
@@ -534,12 +534,12 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 <b>Server 1</b> ({PRIMARY_IP}) — Primary
   {icon(s1_sanbao[0])} Sanbao :{SANBAO_PORT}
-  {icon(s1_fragment[0])} FragmentDB :{FRAGMENTDB_PORT}
+  {icon(s1_fragment[0])} LeemaDB :{LEEMADB_PORT}
   {icon(s1_orch[0])} Orchestrator :{ORCHESTRATOR_PORT}
 
 <b>Server 2</b> ({STANDBY_IP}) — Standby
   {icon(s2_sanbao[0])} Sanbao :{SANBAO_PORT}
-  {icon(s2_fragment[0])} FragmentDB :{FRAGMENTDB_PORT}
+  {icon(s2_fragment[0])} LeemaDB :{LEEMADB_PORT}
   {icon(s2_orch[0])} Orchestrator :{ORCHESTRATOR_PORT}
 
 <b>Режим:</b> {mode}{cooldown_str}

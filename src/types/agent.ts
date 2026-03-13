@@ -6,6 +6,7 @@ export interface AgentFile {
   fileSize: number;
   extractedText?: string | null;
   inContext?: boolean;
+  tier?: string;
   createdAt: string;
 }
 
@@ -25,6 +26,8 @@ export interface Agent {
   mcpServers?: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string } }>;
   tools?: Array<{ id: string; tool: { id: string; name: string; icon: string; iconColor: string } }>;
   integrations?: Array<{ id: string; integration: { id: string; name: string; type: string; status: string } }>;
+  knowledgeStatus?: "NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR";
+  projectId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

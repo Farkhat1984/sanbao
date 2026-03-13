@@ -27,3 +27,59 @@ groups:
         annotations:
           summary: "High token usage"
           description: "Over 1M tokens used today (current: {{ $value }})"
+
+  - name: ai-cortex-alerts
+    rules:
+      - alert: LeemaDBDown
+        expr: up{job="leemadb"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LeemaDB is down"
+          description: "LeemaDB has been unreachable for more than 2 minutes."
+
+      - alert: OrchestratorDown
+        expr: up{job="orchestrator"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Orchestrator is down"
+          description: "Orchestrator has been unreachable for more than 2 minutes."
+
+      - alert: HighSearchLatencyP95
+        expr: histogram_quantile(0.95, rate(fdb_search_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High search latency (p95)"
+          description: "LeemaDB search p95 latency exceeds 500ms (current: {{ $value }}s)."
+
+      - alert: CircuitBreakerOpen
+        expr: orchestrator_circuit_breaker_state > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Orchestrator circuit breaker to LeemaDB is open — requests are being rejected."
+
+      - alert: PipelineHighErrorRate
+        expr: rate(orchestrator_pipeline_errors_total[5m]) / rate(orchestrator_pipeline_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline high error rate"
+          description: "More than 10% of pipeline jobs are failing (current: {{ $value | humanizePercentage }})."
+
+      - alert: BackupStale
+        expr: time() - ai_cortex_backup_last_success_timestamp > 172800
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup is stale"
+          description: "Last successful backup was more than 48 hours ago."

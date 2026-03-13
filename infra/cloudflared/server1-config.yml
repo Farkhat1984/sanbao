@@ -17,7 +17,7 @@ ingress:
   - hostname: www.sanbao.ai
     service: http://localhost:3004
 
-  # --- AI Cortex Web Admin (FragmentDB + Orchestrator dashboard) ---
+  # --- AI Cortex Web Admin (LeemaDB + Orchestrator dashboard) ---
   - hostname: jcas.kz
     service: http://localhost:5173
   - hostname: www.jcas.kz

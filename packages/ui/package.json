@@ -56,6 +56,7 @@
     "./components/sidebar/Sidebar": { "types": "./src/components/sidebar/Sidebar.tsx", "default": "./src/components/sidebar/Sidebar.tsx" },
     "./components/agents/AgentCard": { "types": "./src/components/agents/AgentCard.tsx", "default": "./src/components/agents/AgentCard.tsx" },
     "./components/agents/AgentFileUpload": { "types": "./src/components/agents/AgentFileUpload.tsx", "default": "./src/components/agents/AgentFileUpload.tsx" },
+    "./components/agents/AgentKnowledgeSection": { "types": "./src/components/agents/AgentKnowledgeSection.tsx", "default": "./src/components/agents/AgentKnowledgeSection.tsx" },
     "./components/agents/AgentForm": { "types": "./src/components/agents/AgentForm.tsx", "default": "./src/components/agents/AgentForm.tsx" },
     "./components/agents/AgentIconPicker": { "types": "./src/components/agents/AgentIconPicker.tsx", "default": "./src/components/agents/AgentIconPicker.tsx" },
     "./components/agents/AgentIntegrationPicker": { "types": "./src/components/agents/AgentIntegrationPicker.tsx", "default": "./src/components/agents/AgentIntegrationPicker.tsx" },

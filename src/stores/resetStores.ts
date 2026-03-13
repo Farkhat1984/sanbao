@@ -38,6 +38,7 @@ export function resetAllStores() {
     contextUsage: null,
     pendingInput: null,
     clarifyQuestions: null,
+    isLoadingConversation: false,
   });
 
   useArtifactStore.setState({

@@ -1,5 +1,5 @@
 # Unified Docker Compose for Active-Passive Failover
-# FragmentDB (vector DB) + Sanbao (Next.js AI assistant)
+# LeemaDB (vector DB) + Sanbao (Next.js AI assistant)
 #
 # Usage:
 #   docker compose -f docker-compose.failover.yml build
@@ -7,7 +7,7 @@
 
 services:
   # =========================================================================
-  # FragmentDB Stack
+  # LeemaDB Stack
   # =========================================================================
 
   embedding-proxy:
@@ -33,18 +33,18 @@ services:
         reservations:
           memory: 128M
 
-  fragmentdb:
+  leemadb:
     build:
       context: ../ai_cortex
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "${FRAGMENTDB_PORT:-8110}:8080"
+      - "${LEEMADB_PORT:-8110}:8080"
     volumes:
-      - fragmentdb-data:/home/fragmentdb/data
+      - leemadb-data:/home/leemadb/data
     environment:
-      - RUST_LOG=fdb=info
-    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data"]
+      - RUST_LOG=ldb=info
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/leemadb/data"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 15s
@@ -66,13 +66,13 @@ services:
     ports:
       - "${ORCHESTRATOR_PORT:-8120}:8120"
     environment:
-      - FRAGMENTDB_URL=http://fragmentdb:8080
+      - LEEMADB_URL=http://leemadb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
-      fragmentdb:
+      leemadb:
         condition: service_healthy
       embedding-proxy:
         condition: service_healthy
@@ -219,7 +219,7 @@ services:
       - PRIMARY_IP=${PRIMARY_IP:-128.127.102.170}
       - STANDBY_IP=${STANDBY_IP:-46.225.122.142}
       - SANBAO_PORT=${SANBAO_PORT:-3004}
-      - FRAGMENTDB_PORT=${FRAGMENTDB_PORT:-8110}
+      - LEEMADB_PORT=${LEEMADB_PORT:-8110}
       - SYNC_SSH_USER=${SYNC_SSH_USER:-metadmin}
       - SYNC_SSH_HOST=${SYNC_SSH_HOST:-128.127.102.170}
       - SYNC_SSH_PORT=${SYNC_SSH_PORT:-22222}
@@ -261,7 +261,7 @@ services:
           memory: 64M
 
 volumes:
-  fragmentdb-data:
+  leemadb-data:
     driver: local
   pgdata:
     driver: local

@@ -92,7 +92,7 @@ test_health() {
 
   # --- Server 1: Docker containers ---
   echo -e "  ${BOLD}Server 1 (Docker):${NC}"
-  local SERVICES="db pgbouncer redis nginx app embedding-proxy fragmentdb"
+  local SERVICES="db pgbouncer redis nginx app embedding-proxy leemadb"
   for SVC in $SERVICES; do
     COUNT=$($COMPOSE ps "$SVC" --format json 2>/dev/null | grep -c '"healthy"' || echo 0)
     TOTAL=$($COMPOSE ps "$SVC" -q 2>/dev/null | wc -l | tr -d '[:space:]')
@@ -135,14 +135,14 @@ test_health() {
     fail "sanbao.ai (Cloudflare): HTTP $EXT_CODE"
   fi
 
-  # FragmentDB health
+  # LeemaDB health
   FDB_RESP=$(curl -s --connect-timeout 5 "$LOCAL_FDB/health" 2>&1)
   if echo "$FDB_RESP" | grep -qi "ok\|healthy\|alive"; then
-    ok "FragmentDB :8110: healthy"
+    ok "LeemaDB :8110: healthy"
   elif [ -n "$FDB_RESP" ]; then
-    ok "FragmentDB :8110: responding ($FDB_RESP)"
+    ok "LeemaDB :8110: responding ($FDB_RESP)"
   else
-    fail "FragmentDB :8110: не отвечает"
+    fail "LeemaDB :8110: не отвечает"
   fi
 
   # Orchestrator health
@@ -441,12 +441,12 @@ test_redis() {
   ok "Rate-limit ключей: $RL_KEYS"
 }
 
-# ─── 5. AI CORTEX: FragmentDB + Orchestrator ────────────────────────────────
+# ─── 5. AI CORTEX: LeemaDB + Orchestrator ────────────────────────────────
 test_cortex() {
-  header "5. AI CORTEX — FragmentDB + Orchestrator + Embedding"
+  header "5. AI CORTEX — LeemaDB + Orchestrator + Embedding"
 
-  # FragmentDB
-  echo -e "  ${BOLD}FragmentDB (:8110):${NC}"
+  # LeemaDB
+  echo -e "  ${BOLD}LeemaDB (:8110):${NC}"
   FDB_HEALTH=$(curl -s --connect-timeout 5 "$LOCAL_FDB/health" 2>&1)
   if [ -n "$FDB_HEALTH" ]; then
     ok "Health: $FDB_HEALTH"
@@ -992,7 +992,7 @@ show_menu() {
   echo "  2)  network    — Сеть, DNS, tunnel"
   echo "  3)  database   — PostgreSQL + PgBouncer"
   echo "  4)  redis      — Кеш и очереди"
-  echo "  5)  cortex     — AI Cortex (FragmentDB, Orchestrator)"
+  echo "  5)  cortex     — AI Cortex (LeemaDB, Orchestrator)"
   echo "  6)  deploy     — Проверка готовности к деплою"
   echo "  7)  sync       — Синхронизация Server 1 → Server 2"
   echo "  8)  backup     — Бекапы"

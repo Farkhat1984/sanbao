@@ -207,7 +207,6 @@ export function streamMoonshot(
         }
 
         const currentMessages = [...apiMessages];
-        let searchNotified = false;
 
         // Plan detection state (shared parser)
         const planState = createPlanDetectorState();
@@ -218,6 +217,8 @@ export function streamMoonshot(
 
         // Tool-call loop
         for (let turn = 0; turn < maxToolCallsPerRequest; turn++) {
+          // Reset per-turn: each tool-call iteration sends its own status
+          let searchNotified = false;
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
@@ -233,8 +234,6 @@ export function streamMoonshot(
               stream: true,
               stream_options: { include_usage: true },
               tools: [
-                ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
-                ...nativeToolDefs,
                 ...mcpTools.map((t) => ({
                   type: "function" as const,
                   function: {
@@ -243,6 +242,8 @@ export function streamMoonshot(
                     parameters: t.inputSchema,
                   },
                 })),
+                ...nativeToolDefs,
+                ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
               ],
               ...(!thinkingEnabled
                 ? { thinking: { type: "disabled" } }
@@ -336,13 +337,17 @@ export function streamMoonshot(
                   toolCallMap[idx].function.arguments +=
                     tc.function.arguments;
                 }
+                // Update tool name if it arrives in a later chunk
+                if (tc.function?.name && toolCallMap[idx] && !toolCallMap[idx].function.name) {
+                  toolCallMap[idx].function.name = tc.function.name;
+                }
               }
 
-              if (!searchNotified) {
+              // Send status notification once we know the tool name
+              const firstToolName = Object.values(toolCallMap).find(t => t.function.name)?.function.name || "";
+              if (!searchNotified && firstToolName) {
                 searchNotified = true;
-                // Determine first known tool name to pick correct status icon
-                const firstToolName = Object.values(toolCallMap).find(t => t.function.name)?.function.name || "";
-                const isWebSearch = !firstToolName || firstToolName === "$web_search";
+                const isWebSearch = firstToolName === "$web_search";
                 controller.enqueue(
                   encoder.encode(
                     JSON.stringify(
@@ -395,7 +400,15 @@ export function streamMoonshot(
           // Break the tool-call loop if cumulative tokens exceed the per-request budget.
           // This prevents runaway loops from consuming unbounded resources.
           const cumulativeTokens = totalInputTokens + totalOutputTokens;
+          logger.info("Tool loop iteration", {
+            turn,
+            cumulativeTokens,
+            maxRequestTokens,
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+          });
           if (cumulativeTokens > maxRequestTokens) {
+            logger.warn("Token budget exceeded", { cumulativeTokens, maxRequestTokens, turn });
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
@@ -407,6 +420,21 @@ export function streamMoonshot(
           // If model finished with tool_calls, send results back and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
+            // Fallback: if status wasn't sent during streaming (tool name came late or not at all)
+            if (!searchNotified) {
+              searchNotified = true;
+              const firstToolName = collectedCalls.find(t => t.function.name)?.function.name || "";
+              const isWebSearch = !firstToolName || firstToolName === "$web_search";
+              controller.enqueue(
+                encoder.encode(
+                  JSON.stringify(
+                    isWebSearch
+                      ? { t: "s", v: "searching" }
+                      : { t: "s", v: "using_tool", n: firstToolName }
+                  ) + "\n"
+                )
+              );
+            }
             currentMessages.push({
               role: "assistant",
               tool_calls: collectedCalls,

@@ -5,7 +5,7 @@
 #
 # Syncs:
 #   1. PostgreSQL (sanbao DB) via pg_dump over SSH
-#   2. FragmentDB data directory via rsync over SSH
+#   2. LeemaDB data directory via rsync over SSH
 #
 # Improvements (Feb 2026):
 #   - docker compose exec instead of hardcoded container names
@@ -164,33 +164,33 @@ else
     log_error "PostgreSQL sync failed after ${MAX_RETRIES} retries!"
 fi
 
-# ---- 2. FragmentDB Data Sync (with retry + timeout) ----
-log "Syncing FragmentDB data..."
+# ---- 2. LeemaDB Data Sync (with retry + timeout) ----
+log "Syncing LeemaDB data..."
 
 # Determine local volume path
-VOLUME_PATH=$(docker volume inspect deploy_fragmentdb-data --format '{{.Mountpoint}}' 2>/dev/null || true)
+VOLUME_PATH=$(docker volume inspect deploy_leemadb-data --format '{{.Mountpoint}}' 2>/dev/null || true)
 if [ -z "${VOLUME_PATH}" ]; then
-    VOLUME_PATH="/data/fragmentdb"
+    VOLUME_PATH="/data/leemadb"
     mkdir -p "${VOLUME_PATH}"
 fi
 
 fdb_sync() {
     local attempt=1
     while [ ${attempt} -le ${MAX_RETRIES} ]; do
-        log "FragmentDB rsync attempt ${attempt}/${MAX_RETRIES}..."
+        log "LeemaDB rsync attempt ${attempt}/${MAX_RETRIES}..."
 
         # sudo for Docker volume write access; -i passes user's SSH key to root's ssh
         if sudo rsync -az --delete \
             --timeout=30 \
             -e "ssh ${SSH_OPTS} -i ${HOME}/.ssh/id_ed25519" \
-            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/fragmentdb_data/" \
+            "${SSH_TARGET}:/home/metadmin/faragj/ai_cortex/leemadb_data/" \
             "${VOLUME_PATH}/" 2>>"${LOG_FILE}"; then
-            log "FragmentDB data sync completed (attempt ${attempt})."
+            log "LeemaDB data sync completed (attempt ${attempt})."
             return 0
         fi
 
         local delay=$((RETRY_BASE_DELAY * attempt))
-        log_error "FragmentDB rsync failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}s..."
+        log_error "LeemaDB rsync failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}s..."
         sleep ${delay}
         attempt=$((attempt + 1))
     done
@@ -201,7 +201,7 @@ if fdb_sync; then
     FDB_ERROR=""
 else
     FDB_ERROR="rsync не удался после ${MAX_RETRIES} попыток (timeout/permission denied?)"
-    log_error "FragmentDB sync failed after ${MAX_RETRIES} retries!"
+    log_error "LeemaDB sync failed after ${MAX_RETRIES} retries!"
 fi
 
 # ---- Summary + Telegram ----
@@ -216,7 +216,7 @@ if [ -n "${PG_ERROR}" ]; then
     FAILED_STEPS="${FAILED_STEPS}\n❌ <b>PostgreSQL:</b> ${PG_ERROR}"
 fi
 if [ -n "${FDB_ERROR}" ]; then
-    FAILED_STEPS="${FAILED_STEPS}\n❌ <b>FragmentDB:</b> ${FDB_ERROR}"
+    FAILED_STEPS="${FAILED_STEPS}\n❌ <b>LeemaDB:</b> ${FDB_ERROR}"
 fi
 
 log_error "Sync completed with errors."

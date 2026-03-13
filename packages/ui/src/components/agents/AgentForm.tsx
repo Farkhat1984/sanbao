@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp } fr
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
+import { AgentKnowledgeSection } from "./AgentKnowledgeSection";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
 import { AgentIntegrationPicker } from "./AgentIntegrationPicker";
@@ -18,9 +19,22 @@ interface AgentFormProps {
   orgId?: string;
   /** Whether the user's plan supports knowledge files (canUseRag) */
   canUseRag?: boolean;
+  /** FDB knowledge base status for this agent */
+  knowledgeStatus?: "NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR";
+  /** Files processed through the FDB pipeline */
+  fdbFiles?: Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>;
+  /** Called when knowledge data changes and parent should re-fetch */
+  onKnowledgeRefresh?: () => void;
 }
 
-export function AgentForm({ agent, orgId, canUseRag = false }: AgentFormProps) {
+export function AgentForm({
+  agent,
+  orgId,
+  canUseRag = false,
+  knowledgeStatus = "NONE",
+  fdbFiles = [],
+  onKnowledgeRefresh,
+}: AgentFormProps) {
   const router = useRouter();
   const isEdit = !!agent;
 
@@ -323,10 +337,10 @@ export function AgentForm({ agent, orgId, canUseRag = false }: AgentFormProps) {
           <h2 className="text-sm font-semibold text-text-primary mb-4">Возможности</h2>
 
           <div className="space-y-6">
-            {/* Files */}
+            {/* Files — context extraction */}
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
-                Файлы знаний
+                Документы в контексте
               </label>
               <AgentFileUpload
                 agentId={agent?.id || null}
@@ -338,6 +352,23 @@ export function AgentForm({ agent, orgId, canUseRag = false }: AgentFormProps) {
                 disabled={!canUseRag}
                 disabledMessage="Файлы знаний доступны только на тарифе Business"
               />
+            </div>
+
+            {/* FDB Knowledge Base */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                База знаний FDB
+              </label>
+              <AgentKnowledgeSection
+                agentId={agent?.id || ""}
+                knowledgeStatus={knowledgeStatus}
+                fdbFiles={fdbFiles}
+                disabled={!canUseRag}
+                onRefresh={onKnowledgeRefresh}
+              />
+              <p className="text-xs text-text-secondary mt-1">
+                Файлы обрабатываются через AI-пайплайн для векторного поиска
+              </p>
             </div>
 
             {/* Skills */}

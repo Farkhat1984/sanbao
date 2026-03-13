@@ -1,5 +1,6 @@
 # Production compose: docker compose -f docker-compose.prod.yml up -d --scale app=3
 # Includes: nginx LB, PgBouncer, Redis, multiple app replicas
+# Monitoring: see docker-compose.monitoring.yml for Prometheus + Grafana stack
 
 services:
   db:
@@ -96,7 +97,7 @@ services:
           memory: 256M
 
   # =========================================================================
-  # AI Cortex Stack (FragmentDB + Orchestrator)
+  # AI Cortex Stack (LeemaDB + Orchestrator)
   # =========================================================================
 
   embedding-proxy:
@@ -106,6 +107,11 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${EMBEDDING_PORT:-8097}:8097"
+    # volumes:
+      # TLS (uncomment to enable)
+      # - ./infra/certs/embedding-proxy.crt:/etc/ssl/certs/service.crt:ro
+      # - ./infra/certs/embedding-proxy.key:/etc/ssl/private/service.key:ro
+      # - ./infra/certs/ca.crt:/etc/ssl/certs/ca.crt:ro
     environment:
       - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY}
       - DEEPINFRA_MODEL=${DEEPINFRA_MODEL:-Qwen/Qwen3-Embedding-8B}
@@ -122,7 +128,7 @@ services:
         reservations:
           memory: 128M
 
-  fragmentdb:
+  leemadb:
     build:
       context: ../ai_cortex
       dockerfile: Dockerfile
@@ -131,13 +137,21 @@ services:
     restart: unless-stopped
     user: "1000:1000"
     ports:
-      - "127.0.0.1:${FRAGMENTDB_PORT:-8110}:8080"
+      - "127.0.0.1:${LEEMADB_PORT:-8110}:8080"
     volumes:
-      - ../ai_cortex/fragmentdb_data:/home/fragmentdb/data
+      - ../ai_cortex/leemadb_data:/home/leemadb/data
+      # TLS (uncomment to enable)
+      # - ./infra/certs/leemadb.crt:/etc/ssl/certs/service.crt:ro
+      # - ./infra/certs/leemadb.key:/etc/ssl/private/service.key:ro
+      # - ./infra/certs/ca.crt:/etc/ssl/certs/ca.crt:ro
     environment:
-      - RUST_LOG=fdb=info
+      - RUST_LOG=ldb=info
       - RAYON_NUM_THREADS=${RAYON_NUM_THREADS:-4}
-    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}"]
+      # TLS (uncomment to enable)
+      # - TLS_CERT=/etc/ssl/certs/service.crt
+      # - TLS_KEY=/etc/ssl/private/service.key
+      # - TLS_CA=/etc/ssl/certs/ca.crt
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/leemadb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf --max-time 30 -H 'Authorization: Bearer $AI_CORTEX_AUTH_TOKEN' http://localhost:8080/health || exit 1"]
       interval: 60s
@@ -161,11 +175,14 @@ services:
       - "127.0.0.1:${ORCHESTRATOR_PORT:-8120}:8120"
     volumes:
       - ../ai_cortex/data/1c_knowledge/images:/app/data/1c_knowledge/images:ro
-      - orchestrator_projects:/app/config/projects
-      - ../ai_cortex/config/users.json:/app/config/users.json
+      - ../ai_cortex/config:/app/config
       - orchestrator_data:/app/data
+      # TLS (uncomment to enable)
+      # - ./infra/certs/orchestrator.crt:/etc/ssl/certs/service.crt:ro
+      # - ./infra/certs/orchestrator.key:/etc/ssl/private/service.key:ro
+      # - ./infra/certs/ca.crt:/etc/ssl/certs/ca.crt:ro
     environment:
-      - FRAGMENTDB_URL=http://fragmentdb:8080
+      - LEEMADB_URL=http://leemadb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
       - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:?AI_CORTEX_ADMIN_PASSWORD must be set in .env}
@@ -175,10 +192,14 @@ services:
       - AI_CORTEX_ENABLE_NAMESPACES=true
       - AI_CORTEX_ENABLE_OCR=true
       - AI_CORTEX_ENABLE_AUTH=${AI_CORTEX_ENABLE_AUTH:-false}
+      # TLS (uncomment to enable)
+      # - TLS_CERT=/etc/ssl/certs/service.crt
+      # - TLS_KEY=/etc/ssl/private/service.key
+      # - TLS_CA=/etc/ssl/certs/ca.crt
       - AI_CORTEX_JWT_SECRET=${AI_CORTEX_JWT_SECRET}
-      - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
+      - LEEMADB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
     depends_on:
-      fragmentdb:
+      leemadb:
         condition: service_healthy
       embedding-proxy:
         condition: service_healthy
@@ -207,10 +228,10 @@ services:
     depends_on:
       orchestrator:
         condition: service_healthy
-      fragmentdb:
+      leemadb:
         condition: service_healthy
     environment:
-      - FDB_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
+      - LDB_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
       interval: 30s
@@ -283,5 +304,4 @@ services:
 volumes:
   pgdata:
   redisdata:
-  orchestrator_projects:
   orchestrator_data:

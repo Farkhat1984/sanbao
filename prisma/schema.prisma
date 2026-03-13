@@ -86,6 +86,8 @@ model User {
   tools         Tool[]
   plugins       Plugin[]
   userFiles     UserFile[]
+  cortexNamespace    String?   @unique
+  cortexNsApiKey     String?   @db.Text
   integrations   Integration[]
   ownedOrgs      Organization[] @relation("OrgOwner")
   orgMembers     OrgMember[]
@@ -256,6 +258,8 @@ model Agent {
   isSystem       Boolean @default(false)
   sortOrder    Int     @default(0)
   status       SkillStatus @default(DRAFT)
+  projectId        String?
+  knowledgeStatus  KnowledgeStatus @default(NONE)
 
   user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   files         AgentFile[]
@@ -282,6 +286,7 @@ model AgentFile {
   fileSize      Int
   extractedText String? @db.Text
   inContext      Boolean @default(true)
+  tier           String  @default("context")
 
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
@@ -1093,6 +1098,14 @@ enum InviteStatus {
 
 enum OrgAgentStatus {
   CREATING
+  PROCESSING
+  READY
+  PUBLISHED
+  ERROR
+}
+
+enum KnowledgeStatus {
+  NONE
   PROCESSING
   READY
   PUBLISHED

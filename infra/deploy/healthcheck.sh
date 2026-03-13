@@ -56,7 +56,7 @@ send_telegram() {
 
 check_primary_health() {
     local sanbao_ok=false
-    local fragmentdb_ok=false
+    local leemadb_ok=false
 
     # Check via reverse SSH tunnel (Server 1 → Server 2)
     # Tunnel maps: localhost:13004 → Server1:3004, localhost:18110 → Server1:8110
@@ -67,14 +67,14 @@ check_primary_health() {
 
     if curl -sf --max-time "${CURL_TIMEOUT}" \
         "http://localhost:18110/health" >/dev/null 2>&1; then
-        fragmentdb_ok=true
+        leemadb_ok=true
     fi
 
-    if [ "${sanbao_ok}" = true ] && [ "${fragmentdb_ok}" = true ]; then
+    if [ "${sanbao_ok}" = true ] && [ "${leemadb_ok}" = true ]; then
         return 0
     fi
 
-    log "Health check failed: sanbao=${sanbao_ok} fragmentdb=${fragmentdb_ok}"
+    log "Health check failed: sanbao=${sanbao_ok} leemadb=${leemadb_ok}"
     return 1
 }
 
@@ -85,7 +85,7 @@ check_local_services() {
     if ! curl -sf --max-time 5 "http://localhost:${SANBAO_PORT:-3004}/api/health" >/dev/null 2>&1; then
         ok=false
     fi
-    if ! curl -sf --max-time 5 "http://localhost:${FRAGMENTDB_PORT:-8110}/health" >/dev/null 2>&1; then
+    if ! curl -sf --max-time 5 "http://localhost:${LEEMADB_PORT:-8110}/health" >/dev/null 2>&1; then
         ok=false
     fi
 
