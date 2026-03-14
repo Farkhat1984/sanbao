@@ -4,7 +4,11 @@ import { jsonOk, jsonError } from "@/lib/api-helpers";
 
 const SYSTEM_AGENT_INCLUDE = {
   skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-  mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+  mcpServers: {
+    include: {
+      mcpServer: { select: { id: true, name: true, url: true, status: true } },
+    },
+  },
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   files: true,
 };
@@ -40,7 +44,11 @@ export async function GET(
     starterPrompts: agent.starterPrompts || [],
     files: agent.files,
     skills: agent.skills.map((s) => s.skill),
-    mcpServers: agent.mcpServers.map((m) => m.mcpServer),
+    mcpServers: agent.mcpServers.map((m) => ({
+      ...m.mcpServer,
+      allowedTools: m.allowedTools,
+      domainMappings: m.domainMappings,
+    })),
     tools: agent.tools.map((t) => t.tool),
   });
 }
@@ -77,9 +85,17 @@ export async function PUT(
 
   await prisma.agent.update({ where: { id }, data });
 
+  // Normalize mcpServers: support both new `mcpServers` array and legacy `mcpServerIds`
+  const mcpServersInput: Array<{ id: string; allowedTools?: string[]; domainMappings?: Record<string, unknown> }> | undefined =
+    Array.isArray(body.mcpServers)
+      ? body.mcpServers
+      : Array.isArray(body.mcpServerIds)
+        ? body.mcpServerIds.map((mcpServerId: string) => ({ id: mcpServerId }))
+        : undefined;
+
   // Update associations atomically
-  const { skillIds, mcpServerIds, toolIds } = body;
-  const hasAssociationUpdates = Array.isArray(skillIds) || Array.isArray(mcpServerIds) || Array.isArray(toolIds);
+  const { skillIds, toolIds } = body;
+  const hasAssociationUpdates = Array.isArray(skillIds) || mcpServersInput !== undefined || Array.isArray(toolIds);
 
   if (hasAssociationUpdates) {
     await prisma.$transaction(async (tx) => {
@@ -89,10 +105,21 @@ export async function PUT(
           await tx.agentSkill.createMany({ data: skillIds.map((skillId: string) => ({ agentId: id, skillId })) });
         }
       }
-      if (Array.isArray(mcpServerIds)) {
+      if (mcpServersInput !== undefined) {
         await tx.agentMcpServer.deleteMany({ where: { agentId: id } });
-        if (mcpServerIds.length > 0) {
-          await tx.agentMcpServer.createMany({ data: mcpServerIds.map((mcpServerId: string) => ({ agentId: id, mcpServerId })) });
+        if (mcpServersInput.length > 0) {
+          await tx.agentMcpServer.createMany({
+            data: mcpServersInput.map((srv) => ({
+              agentId: id,
+              mcpServerId: srv.id,
+              allowedTools: srv.allowedTools && srv.allowedTools.length > 0
+                ? srv.allowedTools as unknown as import("@prisma/client").Prisma.InputJsonValue
+                : undefined,
+              domainMappings: srv.domainMappings
+                ? srv.domainMappings as unknown as import("@prisma/client").Prisma.InputJsonValue
+                : undefined,
+            })),
+          });
         }
       }
       if (Array.isArray(toolIds)) {
@@ -120,7 +147,11 @@ export async function PUT(
     sortOrder: updated!.sortOrder,
     starterPrompts: updated!.starterPrompts || [],
     skills: updated!.skills.map((s) => s.skill),
-    mcpServers: updated!.mcpServers.map((m) => m.mcpServer),
+    mcpServers: updated!.mcpServers.map((m) => ({
+      ...m.mcpServer,
+      allowedTools: m.allowedTools,
+      domainMappings: m.domainMappings,
+    })),
     tools: updated!.tools.map((t) => t.tool),
   });
 }

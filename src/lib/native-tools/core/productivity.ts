@@ -1,5 +1,5 @@
-import { registerNativeTool } from "./registry";
-import { prisma } from "../prisma";
+import { registerNativeTool } from "../registry";
+import { prisma } from "../../prisma";
 
 // ─── create_task ───────────────────────────────────────
 

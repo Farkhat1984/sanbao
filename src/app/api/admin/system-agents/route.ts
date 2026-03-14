@@ -20,7 +20,11 @@ export async function GET(req: Request) {
       orderBy: { sortOrder: "asc" },
       include: {
         skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-        mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+        mcpServers: {
+          include: {
+            mcpServer: { select: { id: true, name: true, url: true, status: true } },
+          },
+        },
         tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
       },
       skip,
@@ -43,7 +47,11 @@ export async function GET(req: Request) {
       sortOrder: a.sortOrder,
       starterPrompts: a.starterPrompts || [],
       skills: a.skills.map((s) => s.skill),
-      mcpServers: a.mcpServers.map((m) => m.mcpServer),
+      mcpServers: a.mcpServers.map((m) => ({
+        ...m.mcpServer,
+        allowedTools: m.allowedTools,
+        domainMappings: m.domainMappings,
+      })),
       tools: a.tools.map((t) => t.tool),
     })),
     total,
@@ -57,11 +65,19 @@ export async function POST(req: Request) {
   if (result.error) return result.error;
 
   const body = await req.json();
-  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder, starterPrompts, skillIds, mcpServerIds, toolIds } = body;
+  const { name, description, systemPrompt, icon, iconColor, model, isActive, sortOrder, starterPrompts, skillIds, toolIds } = body;
 
   if (!name || !systemPrompt) {
     return jsonError("Обязательные поля: name, systemPrompt", 400);
   }
+
+  // Normalize mcpServers: support both new `mcpServers` array and legacy `mcpServerIds`
+  const mcpServersInput: Array<{ id: string; allowedTools?: string[]; domainMappings?: Record<string, unknown> }> =
+    Array.isArray(body.mcpServers)
+      ? body.mcpServers
+      : Array.isArray(body.mcpServerIds)
+        ? body.mcpServerIds.map((mcpServerId: string) => ({ id: mcpServerId }))
+        : [];
 
   const agent = await prisma.agent.create({
     data: {
@@ -83,8 +99,19 @@ export async function POST(req: Request) {
   if (Array.isArray(skillIds) && skillIds.length > 0) {
     await prisma.agentSkill.createMany({ data: skillIds.map((skillId: string) => ({ agentId: agent.id, skillId })) });
   }
-  if (Array.isArray(mcpServerIds) && mcpServerIds.length > 0) {
-    await prisma.agentMcpServer.createMany({ data: mcpServerIds.map((mcpServerId: string) => ({ agentId: agent.id, mcpServerId })) });
+  if (mcpServersInput.length > 0) {
+    await prisma.agentMcpServer.createMany({
+      data: mcpServersInput.map((srv) => ({
+        agentId: agent.id,
+        mcpServerId: srv.id,
+        allowedTools: srv.allowedTools && srv.allowedTools.length > 0
+          ? srv.allowedTools as unknown as import("@prisma/client").Prisma.InputJsonValue
+          : undefined,
+        domainMappings: srv.domainMappings
+          ? srv.domainMappings as unknown as import("@prisma/client").Prisma.InputJsonValue
+          : undefined,
+      })),
+    });
   }
   if (Array.isArray(toolIds) && toolIds.length > 0) {
     await prisma.agentTool.createMany({ data: toolIds.map((toolId: string) => ({ agentId: agent.id, toolId })) });

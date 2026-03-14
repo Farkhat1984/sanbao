@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
 import { AgentSkillPicker } from "@/components/agents/AgentSkillPicker";
 import { AgentMcpPicker } from "@/components/agents/AgentMcpPicker";
+import type { McpServerConfig } from "@/components/agents/AgentMcpPicker";
 import { AgentToolPicker } from "@/components/agents/AgentToolPicker";
 import { AgentFileUpload } from "@/components/agents/AgentFileUpload";
 import { StarterPromptsEditor } from "@/components/agents/StarterPromptsEditor";
@@ -29,7 +30,7 @@ interface SystemAgentData {
   starterPrompts: string[];
   files: AgentFile[];
   skills: Array<{ id: string; name: string }>;
-  mcpServers: Array<{ id: string; name: string }>;
+  mcpServers: Array<{ id: string; name: string; allowedTools?: unknown; domainMappings?: unknown }>;
   tools: Array<{ id: string; name: string }>;
 }
 
@@ -54,7 +55,7 @@ export default function AdminAgentEditPage({
   const [starterPrompts, setStarterPrompts] = useState<string[]>([]);
   const [files, setFiles] = useState<AgentFile[]>([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
-  const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>([]);
+  const [selectedMcpServers, setSelectedMcpServers] = useState<McpServerConfig[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   // AI generation
   const [showGenPanel, setShowGenPanel] = useState(false);
@@ -85,7 +86,13 @@ export default function AdminAgentEditPage({
           setStarterPrompts(data.starterPrompts || []);
           setFiles(data.files || []);
           setSelectedSkillIds(data.skills?.map((s) => s.id) || []);
-          setSelectedMcpIds(data.mcpServers?.map((m) => m.id) || []);
+          setSelectedMcpServers(
+            data.mcpServers?.map((m) => ({
+              id: m.id,
+              ...(m.allowedTools ? { allowedTools: m.allowedTools as string[] } : {}),
+              ...(m.domainMappings ? { domainMappings: m.domainMappings as McpServerConfig["domainMappings"] } : {}),
+            })) || [],
+          );
           setSelectedToolIds(data.tools?.map((t) => t.id) || []);
         })
         .catch(() => setError("Не удалось загрузить агента"))
@@ -113,7 +120,7 @@ export default function AdminAgentEditPage({
           avatar,
           starterPrompts: starterPrompts.filter((s) => s.trim()),
           skillIds: selectedSkillIds,
-          mcpServerIds: selectedMcpIds,
+          mcpServers: selectedMcpServers,
           toolIds: selectedToolIds,
         }),
       });
@@ -350,8 +357,8 @@ export default function AdminAgentEditPage({
             MCP-серверы
           </label>
           <AgentMcpPicker
-            selectedIds={selectedMcpIds}
-            onChange={setSelectedMcpIds}
+            selectedServers={selectedMcpServers}
+            onChangeServers={setSelectedMcpServers}
           />
           <p className="text-xs text-text-secondary mt-1">
             MCP-серверы предоставляют агенту дополнительные инструменты

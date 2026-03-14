@@ -1,4 +1,4 @@
-import { registerNativeTool } from "./registry";
+import { registerNativeTool } from "../registry";
 import { getSettingNumber } from "@/lib/settings";
 import { Parser } from "expr-eval";
 

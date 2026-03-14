@@ -9,6 +9,7 @@ import {
 import { AgentIconPicker } from "@/components/agents/AgentIconPicker";
 import { AgentSkillPicker } from "@/components/agents/AgentSkillPicker";
 import { AgentMcpPicker } from "@/components/agents/AgentMcpPicker";
+import type { McpServerConfig } from "@/components/agents/AgentMcpPicker";
 import { AgentToolPicker } from "@/components/agents/AgentToolPicker";
 import { DEFAULT_ICON_COLOR, DEFAULT_AGENT_ICON } from "@/lib/constants";
 
@@ -26,7 +27,7 @@ export default function AdminAgentNewPage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [starterPrompts, setStarterPrompts] = useState<string[]>([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
-  const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>([]);
+  const [selectedMcpServers, setSelectedMcpServers] = useState<McpServerConfig[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   // AI generation
   const [showGenPanel, setShowGenPanel] = useState(false);
@@ -53,7 +54,7 @@ export default function AdminAgentNewPage() {
           avatar,
           starterPrompts: starterPrompts.filter((s) => s.trim()),
           skillIds: selectedSkillIds,
-          mcpServerIds: selectedMcpIds,
+          mcpServers: selectedMcpServers,
           toolIds: selectedToolIds,
         }),
       });
@@ -284,8 +285,8 @@ export default function AdminAgentNewPage() {
             MCP-серверы
           </label>
           <AgentMcpPicker
-            selectedIds={selectedMcpIds}
-            onChange={setSelectedMcpIds}
+            selectedServers={selectedMcpServers}
+            onChangeServers={setSelectedMcpServers}
           />
           <p className="text-xs text-text-secondary mt-1">
             MCP-серверы предоставляют агенту дополнительные инструменты
