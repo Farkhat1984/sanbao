@@ -225,7 +225,7 @@ export async function resolveAgentAndTools(params: {
   if (agentId) {
     const ctx = await resolveAgentContext(agentId);
     if (ctx.systemPrompt) {
-      systemPrompt = ctx.systemPrompt + "\n\n" + PROMPT_REGISTRY.prompt_system_global + ctx.skillPrompts.join("");
+      systemPrompt = ctx.systemPrompt + ctx.skillPrompts.join("");
       agentMcpTools.push(...ctx.mcpTools);
       // Custom (non-system) agents: suppress artifact creation unless explicitly requested
       if (!ctx.isSystem) {
