@@ -186,7 +186,7 @@ Dispatch order: MCP tools → Native tools → `$web_search`
 | Domain | Target |
 |--------|--------|
 | sanbao.ai / www.sanbao.ai | localhost:3004 |
-| mcp.sanbao.ai | localhost:8120 |
+| mcp.leema.kz | localhost:8120 |
 | leema.kz / www.leema.kz | localhost:5173 |
 
 **Tunnel ID:** `222e9fb5-634f-4064-a1e9-8af13f47e4f1`

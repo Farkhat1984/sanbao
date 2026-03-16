@@ -19,7 +19,7 @@ ingress:
   # If needed, add container to docker-compose.failover.yml
 
   # --- MCP API (Orchestrator) ---
-  - hostname: mcp.sanbao.ai
+  - hostname: mcp.leema.kz
     service: http://localhost:8120
 
   # --- Catch-all ---

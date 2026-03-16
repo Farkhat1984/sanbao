@@ -5,7 +5,7 @@
 # ARCHITECTURE:
 #   sanbao.ai      → Sanbao Next.js SaaS app (:3004)
 #   jcas.kz        → AI Cortex Web Admin dashboard (:5173)
-#   mcp.sanbao.ai  → Orchestrator MCP API (:8120)
+#   mcp.leema.kz  → Orchestrator MCP API (:8120)
 
 tunnel: 222e9fb5-634f-4064-a1e9-8af13f47e4f1
 credentials-file: /etc/cloudflared/credentials.json
@@ -24,7 +24,7 @@ ingress:
     service: http://localhost:5173
 
   # --- MCP API (Orchestrator direct access) ---
-  - hostname: mcp.sanbao.ai
+  - hostname: mcp.leema.kz
     service: http://localhost:8120
 
   # --- Catch-all (required by cloudflared) ---
