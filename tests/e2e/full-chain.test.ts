@@ -12,7 +12,7 @@ import {
 } from "./helpers";
 
 const ORCH_URL = "http://localhost:8120";
-const FDB_URL = "http://localhost:8110";
+const LEEMADB_URL = "http://localhost:8110";
 const CORTEX_TOKEN = "nskey_sanbao_a7775d47525df1d646469e97";
 
 let adminToken: string;
@@ -84,7 +84,7 @@ beforeAll(async () => {
 
 describe("Infrastructure health", () => {
   it("LeemaDB /health returns ok", async () => {
-    const res = await fetch(`${FDB_URL}/health`, {
+    const res = await fetch(`${LEEMADB_URL}/health`, {
       signal: AbortSignal.timeout(10_000),
     });
     expect(res.ok).toBe(true);
@@ -104,7 +104,7 @@ describe("Infrastructure health", () => {
   });
 
   it("meta_scan pagination works beyond 1000 limit", async () => {
-    const META_SCAN_URL = `${FDB_URL}/v3/databases/_default/collections/legal_kz/meta/scan`;
+    const META_SCAN_URL = `${LEEMADB_URL}/v3/databases/_default/collections/legal_kz/meta/scan`;
     const headers = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${CORTEX_TOKEN}`,

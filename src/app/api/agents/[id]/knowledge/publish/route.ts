@@ -66,7 +66,7 @@ export async function POST(
     mcpServer = await prisma.mcpServer.create({
       data: {
         userId,
-        name: `${agent.name} - База знаний`,
+        name: `${agent.name} - LeemaDB`,
         url: endpoint,
         transport: "STREAMABLE_HTTP",
         apiKey: user.cortexNsApiKey, // stored encrypted

@@ -12,19 +12,19 @@ const AGENT_INCLUDE = {
   integrations: { include: { integration: { select: { id: true, name: true, type: true, status: true, entityCount: true } } } },
 };
 
-/** Strip heavy extractedText from files, split into context vs fdb tiers */
+/** Strip heavy extractedText from files, split into context vs knowledge (LeemaDB) tiers */
 function stripFileText(agent: Record<string, unknown>) {
   if (!agent || !Array.isArray(agent.files)) return agent;
   const allFiles = agent.files as Record<string, unknown>[];
   const contextFiles = allFiles.filter((f) => (f.tier || "context") === "context");
-  const fdbFiles = allFiles.filter((f) => f.tier === "fdb");
+  const knowledgeFiles = allFiles.filter((f) => f.tier === "fdb");
   return {
     ...agent,
     files: contextFiles.map((f) => {
       const { extractedText, ...rest } = f;
       return { ...rest, extractedText: extractedText ? "1" : null };
     }),
-    fdbFiles: fdbFiles.map((f) => {
+    knowledgeFiles: knowledgeFiles.map((f) => {
       const { extractedText, ...rest } = f;
       return rest;
     }),

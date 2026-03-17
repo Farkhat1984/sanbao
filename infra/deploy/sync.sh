@@ -48,7 +48,7 @@ TG_CHAT_ID="${TG_CHAT_ID:-}"
 
 # Track errors per step
 PG_ERROR=""
-FDB_ERROR=""
+LDB_ERROR=""
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"
@@ -109,7 +109,7 @@ wait_for_docker() {
 
 if ! wait_for_docker; then
     PG_ERROR="Server 1 Docker/PostgreSQL не готов после ${MAX_RETRIES} попыток"
-    FDB_ERROR="Пропущено (Server 1 недоступен)"
+    LDB_ERROR="Пропущено (Server 1 недоступен)"
     log_error "${PG_ERROR}"
 
     send_telegram "$(cat <<EOF
@@ -174,7 +174,7 @@ if [ -z "${VOLUME_PATH}" ]; then
     mkdir -p "${VOLUME_PATH}"
 fi
 
-fdb_sync() {
+ldb_sync() {
     local attempt=1
     while [ ${attempt} -le ${MAX_RETRIES} ]; do
         log "LeemaDB rsync attempt ${attempt}/${MAX_RETRIES}..."
@@ -197,15 +197,15 @@ fdb_sync() {
     return 1
 }
 
-if fdb_sync; then
-    FDB_ERROR=""
+if ldb_sync; then
+    LDB_ERROR=""
 else
-    FDB_ERROR="rsync не удался после ${MAX_RETRIES} попыток (timeout/permission denied?)"
+    LDB_ERROR="rsync не удался после ${MAX_RETRIES} попыток (timeout/permission denied?)"
     log_error "LeemaDB sync failed after ${MAX_RETRIES} retries!"
 fi
 
 # ---- Summary + Telegram ----
-if [ -z "${PG_ERROR}" ] && [ -z "${FDB_ERROR}" ]; then
+if [ -z "${PG_ERROR}" ] && [ -z "${LDB_ERROR}" ]; then
     log "All syncs completed successfully."
     exit 0
 fi
@@ -215,8 +215,8 @@ FAILED_STEPS=""
 if [ -n "${PG_ERROR}" ]; then
     FAILED_STEPS="${FAILED_STEPS}\n❌ <b>PostgreSQL:</b> ${PG_ERROR}"
 fi
-if [ -n "${FDB_ERROR}" ]; then
-    FAILED_STEPS="${FAILED_STEPS}\n❌ <b>LeemaDB:</b> ${FDB_ERROR}"
+if [ -n "${LDB_ERROR}" ]; then
+    FAILED_STEPS="${FAILED_STEPS}\n❌ <b>LeemaDB:</b> ${LDB_ERROR}"
 fi
 
 log_error "Sync completed with errors."

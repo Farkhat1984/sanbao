@@ -204,51 +204,51 @@ else
 fi
 
 # ── 2. LeemaDB Data Backup ───────────────────────────────────────────────
-FDB_FILE="${DAILY_DIR}/leemadb-${TIMESTAMP}.tar.gz"
+LDB_FILE="${DAILY_DIR}/leemadb-${TIMESTAMP}.tar.gz"
 log "Backing up LeemaDB data..."
 
 # Check possible locations (ordered by likelihood)
-FDB_DATA=""
+LDB_DATA=""
 for path in \
     "/home/metadmin/faragj/ai_cortex/leemadb_data" \
     "/home/faragj/faragj/leemadb/leemadb_data" \
     "/home/metadmin/faragj/leemadb/leemadb_data"; do
     if [ -d "${path}" ] && [ "$(ls -A "${path}" 2>/dev/null)" ]; then
-        FDB_DATA="${path}"
+        LDB_DATA="${path}"
         break
     fi
 done
 
 # Check Docker volume
-if [ -z "${FDB_DATA}" ]; then
+if [ -z "${LDB_DATA}" ]; then
     for vol_name in deploy_leemadb-data leemadb-data; do
         vol_path=$(docker volume inspect "${vol_name}" --format '{{.Mountpoint}}' 2>/dev/null || true)
         if [ -n "${vol_path}" ] && [ -d "${vol_path}" ] && [ "$(ls -A "${vol_path}" 2>/dev/null)" ]; then
-            FDB_DATA="${vol_path}"
+            LDB_DATA="${vol_path}"
             break
         fi
     done
 fi
 
-if [ -n "${FDB_DATA}" ]; then
-    log "LeemaDB data found at ${FDB_DATA}"
-    if tar czf "${FDB_FILE}" -C "$(dirname "${FDB_DATA}")" "$(basename "${FDB_DATA}")" 2>>"${LOG_FILE}"; then
-        FDB_SIZE=$(file_size_bytes "${FDB_FILE}")
-        BACKUP_SIZE_TOTAL=$((BACKUP_SIZE_TOTAL + FDB_SIZE))
+if [ -n "${LDB_DATA}" ]; then
+    log "LeemaDB data found at ${LDB_DATA}"
+    if tar czf "${LDB_FILE}" -C "$(dirname "${LDB_DATA}")" "$(basename "${LDB_DATA}")" 2>>"${LOG_FILE}"; then
+        LDB_SIZE=$(file_size_bytes "${LDB_FILE}")
+        BACKUP_SIZE_TOTAL=$((BACKUP_SIZE_TOTAL + LDB_SIZE))
 
-        if [ "${FDB_SIZE}" -lt 1024 ]; then
-            track_error "LeemaDB" "архив слишком маленький ($(human_size ${FDB_SIZE}))"
-            rm -f "${FDB_FILE}"
+        if [ "${LDB_SIZE}" -lt 1024 ]; then
+            track_error "LeemaDB" "архив слишком маленький ($(human_size ${LDB_SIZE}))"
+            rm -f "${LDB_FILE}"
         # Verify tar.gz integrity
-        elif ! gzip -t "${FDB_FILE}" 2>/dev/null; then
+        elif ! gzip -t "${LDB_FILE}" 2>/dev/null; then
             track_error "LeemaDB" "повреждённый архив, не прошёл gzip -t"
-            rm -f "${FDB_FILE}"
+            rm -f "${LDB_FILE}"
         else
-            log "LeemaDB: OK ($(human_size ${FDB_SIZE}), integrity verified)"
+            log "LeemaDB: OK ($(human_size ${LDB_SIZE}), integrity verified)"
         fi
     else
         track_error "LeemaDB" "tar создание архива не удалось (permissions?)"
-        rm -f "${FDB_FILE}"
+        rm -f "${LDB_FILE}"
     fi
 else
     track_error "LeemaDB" "директория данных не найдена"

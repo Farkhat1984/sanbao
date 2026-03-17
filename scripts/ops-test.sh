@@ -22,7 +22,7 @@ SERVER2_SSH_OPTS="-o ConnectTimeout=5 -o StrictHostKeyChecking=no"
 
 SANBAO_URL="https://sanbao.ai"
 LOCAL_SANBAO="http://localhost:3004"
-LOCAL_FDB="http://localhost:8110"
+LOCAL_LEEMADB="http://localhost:8110"
 LOCAL_ORCH="http://localhost:8120"
 
 LOG_DIR="$(pwd)/logs/ops-test"
@@ -136,11 +136,11 @@ test_health() {
   fi
 
   # LeemaDB health
-  FDB_RESP=$(curl -s --connect-timeout 5 "$LOCAL_FDB/health" 2>&1)
-  if echo "$FDB_RESP" | grep -qi "ok\|healthy\|alive"; then
+  LDB_RESP=$(curl -s --connect-timeout 5 "$LOCAL_LEEMADB/health" 2>&1)
+  if echo "$LDB_RESP" | grep -qi "ok\|healthy\|alive"; then
     ok "LeemaDB :8110: healthy"
-  elif [ -n "$FDB_RESP" ]; then
-    ok "LeemaDB :8110: responding ($FDB_RESP)"
+  elif [ -n "$LDB_RESP" ]; then
+    ok "LeemaDB :8110: responding ($LDB_RESP)"
   else
     fail "LeemaDB :8110: не отвечает"
   fi
@@ -447,23 +447,23 @@ test_cortex() {
 
   # LeemaDB
   echo -e "  ${BOLD}LeemaDB (:8110):${NC}"
-  FDB_HEALTH=$(curl -s --connect-timeout 5 "$LOCAL_FDB/health" 2>&1)
-  if [ -n "$FDB_HEALTH" ]; then
-    ok "Health: $FDB_HEALTH"
+  LDB_HEALTH=$(curl -s --connect-timeout 5 "$LOCAL_LEEMADB/health" 2>&1)
+  if [ -n "$LDB_HEALTH" ]; then
+    ok "Health: $LDB_HEALTH"
   else
     fail "Health: не отвечает"
   fi
 
   # Collections (API: GET /collections → JSON array of names)
-  FDB_COLLECTIONS=$(curl -s --connect-timeout 5 "$LOCAL_FDB/collections" 2>&1)
-  if [ -n "$FDB_COLLECTIONS" ] && echo "$FDB_COLLECTIONS" | grep -q '\['; then
-    COUNT=$(echo "$FDB_COLLECTIONS" | tr ',' '\n' | grep -c '"' || echo "?")
+  LDB_COLLECTIONS=$(curl -s --connect-timeout 5 "$LOCAL_LEEMADB/collections" 2>&1)
+  if [ -n "$LDB_COLLECTIONS" ] && echo "$LDB_COLLECTIONS" | grep -q '\['; then
+    COUNT=$(echo "$LDB_COLLECTIONS" | tr ',' '\n' | grep -c '"' || echo "?")
     ok "Коллекций: $COUNT"
 
     # Check each known collection with doc count (API: GET /collections/{name})
     for COLL in legal_kz laws_kz tnved_rates accounting_1c platform_1c; do
-      if echo "$FDB_COLLECTIONS" | grep -q "$COLL"; then
-        DOC_COUNT=$(curl -s --connect-timeout 5 "$LOCAL_FDB/collections/$COLL" 2>/dev/null | grep -o '"doc_count":[0-9]*' | cut -d: -f2)
+      if echo "$LDB_COLLECTIONS" | grep -q "$COLL"; then
+        DOC_COUNT=$(curl -s --connect-timeout 5 "$LOCAL_LEEMADB/collections/$COLL" 2>/dev/null | grep -o '"doc_count":[0-9]*' | cut -d: -f2)
         ok "  $COLL: ${DOC_COUNT:-?} документов"
       else
         warn "  $COLL: не найдена"

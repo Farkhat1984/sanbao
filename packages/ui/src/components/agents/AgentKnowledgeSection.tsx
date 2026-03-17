@@ -32,7 +32,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 type KnowledgeStatus = "NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR";
 
-interface FdbFile {
+interface KnowledgeFile {
   id: string;
   fileName: string;
   fileSize: number;
@@ -42,8 +42,8 @@ interface FdbFile {
 interface AgentKnowledgeSectionProps {
   agentId: string;
   knowledgeStatus: KnowledgeStatus;
-  fdbFiles: FdbFile[];
-  /** True when the user's plan does not support FDB knowledge bases */
+  knowledgeFiles: KnowledgeFile[];
+  /** True when the user's plan does not support LeemaDB knowledge bases */
   disabled?: boolean;
   /** Called after upload/process/publish to refresh parent data */
   onRefresh?: () => void;
@@ -60,20 +60,20 @@ interface ProgressEvent {
   status?: string;
 }
 
-const MAX_FDB_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_KNOWLEDGE_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 const ACCEPTED_FORMATS = ".pdf,.docx,.xlsx,.txt,.csv,.html,.doc,.xls";
 
 export function AgentKnowledgeSection({
   agentId,
   knowledgeStatus,
-  fdbFiles,
+  knowledgeFiles,
   disabled = false,
   onRefresh,
   errorMessage,
   toolCount,
 }: AgentKnowledgeSectionProps) {
   const [status, setStatus] = useState<KnowledgeStatus>(knowledgeStatus);
-  const [files, setFiles] = useState<FdbFile[]>(fdbFiles);
+  const [files, setFiles] = useState<KnowledgeFile[]>(knowledgeFiles);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -88,8 +88,8 @@ export function AgentKnowledgeSection({
   // Sync props when parent refreshes
   useEffect(() => {
     setStatus(knowledgeStatus);
-    setFiles(fdbFiles);
-  }, [knowledgeStatus, fdbFiles]);
+    setFiles(knowledgeFiles);
+  }, [knowledgeStatus, knowledgeFiles]);
 
   /** Persist knowledge status to DB so it survives page refresh */
   const persistStatus = useCallback(
@@ -166,7 +166,7 @@ export function AgentKnowledgeSection({
   const addFiles = useCallback((newFiles: File[]) => {
     const valid: File[] = [];
     for (const file of newFiles) {
-      if (file.size > MAX_FDB_FILE_SIZE) {
+      if (file.size > MAX_KNOWLEDGE_FILE_SIZE) {
         setError(`Файл "${file.name}" превышает лимит 100 МБ`);
         continue;
       }
@@ -222,7 +222,7 @@ export function AgentKnowledgeSection({
       // Update local file list from response
       const uploaded = await res.json();
       if (Array.isArray(uploaded)) {
-        setFiles((prev) => [...prev, ...uploaded.map((f: FdbFile) => f)]);
+        setFiles((prev) => [...prev, ...uploaded.map((f: KnowledgeFile) => f)]);
       }
       setStagedFiles([]);
       setUploading(false);
@@ -300,7 +300,7 @@ export function AgentKnowledgeSection({
       <div className="relative rounded-xl border-2 border-dashed border-border p-6 text-center opacity-60">
         <Lock className="h-8 w-8 text-text-muted mx-auto mb-2" />
         <p className="text-sm font-medium text-text-secondary">
-          База знаний FDB
+          База знаний LeemaDB
         </p>
         <p className="text-xs text-text-muted mt-1">
           Доступна на тарифе Business
@@ -316,7 +316,7 @@ export function AgentKnowledgeSection({
         <div className="flex items-center gap-2">
           <Database className="h-4 w-4 text-accent" />
           <span className="text-sm font-medium text-text-primary">
-            База знаний FDB
+            База знаний LeemaDB
           </span>
         </div>
         <KnowledgeStatusBadge status={status} toolCount={toolCount} />
@@ -480,7 +480,7 @@ export function AgentKnowledgeSection({
         </div>
       )}
 
-      {/* Existing FDB file list */}
+      {/* Existing knowledge file list */}
       {files.length > 0 && status !== "PROCESSING" && (
         <div className="space-y-2">
           {files.map((file) => (

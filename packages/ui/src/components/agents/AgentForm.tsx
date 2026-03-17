@@ -19,10 +19,10 @@ interface AgentFormProps {
   orgId?: string;
   /** Whether the user's plan supports knowledge files (canUseRag) */
   canUseRag?: boolean;
-  /** FDB knowledge base status for this agent */
+  /** LeemaDB knowledge base status for this agent */
   knowledgeStatus?: "NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR";
-  /** Files processed through the FDB pipeline */
-  fdbFiles?: Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>;
+  /** Files processed through the LeemaDB pipeline */
+  knowledgeFiles?: Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>;
   /** Called when knowledge data changes and parent should re-fetch */
   onKnowledgeRefresh?: () => void;
 }
@@ -32,7 +32,7 @@ export function AgentForm({
   orgId,
   canUseRag = false,
   knowledgeStatus = "NONE",
-  fdbFiles = [],
+  knowledgeFiles = [],
   onKnowledgeRefresh,
 }: AgentFormProps) {
   const router = useRouter();
@@ -354,15 +354,15 @@ export function AgentForm({
               />
             </div>
 
-            {/* FDB Knowledge Base */}
+            {/* LeemaDB Knowledge Base */}
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
-                База знаний FDB
+                База знаний LeemaDB
               </label>
               <AgentKnowledgeSection
                 agentId={agent?.id || ""}
                 knowledgeStatus={knowledgeStatus}
-                fdbFiles={fdbFiles}
+                knowledgeFiles={knowledgeFiles}
                 disabled={!canUseRag}
                 onRefresh={onKnowledgeRefresh}
               />

@@ -34,7 +34,7 @@ export default function AgentDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [knowledgeStatus, setKnowledgeStatus] = useState<"NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR">("NONE");
-  const [fdbFiles, setFdbFiles] = useState<Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>>([]);
+  const [knowledgeFiles, setKnowledgeFiles] = useState<Array<{ id: string; fileName: string; fileSize: number; createdAt: string }>>([]);
 
   const loadAgent = useCallback(async () => {
     try {
@@ -42,12 +42,12 @@ export default function AgentDetailPage() {
       if (!res.ok) throw new Error("Агент не найден");
       const data = await res.json();
       setAgent(data);
-      // Extract FDB knowledge data if present
+      // Extract LeemaDB knowledge data if present
       if (data.knowledgeStatus) {
         setKnowledgeStatus(data.knowledgeStatus);
       }
-      if (data.fdbFiles) {
-        setFdbFiles(data.fdbFiles);
+      if (data.knowledgeFiles) {
+        setKnowledgeFiles(data.knowledgeFiles);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
@@ -362,16 +362,16 @@ export default function AgentDetailPage() {
           </div>
         )}
 
-        {/* FDB Knowledge Base */}
+        {/* LeemaDB Knowledge Base */}
         {isOwned && (
           <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
             <h2 className="text-sm font-semibold text-text-primary mb-3">
-              База знаний FDB
+              База знаний LeemaDB
             </h2>
             <AgentKnowledgeSection
               agentId={id}
               knowledgeStatus={knowledgeStatus}
-              fdbFiles={fdbFiles}
+              knowledgeFiles={knowledgeFiles}
               disabled={!canUseRag}
               onRefresh={loadAgent}
             />

@@ -105,7 +105,7 @@ export async function POST(
       return jsonError(`${file.name}: ${msg}`, 502);
     }
 
-    // Create AgentFile record with tier "fdb" (no local extractedText needed)
+    // Create AgentFile record with tier "fdb" (LeemaDB knowledge — no local extractedText needed)
     const record = await prisma.agentFile.create({
       data: {
         agentId: id,
