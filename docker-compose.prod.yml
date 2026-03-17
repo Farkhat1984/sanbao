@@ -151,7 +151,7 @@ services:
       # - TLS_CERT=/etc/ssl/certs/service.crt
       # - TLS_KEY=/etc/ssl/private/service.key
       # - TLS_CA=/etc/ssl/certs/ca.crt
-    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/leemadb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}"]
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/leemadb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}", "--embedding-url", "http://embedding-proxy:8097/embed"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf --max-time 30 -H 'Authorization: Bearer $AI_CORTEX_AUTH_TOKEN' http://localhost:8080/health || exit 1"]
       interval: 60s
@@ -177,6 +177,10 @@ services:
       - ../ai_cortex/data/1c_knowledge/images:/app/data/1c_knowledge/images:ro
       - ../ai_cortex/config:/app/config
       - orchestrator_data:/app/data
+      # Claude Code CLI (for LLM provider = claude_*)
+      - /home/faragj/.local/share/claude/versions:/home/appuser/.local/share/claude/versions:ro
+      - /home/faragj/.claude:/home/appuser/.claude:ro
+      - /home/faragj/.claude.json:/home/appuser/.claude.json:ro
       # TLS (uncomment to enable)
       # - ./infra/certs/orchestrator.crt:/etc/ssl/certs/service.crt:ro
       # - ./infra/certs/orchestrator.key:/etc/ssl/private/service.key:ro
@@ -225,6 +229,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${AI_CORTEX_WEB_PORT:-5173}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       orchestrator:
         condition: service_healthy

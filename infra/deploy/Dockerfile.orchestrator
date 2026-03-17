@@ -35,7 +35,13 @@ ENV DEEPINFRA_API_KEY=""
 ENV ANTHROPIC_API_KEY=""
 
 RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app/config /app/data
+    chown -R appuser:appuser /app/config /app/data && \
+    mkdir -p /home/appuser/.local/bin /home/appuser/.local/share/claude /home/appuser/.claude && \
+    chown -R appuser:appuser /home/appuser
 USER appuser
+
+# Claude Code CLI: versions dir + .claude config mounted via volume at runtime
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+ENV HOME="/home/appuser"
 
 CMD ["python", "-m", "orchestrator", "--http"]
