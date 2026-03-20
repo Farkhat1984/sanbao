@@ -15,6 +15,7 @@ import {
   DEFAULT_TOP_P,
   TOOL_RESULT_MAX_CHARS,
   TOOL_RESULT_TAIL_CHARS,
+  LLM_TIMEOUT_MS,
 } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { getSettingNumber } from "@/lib/settings";
@@ -215,42 +216,69 @@ export function streamMoonshot(
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
 
+        // ─── Tool definitions (reused across loop iterations) ──
+        const allTools = [
+          ...mcpTools.map((t) => ({
+            type: "function" as const,
+            function: {
+              name: t.name,
+              description: t.description,
+              parameters: t.inputSchema,
+            },
+          })),
+          ...nativeToolDefs,
+          ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
+        ];
+
+        // Track whether any tool-call turn produced user-facing content
+        let hasProducedContent = false;
+        // Track tool call turns for forced final answer
+        let toolCallTurnCount = 0;
+        // Per-request timeout for each API call (60s default)
+        const perCallTimeoutMs = LLM_TIMEOUT_MS * 2; // 60s
+
         // Tool-call loop
         for (let turn = 0; turn < maxToolCallsPerRequest; turn++) {
+          // On the last allowed turn, strip tools so the model MUST answer
+          const isLastTurn = turn === maxToolCallsPerRequest - 1;
+          const sendTools = isLastTurn && toolCallTurnCount > 0 ? [] : allTools;
+
           // Reset per-turn: each tool-call iteration sends its own status
           let searchNotified = false;
-          const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: modelId,
-              messages: currentMessages,
-              max_tokens: maxTokens,
-              temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? cfgDefaultTemperature),
-              top_p: textModel?.topP ?? cfgDefaultTopP,
-              stream: true,
-              stream_options: { include_usage: true },
-              tools: [
-                ...mcpTools.map((t) => ({
-                  type: "function" as const,
-                  function: {
-                    name: t.name,
-                    description: t.description,
-                    parameters: t.inputSchema,
-                  },
-                })),
-                ...nativeToolDefs,
-                ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
-              ],
-              ...(!thinkingEnabled
-                ? { thinking: { type: "disabled" } }
-                : {}),
-            }),
-            signal: upstreamAbort.signal,
-          });
+
+          // Combine upstream abort with per-call timeout
+          const callAbort = new AbortController();
+          const timeoutId = setTimeout(() => callAbort.abort(), perCallTimeoutMs);
+          const onUpstreamAbort = () => callAbort.abort();
+          upstreamAbort.signal.addEventListener("abort", onUpstreamAbort, { once: true });
+
+          let response: Response;
+          try {
+            response = await fetch(apiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: modelId,
+                messages: currentMessages,
+                max_tokens: maxTokens,
+                temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? cfgDefaultTemperature),
+                top_p: textModel?.topP ?? cfgDefaultTopP,
+                stream: true,
+                stream_options: { include_usage: true },
+                ...(sendTools.length > 0 ? { tools: sendTools } : {}),
+                ...(!thinkingEnabled
+                  ? { thinking: { type: "disabled" } }
+                  : {}),
+              }),
+              signal: callAbort.signal,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+            upstreamAbort.signal.removeEventListener("abort", onUpstreamAbort);
+          }
 
           if (!response.ok) {
             const errText = await response
@@ -290,6 +318,10 @@ export function streamMoonshot(
           > = {};
           let hasToolCallFinish = false;
           let turnReasoningContent = "";
+          // Buffer content during this turn — only flush if it's NOT a tool-call turn.
+          // This prevents narration like "Позвольте мне найти..." from leaking to the user
+          // when the model is just announcing what tool it's about to call.
+          let turnContentBuffer = "";
 
           for await (const chunk of parseSSEStream(response.body, sseMaxBuffer)) {
             // Handle SSE error events from Moonshot API
@@ -387,23 +419,42 @@ export function streamMoonshot(
               );
             }
 
-            // Stream content with plan detection
+            // Buffer content — will be flushed only if this turn does NOT end with tool_calls.
+            // This prevents tool-call narration ("Позвольте мне найти...") from appearing as the answer.
             if (delta?.content) {
-              const { chunks } = feedPlanDetector(planState, delta.content);
+              turnContentBuffer += delta.content;
+            }
+          }
+
+          // Decide whether to emit buffered content
+          if (hasToolCallFinish && Object.keys(toolCallMap).length > 0) {
+            // Tool-call turn — discard narration content (e.g. "Позвольте мне получить...")
+            // The content is just the model announcing what tool it's calling — not useful to the user.
+            if (turnContentBuffer) {
+              logger.info("Discarding tool-call narration", {
+                turn,
+                narrationLength: turnContentBuffer.length,
+                preview: turnContentBuffer.slice(0, 100),
+              });
+            }
+          } else {
+            // Final turn (no tool calls) — flush buffered content through plan detector
+            if (turnContentBuffer) {
+              hasProducedContent = true;
+              const { chunks } = feedPlanDetector(planState, turnContentBuffer);
               for (const ch of chunks) {
                 controller.enqueue(
                   encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
                 );
               }
             }
-          }
-
-          // Flush remaining plan buffer
-          const { chunks: finalChunks } = flushPlanDetector(planState);
-          for (const ch of finalChunks) {
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-            );
+            // Flush remaining plan buffer
+            const { chunks: finalChunks } = flushPlanDetector(planState);
+            for (const ch of finalChunks) {
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+              );
+            }
           }
 
           // ─── Token budget check ──────────────────────────────
@@ -419,11 +470,29 @@ export function streamMoonshot(
           });
           if (cumulativeTokens > maxRequestTokens) {
             logger.warn("Token budget exceeded", { cumulativeTokens, maxRequestTokens, turn });
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
-              )
-            );
+            if (!hasProducedContent) {
+              // Token budget hit but no content yet — force one final call without tools
+              controller.enqueue(
+                encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
+              );
+              currentMessages.push({
+                role: "user" as const,
+                content: "Пожалуйста, ответь на основе уже собранной информации. Не вызывай инструменты, дай финальный ответ.",
+              });
+              // One more iteration without tools will happen on next loop pass
+              // But we're already at budget — emit error instead
+              controller.enqueue(
+                encoder.encode(
+                  JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
+                )
+              );
+            } else {
+              controller.enqueue(
+                encoder.encode(
+                  JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
+                )
+              );
+            }
             break;
           }
 
@@ -574,6 +643,7 @@ export function streamMoonshot(
               }
             }
 
+            toolCallTurnCount++;
             continue;
           }
 
@@ -584,6 +654,98 @@ export function streamMoonshot(
             );
           }
           break;
+        }
+
+        // ─── Forced final answer ──────────────────────────────
+        // If the tool-call loop exhausted all turns without the model producing
+        // a final answer (every turn was tool calls), make one last API call
+        // WITHOUT tools so the model is forced to synthesize a response.
+        if (toolCallTurnCount >= maxToolCallsPerRequest && !hasProducedContent) {
+          logger.warn("Tool loop exhausted — forcing final answer", {
+            toolCallTurnCount,
+            maxToolCallsPerRequest,
+          });
+          controller.enqueue(
+            encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
+          );
+
+          // Add instruction to answer based on collected data
+          currentMessages.push({
+            role: "user",
+            content: "Ты уже собрал достаточно информации. Дай развёрнутый ответ на исходный вопрос на основе полученных данных. Отвечай обычным текстом в чате, НЕ используй тег <sanbao-doc>. Изображения из статей вставляй inline рядом с текстом, к которому они относятся (формат: ![описание](url)).",
+          });
+
+          const finalCallAbort = new AbortController();
+          const finalTimeoutId = setTimeout(() => finalCallAbort.abort(), perCallTimeoutMs);
+          const onFinalAbort = () => finalCallAbort.abort();
+          upstreamAbort.signal.addEventListener("abort", onFinalAbort, { once: true });
+
+          try {
+            const finalResponse = await fetch(apiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: modelId,
+                messages: currentMessages,
+                max_tokens: maxTokens,
+                temperature: thinkingEnabled ? 1.0 : (textModel?.temperature ?? cfgDefaultTemperature),
+                top_p: textModel?.topP ?? cfgDefaultTopP,
+                stream: true,
+                stream_options: { include_usage: true },
+                // NO tools — force text response
+                ...(!thinkingEnabled ? { thinking: { type: "disabled" } } : {}),
+              }),
+              signal: finalCallAbort.signal,
+            });
+
+            if (finalResponse.ok && finalResponse.body) {
+              for await (const chunk of parseSSEStream(finalResponse.body, sseMaxBuffer)) {
+                if (chunk.usage) {
+                  totalInputTokens += chunk.usage.prompt_tokens ?? 0;
+                  totalOutputTokens += chunk.usage.completion_tokens ?? 0;
+                }
+                const choice = chunk.choices?.[0];
+                if (!choice) continue;
+                const delta = choice.delta;
+                if (delta?.content) {
+                  const { chunks } = feedPlanDetector(planState, delta.content);
+                  for (const ch of chunks) {
+                    controller.enqueue(
+                      encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+                    );
+                  }
+                }
+                if (thinkingEnabled && delta?.reasoning_content) {
+                  controller.enqueue(
+                    encoder.encode(JSON.stringify({ t: "r", v: delta.reasoning_content }) + "\n")
+                  );
+                }
+              }
+              // Flush plan detector
+              const { chunks: lastChunks } = flushPlanDetector(planState);
+              for (const ch of lastChunks) {
+                controller.enqueue(
+                  encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+                );
+              }
+            } else {
+              controller.enqueue(
+                encoder.encode(
+                  JSON.stringify({ t: "e", v: "Не удалось получить финальный ответ от API" }) + "\n"
+                )
+              );
+            }
+          } catch (finalErr) {
+            logger.error("Forced final answer failed", {
+              error: finalErr instanceof Error ? finalErr.message : String(finalErr),
+            });
+          } finally {
+            clearTimeout(finalTimeoutId);
+            upstreamAbort.signal.removeEventListener("abort", onFinalAbort);
+          }
         }
 
         // Report accumulated usage for token logging

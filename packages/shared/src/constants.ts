@@ -17,6 +17,7 @@ export const ARTIFACT_TYPE_LABELS: Record<string, string> = {
   DOCUMENT: "Документ",
   CODE: "Код",
   ANALYSIS: "Правовой анализ",
+  IMAGE: "Изображение",
 };
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -64,8 +65,9 @@ export const TOOL_TIMEOUT_MS = 30_000;
 export const TOOL_RESULT_MAX_CHARS = 12_000;
 /** Keep last N chars when truncating (head + tail strategy) */
 export const TOOL_RESULT_TAIL_CHARS = 1_000;
-/** Hard cap on tool call turns per request (prevents runaway loops) */
-export const MAX_TOOL_CALLS_PER_REQUEST = 15;
+/** Hard cap on tool call turns per request (prevents runaway loops).
+ *  On the last turn, tools are stripped so the model MUST produce a text answer. */
+export const MAX_TOOL_CALLS_PER_REQUEST = 8;
 
 // ─── Icon & Color palettes ───
 export const VALID_ICONS = [

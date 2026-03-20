@@ -187,6 +187,7 @@ services:
       # - ./infra/certs/ca.crt:/etc/ssl/certs/ca.crt:ro
     environment:
       - LEEMADB_URL=http://leemadb:8080
+      - FRAGMENTDB_URL=http://leemadb:8080
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
       - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:?AI_CORTEX_ADMIN_PASSWORD must be set in .env}
