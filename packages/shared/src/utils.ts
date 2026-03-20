@@ -9,7 +9,7 @@ export function formatDate(date: Date | string): string {
   const d = new Date(date);
   const now = new Date();
   const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 
   if (days === 0) return "Сегодня";
   if (days === 1) return "Вчера";
