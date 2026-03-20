@@ -17,8 +17,8 @@ jobs:
     steps:
       - run: echo "CI passed — proceeding with deploy"
 
-  deploy-server1:
-    name: Deploy Sanbao → Server 1 (Primary)
+  deploy-home:
+    name: Deploy Sanbao → Home Server (Primary)
     runs-on: ubuntu-latest
     needs: gate
     timeout-minutes: 15
@@ -26,7 +26,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: 128.127.102.170
+          host: faragj.duckdns.org
           port: 22222
           username: metadmin
           key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -68,10 +68,10 @@ jobs:
             docker compose -f docker-compose.prod.yml logs --tail=50 app
             exit 1
 
-  deploy-server2:
-    name: Deploy Sanbao → Server 2 (Standby)
+  deploy-vps:
+    name: Deploy Sanbao → VPS (Standby)
     runs-on: ubuntu-latest
-    needs: deploy-server1
+    needs: deploy-home
     timeout-minutes: 15
     steps:
       - name: Deploy via SSH
@@ -106,19 +106,19 @@ jobs:
             echo "=== Waiting for health check ==="
             for i in $(seq 1 30); do
               if curl -sf http://localhost:3004/api/ready >/dev/null 2>&1; then
-                echo "Server 2 is healthy!"
+                echo "VPS is healthy!"
                 break
               fi
               echo "Waiting... ($i/30)"
               sleep 5
             done
 
-            echo "=== Server 2 ready ==="
+            echo "=== VPS ready ==="
 
   notify:
     name: Notify
     runs-on: ubuntu-latest
-    needs: [gate, deploy-server1, deploy-server2]
+    needs: [gate, deploy-home, deploy-vps]
     if: always()
     steps:
       - name: Telegram notification
@@ -128,9 +128,9 @@ jobs:
           token: ${{ secrets.TG_BOT_TOKEN }}
           format: html
           message: |
-            ${{ needs.deploy-server1.result == 'success' && needs.deploy-server2.result == 'success' && '✅' || '❌' }} <b>Sanbao Deploy</b>
+            ${{ needs.deploy-home.result == 'success' && needs.deploy-vps.result == 'success' && '✅' || '❌' }} <b>Sanbao Deploy</b>
 
-            Server 1: ${{ needs.deploy-server1.result }}
-            Server 2: ${{ needs.deploy-server2.result }}
+            Home (Primary): ${{ needs.deploy-home.result }}
+            VPS (Standby): ${{ needs.deploy-vps.result }}
             Commit: <code>${{ github.sha }}</code>
             By: ${{ github.actor }}

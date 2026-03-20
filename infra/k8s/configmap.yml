@@ -8,6 +8,6 @@ data:
   LOG_FORMAT: "json"
   LOG_LEVEL: "info"
   SHUTDOWN_DRAIN_MS: "15000"
-  NEXTAUTH_URL: "https://sanbao.example.com"
+  NEXTAUTH_URL: "https://sanbao.ai"
   # DATABASE_URL and REDIS_URL are constructed in app-deployment.yml env section
   # using secretKeyRef interpolation (not in ConfigMap to avoid plaintext credentials)

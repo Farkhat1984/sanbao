@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
-import { PlanBlock } from "./PlanBlock";
 import { MessageAvatar } from "./MessageAvatar";
 import { ReasoningBlock } from "./ReasoningBlock";
 import { MessageActions } from "./MessageActions";
@@ -106,9 +105,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
           ? "Консультирую агентов"
           : streamingPhase === "synthesizing"
             ? "Формирую решение"
-            : streamingPhase === "planning"
-              ? "Составляю план"
-              : "отвечает"
+            : "отвечает"
     : null;
 
   // Track which edits we've already applied (by message id)
@@ -239,7 +236,6 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
         </span>
 
         {isAssistant && displayReasoning && <ReasoningBlock reasoning={displayReasoning} />}
-        {isAssistant && message.planContent && <PlanBlock content={message.planContent} />}
 
         {/* Message bubble */}
         <div

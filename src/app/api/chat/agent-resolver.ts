@@ -211,10 +211,9 @@ export async function resolveAgentAndTools(params: {
   userId: string;
   planId: string;
   thinkingEnabled: boolean;
-  planningEnabled: boolean;
   maxMcpTools: number;
 }): Promise<{ data: AgentResolutionResult } | { error: NextResponse }> {
-  const { userId, planId, thinkingEnabled, planningEnabled, maxMcpTools } = params;
+  const { userId, planId, thinkingEnabled, maxMcpTools } = params;
   let { agentId, orgAgentId, skillId, conversationId } = params;
 
   // Load admin-editable system prompt from DB (cached 60s)
@@ -225,7 +224,8 @@ export async function resolveAgentAndTools(params: {
   if (agentId) {
     const ctx = await resolveAgentContext(agentId);
     if (ctx.systemPrompt) {
-      systemPrompt = ctx.systemPrompt + ctx.skillPrompts.join("");
+      // Global system prompt is always prepended to agent-specific instructions
+      systemPrompt = systemPrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
       agentMcpTools.push(...ctx.mcpTools);
       // Custom (non-system) agents: suppress artifact creation unless explicitly requested
       if (!ctx.isSystem) {
@@ -294,9 +294,6 @@ export async function resolveAgentAndTools(params: {
   }
 
   // ─── Mode-specific prompts ─────────────────────────
-  if (planningEnabled) {
-    systemPrompt += "\n\n" + await getPrompt("prompt_mode_planning");
-  }
 
   // Web search prompt is always included
   systemPrompt += "\n\n" + await getPrompt("prompt_mode_websearch");

@@ -17,7 +17,6 @@ export default function ChatPage() {
       useChatStore.setState({
         activeConversationId: null,
         messages: [],
-        currentPlan: null,
         contextUsage: null,
         messagesCursor: null,
         hasMoreMessages: false,

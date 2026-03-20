@@ -41,7 +41,6 @@ describe("prompts.ts", () => {
         "prompt_gen_agent",
         "prompt_compaction_initial",
         "prompt_compaction_update",
-        "prompt_mode_planning",
         "prompt_mode_websearch",
         "prompt_mode_thinking",
         "prompt_swarm_classify",

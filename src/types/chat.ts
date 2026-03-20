@@ -14,7 +14,6 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   reasoning?: string;
-  planContent?: string;
   toolName?: string;
   toolResult?: Record<string, unknown>;
   legalRefs?: LegalRef[];

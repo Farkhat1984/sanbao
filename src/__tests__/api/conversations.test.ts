@@ -430,25 +430,5 @@ describe("Conversations API", () => {
       });
     });
 
-    it("should save plan content if present", async () => {
-      const messages = [
-        { role: "USER", content: "Plan something" },
-        { role: "ASSISTANT", content: "Here's the plan", planContent: "**Ключевые решения:**\nDecision 1" },
-      ];
-      const req = new Request("http://localhost", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
-      });
-
-      await POST_MESSAGES(req, makeParams("conv-1"));
-      expect(prisma.conversationPlan.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          conversationId: "conv-1",
-          content: "**Ключевые решения:**\nDecision 1",
-          isActive: true,
-        }),
-      });
-    });
   });
 });

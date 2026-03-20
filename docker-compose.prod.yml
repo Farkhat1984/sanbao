@@ -139,7 +139,7 @@ services:
     ports:
       - "127.0.0.1:${LEEMADB_PORT:-8110}:8080"
     volumes:
-      - ../ai_cortex/leemadb_data:/home/leemadb/data
+      - ../ai_cortex/leemadb_data:/home/fragmentdb/data
       # TLS (uncomment to enable)
       # - ./infra/certs/leemadb.crt:/etc/ssl/certs/service.crt:ro
       # - ./infra/certs/leemadb.key:/etc/ssl/private/service.key:ro
@@ -151,7 +151,7 @@ services:
       # - TLS_CERT=/etc/ssl/certs/service.crt
       # - TLS_KEY=/etc/ssl/private/service.key
       # - TLS_CA=/etc/ssl/certs/ca.crt
-    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/leemadb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}", "--embedding-url", "http://embedding-proxy:8097/embed"]
+    command: ["--host", "0.0.0.0", "--port", "8080", "--data-dir", "/home/fragmentdb/data", "--wal-sync-mode", "interval:100", "--auth-token", "${AI_CORTEX_AUTH_TOKEN}", "--embedding-url", "http://embedding-proxy:8097/embed"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf --max-time 30 -H 'Authorization: Bearer $AI_CORTEX_AUTH_TOKEN' http://localhost:8080/health || exit 1"]
       interval: 60s
@@ -187,6 +187,8 @@ services:
       # - ./infra/certs/ca.crt:/etc/ssl/certs/ca.crt:ro
     environment:
       - LEEMADB_URL=http://leemadb:8080
+      - FRAGMENTDB_URL=http://leemadb:8080
+      - FRAGMENTDB_DOMAINS=legal_ref_kz,accounting_ref_kz,legal_kz,accounting_1c,tnved,laws_kz,platform_1c
       - AI_CORTEX_PORT=8120
       - AI_CORTEX_AUTH_TOKEN=${AI_CORTEX_AUTH_TOKEN}
       - AI_CORTEX_ADMIN_PASSWORD=${AI_CORTEX_ADMIN_PASSWORD:?AI_CORTEX_ADMIN_PASSWORD must be set in .env}

@@ -93,6 +93,12 @@ export function useVoiceRecording({
         }
       }
       setInput(finalTranscript + interim);
+      // Auto-resize textarea as text grows during recording
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height =
+          Math.min(textareaRef.current.scrollHeight, 200) + "px";
+      }
     };
 
     recognition.onerror = () => {

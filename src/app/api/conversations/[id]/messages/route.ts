@@ -39,10 +39,9 @@ export async function POST(
   }
 
   // Limit batch size and individual message size
-  const [batchMax, maxMsgSize, planMemoryMaxChars] = await Promise.all([
+  const [batchMax, maxMsgSize] = await Promise.all([
     getSettingNumber('chat_messages_batch_max'),
     getSettingNumber('chat_max_msg_size_bytes'),
-    getSettingNumber('chat_plan_memory_max_chars'),
   ]);
   if (messages.length > batchMax) {
     return jsonError("Too many messages in batch", 400);
@@ -60,11 +59,10 @@ export async function POST(
   }
 
   const created = await prisma.message.createMany({
-    data: messages.map((m: { role: string; content: string; planContent?: string }) => ({
+    data: messages.map((m: { role: string; content: string }) => ({
       conversationId,
       role: m.role as "USER" | "ASSISTANT",
       content: m.content,
-      planContent: m.role === "ASSISTANT" ? (m.planContent || null) : null,
     })),
   });
 
@@ -100,59 +98,6 @@ export async function POST(
       sendPush(session.user.id, pushTitle, pushBody, { conversationId }),
       "push-notification"
     );
-  }
-
-  // Save planning data if present
-  const planContent = assistantMsg?.planContent;
-  if (planContent && conversationId) {
-    try {
-      // Extract key decisions from plan content
-      const decisionsMatch = planContent.match(
-        /\*\*(?:Ключевые решения|Решения|Контекст)[:\s]*\*\*([\s\S]*?)(?=\n##|\n\*\*|$)/i
-      );
-      const decisions = decisionsMatch?.[1]?.trim() || "";
-
-      // Get existing active plan to merge memory
-      const existing = await prisma.conversationPlan.findFirst({
-        where: { conversationId, isActive: true },
-        orderBy: { createdAt: "desc" },
-      });
-
-      const MAX_PLAN_MEMORY_CHARS = planMemoryMaxChars;
-      let newMemory = existing?.memory && decisions
-        ? `${existing.memory}\n\n--- Обновление ---\n${decisions}`
-        : decisions || existing?.memory || null;
-
-      // Truncate plan memory to prevent unbounded growth
-      if (newMemory && newMemory.length > MAX_PLAN_MEMORY_CHARS) {
-        // Keep the most recent decisions by trimming from the start
-        const sections = newMemory.split("\n\n--- Обновление ---\n");
-        while (sections.length > 1 && sections.join("\n\n--- Обновление ---\n").length > MAX_PLAN_MEMORY_CHARS) {
-          sections.shift();
-        }
-        newMemory = sections.join("\n\n--- Обновление ---\n");
-      }
-
-      // Atomically deactivate previous plans and create new one
-      await prisma.$transaction(async (tx) => {
-        if (existing) {
-          await tx.conversationPlan.update({
-            where: { id: existing.id },
-            data: { isActive: false },
-          });
-        }
-        await tx.conversationPlan.create({
-          data: {
-            conversationId,
-            content: planContent,
-            memory: newMemory,
-            isActive: true,
-          },
-        });
-      });
-    } catch {
-      // Plan persistence is best-effort
-    }
   }
 
   return jsonOk({ count: created.count });
