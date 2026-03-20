@@ -17,6 +17,7 @@ export async function register() {
     const { initSettingsSubscriber } = await import("@/lib/settings");
     initSettingsSubscriber();
 
-    console.log("[instrumentation] Workers and shutdown handlers registered");
+    // Uses process.stdout directly since logger may not be initialized yet
+    process.stdout.write("[instrumentation] Workers and shutdown handlers registered\n");
   }
 }

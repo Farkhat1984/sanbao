@@ -1,4 +1,5 @@
 import { getSettingNumber } from "@/lib/settings";
+import { CircuitBreaker } from "@/lib/circuit-breaker";
 
 const AI_CORTEX_URL = process.env.AI_CORTEX_URL || "http://orchestrator:8120";
 const AI_CORTEX_MASTER_KEY = process.env.AI_CORTEX_AUTH_TOKEN || "";
@@ -6,6 +7,13 @@ const AI_CORTEX_MASTER_KEY = process.env.AI_CORTEX_AUTH_TOKEN || "";
 /** Fallback values used when settings DB is unavailable */
 const TIMEOUT_DEFAULT_FALLBACK = 30_000;
 const TIMEOUT_PROCESS_FALLBACK = 120_000;
+
+/** Circuit breaker: trips after 5 consecutive failures, resets after 30s */
+const circuitBreaker = new CircuitBreaker({
+  name: "ai-cortex",
+  failureThreshold: 5,
+  resetTimeoutMs: 30_000,
+});
 
 class AiCortexError extends Error {
   constructor(
@@ -21,45 +29,47 @@ async function cortexFetch(
   path: string,
   options: RequestInit & { timeout?: number; apiKey?: string } = {}
 ): Promise<Response> {
-  const defaultTimeout = await getSettingNumber("ai_cortex_timeout_default_ms")
-    .catch(() => TIMEOUT_DEFAULT_FALLBACK);
-  const { timeout = defaultTimeout, apiKey, ...fetchOptions } = options;
+  return circuitBreaker.execute(async () => {
+    const defaultTimeout = await getSettingNumber("ai_cortex_timeout_default_ms")
+      .catch(() => TIMEOUT_DEFAULT_FALLBACK);
+    const { timeout = defaultTimeout, apiKey, ...fetchOptions } = options;
 
-  const headers: Record<string, string> = {
-    ...(fetchOptions.headers as Record<string, string>),
-  };
+    const headers: Record<string, string> = {
+      ...(fetchOptions.headers as Record<string, string>),
+    };
 
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
-
-  // Don't set Content-Type for FormData
-  if (!(fetchOptions.body instanceof FormData) && !headers["Content-Type"]) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const res = await fetch(`${AI_CORTEX_URL}${path}`, {
-      ...fetchOptions,
-      headers,
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new AiCortexError(
-        `AI Cortex ${path} failed: ${res.status} ${text}`,
-        res.status
-      );
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
-    return res;
-  } finally {
-    clearTimeout(timer);
-  }
+    // Don't set Content-Type for FormData
+    if (!(fetchOptions.body instanceof FormData) && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const res = await fetch(`${AI_CORTEX_URL}${path}`, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new AiCortexError(
+          `AI Cortex ${path} failed: ${res.status} ${text}`,
+          res.status
+        );
+      }
+
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  });
 }
 
 export async function createNamespace(

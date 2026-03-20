@@ -2,10 +2,8 @@
 // POST /api/chat — main streaming endpoint.
 // Delegates to focused modules for validation, agent resolution, and context loading.
 
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
-import { prisma } from "@/lib/prisma";
 import { incrementUsage, incrementTokens } from "@/lib/usage";
 import { resolveModel } from "@/lib/model-router";
 import { logTokenUsage } from "@/lib/audit";
@@ -17,8 +15,7 @@ import type { NativeToolContext } from "@/lib/native-tools";
 
 import { streamMoonshot } from "@/lib/chat/moonshot-stream";
 import { streamAiSdk } from "@/lib/chat/ai-sdk-stream";
-import { loadAgentContext, type OrgAgentContext } from "@/lib/swarm/agent-loader";
-import { consultAndSynthesize } from "@/lib/swarm/consult";
+import { handleMultiAgentMode } from "@/lib/services/multi-agent-service";
 
 import { validateChatRequest } from "./validate";
 import { resolveAgentAndTools } from "./agent-resolver";
@@ -232,92 +229,3 @@ export async function POST(req: Request) {
   }); // end runWithCorrelationId
 }
 
-// ─── Multi-Agent handler ─────────────────────────────────
-
-interface MultiAgentResult {
-  response?: Response;
-  orgAgentId?: string;
-}
-
-async function handleMultiAgentMode(params: {
-  messages: Array<{ role: string; content: string }>;
-  swarmOrgId: string;
-  multiAgentId: string;
-  userId: string;
-  planId: string;
-  requestId: string;
-  requestStart: number;
-  signal: AbortSignal;
-}): Promise<MultiAgentResult> {
-  const { messages, swarmOrgId, multiAgentId, userId, planId, requestId, requestStart, signal } = params;
-
-  // Verify user is org member
-  const membership = await prisma.orgMember.findUnique({
-    where: { orgId_userId: { orgId: swarmOrgId, userId } },
-  });
-  if (!membership) {
-    return { response: jsonError("Нет доступа к организации", 403) as unknown as Response };
-  }
-
-  const multiAgent = await prisma.multiAgent.findUnique({
-    where: { id: multiAgentId },
-    include: { members: true, org: { select: { name: true } } },
-  });
-
-  if (!multiAgent || multiAgent.orgId !== swarmOrgId) {
-    return { response: jsonError("Мультиагент не найден", 404) as unknown as Response };
-  }
-
-  const textModel = await resolveModel("TEXT", planId);
-  if (!textModel) {
-    return { response: jsonError("Нет настроенной модели", 500) as unknown as Response };
-  }
-
-  // Load all configured agent contexts using universal loader
-  const members = multiAgent.members as Array<{ agentType: string; agentId: string }>;
-  const agentContexts = (await Promise.all(
-    members.map((m) => loadAgentContext(m.agentType, m.agentId, userId))
-  )).filter((ctx): ctx is OrgAgentContext => ctx !== null);
-
-  if (agentContexts.length === 0) return {};
-  if (agentContexts.length === 1) {
-    const member = members[0];
-    if (member.agentType === "org") return { orgAgentId: member.agentId };
-    return {};
-  }
-
-  const conversationHistory = messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role.toLowerCase(),
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-    }));
-
-  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-  const lastUserMessage = typeof lastUserMsg?.content === "string"
-    ? lastUserMsg.content
-    : JSON.stringify(lastUserMsg?.content || "");
-
-  const stream = consultAndSynthesize({
-    userMessage: lastUserMessage,
-    conversationHistory,
-    agentContexts,
-    orgName: multiAgent.org.name,
-    inaccessibleAgents: [],
-    model: textModel,
-    signal,
-  });
-
-  recordRequestDuration("/api/chat", Date.now() - requestStart);
-  return {
-    response: new Response(stream, {
-      headers: {
-        "Content-Type": "application/x-ndjson",
-        "Transfer-Encoding": "chunked",
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",
-        [CORRELATION_HEADER]: requestId,
-      },
-    }),
-  };
-}

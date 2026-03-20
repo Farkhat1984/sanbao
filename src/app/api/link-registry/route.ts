@@ -1,4 +1,5 @@
 import { jsonOk } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 
 const ORCHESTRATOR_URL =
   process.env.ORCHESTRATOR_URL || "http://orchestrator:8120";
@@ -21,7 +22,7 @@ export async function GET() {
     const data = await res.json();
     return jsonOk(data);
   } catch (e) {
-    console.error("Failed to fetch link registry:", e);
+    logger.error("Failed to fetch link registry", { error: e instanceof Error ? e.message : String(e) });
     return jsonOk({});
   }
 }

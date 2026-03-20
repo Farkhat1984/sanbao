@@ -1,5 +1,6 @@
 // ─── Native Tools Registry ─────────────────────────────
 // Core registry — no imports to tool modules (avoids circular deps).
+import { logger } from "@/lib/logger";
 
 export interface NativeToolContext {
   userId: string;
@@ -46,7 +47,7 @@ export async function executeNativeTool(
     return await def.execute(args, ctx);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[native-tool] ${name} failed:`, msg);
+    logger.error(`[native-tool] ${name} failed`, { error: msg });
     return `Error executing ${name}: ${msg}`;
   }
 }

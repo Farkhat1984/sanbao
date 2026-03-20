@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
-import { fireAndForget } from "@/lib/logger";
+import { fireAndForget, logger } from "@/lib/logger";
 import { invalidatePlanCache } from "@/lib/usage";
 import { getStripe } from "@/lib/stripe-client";
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     }
   } else if (!endpointSecret) {
     // Reject unsigned webhooks — STRIPE_WEBHOOK_SECRET must be configured
-    console.warn("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured");
+    logger.warn("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured");
     return jsonError("Webhook secret not configured", 500);
   } else {
     // endpointSecret set but no signature header

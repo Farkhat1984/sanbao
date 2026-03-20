@@ -1,79 +1,23 @@
-import { requireAdmin } from "@/lib/admin";
-import { prisma } from "@/lib/prisma";
-import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { createAdminCrudHandlers } from "@/lib/admin-crud-factory";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const result = await requireAdmin();
-  if (result.error) return result.error;
-
-  const { id } = await params;
-  const skill = await prisma.skill.findUnique({
-    where: { id },
-    include: {
-      user: { select: { id: true, name: true, email: true } },
-      _count: { select: { agents: true } },
-    },
-  });
-
-  if (!skill) {
-    return jsonError("Скилл не найден", 404);
-  }
-
-  return jsonOk(skill);
-}
-
-export async function PUT(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const result = await requireAdmin();
-  if (result.error) return result.error;
-
-  const { id } = await params;
-  const body = await req.json();
-
-  const skill = await prisma.skill.findUnique({ where: { id } });
-  if (!skill) {
-    return jsonError("Скилл не найден", 404);
-  }
-
-  const allowedFields = [
+export const { GET, PUT, DELETE } = createAdminCrudHandlers({
+  model: "skill",
+  allowedUpdateFields: [
     "name", "description", "systemPrompt", "templates", "citationRules",
     "jurisdiction", "icon", "iconColor", "isBuiltIn", "isPublic", "status",
     "category", "tags",
-  ];
-  const data: Record<string, unknown> = {};
-  for (const field of allowedFields) {
-    if (body[field] !== undefined) data[field] = body[field];
-  }
-
-  // Validate tags if provided
-  if (data.tags !== undefined) {
-    data.tags = Array.isArray(data.tags)
-      ? (data.tags as unknown[]).filter((t: unknown) => typeof t === "string" && (t as string).length <= 50).slice(0, 20)
-      : [];
-  }
-
-  const updated = await prisma.skill.update({ where: { id }, data });
-  return jsonOk(updated);
-}
-
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const result = await requireAdmin();
-  if (result.error) return result.error;
-
-  const { id } = await params;
-  const skill = await prisma.skill.findUnique({ where: { id } });
-  if (!skill) {
-    return jsonError("Скилл не найден", 404);
-  }
-
-  await prisma.skill.delete({ where: { id } });
-  return jsonOk({ success: true });
-}
+  ],
+  notFoundMsg: "Скилл не найден",
+  include: {
+    user: { select: { id: true, name: true, email: true } },
+    _count: { select: { agents: true } },
+  },
+  transformField: (field, value) => {
+    if (field === "tags") {
+      return Array.isArray(value)
+        ? (value as unknown[]).filter((t) => typeof t === "string" && (t as string).length <= 50).slice(0, 20)
+        : [];
+    }
+    return value;
+  },
+});

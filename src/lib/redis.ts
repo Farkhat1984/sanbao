@@ -30,7 +30,15 @@ function getClient(): Redis | null {
   if (redis) return redis;
 
   const url = process.env.REDIS_URL;
-  if (!url) return null;
+  if (!url) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "REDIS_URL is required in production for shared rate limiting and caching. " +
+        "Set REDIS_URL environment variable to your Redis instance."
+      );
+    }
+    return null;
+  }
 
   const maxRetries = registryDefault("redis_max_retries_per_request", 3);
   const retryMaxAttempts = registryDefault("redis_retry_max_attempts", 5);

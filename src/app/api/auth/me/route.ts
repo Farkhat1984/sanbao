@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/auth/me
@@ -81,7 +82,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[AUTH:ME] error:", error);
+    logger.error("[AUTH:ME] error", { error: error instanceof Error ? error.message : String(error) });
     return jsonError("Internal server error", 500);
   }
 }

@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import type { EmailType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SMTP_PORT, DEFAULT_EMAIL_FROM } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 // ─── SMTP Transport ─────────────────────────────────────
 
@@ -88,7 +89,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       where: { id: log.id },
       data: { status: "FAILED", error: "SMTP not configured" },
     });
-    console.error("Email not sent: SMTP not configured");
+    logger.error("Email not sent: SMTP not configured");
     return false;
   }
 
@@ -107,7 +108,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       where: { id: log.id },
       data: { status: "FAILED", error: errorMsg },
     });
-    console.error("Email send failed:", errorMsg);
+    logger.error("Email send failed", { error: errorMsg });
     return false;
   }
 }

@@ -14,10 +14,18 @@ interface AdminCrudConfig {
   notFoundMsg: string;
   /** Optional: Prisma include for GET response */
   include?: Record<string, unknown>;
+  /** Optional: Prisma include for PUT response */
+  includeOnPut?: Record<string, unknown>;
+  /** Optional: extra where conditions for findUnique (e.g. { isGlobal: true }) */
+  findWhere?: Record<string, unknown>;
   /** Optional: transform record before returning from GET */
   transformGet?: (record: Record<string, unknown>) => unknown;
   /** Optional: transform record before returning from PUT */
   transformPut?: (record: Record<string, unknown>) => unknown;
+  /** Optional: validate/transform before PUT. Return NextResponse to abort. */
+  beforeUpdate?: (body: Record<string, unknown>, record: Record<string, unknown>) => Promise<NextResponse | void> | NextResponse | void;
+  /** Optional: validate before DELETE. Return NextResponse to abort. */
+  beforeDelete?: (record: Record<string, unknown>) => Promise<NextResponse | void> | NextResponse | void;
   /** Optional: callback after PUT (e.g. cache invalidation) */
   afterUpdate?: () => void;
   /** Optional: callback after DELETE (e.g. cache invalidation) */
@@ -61,8 +69,12 @@ export function createAdminCrudHandlers(config: AdminCrudConfig) {
     allowedUpdateFields,
     notFoundMsg,
     include,
+    includeOnPut,
+    findWhere,
     transformGet,
     transformPut,
+    beforeUpdate,
+    beforeDelete,
     afterUpdate,
     afterDelete,
     transformField,
@@ -78,8 +90,9 @@ export function createAdminCrudHandlers(config: AdminCrudConfig) {
     if (result.error) return result.error;
 
     const { id } = await params;
+    const where = { id, ...findWhere };
     const record = await delegate.findUnique({
-      where: { id },
+      where,
       ...(include ? { include } : {}),
     });
 
@@ -99,10 +112,16 @@ export function createAdminCrudHandlers(config: AdminCrudConfig) {
 
     const { id } = await params;
     const body = await req.json();
+    const where = { id, ...findWhere };
 
-    const existing = await delegate.findUnique({ where: { id } });
+    const existing = await delegate.findUnique({ where });
     if (!existing) {
       return jsonError(notFoundMsg, 404);
+    }
+
+    if (beforeUpdate) {
+      const abort = await beforeUpdate(body, existing);
+      if (abort) return abort;
     }
 
     const data: Record<string, unknown> = {};
@@ -114,7 +133,11 @@ export function createAdminCrudHandlers(config: AdminCrudConfig) {
       }
     }
 
-    const updated = await delegate.update({ where: { id }, data });
+    const updated = await delegate.update({
+      where: { id },
+      data,
+      ...(includeOnPut ? { include: includeOnPut } : {}),
+    });
     afterUpdate?.();
 
     return jsonOk(transformPut ? transformPut(updated) : updated);
@@ -128,9 +151,15 @@ export function createAdminCrudHandlers(config: AdminCrudConfig) {
     if (result.error) return result.error;
 
     const { id } = await params;
-    const existing = await delegate.findUnique({ where: { id } });
+    const where = { id, ...findWhere };
+    const existing = await delegate.findUnique({ where });
     if (!existing) {
       return jsonError(notFoundMsg, 404);
+    }
+
+    if (beforeDelete) {
+      const abort = await beforeDelete(existing);
+      if (abort) return abort;
     }
 
     await delegate.delete({ where: { id } });

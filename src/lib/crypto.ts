@@ -11,12 +11,15 @@ function getKey(): Buffer {
 
   const secret = process.env.ENCRYPTION_KEY;
   if (!secret) {
-    // Fallback for dev/migration only — log warning
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "ENCRYPTION_KEY is required in production. " +
+        "Generate one with: openssl rand -hex 32"
+      );
+    }
+    // Fallback for dev/migration only
     const fallback = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
     if (!fallback) throw new Error("ENCRYPTION_KEY must be set (NEXTAUTH_SECRET/AUTH_SECRET accepted as temporary fallback)");
-    if (process.env.NODE_ENV === "production") {
-      console.warn("[CRYPTO] Using NEXTAUTH_SECRET/AUTH_SECRET as encryption key fallback — set ENCRYPTION_KEY for production!");
-    }
     _cachedKey = crypto.createHash("sha256").update(fallback).digest();
     return _cachedKey;
   }
