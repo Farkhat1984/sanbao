@@ -74,7 +74,7 @@ const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
 export function getToolCategory(toolName: string | null): ToolCategory {
   if (!toolName) return "generic";
   if (toolName === "$web_search") return "web_search";
-  return TOOL_CATEGORY_MAP[toolName] || "knowledge";
+  return TOOL_CATEGORY_MAP[toolName] || "mcp";
 }
 
 /**

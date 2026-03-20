@@ -5,7 +5,7 @@ import { PHASE_PRIORITY } from "@/lib/chat/tool-categories";
 /** Maximum conversations kept in memory to prevent unbounded growth */
 const MAX_CONVERSATIONS = 500;
 
-export type StreamingPhase = "thinking" | "searching" | "using_tool" | "answering" | "routing" | "consulting" | "synthesizing" | null;
+export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | "routing" | "consulting" | "synthesizing" | null;
 
 export interface ClarifyQuestion {
   id: string;
@@ -46,11 +46,16 @@ interface ChatState {
   // Streaming content buffer (merged into messages when stream ends)
   streamingContent: string | null;
   streamingReasoning: string | null;
+  streamingPlanContent: string | null;
 
   // AI feature toggles
   provider: string;
   thinkingEnabled: boolean;
   webSearchEnabled: boolean;
+  planningEnabled: boolean;
+
+  // Planning mode
+  currentPlan: string | null;
 
   // Autocompact
   contextUsage: ContextUsage | null;
@@ -88,15 +93,20 @@ interface ChatState {
   setIsLoadingMoreMessages: (loading: boolean) => void;
   setIsLoadingConversation: (loading: boolean) => void;
   setMessagesPagination: (cursor: string | null, hasMore: boolean) => void;
-  updateLastAssistantMessage: (content: string, reasoning?: string) => void;
+  updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
   /** Get the latest content for the last assistant message (streaming or committed) */
-  getLastAssistantContent: () => { content: string; reasoning?: string } | null;
+  getLastAssistantContent: () => { content: string; reasoning?: string; planContent?: string } | null;
   setStreaming: (isStreaming: boolean) => void;
   setStreamingPhase: (phase: StreamingPhase, toolName?: string | null) => void;
 
   setProvider: (provider: string) => void;
   toggleThinking: () => void;
   toggleWebSearch: () => void;
+  togglePlanning: () => void;
+
+  // Planning
+  setCurrentPlan: (plan: string | null) => void;
+  updateCurrentPlan: (content: string) => void;
 
   // Context
   setContextUsage: (usage: ContextUsage | null) => void;
@@ -125,10 +135,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingToolName: null,
   streamingContent: null,
   streamingReasoning: null,
+  streamingPlanContent: null,
   provider: "default",
   thinkingEnabled: false,
   webSearchEnabled: false,
+  planningEnabled: false,
 
+  currentPlan: null,
   contextUsage: null,
   pendingInput: null,
   clarifyQuestions: null,
@@ -144,7 +157,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setActiveConversation: (activeConversationId) =>
     set(activeConversationId === null
-      ? { activeConversationId, messages: [], contextUsage: null, messagesCursor: null, hasMoreMessages: false, isLoadingConversation: false }
+      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null, messagesCursor: null, hasMoreMessages: false, isLoadingConversation: false }
       : { activeConversationId }),
 
   setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
@@ -210,10 +223,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setMessagesPagination: (messagesCursor, hasMoreMessages) =>
     set({ messagesCursor, hasMoreMessages }),
 
-  updateLastAssistantMessage: (content, reasoning) =>
+  updateLastAssistantMessage: (content, reasoning, planContent) =>
     set({
       streamingContent: content,
       ...(reasoning !== undefined ? { streamingReasoning: reasoning } : {}),
+      ...(planContent !== undefined ? { streamingPlanContent: planContent } : {}),
     }),
 
   getLastAssistantContent: () => {
@@ -222,6 +236,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return {
         content: s.streamingContent,
         reasoning: s.streamingReasoning ?? undefined,
+        planContent: s.streamingPlanContent ?? undefined,
       };
     }
     return null;
@@ -238,6 +253,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ...msgs[i],
               content: s.streamingContent!,
               ...(s.streamingReasoning !== null ? { reasoning: s.streamingReasoning } : {}),
+              ...(s.streamingPlanContent !== null ? { planContent: s.streamingPlanContent } : {}),
             };
             break;
           }
@@ -248,6 +264,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           streamingToolName: null,
           streamingContent: null,
           streamingReasoning: null,
+          streamingPlanContent: null,
           messages: msgs,
         };
       }
@@ -277,6 +294,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setProvider: (provider) => set({ provider }),
   toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),
   toggleWebSearch: () => set((s) => ({ webSearchEnabled: !s.webSearchEnabled })),
+  togglePlanning: () => set((s) => ({ planningEnabled: !s.planningEnabled })),
+
+  setCurrentPlan: (currentPlan) => set({ currentPlan }),
+
+  updateCurrentPlan: (content) =>
+    set((s) => ({ currentPlan: (s.currentPlan || "") + content })),
 
   setContextUsage: (contextUsage) => set({ contextUsage }),
 

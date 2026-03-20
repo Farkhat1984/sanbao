@@ -86,6 +86,7 @@ export async function POST(req: Request) {
     userId: session.user.id,
     planId: plan.id,
     thinkingEnabled: body.thinkingEnabled,
+    planningEnabled: body.planningEnabled,
     maxMcpTools: settings.maxMcpTools,
   });
   if ("error" in agentResult) {

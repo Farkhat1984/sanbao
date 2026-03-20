@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.environ["TG_BOT_TOKEN"]
 TG_CHAT_ID = os.getenv("TG_CHAT_ID", "")
 AUTH_PASSWORD = os.getenv("BOT_PASSWORD", "Ckdshfh231161!")
-PRIMARY_IP = os.getenv("PRIMARY_IP", "178.88.188.52")
+PRIMARY_IP = os.getenv("PRIMARY_IP", "128.127.102.170")
 STANDBY_IP = os.getenv("STANDBY_IP", "46.225.122.142")
 SANBAO_PORT = os.getenv("SANBAO_PORT", "3004")
 LEEMADB_PORT = os.getenv("LEEMADB_PORT", "8110")
@@ -49,7 +49,6 @@ AUTH_FILE = "/data/authorized_users.json"
 SYNC_SSH_USER = os.getenv("SYNC_SSH_USER", "metadmin")
 SYNC_SSH_HOST = os.getenv("SYNC_SSH_HOST", PRIMARY_IP)
 SYNC_SSH_PORT = os.getenv("SYNC_SSH_PORT", "22")
-AI_CORTEX_AUTH_TOKEN = os.getenv("AI_CORTEX_AUTH_TOKEN", "")
 
 # ── Auto-failover config ───────────────────────────────────────────────────
 MONITOR_INTERVAL = 30          # seconds between health checks
@@ -65,17 +64,15 @@ consecutive_recoveries = 0
 last_switch_time = 0.0         # monotonic timestamp of last failover/failback
 failover_active = False
 
-# ── Server 2 health state (checked via SSH to standby) ───────────────────
+# ── Server 2 local health state ───────────────────────────────────────────
 ORCHESTRATOR_PORT = os.getenv("ORCHESTRATOR_PORT", "8120")
 S2_ALERT_THRESHOLD = 2         # consecutive failures before alerting (60s)
-S2_SSH_USER = os.getenv("S2_SSH_USER", "faragj")
-S2_SSH_HOST = os.getenv("S2_SSH_HOST", STANDBY_IP)
-S2_SSH_PORT = os.getenv("S2_SSH_PORT", "22")
-# Checked via SSH to standby server (localhost ports on VPS)
+# Docker service names (bot runs in same compose network)
+# Internal ports: sanbao=3004, leemadb=8080, orchestrator=8120
 S2_SERVICES: dict[str, dict] = {
-    "Sanbao":       {"port": SANBAO_PORT, "path": "/api/ready"},
-    "LeemaDB":      {"port": LEEMADB_PORT, "path": "/health"},
-    "Orchestrator": {"port": ORCHESTRATOR_PORT, "path": "/health"},
+    "Sanbao":      {"url": "http://sanbao:3004/api/ready"},
+    "LeemaDB":  {"url": "http://leemadb:8080/health"},
+    "Orchestrator": {"url": "http://orchestrator:8120/health"},
 }
 # Track per-service: {"Sanbao": True/False/None} — None = unknown (first run)
 s2_health_state: dict[str, bool | None] = {n: None for n in S2_SERVICES}
@@ -129,15 +126,11 @@ async def check_url(url: str, timeout: int = 8, any_response: bool = False) -> t
 
     If any_response=True, any HTTP status counts as alive (for services
     where /health may require auth but responding means the process is up).
-    Automatically adds Authorization header for AI Cortex services.
     """
     import aiohttp
     try:
-        headers = {}
-        if AI_CORTEX_AUTH_TOKEN:
-            headers["Authorization"] = f"Bearer {AI_CORTEX_AUTH_TOKEN}"
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=timeout), headers=headers) as r:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
                 body = await r.text()
                 if r.status == 200 or any_response:
                     return True, body[:200]
@@ -161,31 +154,22 @@ def run_shell(cmd: str, timeout: int = 120) -> tuple[int, str]:
 
 
 def check_s1_sanbao_sync() -> bool:
-    """Check Server 1 (local) sanbao health."""
+    """Check Server 1 sanbao health via SSH (blocking)."""
     rc, _ = run_shell(
-        f'curl -sf --max-time 5 http://localhost:{SANBAO_PORT}/api/ready',
-        timeout=10,
+        f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {SYNC_SSH_PORT} '
+        f'{SYNC_SSH_USER}@{SYNC_SSH_HOST} '
+        f'"curl -sf --max-time 5 http://localhost:{SANBAO_PORT}/api/ready"',
+        timeout=15,
     )
     return rc == 0
 
 
 def check_s1_cortex_service(port: str, path: str) -> tuple[bool, str]:
-    """Check a Server 1 (local) AI Cortex service."""
-    auth = f' -H "Authorization: Bearer {AI_CORTEX_AUTH_TOKEN}"' if AI_CORTEX_AUTH_TOKEN else ""
+    """Check a Server 1 AI Cortex service via SSH (blocking)."""
     rc, out = run_shell(
-        f'curl -sf --max-time 5{auth} http://localhost:{port}{path}',
-        timeout=10,
-    )
-    return (rc == 0, out[:200] if rc == 0 else "unreachable")
-
-
-def check_s2_service(port: str, path: str) -> tuple[bool, str]:
-    """Check a Server 2 (standby) service via SSH (blocking)."""
-    auth = f' -H \\"Authorization: Bearer {AI_CORTEX_AUTH_TOKEN}\\"' if AI_CORTEX_AUTH_TOKEN else ""
-    rc, out = run_shell(
-        f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {S2_SSH_PORT} '
-        f'{S2_SSH_USER}@{S2_SSH_HOST} '
-        f'"curl -sf --max-time 5{auth} http://localhost:{port}{path}"',
+        f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {SYNC_SSH_PORT} '
+        f'{SYNC_SSH_USER}@{SYNC_SSH_HOST} '
+        f'"curl -sf --max-time 5 http://localhost:{port}{path}"',
         timeout=15,
     )
     return (rc == 0, out[:200] if rc == 0 else "unreachable")
@@ -413,12 +397,12 @@ async def auto_monitor_loop() -> None:
                             f"Ошибка: <code>{svc_detail}</code>"
                         )
 
-            # ── Server 2 health checks (via SSH to standby) ────────────
+            # ── Server 2 local health checks ──────────────────────────────
             for svc_name, svc_cfg in S2_SERVICES.items():
                 try:
-                    svc_ok, svc_detail = await asyncio.to_thread(
-                        check_s2_service,
-                        svc_cfg["port"], svc_cfg["path"],
+                    svc_ok, svc_detail = await check_url(
+                        svc_cfg["url"], timeout=5,
+                        any_response=svc_cfg.get("any_response", False),
                     )
                 except Exception as exc:
                     svc_ok, svc_detail = False, str(exc)[:120]
@@ -510,26 +494,22 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     msg = await update.message.reply_text("⏳ Проверяю серверы...")
 
-    async def check_local(port: str, path: str) -> tuple[bool, str]:
-        """Check Server 1 (local) service."""
-        return await check_url(f"http://localhost:{port}{path}", timeout=5)
-
-    async def check_s2_via_ssh(port: str, path: str) -> tuple[bool, str]:
+    async def check_via_ssh(port: str, path: str) -> tuple[bool, str]:
         rc, out = await asyncio.to_thread(
             run_shell,
-            f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {S2_SSH_PORT} {S2_SSH_USER}@{S2_SSH_HOST} '
+            f'ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p {SYNC_SSH_PORT} {SYNC_SSH_USER}@{SYNC_SSH_HOST} '
             f'"curl -sf --max-time 5 http://localhost:{port}{path}"',
             15,
         )
         return (rc == 0, out[:200] if rc == 0 else "unreachable")
 
     checks = await asyncio.gather(
-        check_local(SANBAO_PORT, "/api/health"),
-        check_local(LEEMADB_PORT, "/health"),
-        check_local(ORCHESTRATOR_PORT, "/health"),
-        check_s2_via_ssh(SANBAO_PORT, "/api/health"),
-        check_s2_via_ssh(LEEMADB_PORT, "/health"),
-        check_s2_via_ssh(ORCHESTRATOR_PORT, "/health"),
+        check_via_ssh(SANBAO_PORT, "/api/health"),
+        check_via_ssh(LEEMADB_PORT, "/health"),
+        check_via_ssh(ORCHESTRATOR_PORT, "/health"),
+        check_url("http://sanbao:3004/api/health"),
+        check_url("http://leemadb:8080/health"),
+        check_url("http://orchestrator:8120/health"),
     )
 
     s1_sanbao = checks[0]

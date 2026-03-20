@@ -78,6 +78,8 @@ describe("GET /api/admin/prompts", () => {
     expect(fixCode.isDefault).toBe(false);
     expect(fixCode.currentValue).toBe("Custom fix prompt");
 
+    const planning = data.find((p: { key: string }) => p.key === "prompt_mode_planning");
+    expect(planning.isDefault).toBe(true);
   });
 
   it("each prompt has label and description", async () => {

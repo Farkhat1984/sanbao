@@ -18,6 +18,11 @@ import {
 } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { getSettingNumber } from "@/lib/settings";
+import {
+  createPlanDetectorState,
+  feedPlanDetector,
+  flushPlanDetector,
+} from "@/lib/chat/plan-parser";
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -203,6 +208,9 @@ export function streamMoonshot(
 
         const currentMessages = [...apiMessages];
 
+        // Plan detection state (shared parser)
+        const planState = createPlanDetectorState();
+
         // Usage accumulation for token logging
         let totalInputTokens = 0;
         let totalOutputTokens = 0;
@@ -379,12 +387,23 @@ export function streamMoonshot(
               );
             }
 
-            // Stream content
+            // Stream content with plan detection
             if (delta?.content) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "c", v: delta.content }) + "\n")
-              );
+              const { chunks } = feedPlanDetector(planState, delta.content);
+              for (const ch of chunks) {
+                controller.enqueue(
+                  encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+                );
+              }
             }
+          }
+
+          // Flush remaining plan buffer
+          const { chunks: finalChunks } = flushPlanDetector(planState);
+          for (const ch of finalChunks) {
+            controller.enqueue(
+              encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+            );
           }
 
           // ─── Token budget check ──────────────────────────────

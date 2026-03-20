@@ -183,18 +183,6 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
   const { method } = req;
   const { pathname } = req.nextUrl;
   const origin = req.headers.get("origin");
-  const host = req.headers.get("host");
-
-  // Canonical domain redirect: sanbao.ai → www.sanbao.ai
-  // Ensures OAuth callbacks, cookies, and sessions use a single domain
-  if (
-    host === "sanbao.ai" &&
-    process.env.NODE_ENV === "production"
-  ) {
-    const url = req.nextUrl.clone();
-    url.host = "www.sanbao.ai";
-    return NextResponse.redirect(url, 301);
-  }
 
   // CORS preflight for mobile clients
   if (method === "OPTIONS" && isMobileOrigin(origin)) {
@@ -245,8 +233,6 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
 export const config = {
   matcher: [
     "/",
-    "/login",
-    "/register",
     "/chat/:path*",
     "/profile",
     "/settings",
@@ -258,8 +244,5 @@ export const config = {
     "/invite/:path*",
     "/admin/:path*",
     "/api/:path*",
-    "/terms",
-    "/privacy",
-    "/offer",
   ],
 };

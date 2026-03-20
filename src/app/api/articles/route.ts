@@ -53,10 +53,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Fetch full article via get_article tool
+  // Single unified call — orchestrator resolves the right handler
   const { result, error } = await callMcpTool(
     UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,
-    "get_article", { code, article }, ctx,
+    "resolve_document", { code, identifier: article }, ctx,
   );
   if (error) return jsonError(`MCP error: ${error}`, 502);
 

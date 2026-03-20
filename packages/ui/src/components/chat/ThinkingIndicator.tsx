@@ -4,6 +4,7 @@ import {
   Brain,
   MessageSquare,
   Globe,
+  ListChecks,
   DatabaseZap,
   Calculator,
   Bookmark,
@@ -143,6 +144,10 @@ const ICON_ANIMATIONS: Record<
     animate: { rotate: [0, 90, 180, 270, 360] },
     duration: 1.8,
   },
+  planning: {
+    animate: { rotateZ: [0, -8, 8, -4, 4, 0] },
+    duration: 2,
+  },
   answering: {
     animate: { rotateZ: [0, -8, 8, -4, 4, 0] },
     duration: 2,
@@ -212,6 +217,12 @@ export function ThinkingIndicator({ phase, agentName, toolName }: ThinkingIndica
     gradientClass = "from-amber-500 to-amber-600";
     dotColorClass = "bg-amber-500";
     animKey = "synthesizing";
+  } else if (phase === "planning") {
+    label = "Составляет план";
+    Icon = ListChecks;
+    gradientClass = "from-warning to-warning";
+    dotColorClass = "bg-warning";
+    animKey = "planning";
   } else {
     label = "Отвечает";
     Icon = MessageSquare;

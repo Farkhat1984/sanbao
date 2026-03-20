@@ -24,11 +24,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - sanbao.ai
-        - faragj.duckdns.org
+        - sanbao.example.com  # Replace with actual domain
       secretName: sanbao-tls
   rules:
-    - host: sanbao.ai
+    - host: sanbao.example.com  # Replace with actual domain
       http:
         paths:
           - path: /

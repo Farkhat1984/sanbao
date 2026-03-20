@@ -30,7 +30,7 @@ LOCK_FILE="/tmp/failover-sync.lock"
 COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.failover.yml"
 
 # Sanbao compose on Server 1 (primary)
-REMOTE_SANBAO_DIR="/home/metadmin/faragj/SANBAO_PROJECT/sanbao"
+REMOTE_SANBAO_DIR="/home/metadmin/faragj/sanbao"
 REMOTE_COMPOSE_FILE="docker-compose.prod.yml"
 
 # Retry config

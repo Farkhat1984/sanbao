@@ -43,6 +43,7 @@ export function useStreamChat({
   const multiAgentId = useChatStore((s) => s.multiAgentId);
   const thinkingEnabled = useChatStore((s) => s.thinkingEnabled);
   const webSearchEnabled = useChatStore((s) => s.webSearchEnabled);
+  const planningEnabled = useChatStore((s) => s.planningEnabled);
   const pendingInput = useChatStore((s) => s.pendingInput);
   const addMessage = useChatStore((s) => s.addMessage);
   const addConversation = useChatStore((s) => s.addConversation);
@@ -50,6 +51,8 @@ export function useStreamChat({
   const updateLastAssistantMessage = useChatStore((s) => s.updateLastAssistantMessage);
   const setStreaming = useChatStore((s) => s.setStreaming);
   const setStreamingPhase = useChatStore((s) => s.setStreamingPhase);
+  const updateCurrentPlan = useChatStore((s) => s.updateCurrentPlan);
+  const setCurrentPlan = useChatStore((s) => s.setCurrentPlan);
   const setContextUsage = useChatStore((s) => s.setContextUsage);
   const setPendingInput = useChatStore((s) => s.setPendingInput);
   const setClarifyQuestions = useChatStore((s) => s.setClarifyQuestions);
@@ -101,6 +104,7 @@ export function useStreamChat({
 
     setStreaming(true);
     setStreamingPhase("thinking");
+    setCurrentPlan(null);
     clearSwarmAgentResponses();
 
     // Ensure we have a conversation for persistence
@@ -142,6 +146,7 @@ export function useStreamChat({
     }
 
     let fullContent = "";
+    let fullPlan = "";
     let fullReasoning = "";
 
     try {
@@ -171,6 +176,7 @@ export function useStreamChat({
           conversationId: convId,
           thinkingEnabled,
           webSearchEnabled,
+          planningEnabled,
           attachments: attachmentsPayload,
           swarmMode: swarmMode || undefined,
           swarmOrgId: swarmOrgId || undefined,
@@ -261,6 +267,16 @@ export function useStreamChat({
                 );
                 break;
               }
+              case "p": // plan content
+                setStreamingPhase("planning");
+                fullPlan += data.v;
+                updateCurrentPlan(data.v);
+                updateLastAssistantMessage(
+                  fullContent,
+                  fullReasoning || undefined,
+                  fullPlan
+                );
+                break;
               case "x": // context info
                 try {
                   const info = JSON.parse(data.v);
@@ -304,6 +320,7 @@ export function useStreamChat({
               {
                 role: "ASSISTANT",
                 content: fullContent,
+                planContent: fullPlan || undefined,
                 ...(swarmResponses.length > 0 ? { metadata: { swarmAgentResponses: swarmResponses } } : {}),
               },
             ],
@@ -373,7 +390,7 @@ export function useStreamChat({
 
       if (fullContent) {
         // Flush accumulated content to the store so partial response is visible
-        updateLastAssistantMessage(fullContent, fullReasoning || undefined);
+        updateLastAssistantMessage(fullContent, fullReasoning || undefined, fullPlan || undefined);
 
         // Save partial content on any interruption
         if (convId) {
@@ -383,7 +400,7 @@ export function useStreamChat({
             body: JSON.stringify({
               messages: [
                 { role: "USER", content: trimmed },
-                { role: "ASSISTANT", content: fullContent },
+                { role: "ASSISTANT", content: fullContent, planContent: fullPlan || undefined },
               ],
             }),
           }).catch(console.error);
@@ -412,12 +429,15 @@ export function useStreamChat({
     multiAgentId,
     thinkingEnabled,
     webSearchEnabled,
+    planningEnabled,
     addMessage,
     addConversation,
     setActiveConversation,
     updateLastAssistantMessage,
     setStreaming,
     setStreamingPhase,
+    updateCurrentPlan,
+    setCurrentPlan,
     setContextUsage,
     addTask,
     setPendingInput,

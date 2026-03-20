@@ -33,6 +33,8 @@ export function resetAllStores() {
     streamingToolName: null,
     streamingContent: null,
     streamingReasoning: null,
+    streamingPlanContent: null,
+    currentPlan: null,
     contextUsage: null,
     pendingInput: null,
     clarifyQuestions: null,

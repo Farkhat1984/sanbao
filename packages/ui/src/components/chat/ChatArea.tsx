@@ -19,6 +19,7 @@ function mapMessages(raw: any[]): ChatMessage[] {
     id: m.id,
     role: m.role,
     content: m.content,
+    planContent: m.planContent || undefined,
     createdAt: m.createdAt,
     legalRefs: m.legalRefs || [],
     artifacts: m.artifacts || [],

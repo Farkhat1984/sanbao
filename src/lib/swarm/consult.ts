@@ -5,15 +5,6 @@ import { callMcpTool } from "@/lib/mcp-client";
 import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS, DEFAULT_MAX_TOKENS } from "@/lib/constants";
 import { getSettingNumber } from "@/lib/settings";
 
-/** Cached global system prompt for consult calls within same request */
-let _cachedGlobalPrompt: string | null = null;
-async function getGlobalPrompt(): Promise<string> {
-  if (!_cachedGlobalPrompt) {
-    _cachedGlobalPrompt = await getPrompt("prompt_system_global");
-  }
-  return _cachedGlobalPrompt;
-}
-
 interface ConsultOptions {
   userMessage: string;
   conversationHistory: Array<{ role: string; content: string }>;
@@ -45,9 +36,7 @@ async function consultAgent(
   maxToolTurns: number,
   signal?: AbortSignal
 ): Promise<string> {
-  // Global system prompt is always prepended to agent-specific instructions
-  const globalPrompt = await getGlobalPrompt();
-  const systemPrompt = globalPrompt + "\n\n" + agentCtx.systemPrompt + agentCtx.skillPrompts.join("");
+  const systemPrompt = agentCtx.systemPrompt + agentCtx.skillPrompts.join("");
 
   // Build tools array for the agent's MCP tools
   const tools = agentCtx.mcpTools.map((t) => ({

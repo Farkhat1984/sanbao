@@ -1,11 +1,17 @@
 // ─── Vercel AI SDK streaming handler ─────────────────────
-// Extracted from route.ts — wraps streamText() with reasoning support
-// for OpenAI-compatible providers via AI SDK.
+// Extracted from route.ts — wraps streamText() with plan detection
+// and reasoning support for OpenAI-compatible providers via AI SDK.
 
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from "@/lib/constants";
+import { getSettingNumber } from "@/lib/settings";
 import type { ResolvedModel } from "@/lib/model-router";
+import {
+  createPlanDetectorState,
+  feedPlanDetector,
+  flushPlanDetector,
+} from "@/lib/chat/plan-parser";
 
 // ─── Options ─────────────────────────────────────────────
 
@@ -33,9 +39,9 @@ export interface AiSdkStreamOptions {
   settingsOverrides?: AiSdkSettingsOverrides;
 }
 
-// ─── NDJSON wrapper for AI SDK streams ────────────────────
+// ─── Plan detection wrapper for AI SDK streams ───────────
 
-function createNdjsonStream(
+function createPlanDetectorStream(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fullStream: AsyncIterable<any>,
   contextInfo?: {
@@ -44,6 +50,7 @@ function createNdjsonStream(
     contextWindowSize: number;
     compacting: boolean;
   },
+  sseMaxBuffer = 1_000_000,
 ): ReadableStream {
   const encoder = new TextEncoder();
 
@@ -65,6 +72,8 @@ function createNdjsonStream(
           );
         }
 
+        const planState = createPlanDetectorState();
+
         for await (const part of fullStream) {
           // Stream reasoning chunks from AI SDK
           if (part.type === "reasoning-delta") {
@@ -76,13 +85,34 @@ function createNdjsonStream(
             continue;
           }
 
-          // Stream text content
+          // Only process text deltas for plan detection + content
           if (part.type !== "text-delta") continue;
           const chunk = part.text;
           if (!chunk) continue;
 
+          // Buffer overflow safety: flush everything before feeding more
+          if (planState.buffer.length + chunk.length > sseMaxBuffer) {
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ t: planState.insidePlan ? "p" : "c", v: planState.buffer }) + "\n"
+              )
+            );
+            planState.buffer = "";
+          }
+
+          const { chunks } = feedPlanDetector(planState, chunk);
+          for (const ch of chunks) {
+            controller.enqueue(
+              encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
+            );
+          }
+        }
+
+        // Flush remaining
+        const { chunks: finalChunks } = flushPlanDetector(planState);
+        for (const ch of finalChunks) {
           controller.enqueue(
-            encoder.encode(JSON.stringify({ t: "c", v: chunk }) + "\n")
+            encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
           );
         }
       } catch {
@@ -119,6 +149,8 @@ export async function streamAiSdk(options: AiSdkStreamOptions): Promise<Readable
     throw new Error("No model resolved from DB — configure models via /admin/models");
   }
 
+  const sseMaxBuffer = await getSettingNumber("stream_sse_max_buffer");
+
   // Resolve settings: prefer overrides from route.ts batch, fall back to constants
   const cfgDefaultTemperature = settingsOverrides?.defaultTemperature ?? DEFAULT_TEMPERATURE;
   const cfgDefaultTopP = settingsOverrides?.defaultTopP ?? DEFAULT_TOP_P;
@@ -146,6 +178,6 @@ export async function streamAiSdk(options: AiSdkStreamOptions): Promise<Readable
     }).catch(() => {});
   }
 
-  // Wrap AI SDK full stream with NDJSON encoding
-  return createNdjsonStream(result.fullStream, contextInfo);
+  // Wrap AI SDK full stream with plan detection and reasoning
+  return createPlanDetectorStream(result.fullStream, contextInfo, sseMaxBuffer);
 }

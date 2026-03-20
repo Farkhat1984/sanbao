@@ -181,62 +181,21 @@ Dispatch order: MCP tools → Native tools → `$web_search`
 
 ## Infrastructure
 
-### Servers
-
-| Role | Host | Access |
-|------|------|--------|
-| **Primary (Home)** | `faragj.duckdns.org` (178.88.188.52) | SSH :22222, user: metadmin |
-| **Standby (VPS)** | `46.225.122.142` | SSH :22, user: faragj |
-
-### Cloudflare Tunnel
-
-Runs on home server via systemd (`cloudflared.service`, config: `/etc/cloudflared/config.yml`).
-Tunnel ID: `222e9fb5-634f-4064-a1e9-8af13f47e4f1`.
+### Cloudflare Tunnel (Server 2: 46.225.122.142)
 
 | Domain | Target |
 |--------|--------|
 | sanbao.ai / www.sanbao.ai | localhost:3004 |
-| mcp.sanbao.ai | localhost:8120 |
-| leema.kz / www.leema.kz | localhost:3100 |
-| jcas.kz / www.jcas.kz | localhost:5173 |
-| rexor.kz | 46.225.122.142:3003 |
+| mcp.leema.kz | localhost:8120 |
+| leema.kz / www.leema.kz | localhost:5173 |
 
-### Monitor Bot (Telegram)
+**Tunnel ID:** `222e9fb5-634f-4064-a1e9-8af13f47e4f1`
 
-Container `monitor-bot` (`infra/bot/`), `--network host`, auto-restart.
-Telegram bot `@sanbao_monitor_bot`, chat ID: 713121714.
+### Failover
 
-Features:
-- Health checks every 30s: Sanbao (:3004/api/ready), LeemaDB (:8110/health), Orchestrator (:8120/health)
-- Auto-failover: 3 consecutive failures (90s) → start cloudflared on VPS → route traffic to standby
-- Auto-failback: 3 consecutive recoveries + 5min cooldown → stop cloudflared on VPS
-- Server 2 monitoring via SSH (sanbao, leemadb, orchestrator)
-- Commands: /status, /failover, /failback, /sync, /backup (password-protected)
-
-Rebuild: `cd infra/bot && docker build -t monitor-bot .`
-Env requires: `AI_CORTEX_AUTH_TOKEN` for LeemaDB/Orchestrator health checks.
-
-### DB Sync (Primary → VPS)
-
-Cron `*/5 * * * *` runs `scripts/sync-db.sh`:
-- pg_dump from primary → gzip → scp → restore on VPS
-- Lock file prevents concurrent runs, ~8s full cycle
-- Logs: `logs/sync-db.log`
-
-### K3s Cluster (Home Server)
-
-- **K3s v1.34.5** with Docker runtime, node: `ai-metalogic`
-- Ingress: nginx-ingress on NodePort 30080/30443
-- Cert-manager with Let's Encrypt (letsencrypt-prod/staging)
-- System nginx (ports 80/443) proxies to Docker containers; will proxy to K3s after migration
-- Deploy: `./infra/k8s/deploy-k3s.sh [init|secrets|app|status|all]`
-- Add worker: `curl -sfL https://get.k3s.io | K3S_URL=https://faragj.duckdns.org:6443 K3S_TOKEN=<token> sh -`
-
-### CI/CD
-
-GitHub Actions: `.github/workflows/deploy-server.yml`
-- Push to `main` → CI → Deploy to Home Server → Deploy to VPS (standby)
-- SSH via `faragj.duckdns.org:22222`
+- Monitor bot (`failover-monitor.service`): probes /api/ready every 30s
+- 3 failures → start cloudflared → route traffic to Server 2
+- 3 successes + 5min cooldown → stop
 
 ### Monitoring
 
@@ -246,9 +205,9 @@ GitHub Actions: `.github/workflows/deploy-server.yml`
 - Grafana + Prometheus: `infra/monitoring/`
 - Sentry: active when `SENTRY_DSN` set
 
-### K8s Manifests
+### K8s (optional)
 
-`infra/k8s/`: namespace, deployment (3-20 HPA), PDB, ingress (sanbao.ai), network policies, configmap, secrets template, cluster-issuer, postgres, redis, pgbouncer, backup CronJob, canary rollout, deploy script.
+Manifests in `infra/k8s/`: deployment (3-20 HPA), PDB, ingress, network policies, backup CronJob, Argo canary rollout.
 
 ---
 

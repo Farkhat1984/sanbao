@@ -33,6 +33,7 @@ export const chatRequestSchema = z.object({
   orgAgentId: z.string().optional(),
   thinkingEnabled: z.boolean().default(true),
   webSearchEnabled: z.boolean().default(false),
+  planningEnabled: z.boolean().default(false),
   attachments: z.array(chatAttachmentSchema).default([]),
   conversationId: z.string().optional(),
   swarmMode: z.boolean().default(false),
@@ -49,6 +50,7 @@ export interface ChatRequestBody {
   orgAgentId?: string;
   thinkingEnabled: boolean;
   webSearchEnabled: boolean;
+  planningEnabled: boolean;
   attachments: ChatAttachment[];
   conversationId?: string;
   swarmMode: boolean;
