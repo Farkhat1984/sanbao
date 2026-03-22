@@ -256,8 +256,8 @@ export function streamMoonshot(
           const toolCallMap: Record<number, CollectedToolCall> = {};
           let hasToolCallFinish = false;
           let turnReasoningContent = "";
-          // Buffer content during this turn — only flush if it's NOT a tool-call turn.
-          let turnContentBuffer = "";
+          // Track content emitted during this turn for rollback on tool-call turns
+          let turnContentEmitted = 0;
 
           for await (const chunk of parseSSEStream(response.body, sseMaxBuffer)) {
             // Handle SSE error events from Moonshot API
@@ -333,32 +333,29 @@ export function streamMoonshot(
               enqueueJson(controller, { t: "r", v: delta.reasoning_content });
             }
 
-            // Buffer content — will be flushed only if this turn does NOT end with tool_calls
+            // Stream content in real-time through plan detector
             if (delta?.content) {
-              turnContentBuffer += delta.content;
-            }
-          }
-
-          // Decide whether to emit buffered content
-          if (hasToolCallFinish && Object.keys(toolCallMap).length > 0) {
-            // Tool-call turn — discard narration content
-            if (turnContentBuffer) {
-              logger.info("Discarding tool-call narration", {
-                turn,
-                narrationLength: turnContentBuffer.length,
-                preview: turnContentBuffer.slice(0, 100),
-              });
-            }
-          } else {
-            // Final turn (no tool calls) — flush buffered content through plan detector
-            if (turnContentBuffer) {
-              hasProducedContent = true;
-              const { chunks } = feedPlanDetector(planState, turnContentBuffer);
+              const { chunks } = feedPlanDetector(planState, delta.content);
               for (const ch of chunks) {
+                turnContentEmitted += ch.text.length;
                 enqueueJson(controller, { t: ch.type, v: ch.text });
               }
             }
-            // Flush remaining plan buffer
+          }
+
+          // Handle end of SSE turn
+          if (hasToolCallFinish && Object.keys(toolCallMap).length > 0) {
+            // Tool-call turn — tell client to discard any narration content we streamed
+            if (turnContentEmitted > 0) {
+              logger.info("Rolling back tool-call narration", {
+                turn,
+                narrationLength: turnContentEmitted,
+              });
+              enqueueJson(controller, { t: "d", v: turnContentEmitted });
+            }
+          } else {
+            // Final turn (no tool calls) — flush remaining plan detector buffer
+            hasProducedContent = true;
             const { chunks: finalChunks } = flushPlanDetector(planState);
             for (const ch of finalChunks) {
               enqueueJson(controller, { t: ch.type, v: ch.text });

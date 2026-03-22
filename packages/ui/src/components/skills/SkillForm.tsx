@@ -27,6 +27,7 @@ export function SkillForm({ initial, adminMode }: SkillFormProps) {
   const [genDescription, setGenDescription] = useState("");
   const [showGenPanel, setShowGenPanel] = useState(isNew);
   const [genError, setGenError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [name, setName] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
@@ -66,6 +67,7 @@ export function SkillForm({ initial, adminMode }: SkillFormProps) {
     if (!name.trim() || !systemPrompt.trim()) return;
 
     setSaving(true);
+    setSaveError(null);
     try {
       const url = adminMode
         ? (initial ? `/api/admin/skills/${initial.id}` : "/api/admin/skills")
@@ -97,7 +99,12 @@ export function SkillForm({ initial, adminMode }: SkillFormProps) {
       if (res.ok) {
         router.push(adminMode ? "/admin/skills" : "/skills");
         router.refresh();
+      } else {
+        const data = await res.json().catch(() => null);
+        setSaveError(data?.error || `Ошибка сохранения (${res.status})`);
       }
+    } catch {
+      setSaveError("Не удалось сохранить скилл. Проверьте соединение.");
     } finally {
       setSaving(false);
     }
@@ -321,6 +328,12 @@ export function SkillForm({ initial, adminMode }: SkillFormProps) {
           </div>
         )}
       </div>
+
+      {saveError && (
+        <div className="rounded-xl bg-error/10 border border-error/20 px-4 py-3 text-sm text-error">
+          {saveError}
+        </div>
+      )}
 
       <div className="flex gap-3">
         <Button type="submit" variant="primary" disabled={saving || !name.trim() || !systemPrompt.trim()}>

@@ -26,6 +26,7 @@ interface PlanCardProps {
     highlighted?: boolean;
   };
   isCurrent: boolean;
+  onContactAdmin?: () => void;
 }
 
 function formatLimit(value: number, unit: string) {
@@ -39,7 +40,7 @@ function formatTokens(value: number) {
   return value.toString();
 }
 
-export function PlanCard({ plan, isCurrent }: PlanCardProps) {
+export function PlanCard({ plan, isCurrent, onContactAdmin }: PlanCardProps) {
   const limits = [
     {
       icon: MessageSquare,
@@ -159,7 +160,10 @@ export function PlanCard({ plan, isCurrent }: PlanCardProps) {
             Текущий тариф
           </div>
         ) : (
-          <button className="w-full h-10 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:bg-surface-alt flex items-center justify-center transition-colors cursor-pointer">
+          <button
+            onClick={onContactAdmin}
+            className="w-full h-10 rounded-xl border border-border bg-surface text-sm text-text-secondary hover:bg-surface-alt flex items-center justify-center transition-colors cursor-pointer"
+          >
             <Bot className="h-4 w-4 mr-2" />
             Обратитесь к администратору
           </button>

@@ -207,7 +207,12 @@ export async function validateChatRequest(
       };
     }
     if (!(await checkMinuteRateLimit(userId, plan.requestsPerMinute))) {
-      return { error: jsonError("Слишком много запросов. Подождите минуту.", 429) };
+      return {
+        error: NextResponse.json(
+          { error: "Слишком много запросов. Подождите минуту перед следующим сообщением.", retryAfterSeconds: 60 },
+          { status: 429, headers: { "Retry-After": "60" } }
+        ),
+      };
     }
     if (body.thinkingEnabled && !plan.canUseReasoning) {
       return { error: jsonError("Режим рассуждений доступен на тарифе Pro и выше. Обновите подписку в настройках.", 403) };

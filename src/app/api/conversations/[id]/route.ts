@@ -28,7 +28,7 @@ export async function GET(
       systemAgentId: true,
       orgAgentId: true,
       messages: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit + 1, // fetch one extra to determine if there are more
         ...(before ? { cursor: { id: before }, skip: 1 } : {}),
         include: {

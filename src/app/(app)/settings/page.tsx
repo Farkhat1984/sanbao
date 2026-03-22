@@ -284,6 +284,7 @@ function SettingsContent() {
                   key={plan.slug}
                   plan={plan}
                   isCurrent={currentPlan?.slug === plan.slug}
+                  onContactAdmin={() => window.open("mailto:admin@sanbao.ai?subject=Запрос на смену тарифа", "_blank")}
                 />
               ))}
             </div>

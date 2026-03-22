@@ -189,10 +189,14 @@ export function useStreamChat({
         const error = await response
           .json()
           .catch(() => ({ error: "Неизвестная ошибка" }));
+        let errorMsg = error.error || "Не удалось получить ответ";
+        if (response.status === 429 && error.retryAfterSeconds) {
+          errorMsg += ` (повторите через ${error.retryAfterSeconds} сек.)`;
+        }
         addMessage({
           id: crypto.randomUUID(),
           role: "ASSISTANT",
-          content: `Ошибка: ${error.error || "Не удалось получить ответ"}`,
+          content: `Ошибка: ${errorMsg}`,
           createdAt: new Date().toISOString(),
         });
         setStreaming(false);
@@ -290,6 +294,12 @@ export function useStreamChat({
                   }
                 } catch {
                   // ignore malformed context info
+                }
+                break;
+              case "d": // discard narration — rollback content from tool-call turn
+                if (typeof data.v === "number" && data.v > 0) {
+                  fullContent = fullContent.slice(0, -data.v);
+                  updateLastAssistantMessage(fullContent, fullReasoning || undefined);
                 }
                 break;
               case "e": // error
