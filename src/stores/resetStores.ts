@@ -1,7 +1,9 @@
 /**
  * Reset all Zustand stores on logout to prevent data leaks between sessions.
  */
-import { useChatStore } from "./chatStore";
+import { useMessagesStore } from "./messagesStore";
+import { useStreamingStore } from "./streamingStore";
+import { useAiSettingsStore } from "./aiSettingsStore";
 import { useArtifactStore } from "./artifactStore";
 import { useAgentStore } from "./agentStore";
 import { useTaskStore } from "./taskStore";
@@ -18,7 +20,7 @@ import { useIntegrationStore } from "./integrationStore";
 import { useOnboardingStore } from "./onboardingStore";
 
 export function resetAllStores() {
-  useChatStore.setState({
+  useMessagesStore.setState({
     activeConversationId: null,
     activeAgentId: null,
     orgAgentId: null,
@@ -28,17 +30,27 @@ export function resetAllStores() {
     swarmAgentResponses: [],
     conversations: [],
     messages: [],
+    currentPlan: null,
+    contextUsage: null,
+    pendingInput: null,
+    clarifyQuestions: null,
+    isLoadingConversation: false,
+  });
+
+  useStreamingStore.setState({
     isStreaming: false,
     streamingPhase: null,
     streamingToolName: null,
     streamingContent: null,
     streamingReasoning: null,
     streamingPlanContent: null,
-    currentPlan: null,
-    contextUsage: null,
-    pendingInput: null,
-    clarifyQuestions: null,
-    isLoadingConversation: false,
+  });
+
+  useAiSettingsStore.setState({
+    provider: "default",
+    thinkingEnabled: false,
+    webSearchEnabled: false,
+    planningEnabled: false,
   });
 
   useArtifactStore.setState({

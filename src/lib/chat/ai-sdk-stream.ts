@@ -9,9 +9,14 @@ import { getSettingNumber } from "@/lib/settings";
 import type { ResolvedModel } from "@/lib/model-router";
 import {
   createPlanDetectorState,
-  feedPlanDetector,
-  flushPlanDetector,
-} from "@/lib/chat/plan-parser";
+  emitContextInfo,
+  feedAndEnqueue,
+  flushAndEnqueue,
+  handleBufferOverflow,
+  emitError,
+  encodeNdjsonChunk,
+  type StreamContextInfo,
+} from "@/lib/chat/plan-detector";
 
 // ─── Options ─────────────────────────────────────────────
 
@@ -44,32 +49,14 @@ export interface AiSdkStreamOptions {
 function createPlanDetectorStream(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fullStream: AsyncIterable<any>,
-  contextInfo?: {
-    usagePercent: number;
-    totalTokens: number;
-    contextWindowSize: number;
-    compacting: boolean;
-  },
+  contextInfo?: StreamContextInfo,
   sseMaxBuffer = 1_000_000,
 ): ReadableStream {
-  const encoder = new TextEncoder();
-
   return new ReadableStream({
     async start(controller) {
       try {
-        // Emit context info
         if (contextInfo) {
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                t: "x",
-                v: JSON.stringify({
-                  action: "context_info",
-                  ...contextInfo,
-                }),
-              }) + "\n"
-            )
-          );
+          emitContextInfo(controller, contextInfo);
         }
 
         const planState = createPlanDetectorState();
@@ -77,11 +64,7 @@ function createPlanDetectorStream(
         for await (const part of fullStream) {
           // Stream reasoning chunks from AI SDK
           if (part.type === "reasoning-delta") {
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: "r", v: part.text }) + "\n"
-              )
-            );
+            controller.enqueue(encodeNdjsonChunk("r", part.text));
             continue;
           }
 
@@ -91,39 +74,14 @@ function createPlanDetectorStream(
           if (!chunk) continue;
 
           // Buffer overflow safety: flush everything before feeding more
-          if (planState.buffer.length + chunk.length > sseMaxBuffer) {
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: planState.insidePlan ? "p" : "c", v: planState.buffer }) + "\n"
-              )
-            );
-            planState.buffer = "";
-          }
-
-          const { chunks } = feedPlanDetector(planState, chunk);
-          for (const ch of chunks) {
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-            );
-          }
+          handleBufferOverflow(controller, planState, chunk.length, sseMaxBuffer);
+          feedAndEnqueue(controller, planState, chunk);
         }
 
         // Flush remaining
-        const { chunks: finalChunks } = flushPlanDetector(planState);
-        for (const ch of finalChunks) {
-          controller.enqueue(
-            encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-          );
-        }
+        flushAndEnqueue(controller, planState);
       } catch {
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              t: "e",
-              v: "Ошибка генерации ответа",
-            }) + "\n"
-          )
-        );
+        emitError(controller, "Ошибка генерации ответа");
       } finally {
         controller.close();
       }

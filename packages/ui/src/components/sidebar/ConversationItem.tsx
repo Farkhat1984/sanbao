@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, memo } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Pin, Trash2, Archive, ArchiveRestore, Network } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { MoreHorizontal, Pin, Network } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useSidebarStore } from "@/stores/sidebarStore";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ICON_MAP } from "@/components/agents/AgentIconPicker";
 import { cn, truncate } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useTranslation } from "@/hooks/useTranslation";
+import { ConversationContextMenu } from "./ConversationContextMenu";
+import { DeleteConfirmation } from "./DeleteConfirmation";
 import type { ConversationSummary } from "@/types/chat";
 
 interface ConversationItemProps {
@@ -35,6 +35,7 @@ export const ConversationItem = memo(function ConversationItem({
   const { close: closeSidebar } = useSidebarStore();
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const openMenu = useCallback(() => {
     if (triggerRef.current) {
@@ -136,6 +137,7 @@ export const ConversationItem = memo(function ConversationItem({
     <div className="relative group">
       <button
         onClick={handleClick}
+        aria-current={isActive ? "page" : undefined}
         className={cn(
           "w-full text-left px-2.5 py-2 pr-8 rounded-xl text-sm transition-all duration-150 cursor-pointer",
           "flex items-center gap-2",
@@ -153,7 +155,7 @@ export const ConversationItem = memo(function ConversationItem({
             <div
               className="h-4 w-4 rounded shrink-0 flex items-center justify-center"
               style={{ backgroundColor: conversation.agentIconColor || "#8FAF9F" }}
-              title={conversation.agentName || "Агент"}
+              title={conversation.agentName || t("sidebar.agent")}
             >
               <AgentIcon className="h-2.5 w-2.5 text-white" />
             </div>
@@ -162,7 +164,7 @@ export const ConversationItem = memo(function ConversationItem({
         {conversation.isSwarmMode && (
           <div
             className="h-4 w-4 rounded shrink-0 flex items-center justify-center bg-amber-500/10"
-            title="Мультиагент"
+            title={t("sidebar.multiAgent")}
           >
             <Network className="h-2.5 w-2.5 text-amber-500" />
           </div>
@@ -180,6 +182,8 @@ export const ConversationItem = memo(function ConversationItem({
           if (showMenu) setShowMenu(false);
           else openMenu();
         }}
+        aria-label={t("sidebar.chatMenu")}
+        title={t("sidebar.chatMenu")}
         className={cn(
           "absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md",
           "flex items-center justify-center text-text-secondary",
@@ -195,54 +199,22 @@ export const ConversationItem = memo(function ConversationItem({
       </button>
 
       {/* Dropdown — rendered via portal to escape overflow:hidden containers */}
-      {showMenu && menuPos && createPortal(
-        <AnimatePresence>
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.12 }}
-            style={{ top: menuPos.top, left: menuPos.left }}
-            className="fixed z-[100] w-40 bg-surface border border-border rounded-xl shadow-lg py-1"
-          >
-            {!isArchived && (
-              <button onClick={handlePinToggle} aria-label="Закрепить чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <Pin className="h-3 w-3" />
-                {conversation.pinned ? "Открепить" : "Закрепить"}
-              </button>
-            )}
-            {isArchived ? (
-              <button onClick={handleUnarchive} aria-label="Разархивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <ArchiveRestore className="h-3 w-3" />
-                Разархивировать
-              </button>
-            ) : (
-              <button onClick={handleArchive} aria-label="Архивировать чат" className="w-full px-3 py-1.5 text-xs text-left text-text-secondary hover:bg-surface-alt flex items-center gap-2 cursor-pointer">
-                <Archive className="h-3 w-3" />
-                В архив
-              </button>
-            )}
-            <button
-              onClick={handleDeleteClick}
-              aria-label="Удалить чат"
-              className="w-full px-3 py-1.5 text-xs text-left text-error hover:bg-error-light flex items-center gap-2 cursor-pointer"
-            >
-              <Trash2 className="h-3 w-3" />
-              Удалить
-            </button>
-          </motion.div>
-        </AnimatePresence>,
-        document.body
-      )}
+      <ConversationContextMenu
+        showMenu={showMenu}
+        menuPos={menuPos}
+        menuRef={menuRef}
+        isArchived={isArchived}
+        pinned={conversation.pinned}
+        onPinToggle={handlePinToggle}
+        onArchive={handleArchive}
+        onUnarchive={handleUnarchive}
+        onDeleteClick={handleDeleteClick}
+      />
 
-      <ConfirmModal
+      <DeleteConfirmation
         isOpen={showDeleteConfirm}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setShowDeleteConfirm(false)}
-        title="Удалить чат?"
-        description="Все сообщения и документы этого чата будут удалены."
-        confirmText="Удалить"
       />
     </div>
   );

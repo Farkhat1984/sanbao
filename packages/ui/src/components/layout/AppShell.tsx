@@ -126,6 +126,7 @@ export function AppShell({ children }: AppShellProps) {
             <>
               {/* Backdrop */}
               <motion.div
+                aria-hidden="true"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -139,6 +140,7 @@ export function AppShell({ children }: AppShellProps) {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Навигация"
+                aria-describedby="sidebar-desc"
                 onKeyDown={handleSidebarKeyDown}
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
@@ -146,6 +148,9 @@ export function AppShell({ children }: AppShellProps) {
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 className="fixed top-0 bottom-0 left-0 z-50 w-[85vw] max-w-[320px] h-[100dvh] overscroll-contain touch-pan-y"
               >
+                <span id="sidebar-desc" className="sr-only">
+                  Боковая панель навигации. Нажмите Escape для закрытия.
+                </span>
                 <Sidebar />
               </motion.div>
             </>

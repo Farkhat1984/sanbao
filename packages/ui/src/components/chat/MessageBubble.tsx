@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+import { useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LegalReference } from "./LegalReference";
@@ -11,10 +11,14 @@ import { MessageActions } from "./MessageActions";
 import { CollapseOverlay } from "./CollapseOverlay";
 import { SwarmResponses } from "./SwarmResponses";
 import { AssistantContent } from "./AssistantContent";
+import { StreamingLabel } from "./StreamingLabel";
 import { useArtifactStore } from "@/stores/artifactStore";
 import { useChatStore, type SwarmAgentResponse } from "@/stores/chatStore";
 import { openArtifactInPanel } from "@/lib/panel-actions";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useMessageCollapse } from "@/hooks/useMessageCollapse";
+import { useAutoApplyEdits } from "@/hooks/useAutoApplyEdits";
+import { useTranslation } from "@/hooks/useTranslation";
 import { parseContentWithArtifacts } from "@/lib/parse-message-content";
 import { getToolCategory } from "@/lib/chat/tool-categories";
 import type { ParsedPart } from "@/lib/parse-message-content";
@@ -51,6 +55,7 @@ interface MessageBubbleProps {
 }
 
 export const MessageBubble = memo(function MessageBubble({ message, isLast, agentName, agentIcon, agentIconColor, onRetry }: MessageBubbleProps) {
+  const { t } = useTranslation();
   const findByTitle = useArtifactStore((s) => s.findByTitle);
   const applyEdits = useArtifactStore((s) => s.applyEdits);
   const isMobile = useIsMobile();
@@ -80,51 +85,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   const displayReasoning = streamingReasoning ?? message.reasoning;
 
   // Compute tool category for avatar streaming state
-  // Only morph avatar during actual tool use (searching/using_tool)
   const isToolPhase = streamingPhase === "searching" || streamingPhase === "using_tool";
   const streamingCategory = isCurrentlyStreaming && isToolPhase
     ? getToolCategory(streamingToolName ?? null)
     : null;
 
-  // Status label shown next to agent name during streaming
-  const TOOL_LABELS: Record<string, string> = {
-    web_search: "Ищет в интернете",
-    knowledge: "Ищу в базе",
-    calculation: "Вычисляет",
-    memory: "Сохраняю",
-    task: "Создаю задачу",
-    chart: "Строю график",
-    mcp: "Плагин",
-    generic: "Ищу",
-  };
-  const streamingLabel = isCurrentlyStreaming && streamingPhase
-    ? isToolPhase
-      ? TOOL_LABELS[streamingCategory || "generic"] || "Ищу"
-      : streamingPhase === "routing"
-        ? "Определяю агентов"
-        : streamingPhase === "consulting"
-          ? "Консультирую агентов"
-          : streamingPhase === "synthesizing"
-            ? "Формирую решение"
-            : streamingPhase === "planning"
-              ? "Составляю план"
-              : "отвечает"
-    : null;
-
-  // Track which edits we've already applied (by message id)
-  const appliedEditsRef = useRef<Set<string>>(new Set());
-
-  // Collapse long assistant messages
-  const [isExpanded, setIsExpanded] = useState(false);
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  // Collapse long user messages (~20 lines = 400px)
-  const [isUserExpanded, setIsUserExpanded] = useState(false);
-  const userBubbleRef = useRef<HTMLDivElement>(null);
-  const [isUserOverflowing, setIsUserOverflowing] = useState(false);
-
-  // Parse artifacts and edits from assistant messages (always, to avoid DOM flash on stream end)
+  // Parse artifacts and edits from assistant messages
   const parts = useMemo(
     () => (isAssistant ? parseContentWithArtifacts(displayContent) : []),
     [isAssistant, displayContent]
@@ -140,45 +106,30 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     [isAssistant, hasSpecialParts, displayContent]
   );
 
-  // Detect overflow for assistant messages (skip during streaming, delay after stream ends)
-  useEffect(() => {
-    if (!isAssistant || isExpanded || isCurrentlyStreaming) return;
-    const el = bubbleRef.current;
-    if (!el) return;
-    // Delay to let CSS transitions settle and avoid layout thrash
-    const timer = setTimeout(() => {
-      requestAnimationFrame(() => {
-        if (el) setIsOverflowing(el.scrollHeight > ASSISTANT_COLLAPSE_HEIGHT);
-      });
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [displayContent, isAssistant, isExpanded, isCurrentlyStreaming]);
+  // Collapse logic for assistant and user messages
+  const assistantCollapse = useMessageCollapse({
+    enabled: isAssistant,
+    skipDetection: isCurrentlyStreaming,
+    collapseHeight: ASSISTANT_COLLAPSE_HEIGHT,
+    content: displayContent,
+    measureDelay: 250,
+  });
 
-  // Detect overflow for user messages
-  useEffect(() => {
-    if (!isUser || isUserExpanded) return;
-    const el = userBubbleRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      setIsUserOverflowing(el.scrollHeight > USER_COLLAPSE_HEIGHT);
-    });
-  }, [displayContent, isUser, isUserExpanded]);
+  const userCollapse = useMessageCollapse({
+    enabled: isUser,
+    collapseHeight: USER_COLLAPSE_HEIGHT,
+    content: displayContent,
+  });
 
-  // Auto-apply edits to existing artifacts (run once per message)
-  useEffect(() => {
-    if (!isAssistant) return;
-    const editParts = parts.filter((p) => p.type === "edit");
-    for (const part of editParts) {
-      const editKey = `${message.id}-${part.title}`;
-      if (appliedEditsRef.current.has(editKey)) continue;
-      appliedEditsRef.current.add(editKey);
-      const target = findByTitle(part.title || "");
-      if (target && part.edits) {
-        applyEdits(target.id, part.edits);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.id, displayContent, findByTitle, applyEdits]);
+  // Auto-apply edits to existing artifacts
+  useAutoApplyEdits({
+    messageId: message.id,
+    parts,
+    isAssistant,
+    displayContent,
+    findByTitle,
+    applyEdits,
+  });
 
   const handleOpenArtifact = (part: ParsedPart) => {
     const existing = findByTitle(part.title || "");
@@ -189,7 +140,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
     openArtifactInPanel({
       id: crypto.randomUUID(),
       type: (part.artifactType || "DOCUMENT") as ArtifactType,
-      title: part.title || "Документ",
+      title: part.title || t("chat.document"),
       content: part.content,
       version: 1,
     });
@@ -207,7 +158,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
       transition={{ duration: 0.15 }}
       className={cn("group flex gap-3 py-3", isUser && "flex-row-reverse")}
       role="article"
-      aria-label={isUser ? "Сообщение пользователя" : "Ответ ассистента"}
+      aria-label={isUser ? t("chat.userMessage") : t("chat.assistantMessage")}
     >
       <MessageAvatar
         isUser={isUser}
@@ -218,24 +169,14 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
       <div className={cn("flex-1 min-w-0", isUser && "max-w-[85%] flex flex-col items-end")}>
         <span className="text-[11px] font-medium text-text-secondary mb-1 block">
-          {isUser ? "Вы" : streamingLabel ? (
-            <span className="inline-flex items-center gap-1">
-              <span>{agentName || "Sanbao"}</span>
-              <span className="text-accent">
-                · {streamingLabel}
-                <span className="inline-flex ml-0.5 gap-[2px]">
-                  {[0, 1, 2].map((i) => (
-                    <motion.span
-                      key={i}
-                      className="inline-block w-[3px] h-[3px] rounded-full bg-accent"
-                      animate={{ opacity: [0.2, 1, 0.2] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
-                    />
-                  ))}
-                </span>
-              </span>
-            </span>
-          ) : (agentName || "Sanbao")}
+          {isUser ? t("chat.you") : (
+            <StreamingLabel
+              agentName={agentName}
+              streamingPhase={streamingPhase}
+              streamingCategory={streamingCategory}
+              isCurrentlyStreaming={isCurrentlyStreaming}
+            />
+          )}
         </span>
 
         {isAssistant && displayReasoning && <ReasoningBlock reasoning={displayReasoning} />}
@@ -243,7 +184,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
 
         {/* Message bubble */}
         <div
-          ref={isAssistant ? bubbleRef : isUser ? userBubbleRef : undefined}
+          ref={isAssistant ? assistantCollapse.ref : isUser ? userCollapse.ref : undefined}
           className={cn(
             "text-sm leading-relaxed transition-[background-color,border-color,padding,max-height] duration-300",
             isUser
@@ -251,13 +192,13 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               : isRichMd
                 ? "rounded-2xl px-4 py-3 bg-surface-alt text-text-primary rounded-tl-md border border-border"
                 : "text-text-primary py-1",
-            isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing && "overflow-hidden relative",
-            isAssistant && !isCurrentlyStreaming && isExpanded && "overflow-x-auto",
-            isUser && !isUserExpanded && isUserOverflowing && "overflow-hidden relative",
+            isAssistant && !isCurrentlyStreaming && !assistantCollapse.isExpanded && assistantCollapse.isOverflowing && "overflow-hidden relative",
+            isAssistant && !isCurrentlyStreaming && assistantCollapse.isExpanded && "overflow-x-auto",
+            isUser && !userCollapse.isExpanded && userCollapse.isOverflowing && "overflow-hidden relative",
           )}
           style={{
-            ...(isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
-            ...(isUser && !isUserExpanded && isUserOverflowing ? { maxHeight: USER_COLLAPSE_HEIGHT } : {}),
+            ...(isAssistant && !isCurrentlyStreaming && !assistantCollapse.isExpanded && assistantCollapse.isOverflowing ? { maxHeight: ASSISTANT_COLLAPSE_HEIGHT } : {}),
+            ...(isUser && !userCollapse.isExpanded && userCollapse.isOverflowing ? { maxHeight: USER_COLLAPSE_HEIGHT } : {}),
           }}
         >
           {isAssistant ? (
@@ -273,19 +214,19 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
             <p className="whitespace-pre-wrap">{displayContent}</p>
           )}
 
-          {isUser && !isUserExpanded && isUserOverflowing && (
-            <CollapseOverlay variant="user" onToggle={() => setIsUserExpanded(true)} isExpanded={false} />
+          {isUser && !userCollapse.isExpanded && userCollapse.isOverflowing && (
+            <CollapseOverlay variant="user" onToggle={() => userCollapse.setIsExpanded(true)} isExpanded={false} />
           )}
-          {isAssistant && !isCurrentlyStreaming && !isExpanded && isOverflowing && (
-            <CollapseOverlay variant="assistant" isRichMd={isRichMd} onToggle={() => setIsExpanded(true)} isExpanded={false} />
+          {isAssistant && !isCurrentlyStreaming && !assistantCollapse.isExpanded && assistantCollapse.isOverflowing && (
+            <CollapseOverlay variant="assistant" isRichMd={isRichMd} onToggle={() => assistantCollapse.setIsExpanded(true)} isExpanded={false} />
           )}
         </div>
 
-        {isAssistant && isExpanded && isOverflowing && (
-          <CollapseOverlay variant="assistant" onToggle={() => setIsExpanded(false)} isExpanded={true} />
+        {isAssistant && assistantCollapse.isExpanded && assistantCollapse.isOverflowing && (
+          <CollapseOverlay variant="assistant" onToggle={() => assistantCollapse.setIsExpanded(false)} isExpanded={true} />
         )}
-        {isUser && isUserExpanded && isUserOverflowing && (
-          <CollapseOverlay variant="user" onToggle={() => setIsUserExpanded(false)} isExpanded={true} />
+        {isUser && userCollapse.isExpanded && userCollapse.isOverflowing && (
+          <CollapseOverlay variant="user" onToggle={() => userCollapse.setIsExpanded(false)} isExpanded={true} />
         )}
 
         {message.legalRefs && message.legalRefs.length > 0 && (

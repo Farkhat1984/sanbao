@@ -2,20 +2,17 @@
 // Handles SSE streaming with tool calling for providers using
 // OpenAI-compatible API (web search via $web_search, MCP tools, native tools).
 
-import { callMcpTool } from "@/lib/mcp-client";
 import {
   getNativeToolDefinitions,
-  isNativeTool,
-  executeNativeTool,
   type NativeToolContext,
 } from "@/lib/native-tools";
 import type { ResolvedModel } from "@/lib/model-router";
 import {
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
+  LLM_TIMEOUT_MS,
   TOOL_RESULT_MAX_CHARS,
   TOOL_RESULT_TAIL_CHARS,
-  LLM_TIMEOUT_MS,
 } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { getSettingNumber } from "@/lib/settings";
@@ -24,6 +21,15 @@ import {
   feedPlanDetector,
   flushPlanDetector,
 } from "@/lib/chat/plan-parser";
+import { parseSSEStream } from "@/lib/chat/sse-parser";
+import {
+  executeToolCalls,
+  type CollectedToolCall,
+} from "@/lib/chat/tool-call-orchestrator";
+
+// Re-export for backward compatibility
+export { truncateToolResult } from "@/lib/chat/truncate-tool-result";
+export { parseSSEStream } from "@/lib/chat/sse-parser";
 
 // ─── Moonshot built-in web search tool ───────────────────
 
@@ -69,70 +75,6 @@ export interface MoonshotStreamOptions {
   mcpCallContext?: { userId: string; conversationId?: string };
   /** Settings overrides from route.ts batch load — avoids redundant DB queries */
   settingsOverrides?: StreamSettingsOverrides;
-}
-
-// ─── SSE Parser ──────────────────────────────────────────
-
-// SSE_MAX_BUFFER loaded per-stream from settings (stream_sse_max_buffer)
-
-/**
- * Truncate a tool result to fit within token budget.
- * Strategy: keep head + tail (like ChatGPT/Claude), add truncation metadata.
- * This prevents context overflow while preserving the most useful information
- * -- beginnings typically contain structure/headers, endings contain conclusions.
- */
-function truncateToolResult(
-  content: string,
-  maxChars: number = TOOL_RESULT_MAX_CHARS,
-  tailChars: number = TOOL_RESULT_TAIL_CHARS
-): string {
-  if (!content || content.length <= maxChars) return content ?? "";
-
-  const headChars = maxChars - tailChars - 200; // Reserve space for truncation notice
-  const head = content.slice(0, headChars);
-  const tail = content.slice(-tailChars);
-  const originalKB = (content.length / 1024).toFixed(1);
-
-  return (
-    head +
-    `\n\n[... обрезано ${originalKB}KB → ${(maxChars / 1024).toFixed(1)}KB — ` +
-    `используйте более конкретный запрос для получения нужной информации ...]\n\n` +
-    tail
-  );
-}
-
-async function* parseSSEStream(body: ReadableStream<Uint8Array>, maxBuffer: number) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      if (buffer.length > maxBuffer) {
-        throw new Error("SSE buffer overflow");
-      }
-
-      const lines = buffer.split("\n");
-      buffer = lines.pop()!;
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
-          try {
-            yield JSON.parse(trimmed.slice(6));
-          } catch {
-            // Skip malformed JSON
-          }
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }
 
 // ─── Main Moonshot streaming function ────────────────────
@@ -182,6 +124,11 @@ export function streamMoonshot(
     }
   }
 
+  /** Enqueue an NDJSON line to the client stream */
+  function enqueueJson(controller: ReadableStreamDefaultController, payload: Record<string, unknown>) {
+    controller.enqueue(encoder.encode(JSON.stringify(payload) + "\n"));
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -194,17 +141,13 @@ export function streamMoonshot(
 
         // Emit context info as first chunk
         if (contextInfo) {
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                t: "x",
-                v: JSON.stringify({
-                  action: "context_info",
-                  ...contextInfo,
-                }),
-              }) + "\n"
-            )
-          );
+          enqueueJson(controller, {
+            t: "x",
+            v: JSON.stringify({
+              action: "context_info",
+              ...contextInfo,
+            }),
+          });
         }
 
         const currentMessages = [...apiMessages];
@@ -236,6 +179,17 @@ export function streamMoonshot(
         let toolCallTurnCount = 0;
         // Per-request timeout for each API call (60s default)
         const perCallTimeoutMs = LLM_TIMEOUT_MS * 2; // 60s
+
+        // Tool execution context (reused across iterations)
+        const toolExecCtx = {
+          mcpTools,
+          nativeToolCtx,
+          mcpCallContext,
+          mcpToolTimeoutMs,
+          toolResultMaxChars: cfgToolResultMaxChars,
+          toolResultTailChars: cfgToolResultTailChars,
+        };
+        const emitStatus = (payload: Record<string, unknown>) => enqueueJson(controller, payload);
 
         // Tool-call loop
         for (let turn = 0; turn < maxToolCallsPerRequest; turn++) {
@@ -281,9 +235,7 @@ export function streamMoonshot(
           }
 
           if (!response.ok) {
-            const errText = await response
-              .text()
-              .catch(() => "Unknown error");
+            const errText = await response.text().catch(() => "Unknown error");
             let errMsg = `Ошибка API: ${response.status}`;
             try {
               const errJson = JSON.parse(errText);
@@ -291,49 +243,28 @@ export function streamMoonshot(
             } catch {
               // use default
             }
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: "e", v: errMsg }) + "\n")
-            );
+            enqueueJson(controller, { t: "e", v: errMsg });
             return;
           }
 
           if (!response.body) {
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({ t: "e", v: "Пустой ответ от API" }) + "\n"
-              )
-            );
+            enqueueJson(controller, { t: "e", v: "Пустой ответ от API" });
             return;
           }
 
           // Collect tool calls and reasoning from this turn
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const toolCallMap: Record<
-            number,
-            {
-              id: string;
-              type: string;
-              function: { name: string; arguments: string };
-            }
-          > = {};
+          const toolCallMap: Record<number, CollectedToolCall> = {};
           let hasToolCallFinish = false;
           let turnReasoningContent = "";
           // Buffer content during this turn — only flush if it's NOT a tool-call turn.
-          // This prevents narration like "Позвольте мне найти..." from leaking to the user
-          // when the model is just announcing what tool it's about to call.
           let turnContentBuffer = "";
 
           for await (const chunk of parseSSEStream(response.body, sseMaxBuffer)) {
             // Handle SSE error events from Moonshot API
             if (chunk.type === "error" || chunk.error) {
-              const errMsg =
-                chunk.error?.message || "Ошибка API провайдера";
+              const errMsg = chunk.error?.message || "Ошибка API провайдера";
               logger.error("SSE error from API provider", { chunk: JSON.stringify(chunk) });
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "e", v: errMsg }) + "\n"
-                )
-              );
+              enqueueJson(controller, { t: "e", v: errMsg });
               return;
             }
 
@@ -362,12 +293,8 @@ export function streamMoonshot(
                       arguments: tc.function?.arguments || "",
                     },
                   };
-                } else if (
-                  tc.function?.arguments &&
-                  toolCallMap[idx]
-                ) {
-                  toolCallMap[idx].function.arguments +=
-                    tc.function.arguments;
+                } else if (tc.function?.arguments && toolCallMap[idx]) {
+                  toolCallMap[idx].function.arguments += tc.function.arguments;
                 }
                 // Update tool name if it arrives in a later chunk
                 if (tc.function?.name && toolCallMap[idx] && !toolCallMap[idx].function.name) {
@@ -375,9 +302,7 @@ export function streamMoonshot(
                 }
               }
 
-              // Send status notification once we know the tool name.
-              // Prioritize: $web_search > knowledge/MCP tools > generic tools
-              // so the icon reflects the most meaningful tool in multi-tool calls.
+              // Send status notification once we know the tool name
               if (!searchNotified) {
                 const toolNames = Object.values(toolCallMap)
                   .map(t => t.function.name)
@@ -389,14 +314,10 @@ export function streamMoonshot(
                 if (bestTool) {
                   searchNotified = true;
                   const isWebSearch = bestTool === "$web_search";
-                  controller.enqueue(
-                    encoder.encode(
-                      JSON.stringify(
-                        isWebSearch
-                          ? { t: "s", v: "searching", n: "$web_search" }
-                          : { t: "s", v: "using_tool", n: bestTool }
-                      ) + "\n"
-                    )
+                  enqueueJson(controller,
+                    isWebSearch
+                      ? { t: "s", v: "searching", n: "$web_search" }
+                      : { t: "s", v: "using_tool", n: bestTool }
                   );
                 }
               }
@@ -409,18 +330,10 @@ export function streamMoonshot(
             // Stream reasoning and accumulate for tool-call messages
             if (thinkingEnabled && delta?.reasoning_content) {
               turnReasoningContent += delta.reasoning_content;
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({
-                    t: "r",
-                    v: delta.reasoning_content,
-                  }) + "\n"
-                )
-              );
+              enqueueJson(controller, { t: "r", v: delta.reasoning_content });
             }
 
-            // Buffer content — will be flushed only if this turn does NOT end with tool_calls.
-            // This prevents tool-call narration ("Позвольте мне найти...") from appearing as the answer.
+            // Buffer content — will be flushed only if this turn does NOT end with tool_calls
             if (delta?.content) {
               turnContentBuffer += delta.content;
             }
@@ -428,8 +341,7 @@ export function streamMoonshot(
 
           // Decide whether to emit buffered content
           if (hasToolCallFinish && Object.keys(toolCallMap).length > 0) {
-            // Tool-call turn — discard narration content (e.g. "Позвольте мне получить...")
-            // The content is just the model announcing what tool it's calling — not useful to the user.
+            // Tool-call turn — discard narration content
             if (turnContentBuffer) {
               logger.info("Discarding tool-call narration", {
                 turn,
@@ -443,23 +355,17 @@ export function streamMoonshot(
               hasProducedContent = true;
               const { chunks } = feedPlanDetector(planState, turnContentBuffer);
               for (const ch of chunks) {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-                );
+                enqueueJson(controller, { t: ch.type, v: ch.text });
               }
             }
             // Flush remaining plan buffer
             const { chunks: finalChunks } = flushPlanDetector(planState);
             for (const ch of finalChunks) {
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-              );
+              enqueueJson(controller, { t: ch.type, v: ch.text });
             }
           }
 
           // ─── Token budget check ──────────────────────────────
-          // Break the tool-call loop if cumulative tokens exceed the per-request budget.
-          // This prevents runaway loops from consuming unbounded resources.
           const cumulativeTokens = totalInputTokens + totalOutputTokens;
           logger.info("Tool loop iteration", {
             turn,
@@ -471,176 +377,55 @@ export function streamMoonshot(
           if (cumulativeTokens > maxRequestTokens) {
             logger.warn("Token budget exceeded", { cumulativeTokens, maxRequestTokens, turn });
             if (!hasProducedContent) {
-              // Token budget hit but no content yet — force one final call without tools
-              controller.enqueue(
-                encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
-              );
+              enqueueJson(controller, { t: "s", v: "answering" });
               currentMessages.push({
                 role: "user" as const,
                 content: "Пожалуйста, ответь на основе уже собранной информации. Не вызывай инструменты, дай финальный ответ.",
               });
-              // One more iteration without tools will happen on next loop pass
-              // But we're already at budget — emit error instead
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
-                )
-              );
+              enqueueJson(controller, {
+                t: "e",
+                v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос.",
+              });
             } else {
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "e", v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос." }) + "\n"
-                )
-              );
+              enqueueJson(controller, {
+                t: "e",
+                v: "Превышен лимит токенов. Попробуйте задать более конкретный вопрос.",
+              });
             }
             break;
           }
 
-          // If model finished with tool_calls, send results back and loop
+          // If model finished with tool_calls, execute them and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
-            // Fallback: if status wasn't sent during streaming (tool name came late or not at all)
+            // Fallback: if status wasn't sent during streaming
             if (!searchNotified) {
               searchNotified = true;
               const firstToolName = collectedCalls.find(t => t.function.name)?.function.name || "";
               if (firstToolName === "$web_search") {
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: "searching", n: "$web_search" }) + "\n"
-                  )
-                );
+                enqueueJson(controller, { t: "s", v: "searching", n: "$web_search" });
               } else if (firstToolName) {
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: "using_tool", n: firstToolName }) + "\n"
-                  )
-                );
+                enqueueJson(controller, { t: "s", v: "using_tool", n: firstToolName });
               } else {
-                // Tool name unknown — send neutral status without assuming web search
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({ t: "s", v: "using_tool" }) + "\n"
-                  )
-                );
+                enqueueJson(controller, { t: "s", v: "using_tool" });
               }
             }
             currentMessages.push({
               role: "assistant",
               tool_calls: collectedCalls,
-              // Kimi API requires reasoning_content on assistant messages when thinking is enabled.
-              // It rejects empty string "", so provide a minimal placeholder when model
-              // jumped straight to tool calls without producing reasoning content.
               ...(thinkingEnabled
                 ? { reasoning_content: turnReasoningContent || "." }
                 : {}),
             });
 
-            // Build a map of MCP tool names for quick lookup
-            const mcpToolMap = new Map(
-              mcpTools.map((t) => [t.name, t])
+            // Execute tool calls via orchestrator
+            const toolResults = await executeToolCalls(
+              collectedCalls,
+              toolExecCtx,
+              emitStatus
             );
-
-            for (const tc of collectedCalls) {
-              const mcpDef = mcpToolMap.get(tc.function.name);
-              if (mcpDef) {
-                // MCP tool call — notify client with tool name
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({
-                      t: "s",
-                      v: "using_tool",
-                      n: tc.function.name,
-                    }) + "\n"
-                  )
-                );
-                let args: Record<string, unknown> = {};
-                try {
-                  args = JSON.parse(
-                    tc.function.arguments || "{}"
-                  );
-                } catch {
-                  // fallback empty
-                }
-
-                // Inject domain from agent config (only if not already set by LLM)
-                if (mcpDef.defaultDomain && !args.domain) {
-                  const toolName = mcpDef.originalName || tc.function.name;
-                  args.domain = mcpDef.toolDomains?.[toolName] ?? mcpDef.defaultDomain;
-                }
-
-                let mcpResult: { result?: string; error?: string };
-                try {
-                  mcpResult = await Promise.race([
-                    callMcpTool(
-                      mcpDef.url,
-                      mcpDef.transport,
-                      mcpDef.apiKey,
-                      mcpDef.originalName || tc.function.name,
-                      args,
-                      {
-                        mcpServerId: mcpDef.mcpServerId,
-                        userId: mcpCallContext?.userId,
-                        conversationId: mcpCallContext?.conversationId,
-                      }
-                    ),
-                    new Promise<{ error: string }>((resolve) =>
-                      setTimeout(() => resolve({ error: `MCP tool ${tc.function.name} timed out after ${mcpToolTimeoutMs / 1000}s` }), mcpToolTimeoutMs)
-                    ),
-                  ]);
-                } catch (mcpErr) {
-                  logger.warn("MCP tool call failed", {
-                    tool: tc.function.name,
-                    error: mcpErr instanceof Error ? mcpErr.message : String(mcpErr),
-                  });
-                  mcpResult = { error: `MCP tool ${tc.function.name} failed: ${mcpErr instanceof Error ? mcpErr.message : "unknown error"}` };
-                }
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: mcpResult.error
-                    ? `Error: ${mcpResult.error}`
-                    : truncateToolResult(mcpResult.result ?? "", cfgToolResultMaxChars, cfgToolResultTailChars),
-                });
-              } else if (
-                isNativeTool(tc.function.name) &&
-                nativeToolCtx
-              ) {
-                // Native tool call — notify client with tool name
-                controller.enqueue(
-                  encoder.encode(
-                    JSON.stringify({
-                      t: "s",
-                      v: "using_tool",
-                      n: tc.function.name,
-                    }) + "\n"
-                  )
-                );
-                let args: Record<string, unknown> = {};
-                try {
-                  args = JSON.parse(
-                    tc.function.arguments || "{}"
-                  );
-                } catch {
-                  // fallback empty
-                }
-                const result = await executeNativeTool(
-                  tc.function.name,
-                  args,
-                  nativeToolCtx
-                );
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: truncateToolResult(result, cfgToolResultMaxChars, cfgToolResultTailChars),
-                });
-              } else {
-                // Built-in tool (web search) — pass arguments as content
-                currentMessages.push({
-                  role: "tool",
-                  tool_call_id: tc.id,
-                  content: tc.function.arguments,
-                });
-              }
+            for (const msg of toolResults) {
+              currentMessages.push({ ...msg });
             }
 
             toolCallTurnCount++;
@@ -649,27 +434,19 @@ export function streamMoonshot(
 
           // Final turn (no tool calls) — signal client to show "answering" state
           if (turn > 0) {
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
-            );
+            enqueueJson(controller, { t: "s", v: "answering" });
           }
           break;
         }
 
         // ─── Forced final answer ──────────────────────────────
-        // If the tool-call loop exhausted all turns without the model producing
-        // a final answer (every turn was tool calls), make one last API call
-        // WITHOUT tools so the model is forced to synthesize a response.
         if (toolCallTurnCount >= maxToolCallsPerRequest && !hasProducedContent) {
           logger.warn("Tool loop exhausted — forcing final answer", {
             toolCallTurnCount,
             maxToolCallsPerRequest,
           });
-          controller.enqueue(
-            encoder.encode(JSON.stringify({ t: "s", v: "answering" }) + "\n")
-          );
+          enqueueJson(controller, { t: "s", v: "answering" });
 
-          // Add instruction to answer based on collected data
           currentMessages.push({
             role: "user",
             content: "Ты уже собрал достаточно информации. Дай развёрнутый ответ на исходный вопрос на основе полученных данных. Отвечай обычным текстом в чате, НЕ используй тег <sanbao-doc>. Изображения из статей вставляй inline рядом с текстом, к которому они относятся (формат: ![описание](url)).",
@@ -695,7 +472,6 @@ export function streamMoonshot(
                 top_p: textModel?.topP ?? cfgDefaultTopP,
                 stream: true,
                 stream_options: { include_usage: true },
-                // NO tools — force text response
                 ...(!thinkingEnabled ? { thinking: { type: "disabled" } } : {}),
               }),
               signal: finalCallAbort.signal,
@@ -713,30 +489,19 @@ export function streamMoonshot(
                 if (delta?.content) {
                   const { chunks } = feedPlanDetector(planState, delta.content);
                   for (const ch of chunks) {
-                    controller.enqueue(
-                      encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-                    );
+                    enqueueJson(controller, { t: ch.type, v: ch.text });
                   }
                 }
                 if (thinkingEnabled && delta?.reasoning_content) {
-                  controller.enqueue(
-                    encoder.encode(JSON.stringify({ t: "r", v: delta.reasoning_content }) + "\n")
-                  );
+                  enqueueJson(controller, { t: "r", v: delta.reasoning_content });
                 }
               }
-              // Flush plan detector
               const { chunks: lastChunks } = flushPlanDetector(planState);
               for (const ch of lastChunks) {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify({ t: ch.type, v: ch.text }) + "\n")
-                );
+                enqueueJson(controller, { t: ch.type, v: ch.text });
               }
             } else {
-              controller.enqueue(
-                encoder.encode(
-                  JSON.stringify({ t: "e", v: "Не удалось получить финальный ответ от API" }) + "\n"
-                )
-              );
+              enqueueJson(controller, { t: "e", v: "Не удалось получить финальный ответ от API" });
             }
           } catch (finalErr) {
             logger.error("Forced final answer failed", {
@@ -753,25 +518,16 @@ export function streamMoonshot(
           onUsage({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
         }
       } catch (err) {
-        // Log the actual error for debugging — the user gets a generic message
         logger.error("Moonshot stream error", {
           error: err instanceof Error ? err.message : String(err),
           model: textModel?.modelId,
         });
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              t: "e",
-              v: "Ошибка подключения к API",
-            }) + "\n"
-          )
-        );
+        enqueueJson(controller, { t: "e", v: "Ошибка подключения к API" });
       } finally {
         controller.close();
       }
     },
     cancel() {
-      // Client disconnected — abort any in-flight upstream API requests
       upstreamAbort.abort();
     },
   });

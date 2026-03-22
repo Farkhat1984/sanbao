@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Copy, Check, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
@@ -18,7 +19,7 @@ interface MessageActionsProps {
 }
 
 /** Action buttons (copy, regenerate) shown on hover for both user and assistant messages. */
-export function MessageActions({ content, messageId, isUser, isMobile, onRetry }: MessageActionsProps) {
+export const MessageActions = memo(function MessageActions({ content, messageId, isUser, isMobile, onRetry }: MessageActionsProps) {
   const { copied, copy: handleCopy } = useCopyToClipboard();
 
   const buttonClass = cn(
@@ -56,4 +57,4 @@ export function MessageActions({ content, messageId, isUser, isMobile, onRetry }
       )}
     </div>
   );
-}
+});

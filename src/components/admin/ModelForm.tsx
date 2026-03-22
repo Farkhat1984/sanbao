@@ -3,16 +3,23 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "@/hooks/useTranslation";
 import { DEFAULT_TEMPERATURE_PREVIEW, DEFAULT_MAX_TOKENS, DEFAULT_CONTEXT_WINDOW } from "@/lib/constants";
+import { ModelFormIdentity } from "./ModelFormIdentity";
+import { ModelFormParameters } from "./ModelFormParameters";
+import { ModelFormPricing } from "./ModelFormPricing";
+import { ModelFormThinking } from "./ModelFormThinking";
 
 const CATEGORIES = ["TEXT", "IMAGE", "VOICE", "VIDEO", "CODE", "EMBEDDING"] as const;
-const CATEGORY_LABELS: Record<string, string> = {
-  TEXT: "Текст",
-  IMAGE: "Изображения",
-  VOICE: "Голос",
-  VIDEO: "Видео",
-  CODE: "Код",
-  EMBEDDING: "Эмбеддинги",
+
+/** Maps model category enum to translation key */
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  TEXT: "adminModels.categoryText",
+  IMAGE: "adminModels.categoryImage",
+  VOICE: "adminModels.categoryVoice",
+  VIDEO: "adminModels.categoryVideo",
+  CODE: "adminModels.categoryCode",
+  EMBEDDING: "adminModels.categoryEmbedding",
 };
 
 interface Provider {
@@ -86,6 +93,7 @@ export function ModelForm({
   onCancel,
   submitLabel,
 }: ModelFormProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<ModelFormData>({ ...DEFAULT_FORM, ...initialValues });
 
   const updateField = <K extends keyof ModelFormData>(key: K, value: ModelFormData[K]) => {
@@ -93,180 +101,37 @@ export function ModelForm({
   };
 
   const inputClass = mode === "edit" ? INPUT_EDIT : INPUT_CREATE;
-  const label = submitLabel ?? (mode === "create" ? "Создать" : "Сохранить");
+  const label = submitLabel ?? (mode === "create" ? t("common.create") : t("common.save"));
 
   return (
     <div>
       {mode === "create" && (
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Новая модель</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">{t("adminModels.newModel")}</h3>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {mode === "create" && (
-          <select
-            value={form.providerId}
-            onChange={(e) => updateField("providerId", e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Провайдер...</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        )}
-
-        {mode === "create" && (
-          <input
-            placeholder="ID модели у провайдера"
-            value={form.modelId}
-            onChange={(e) => updateField("modelId", e.target.value)}
-            className={inputClass}
-          />
-        )}
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Название</label>}
-          <input
-            placeholder="Отображаемое имя"
-            value={form.displayName}
-            onChange={(e) => updateField("displayName", e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        {mode === "create" && (
-          <select
-            value={form.category}
-            onChange={(e) => updateField("category", e.target.value)}
-            className={inputClass}
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-            ))}
-          </select>
-        )}
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Temperature</label>}
-          <input
-            placeholder="Temperature"
-            type="number"
-            step="0.1"
-            value={form.temperature}
-            onChange={(e) => updateField("temperature", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Top P</label>}
-          <input
-            placeholder="Top P"
-            type="number"
-            step="0.1"
-            value={form.topP}
-            onChange={(e) => updateField("topP", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Max Tokens</label>}
-          <input
-            placeholder="Max Tokens"
-            type="number"
-            value={form.maxTokens}
-            onChange={(e) => updateField("maxTokens", parseInt(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Context Window</label>}
-          <input
-            placeholder="Context Window"
-            type="number"
-            value={form.contextWindow}
-            onChange={(e) => updateField("contextWindow", parseInt(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">$/1k input</label>}
-          <input
-            placeholder="Себест./1k вх"
-            type="number"
-            step="0.001"
-            value={form.costPer1kInput}
-            onChange={(e) => updateField("costPer1kInput", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">$/1k output</label>}
-          <input
-            placeholder="Себест./1k вых"
-            type="number"
-            step="0.001"
-            value={form.costPer1kOutput}
-            onChange={(e) => updateField("costPer1kOutput", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Продажа/1k вх</label>}
-          <input
-            placeholder="Продажа/1k вх"
-            type="number"
-            step="0.001"
-            value={form.pricePer1kInput}
-            onChange={(e) => updateField("pricePer1kInput", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Продажа/1k вых</label>}
-          <input
-            placeholder="Продажа/1k вых"
-            type="number"
-            step="0.001"
-            value={form.pricePer1kOutput}
-            onChange={(e) => updateField("pricePer1kOutput", parseFloat(e.target.value) || 0)}
-            className={inputClass}
-          />
-        </div>
+        <ModelFormIdentity
+          form={form}
+          updateField={updateField}
+          inputClass={inputClass}
+          mode={mode}
+          providers={providers}
+        />
+        <ModelFormParameters
+          form={form}
+          updateField={updateField}
+          inputClass={inputClass}
+          mode={mode}
+        />
+        <ModelFormPricing
+          form={form}
+          updateField={updateField}
+          inputClass={inputClass}
+          mode={mode}
+        />
       </div>
 
-      <div className="flex items-center gap-4 mt-3">
-        <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.supportsThinking}
-            onChange={(e) => updateField("supportsThinking", e.target.checked)}
-            className="rounded"
-          />
-          Поддержка Thinking
-        </label>
-        {form.supportsThinking && (
-          <div>
-            {mode === "edit" && <label className="text-xs text-text-secondary block mb-1">Max Thinking Tokens</label>}
-            <input
-              placeholder="Max Thinking Tokens"
-              type="number"
-              value={form.maxThinkingTokens}
-              onChange={(e) => updateField("maxThinkingTokens", parseInt(e.target.value) || 0)}
-              className={mode === "edit"
-                ? "w-40 h-8 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
-                : "w-48 h-9 px-3 rounded-lg bg-surface-alt border border-border text-sm text-text-primary focus:outline-none focus:border-accent"
-              }
-            />
-          </div>
-        )}
-      </div>
+      <ModelFormThinking form={form} updateField={updateField} mode={mode} />
 
       <div className="flex gap-2 mt-3">
         <Button variant="gradient" size="sm" onClick={() => onSubmit(form)}>
@@ -274,7 +139,7 @@ export function ModelForm({
           {label}
         </Button>
         {onCancel && (
-          <Button variant="secondary" size="sm" onClick={onCancel}>Отмена</Button>
+          <Button variant="secondary" size="sm" onClick={onCancel}>{t("common.cancel")}</Button>
         )}
       </div>
     </div>
@@ -282,4 +147,18 @@ export function ModelForm({
 }
 
 export type { ModelFormData, Provider as ModelFormProvider };
-export { CATEGORIES as MODEL_CATEGORIES, CATEGORY_LABELS as MODEL_CATEGORY_LABELS };
+export { CATEGORIES as MODEL_CATEGORIES, CATEGORY_LABEL_KEYS as MODEL_CATEGORY_LABEL_KEYS };
+
+/**
+ * Static label map for backward compatibility.
+ * Prefer using t(MODEL_CATEGORY_LABEL_KEYS[cat]) in i18n-aware components.
+ */
+const CATEGORY_LABELS: Record<string, string> = {
+  TEXT: "Текст",
+  IMAGE: "Изображения",
+  VOICE: "Голос",
+  VIDEO: "Видео",
+  CODE: "Код",
+  EMBEDDING: "Эмбеддинги",
+};
+export { CATEGORY_LABELS as MODEL_CATEGORY_LABELS };

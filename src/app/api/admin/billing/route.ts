@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { invalidatePlanCache } from "@/lib/usage";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -17,27 +18,31 @@ export async function GET(req: Request) {
   const planFilter = searchParams.get("planFilter") || "";
 
   // Subscription where clause
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subWhere: any = {};
-  if (planFilter) subWhere.planId = planFilter;
-  if (search) {
-    subWhere.OR = [
-      { user: { name: { contains: search, mode: "insensitive" } } },
-      { user: { email: { contains: search, mode: "insensitive" } } },
-      { userId: { contains: search, mode: "insensitive" } },
-    ];
-  }
+  const subWhere: Prisma.SubscriptionWhereInput = {
+    ...(planFilter ? { planId: planFilter } : {}),
+    ...(search
+      ? {
+          OR: [
+            { user: { name: { contains: search, mode: "insensitive" } } },
+            { user: { email: { contains: search, mode: "insensitive" } } },
+            { userId: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
 
   // Payment where clause
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payWhere: any = {};
-  if (search) {
-    payWhere.OR = [
-      { user: { name: { contains: search, mode: "insensitive" } } },
-      { user: { email: { contains: search, mode: "insensitive" } } },
-      { userId: { contains: search, mode: "insensitive" } },
-    ];
-  }
+  const payWhere: Prisma.PaymentWhereInput = {
+    ...(search
+      ? {
+          OR: [
+            { user: { name: { contains: search, mode: "insensitive" } } },
+            { user: { email: { contains: search, mode: "insensitive" } } },
+            { userId: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
 
   const [subscriptions, totalSubscriptions, plans, payments, totalPayments, allSubs] = await Promise.all([
     prisma.subscription.findMany({

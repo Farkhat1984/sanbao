@@ -78,6 +78,7 @@ export async function loadChatContext(params: {
     prisma.userMemory.findMany({
       where: { userId },
       select: { key: true, content: true },
+      take: 100,
     }),
     conversationId
       ? prisma.task.findMany({

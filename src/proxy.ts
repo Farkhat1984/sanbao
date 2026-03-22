@@ -16,6 +16,7 @@ function getOrCreateRequestId(req: Request): string {
 // ─── Security headers ───
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -38,6 +39,23 @@ const SESSION_COOKIE =
   process.env.NODE_ENV === "production"
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
+
+/** Validate JWT structure: three base64url segments with valid JSON header/payload */
+const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+function isValidJwtFormat(token: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  // Each part must be non-empty base64url
+  if (!parts.every((p) => p.length > 0 && BASE64URL_RE.test(p))) return false;
+  // Header must be valid JSON with "alg"
+  try {
+    const header = JSON.parse(Buffer.from(parts[0], "base64url").toString());
+    if (typeof header !== "object" || !header.alg) return false;
+  } catch {
+    return false;
+  }
+  return true;
+}
 
 // ─── P3-40: CSRF Origin Validation ───
 
@@ -166,14 +184,35 @@ const withAuth = auth((req) => {
 
 const MOBILE_ORIGINS = new Set(["https://localhost", "capacitor://localhost"]);
 
+const ALLOWED_BUNDLE_IDS = new Set(
+  (process.env.ALLOWED_CAPACITOR_BUNDLE_IDS || "ai.sanbao.app")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+);
+
+const BUNDLE_ID_HEADER = "x-app-bundle-id";
+
 function isMobileOrigin(origin: string | null): boolean {
   return !!origin && MOBILE_ORIGINS.has(origin);
+}
+
+/** Validate Capacitor bundle ID for capacitor:// origins. */
+function isValidCapacitorRequest(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  // Only enforce bundle ID check for capacitor:// origin
+  if (origin !== "capacitor://localhost") return true;
+
+  const bundleId = req.headers.get(BUNDLE_ID_HEADER);
+  if (!bundleId) return false;
+
+  return ALLOWED_BUNDLE_IDS.has(bundleId);
 }
 
 function addCorsHeaders(response: NextResponse, origin: string): NextResponse {
   response.headers.set("Access-Control-Allow-Origin", origin);
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-id");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-id, " + BUNDLE_ID_HEADER);
   response.headers.set("Access-Control-Allow-Credentials", "true");
   response.headers.set("Access-Control-Max-Age", "86400");
   return response;
@@ -183,6 +222,14 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
   const { method } = req;
   const { pathname } = req.nextUrl;
   const origin = req.headers.get("origin");
+
+  // Validate Capacitor bundle ID for capacitor:// origins
+  if (origin === "capacitor://localhost" && !isValidCapacitorRequest(req)) {
+    return new NextResponse(
+      JSON.stringify({ error: "Invalid or missing X-App-Bundle-Id header" }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   // CORS preflight for mobile clients
   if (method === "OPTIONS" && isMobileOrigin(origin)) {
@@ -212,7 +259,10 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
   if (req.nextUrl.pathname.startsWith("/api/")) {
     const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ") && !req.cookies.has(SESSION_COOKIE)) {
-      req.cookies.set(SESSION_COOKIE, authHeader.slice(7));
+      const token = authHeader.slice(7);
+      if (isValidJwtFormat(token)) {
+        req.cookies.set(SESSION_COOKIE, token);
+      }
     }
   }
 

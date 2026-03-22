@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { User, Search, Globe, DatabaseZap, Calculator, Bookmark, ClipboardList, Bell, StickyNote, BarChart3, Send, Plug } from "lucide-react";
 import { motion } from "framer-motion";
 import { SanbaoCompass } from "@/components/ui/SanbaoCompass";
@@ -33,7 +34,7 @@ interface MessageAvatarProps {
 /** Renders the circular avatar for user or assistant messages.
  *  During streaming, the icon morphs to reflect the current tool state.
  */
-export function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCategory }: MessageAvatarProps) {
+export const MessageAvatar = memo(function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCategory }: MessageAvatarProps) {
   const hasCustomIcon = agentIcon && ICON_MAP[agentIcon];
   const AgentIcon = hasCustomIcon ? ICON_MAP[agentIcon] : null;
   const isStreaming = !!streamingCategory;
@@ -100,4 +101,4 @@ export function MessageAvatar({ isUser, agentIcon, agentIconColor, streamingCate
       {isUser ? <User className="h-4 w-4" /> : renderIcon()}
     </div>
   );
-}
+});

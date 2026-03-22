@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ChatArea } from "@sanbao/ui/components/chat/ChatArea";
+import { ChatErrorBoundary } from "@/components/chat/ChatErrorBoundary";
 import { useChatStore } from "@/stores/chatStore";
 import type { ChatMessage } from "@/types/chat";
 
@@ -128,5 +129,9 @@ export default function ConversationPage() {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [fetchMessages, id]);
 
-  return <ChatArea />;
+  return (
+    <ChatErrorBoundary>
+      <ChatArea />
+    </ChatErrorBoundary>
+  );
 }

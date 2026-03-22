@@ -45,9 +45,12 @@ export async function POST(req: Request) {
       ? String(name).replace(/<[^>]*>/g, "").trim().slice(0, nameMaxLength)
       : null;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
-      return jsonError("Пользователь с таким email уже существует", 409);
+      // Return same response as success to prevent user enumeration
+      logger.warn("Registration attempt for existing email", { context: "AUTH:REGISTER", email: normalizedEmail });
+      return jsonOk({ success: true, message: "Если аккаунт не существовал, он был создан. Проверьте почту." }, 201);
     }
 
     const hashedPassword = await bcrypt.hash(password, bcryptRounds);
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         name: sanitizedName,
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password: hashedPassword,
       },
     });
@@ -68,7 +71,7 @@ export async function POST(req: Request) {
       });
     }
 
-    return jsonOk({ success: true }, 201);
+    return jsonOk({ success: true, message: "Если аккаунт не существовал, он был создан. Проверьте почту." }, 201);
   } catch (error) {
     logger.error("Registration error", { context: "AUTH:REGISTER", error: error instanceof Error ? error.message : String(error) });
     return jsonError("Внутренняя ошибка сервера", 500);

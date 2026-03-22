@@ -244,3 +244,52 @@ All in `src/lib/constants.ts`:
 - `DEFAULT_MAX_TOKENS=131072`, `DEFAULT_TIMEZONE="Asia/Almaty"`
 - `NATIVE_TOOL_MAX_TURNS=50`, `BCRYPT_SALT_ROUNDS=12`
 - Agent IDs: `LAWYER_ID`, `LAWYER_AGENT_ID`, `BROKER_AGENT_ID`, `SANBAO_AGENT_ID`
+
+---
+
+## Agents & Skills
+
+### Specialized Agents
+
+Use these agents for language-specific tasks:
+
+| Agent | When to use |
+|-------|-------------|
+| **senior-fullstack-architect** | TypeScript/React: components, API routes, UI/UX, Next.js, performance optimization |
+| **senior-python-architect** | Python: microservices, FastAPI, async patterns, testing, data pipelines |
+| **rust-senior-architect** | Rust: axum services, CLI tools, async Rust, performance, safety |
+
+**Always delegate** complex implementation tasks to the appropriate agent — they have deeper expertise and produce higher quality code.
+
+### Skills (`.claude/skills/`)
+
+Skills are loaded automatically when relevant. Available skills:
+
+**TypeScript/Frontend:**
+- `ai-chat-platform` — Universal AI chat architecture: provider abstraction (Vercel AI SDK), NDJSON streaming, artifacts panel, model router
+- `claude-api` — Claude API + Agent SDK (TypeScript + Python)
+- `frontend-design` — Production UI design without "AI slop"
+- `web-artifacts-builder` — React + Tailwind + shadcn/ui artifacts
+- `mcp-builder` — MCP server development (TypeScript + Python)
+
+**Python:**
+- `python-pro` — Modern Python 3.11+: mypy strict, async-first, Pydantic v2, Protocol DI
+- `python-testing` — pytest infrastructure: real DB fixtures, factories, parametrize, 90%+ coverage
+- `python-fastapi` — FastAPI production: lifespan, SSE streaming, WebSocket, Annotated DI
+
+**Rust:**
+- `rust-coding` — Idiomatic Rust: ownership, traits, error handling, build optimization
+- `rust-axum-service` — Production axum: SQLx, tower middleware, graceful shutdown, tracing
+- `rust-cli` — CLI tools: clap, indicatif, dialoguer, TOML config
+
+**Meta:**
+- `skill-creator` — Create, test, and optimize skills with evals
+- `webapp-testing` — Playwright web app testing
+
+### Usage Pattern
+
+For this project (sanbao = Next.js + TypeScript), prefer:
+1. `senior-fullstack-architect` agent for all TypeScript/React work
+2. `ai-chat-platform` skill when working on chat UI, streaming, or provider abstraction
+3. `python-pro` + `python-fastapi` skills when working on orchestrator Python code
+4. `rust-coding` + `rust-axum-service` skills when working on ai_cortex Rust code

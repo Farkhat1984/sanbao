@@ -18,6 +18,21 @@ export interface PanelTab {
 
 const MAX_TABS = 8;
 
+const PANEL_WIDTH_KEY = "sanbao_panel_width";
+const DEFAULT_PANEL_WIDTH = 50;
+const MIN_PANEL_WIDTH = 25;
+const MAX_PANEL_WIDTH = 75;
+
+const getInitialWidth = (): number => {
+  if (typeof window === "undefined") return DEFAULT_PANEL_WIDTH;
+  const stored = localStorage.getItem(PANEL_WIDTH_KEY);
+  if (!stored) return DEFAULT_PANEL_WIDTH;
+  const parsed = parseInt(stored, 10);
+  return Number.isFinite(parsed)
+    ? Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, parsed))
+    : DEFAULT_PANEL_WIDTH;
+};
+
 interface PanelState {
   isOpen: boolean;
   tabs: PanelTab[];
@@ -36,7 +51,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
   isOpen: false,
   tabs: [],
   activeTabId: null,
-  panelWidthPercent: 50,
+  panelWidthPercent: getInitialWidth(),
 
   openTab: (tab) => {
     const state = get();
@@ -90,5 +105,11 @@ export const usePanelStore = create<PanelState>((set, get) => ({
 
   closeAll: () => set({ isOpen: false, tabs: [], activeTabId: null }),
 
-  setPanelWidthPercent: (panelWidthPercent) => set({ panelWidthPercent }),
+  setPanelWidthPercent: (percent) => {
+    const clamped = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, percent));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PANEL_WIDTH_KEY, String(clamped));
+    }
+    set({ panelWidthPercent: clamped });
+  },
 }));

@@ -1,309 +1,145 @@
-import { create } from "zustand";
-import type { ChatMessage, ConversationSummary } from "@/types/chat";
-import { PHASE_PRIORITY } from "@/lib/chat/tool-categories";
+/**
+ * Backward-compatible facade — re-exports from the 3 focused stores.
+ *
+ * All existing `import { useChatStore } from "@/stores/chatStore"` continue working.
+ * New code should import directly from the focused store it needs:
+ *   - useMessagesStore  — conversations, messages, swarm, pagination
+ *   - useStreamingStore — streaming state, phases, content buffer
+ *   - useAiSettingsStore — provider, thinking, web search, planning toggles
+ */
 
-/** Maximum conversations kept in memory to prevent unbounded growth */
-const MAX_CONVERSATIONS = 500;
+// Re-export types and individual stores for direct access
+export { useMessagesStore, type SwarmAgentResponse, type ClarifyQuestion, type ContextUsage } from "./messagesStore";
+export { useStreamingStore, type StreamingPhase } from "./streamingStore";
+export { useAiSettingsStore } from "./aiSettingsStore";
 
-export type StreamingPhase = "thinking" | "searching" | "using_tool" | "planning" | "answering" | "routing" | "consulting" | "synthesizing" | null;
+import { useMessagesStore } from "./messagesStore";
+import { useStreamingStore } from "./streamingStore";
+import { useAiSettingsStore } from "./aiSettingsStore";
+// ---------------------------------------------------------------------------
+// Combined store type — union of all 3 stores' states for backward compat
+// ---------------------------------------------------------------------------
 
-export interface ClarifyQuestion {
-  id: string;
-  question: string;
-  options?: string[];
-  type?: "select" | "text";
-  placeholder?: string;
+type MessagesState = ReturnType<typeof useMessagesStore.getState>;
+type StreamingState = ReturnType<typeof useStreamingStore.getState>;
+type AiSettingsState = ReturnType<typeof useAiSettingsStore.getState>;
+
+type CombinedChatState = MessagesState & StreamingState & AiSettingsState;
+
+// ---------------------------------------------------------------------------
+// useChatStore — legacy combined hook
+//
+// Supports both selector and no-arg usage:
+//   const x = useChatStore(s => s.messages)
+//   const { messages, isStreaming } = useChatStore()
+//   useChatStore.getState().addMessage(...)
+//   useChatStore.setState({ ... })
+// ---------------------------------------------------------------------------
+
+function getCombinedState(): CombinedChatState {
+  return {
+    ...useMessagesStore.getState(),
+    ...useStreamingStore.getState(),
+    ...useAiSettingsStore.getState(),
+  };
 }
 
-interface ContextUsage {
-  usagePercent: number;
-  totalTokens: number;
-  contextWindowSize: number;
-  isCompacting: boolean;
+/**
+ * Combined hook that subscribes to all 3 stores.
+ * When called with a selector, re-renders only when the selected value changes.
+ * When called without args, re-renders on any change in any of the 3 stores.
+ */
+function useChatStoreHook(): CombinedChatState;
+function useChatStoreHook<T>(selector: (state: CombinedChatState) => T): T;
+function useChatStoreHook<T>(selector?: (state: CombinedChatState) => T): T | CombinedChatState {
+  // Subscribe to all 3 stores so React re-renders when any of them changes.
+  // Zustand selectors use Object.is by default, so unchanged selectors won't trigger re-renders.
+  const messagesState = useMessagesStore();
+  const streamingState = useStreamingStore();
+  const aiSettingsState = useAiSettingsStore();
+
+  const combined: CombinedChatState = {
+    ...messagesState,
+    ...streamingState,
+    ...aiSettingsState,
+  };
+
+  if (selector) {
+    return selector(combined);
+  }
+  return combined;
 }
 
-export interface SwarmAgentResponse {
-  id: string;
-  name: string;
-  icon?: string;
-  content: string;
+/**
+ * setState that dispatches to the correct underlying store.
+ */
+function setCombinedState(partial: Partial<CombinedChatState> | ((state: CombinedChatState) => Partial<CombinedChatState>)): void {
+  const resolved = typeof partial === "function" ? partial(getCombinedState()) : partial;
+
+  // Partition keys into the correct stores
+  const messagesKeys = new Set<string>(Object.keys(useMessagesStore.getState()));
+  const streamingKeys = new Set<string>(Object.keys(useStreamingStore.getState()));
+  const aiSettingsKeys = new Set<string>(Object.keys(useAiSettingsStore.getState()));
+
+  const messagesPatch: Record<string, unknown> = {};
+  const streamingPatch: Record<string, unknown> = {};
+  const aiSettingsPatch: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(resolved)) {
+    if (messagesKeys.has(key)) {
+      messagesPatch[key] = value;
+    }
+    if (streamingKeys.has(key)) {
+      streamingPatch[key] = value;
+    }
+    if (aiSettingsKeys.has(key)) {
+      aiSettingsPatch[key] = value;
+    }
+  }
+
+  if (Object.keys(messagesPatch).length > 0) {
+    useMessagesStore.setState(messagesPatch as Partial<ReturnType<typeof useMessagesStore.getState>>);
+  }
+  if (Object.keys(streamingPatch).length > 0) {
+    useStreamingStore.setState(streamingPatch as Partial<ReturnType<typeof useStreamingStore.getState>>);
+  }
+  if (Object.keys(aiSettingsPatch).length > 0) {
+    useAiSettingsStore.setState(aiSettingsPatch as Partial<ReturnType<typeof useAiSettingsStore.getState>>);
+  }
 }
 
-interface ChatState {
-  activeConversationId: string | null;
-  activeAgentId: string | null;
-  orgAgentId: string | null;
-  swarmMode: boolean;
-  swarmOrgId: string | null;
-  multiAgentId: string | null;
-  swarmAgentResponses: SwarmAgentResponse[];
-  conversations: ConversationSummary[];
-  messages: ChatMessage[];
-  isStreaming: boolean;
-  streamingPhase: StreamingPhase;
-  streamingToolName: string | null;
+// Attach static methods to match Zustand's store API
+useChatStoreHook.getState = getCombinedState;
+useChatStoreHook.setState = setCombinedState;
 
-  // Streaming content buffer (merged into messages when stream ends)
-  streamingContent: string | null;
-  streamingReasoning: string | null;
-  streamingPlanContent: string | null;
-
-  // AI feature toggles
-  provider: string;
-  thinkingEnabled: boolean;
-  webSearchEnabled: boolean;
-  planningEnabled: boolean;
-
-  // Planning mode
-  currentPlan: string | null;
-
-  // Autocompact
-  contextUsage: ContextUsage | null;
-
-  // Conversation pagination
-  conversationsCursor: string | null;
-  hasMoreConversations: boolean;
-  isLoadingMoreConversations: boolean;
-
-  // Message pagination
-  messagesCursor: string | null;
-  hasMoreMessages: boolean;
-  isLoadingMoreMessages: boolean;
-
-  /** True while fetching conversation messages (skeleton state) */
-  isLoadingConversation: boolean;
-
-  setSwarmMode: (orgId: string | null, multiAgentId?: string | null) => void;
-  setMultiAgentId: (id: string | null) => void;
-  addSwarmAgentResponse: (resp: SwarmAgentResponse) => void;
-  clearSwarmAgentResponses: () => void;
-
-  setActiveConversation: (id: string | null) => void;
-  setActiveAgentId: (id: string | null) => void;
-  setOrgAgentId: (id: string | null) => void;
-  setConversations: (conversations: ConversationSummary[], nextCursor?: string | null) => void;
-  appendConversations: (conversations: ConversationSummary[], nextCursor: string | null) => void;
-  addConversation: (conversation: ConversationSummary) => void;
-  removeConversation: (id: string) => void;
-  setIsLoadingMoreConversations: (loading: boolean) => void;
-  setMessages: (messages: ChatMessage[]) => void;
-  addMessage: (message: ChatMessage) => void;
-  /** Prepend older messages to the beginning of the list */
-  prependMessages: (messages: ChatMessage[], nextCursor: string | null) => void;
-  setIsLoadingMoreMessages: (loading: boolean) => void;
-  setIsLoadingConversation: (loading: boolean) => void;
-  setMessagesPagination: (cursor: string | null, hasMore: boolean) => void;
-  updateLastAssistantMessage: (content: string, reasoning?: string, planContent?: string) => void;
-  /** Get the latest content for the last assistant message (streaming or committed) */
-  getLastAssistantContent: () => { content: string; reasoning?: string; planContent?: string } | null;
-  setStreaming: (isStreaming: boolean) => void;
-  setStreamingPhase: (phase: StreamingPhase, toolName?: string | null) => void;
-
-  setProvider: (provider: string) => void;
-  toggleThinking: () => void;
-  toggleWebSearch: () => void;
-  togglePlanning: () => void;
-
-  // Planning
-  setCurrentPlan: (plan: string | null) => void;
-  updateCurrentPlan: (content: string) => void;
-
-  // Context
-  setContextUsage: (usage: ContextUsage | null) => void;
-
-  // Pending input (from tools/templates)
-  pendingInput: string | null;
-  setPendingInput: (input: string | null) => void;
-
-  // Clarify questions modal
-  clarifyQuestions: ClarifyQuestion[] | null;
-  setClarifyQuestions: (questions: ClarifyQuestion[] | null) => void;
-}
-
-export const useChatStore = create<ChatState>((set, get) => ({
-  activeConversationId: null,
-  activeAgentId: null,
-  orgAgentId: null,
-  swarmMode: false,
-  swarmOrgId: null,
-  multiAgentId: null,
-  swarmAgentResponses: [],
-  conversations: [],
-  messages: [],
-  isStreaming: false,
-  streamingPhase: null,
-  streamingToolName: null,
-  streamingContent: null,
-  streamingReasoning: null,
-  streamingPlanContent: null,
-  provider: "default",
-  thinkingEnabled: false,
-  webSearchEnabled: false,
-  planningEnabled: false,
-
-  currentPlan: null,
-  contextUsage: null,
-  pendingInput: null,
-  clarifyQuestions: null,
-
-  conversationsCursor: null,
-  hasMoreConversations: false,
-  isLoadingMoreConversations: false,
-
-  messagesCursor: null,
-  hasMoreMessages: false,
-  isLoadingMoreMessages: false,
-  isLoadingConversation: false,
-
-  setActiveConversation: (activeConversationId) =>
-    set(activeConversationId === null
-      ? { activeConversationId, messages: [], currentPlan: null, contextUsage: null, messagesCursor: null, hasMoreMessages: false, isLoadingConversation: false }
-      : { activeConversationId }),
-
-  setActiveAgentId: (activeAgentId) => set({ activeAgentId }),
-  setOrgAgentId: (orgAgentId) => set({ orgAgentId }),
-  setSwarmMode: (orgId, multiAgentId) => set({ swarmMode: !!orgId, swarmOrgId: orgId, multiAgentId: multiAgentId ?? null, orgAgentId: null }),
-  setMultiAgentId: (multiAgentId) => set({ multiAgentId }),
-  addSwarmAgentResponse: (resp) => set((s) => ({ swarmAgentResponses: [...s.swarmAgentResponses, resp] })),
-  clearSwarmAgentResponses: () => set({ swarmAgentResponses: [] }),
-
-  setConversations: (conversations, nextCursor) =>
-    set({
-      conversations: conversations.slice(0, MAX_CONVERSATIONS),
-      conversationsCursor: nextCursor ?? null,
-      hasMoreConversations: !!nextCursor,
-    }),
-
-  appendConversations: (conversations, nextCursor) =>
-    set((s) => {
-      const updated = [...s.conversations, ...conversations];
-      return {
-        conversations: updated.length > MAX_CONVERSATIONS ? updated.slice(0, MAX_CONVERSATIONS) : updated,
-        conversationsCursor: nextCursor,
-        hasMoreConversations: !!nextCursor,
-        isLoadingMoreConversations: false,
-      };
-    }),
-
-  addConversation: (conversation) =>
-    set((s) => {
-      const updated = [conversation, ...s.conversations];
-      return { conversations: updated.length > MAX_CONVERSATIONS ? updated.slice(0, MAX_CONVERSATIONS) : updated };
-    }),
-
-  removeConversation: (id) =>
-    set((s) => ({
-      conversations: s.conversations.filter((c) => c.id !== id),
-      activeConversationId:
-        s.activeConversationId === id ? null : s.activeConversationId,
-    })),
-
-  setIsLoadingMoreConversations: (isLoadingMoreConversations) =>
-    set({ isLoadingMoreConversations }),
-
-  setMessages: (messages) => set({ messages }),
-
-  addMessage: (message) =>
-    set((s) => ({ messages: [...s.messages, message] })),
-
-  prependMessages: (olderMessages, nextCursor) =>
-    set((s) => ({
-      messages: [...olderMessages, ...s.messages],
-      messagesCursor: nextCursor,
-      hasMoreMessages: !!nextCursor,
-      isLoadingMoreMessages: false,
-    })),
-
-  setIsLoadingMoreMessages: (isLoadingMoreMessages) =>
-    set({ isLoadingMoreMessages }),
-
-  setIsLoadingConversation: (isLoadingConversation) =>
-    set({ isLoadingConversation }),
-
-  setMessagesPagination: (messagesCursor, hasMoreMessages) =>
-    set({ messagesCursor, hasMoreMessages }),
-
-  updateLastAssistantMessage: (content, reasoning, planContent) =>
-    set({
-      streamingContent: content,
-      ...(reasoning !== undefined ? { streamingReasoning: reasoning } : {}),
-      ...(planContent !== undefined ? { streamingPlanContent: planContent } : {}),
-    }),
-
-  getLastAssistantContent: () => {
-    const s = get();
-    if (s.streamingContent !== null) {
-      return {
-        content: s.streamingContent,
-        reasoning: s.streamingReasoning ?? undefined,
-        planContent: s.streamingPlanContent ?? undefined,
-      };
+// Subscribe fans out to all 3 stores
+useChatStoreHook.subscribe = (listener: (state: CombinedChatState, prevState: CombinedChatState) => void) => {
+  let prev = getCombinedState();
+  const handler = () => {
+    const next = getCombinedState();
+    if (next !== prev) {
+      listener(next, prev);
+      prev = next;
     }
-    return null;
-  },
+  };
+  const unsub1 = useMessagesStore.subscribe(handler);
+  const unsub2 = useStreamingStore.subscribe(handler);
+  const unsub3 = useAiSettingsStore.subscribe(handler);
+  return () => {
+    unsub1();
+    unsub2();
+    unsub3();
+  };
+};
 
-  setStreaming: (isStreaming) =>
-    set((s) => {
-      if (!isStreaming && s.streamingContent !== null) {
-        // Merge streaming buffer into messages when stream ends
-        const msgs = [...s.messages];
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (msgs[i].role === "ASSISTANT") {
-            msgs[i] = {
-              ...msgs[i],
-              content: s.streamingContent!,
-              ...(s.streamingReasoning !== null ? { reasoning: s.streamingReasoning } : {}),
-              ...(s.streamingPlanContent !== null ? { planContent: s.streamingPlanContent } : {}),
-            };
-            break;
-          }
-        }
-        return {
-          isStreaming: false,
-          streamingPhase: null,
-          streamingToolName: null,
-          streamingContent: null,
-          streamingReasoning: null,
-          streamingPlanContent: null,
-          messages: msgs,
-        };
-      }
-      return { isStreaming, ...(isStreaming ? {} : { streamingPhase: null, streamingToolName: null }) };
-    }),
+// Destroy is a no-op for the facade (individual stores manage their own lifecycle)
+useChatStoreHook.destroy = () => {
+  // no-op
+};
 
-  setStreamingPhase: (phase, toolName) => {
-    if (!phase) {
-      set({ streamingPhase: null, streamingToolName: null });
-      return;
-    }
-    // searching and using_tool are overlays — always allowed to update
-    // (tool type can change between web search and knowledge base within a turn)
-    if (phase === "searching" || phase === "using_tool") {
-      set({ streamingPhase: phase, streamingToolName: toolName ?? null });
-      return;
-    }
-    const s = get();
-    const curr = s.streamingPhase ? PHASE_PRIORITY[s.streamingPhase] || 0 : 0;
-    const next = PHASE_PRIORITY[phase] || 0;
-    if (next > curr) {
-      set({ streamingPhase: phase, streamingToolName: toolName ?? null });
-    }
-    // If phase priority is not higher, do nothing (no empty set({}) call)
-  },
-
-  setProvider: (provider) => set({ provider }),
-  toggleThinking: () => set((s) => ({ thinkingEnabled: !s.thinkingEnabled })),
-  toggleWebSearch: () => set((s) => ({ webSearchEnabled: !s.webSearchEnabled })),
-  togglePlanning: () => set((s) => ({ planningEnabled: !s.planningEnabled })),
-
-  setCurrentPlan: (currentPlan) => set({ currentPlan }),
-
-  updateCurrentPlan: (content) =>
-    set((s) => ({ currentPlan: (s.currentPlan || "") + content })),
-
-  setContextUsage: (contextUsage) => set({ contextUsage }),
-
-  setPendingInput: (pendingInput) => set({ pendingInput }),
-
-  setClarifyQuestions: (clarifyQuestions) => set({ clarifyQuestions }),
-}));
+export const useChatStore = useChatStoreHook as typeof useChatStoreHook & {
+  getState: typeof getCombinedState;
+  setState: typeof setCombinedState;
+  subscribe: (listener: (state: CombinedChatState, prevState: CombinedChatState) => void) => () => void;
+  destroy: () => void;
+};

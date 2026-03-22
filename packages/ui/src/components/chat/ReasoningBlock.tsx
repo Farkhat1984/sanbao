@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ interface ReasoningBlockProps {
 }
 
 /** Collapsible "reasoning / thinking" block shown above assistant messages. */
-export function ReasoningBlock({ reasoning }: ReasoningBlockProps) {
+export const ReasoningBlock = memo(function ReasoningBlock({ reasoning }: ReasoningBlockProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -41,4 +41,4 @@ export function ReasoningBlock({ reasoning }: ReasoningBlockProps) {
       )}
     </div>
   );
-}
+});

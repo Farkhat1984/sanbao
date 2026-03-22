@@ -66,6 +66,7 @@ export function PlusMenu({
             ? "text-accent bg-accent-light rotate-45"
             : "text-text-secondary hover:text-text-primary hover:bg-surface-alt"
         )}
+        aria-label="Функции"
         title="Функции"
       >
         <Plus className="h-4.5 w-4.5 transition-transform" />
@@ -94,6 +95,7 @@ export function PlusMenu({
                 {/* Attach file */}
                 <button
                   onClick={handleAttachClick}
+                  aria-label="Прикрепить файл"
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg bg-accent-light text-accent flex items-center justify-center">
@@ -110,6 +112,7 @@ export function PlusMenu({
                 {/* Camera */}
                 <button
                   onClick={handleCameraClick}
+                  aria-label="Сделать фото"
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg bg-accent-light text-accent flex items-center justify-center">
@@ -122,6 +125,7 @@ export function PlusMenu({
                 {hasAgentTools && (
                   <button
                     onClick={handleOpenTools}
+                    aria-label="Инструменты"
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                   >
                     <div className="h-7 w-7 rounded-lg bg-warning-light text-warning flex items-center justify-center">
@@ -139,6 +143,7 @@ export function PlusMenu({
                     toggleThinking();
                     setMenuOpen(false);
                   }}
+                  aria-label="Thinking"
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
                 >
                   <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-accent-light text-accent transition-colors">

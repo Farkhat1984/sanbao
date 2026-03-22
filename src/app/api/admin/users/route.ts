@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { parsePagination } from "@/lib/validation";
 import { jsonOk } from "@/lib/api-helpers";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   const result = await requireAdmin();
@@ -14,14 +15,13 @@ export async function GET(req: Request) {
   const { page, limit } = parsePagination(searchParams);
   const skip = (page - 1) * limit;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const conditions: any[] = [];
+  const conditions: Prisma.UserWhereInput[] = [];
 
   if (search) {
     conditions.push({
       OR: [
-        { name: { contains: search, mode: "insensitive" as const } },
-        { email: { contains: search, mode: "insensitive" as const } },
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
       ],
     });
   }
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     }
   }
 
-  const where = conditions.length > 0 ? { AND: conditions } : {};
+  const where: Prisma.UserWhereInput = conditions.length > 0 ? { AND: conditions } : {};
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({

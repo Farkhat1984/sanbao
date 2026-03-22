@@ -5,6 +5,7 @@ import { resetPromptCache } from "@/lib/prompts";
 import { resetTransporter } from "@/lib/email";
 import { jsonOk, jsonError } from "@/lib/api-helpers";
 import { logAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import {
   SETTINGS_REGISTRY,
   SETTINGS_MAP,
@@ -165,7 +166,7 @@ export async function PUT(req: Request) {
       action: "settings.update",
       target: "SystemSetting",
       details: { keys: updated, count: updated.length },
-    }).catch(() => {});
+    }).catch((e) => logger.warn("Audit log failed", { context: "ADMIN:SETTINGS", error: String(e) }));
 
     return jsonOk({ updated });
   } catch (err) {
@@ -221,7 +222,7 @@ export async function DELETE(req: Request) {
       action: "settings.reset",
       target: "SystemSetting",
       details: { keys, count: keys.length },
-    }).catch(() => {});
+    }).catch((e) => logger.warn("Audit log failed", { context: "ADMIN:SETTINGS", error: String(e) }));
 
     return jsonOk({ reset: keys });
   } catch (err) {

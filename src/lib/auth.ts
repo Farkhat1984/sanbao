@@ -7,16 +7,19 @@ import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { BCRYPT_SALT_ROUNDS, DEFAULT_SESSION_TTL_HOURS } from "./constants";
 import { getSettingNumber } from "./settings";
+import { cacheGet, cacheSet } from "./redis";
 import { verifyTotpCode } from "./auth-utils";
 import { logger } from "./logger";
 
-const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
+const ADMIN_LOGIN = process.env.ADMIN_LOGIN;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@sanbao.local";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
-// ─── Session TTL cache (avoid DB query on every JWT validation) ───
+// ─── Session TTL cache (Redis-first, in-memory fallback) ───
+const REDIS_SESSION_TTL_KEY = "session_ttl_hours";
+const REDIS_SESSION_TTL_EXPIRY_SECONDS = 60; // 1 minute in Redis
 let sessionTtlCache: { value: number; expiresAt: number } | null = null;
-const SESSION_TTL_CACHE_MS_FALLBACK = 5 * 60_000; // 5 minutes
+const SESSION_TTL_CACHE_MS_FALLBACK = 5 * 60_000; // 5 minutes (in-memory fallback TTL)
 
 async function getSessionCacheTtlMs(): Promise<number> {
   try {
@@ -27,20 +30,40 @@ async function getSessionCacheTtlMs(): Promise<number> {
 }
 
 async function getSessionTtlHours(): Promise<number> {
+  // L1: Try Redis (shared across all replicas)
+  try {
+    const cached = await cacheGet(REDIS_SESSION_TTL_KEY);
+    if (cached !== null) {
+      const parsed = parseInt(cached, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Redis unavailable — fall through to DB then in-memory
+  }
+
+  // L2: In-memory cache (per-instance fallback when Redis is down)
   const cacheTtlMs = await getSessionCacheTtlMs();
   if (sessionTtlCache && sessionTtlCache.expiresAt > Date.now()) {
     return sessionTtlCache.value;
   }
+
+  // L3: Query DB
   try {
     const ttlSetting = await prisma.systemSetting.findUnique({
       where: { key: "session_ttl_hours" },
     });
     const parsed = ttlSetting ? parseInt(ttlSetting.value, 10) : DEFAULT_SESSION_TTL_HOURS;
     const ttlHours = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 8760) : DEFAULT_SESSION_TTL_HOURS;
+
+    // Write back to both caches
     sessionTtlCache = { value: ttlHours, expiresAt: Date.now() + cacheTtlMs };
+    await cacheSet(REDIS_SESSION_TTL_KEY, String(ttlHours), REDIS_SESSION_TTL_EXPIRY_SECONDS).catch(() => {});
+
     return ttlHours;
   } catch {
-    return DEFAULT_SESSION_TTL_HOURS;
+    return sessionTtlCache?.value ?? DEFAULT_SESSION_TTL_HOURS;
   }
 }
 
@@ -71,9 +94,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const login = (credentials.email as string).trim();
           const password = credentials.password as string;
 
-          // Check admin credentials (disabled when ADMIN_PASSWORD is not set)
+          // Check admin credentials (disabled when ADMIN_PASSWORD or ADMIN_EMAIL is not set)
           if (
             ADMIN_PASSWORD &&
+            ADMIN_EMAIL &&
             (login === ADMIN_LOGIN || login === ADMIN_EMAIL) &&
             password.length === ADMIN_PASSWORD.length &&
             timingSafeEqual(Buffer.from(password), Buffer.from(ADMIN_PASSWORD))

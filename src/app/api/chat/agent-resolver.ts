@@ -112,15 +112,23 @@ function extractToolsFromServer(srv: McpServerRecord, existing: McpToolContext[]
 async function loadUserMcpTools(userId: string, existing: McpToolContext[]): Promise<McpToolContext[]> {
   const result: McpToolContext[] = [];
 
-  // User-enabled global MCP servers
-  const userGlobalMcps = await prisma.userMcpServer.findMany({
-    where: { userId, isActive: true },
-    include: {
-      mcpServer: {
-        select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true, isGlobal: true, isEnabled: true },
+  // N+1 fix: fetch both user-global and user-own MCP servers in parallel instead of sequentially
+  const [userGlobalMcps, userOwnMcps] = await Promise.all([
+    prisma.userMcpServer.findMany({
+      where: { userId, isActive: true },
+      include: {
+        mcpServer: {
+          select: { id: true, url: true, transport: true, apiKey: true, status: true, discoveredTools: true, isGlobal: true, isEnabled: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.mcpServer.findMany({
+      where: { userId, status: "CONNECTED", isGlobal: false },
+      select: { id: true, url: true, transport: true, apiKey: true, discoveredTools: true },
+    }),
+  ]);
+
+  // User-enabled global MCP servers
   for (const link of userGlobalMcps) {
     const srv = link.mcpServer;
     if (!srv.isGlobal || !srv.isEnabled) continue;
@@ -128,10 +136,6 @@ async function loadUserMcpTools(userId: string, existing: McpToolContext[]): Pro
   }
 
   // User's own connected MCP servers
-  const userOwnMcps = await prisma.mcpServer.findMany({
-    where: { userId, status: "CONNECTED", isGlobal: false },
-    select: { id: true, url: true, transport: true, apiKey: true, discoveredTools: true },
-  });
   for (const srv of userOwnMcps) {
     if (!Array.isArray(srv.discoveredTools)) continue;
     result.push(...extractToolsFromServer(
@@ -153,28 +157,34 @@ async function resolveOrgAgent(
   orgAgentId: string,
   userId: string,
 ): Promise<{ tools: McpToolContext[]; promptAddition: string } | { error: NextResponse }> {
-  const ctx = await loadOrgAgentContext(orgAgentId, userId);
-  if (!ctx) {
-    return { tools: [], promptAddition: "" };
-  }
-
-  // Verify user is member of the org
+  // N+1 fix: single query fetches orgAgent with orgId, accessMode, AND membership in one round-trip
+  // Previously this was 3 sequential queries: loadOrgAgentContext → orgAgent.findUnique → orgMember.findUnique
   const orgAgent = await prisma.orgAgent.findUnique({
     where: { id: orgAgentId },
-    select: { orgId: true, accessMode: true },
+    select: {
+      orgId: true,
+      accessMode: true,
+      org: {
+        select: {
+          members: {
+            where: { userId },
+            select: { role: true },
+            take: 1,
+          },
+        },
+      },
+    },
   });
   if (!orgAgent) {
     return { tools: [], promptAddition: "" };
   }
 
-  const membership = await prisma.orgMember.findUnique({
-    where: { orgId_userId: { orgId: orgAgent.orgId, userId } },
-  });
+  const membership = orgAgent.org.members[0];
   if (!membership) {
     return { error: jsonError("Нет доступа к этому агенту", 403) };
   }
 
-  // Check access mode
+  // Check access mode — only need one more query for SPECIFIC access with MEMBER role
   if (orgAgent.accessMode === "SPECIFIC" && membership.role === "MEMBER") {
     const access = await prisma.orgAgentMember.findUnique({
       where: { orgAgentId_userId: { orgAgentId, userId } },
@@ -182,6 +192,12 @@ async function resolveOrgAgent(
     if (!access) {
       return { error: jsonError("Нет доступа к этому агенту", 403) };
     }
+  }
+
+  // Load full org agent context (MCP tools, skills, prompts) only after access is confirmed
+  const ctx = await loadOrgAgentContext(orgAgentId, userId);
+  if (!ctx) {
+    return { tools: [], promptAddition: "" };
   }
 
   // Build prompt addition from the loaded context
@@ -294,15 +310,22 @@ export async function resolveAgentAndTools(params: {
   }
 
   // ─── Mode-specific prompts ─────────────────────────
-  if (planningEnabled) {
-    systemPrompt += "\n\n" + await getPrompt("prompt_mode_planning");
+  // N+1 fix: batch all getPrompt calls into a single Promise.all instead of 3 sequential DB lookups
+  const [planningPrompt, websearchPrompt, thinkingPrompt] = await Promise.all([
+    planningEnabled ? getPrompt("prompt_mode_planning") : Promise.resolve(null),
+    getPrompt("prompt_mode_websearch"),
+    thinkingEnabled ? getPrompt("prompt_mode_thinking") : Promise.resolve(null),
+  ]);
+
+  if (planningPrompt) {
+    systemPrompt += "\n\n" + planningPrompt;
   }
 
   // Web search prompt is always included
-  systemPrompt += "\n\n" + await getPrompt("prompt_mode_websearch");
+  systemPrompt += "\n\n" + websearchPrompt;
 
-  if (thinkingEnabled) {
-    systemPrompt += "\n\n" + await getPrompt("prompt_mode_thinking");
+  if (thinkingPrompt) {
+    systemPrompt += "\n\n" + thinkingPrompt;
   }
 
   return {

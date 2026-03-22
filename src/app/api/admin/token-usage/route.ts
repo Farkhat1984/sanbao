@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { buildCsvDocument, csvResponse } from "@/lib/csv-utils";
 import { parsePagination } from "@/lib/validation";
 import { jsonOk } from "@/lib/api-helpers";
+import { Prisma } from "@prisma/client";
 
 // Build a price lookup map from AiModel records: "providerSlug:modelId" → prices
 async function buildPriceMap() {
@@ -55,16 +56,15 @@ export async function GET(req: Request) {
   const modelFilter = searchParams.get("model");
   const { page, limit } = parsePagination(searchParams);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {};
-  if (userId) where.userId = userId;
-  if (providerFilter) where.provider = providerFilter;
-  if (modelFilter) where.model = { contains: modelFilter, mode: "insensitive" };
-
-  // Default to current month if no date range specified
   const dateFrom = from ? new Date(from) : defaultFrom();
   const dateTo = to ? new Date(to) : new Date();
-  where.createdAt = { gte: dateFrom, lte: dateTo };
+
+  const where: Prisma.TokenLogWhereInput = {
+    ...(userId ? { userId } : {}),
+    ...(providerFilter ? { provider: providerFilter } : {}),
+    ...(modelFilter ? { model: { contains: modelFilter, mode: "insensitive" } } : {}),
+    createdAt: { gte: dateFrom, lte: dateTo },
+  };
 
   const format = searchParams.get("format");
   const priceMap = await buildPriceMap();

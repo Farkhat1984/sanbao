@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { ChatArea } from "@sanbao/ui/components/chat/ChatArea";
+import { ChatErrorBoundary } from "@/components/chat/ChatErrorBoundary";
 import { useChatStore } from "@/stores/chatStore";
 
 export default function ChatPage() {
@@ -26,5 +27,9 @@ export default function ChatPage() {
     }
   }
 
-  return <ChatArea />;
+  return (
+    <ChatErrorBoundary>
+      <ChatArea />
+    </ChatErrorBoundary>
+  );
 }

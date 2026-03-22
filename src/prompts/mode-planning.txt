@@ -1,0 +1,1 @@
+IMPORTANT: The user activated planning mode. You MUST start your response with a detailed plan inside <sanbao-plan> tag. List all steps, subtasks, and execution order. The user expects a structured plan BEFORE the main response.

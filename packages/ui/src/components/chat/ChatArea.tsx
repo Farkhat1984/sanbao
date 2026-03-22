@@ -1,17 +1,20 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { ListChecks, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import { useAgentStore } from "@/stores/agentStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
-import { WelcomeScreen } from "./WelcomeScreen";
-import { ContextIndicator } from "./ContextIndicator";
-import { TaskPanel } from "@/components/tasks/TaskPanel";
-import { ClarifyModal } from "./ClarifyModal";
+import { useTranslation } from "@/hooks/useTranslation";
 import type { ChatMessage } from "@/types/chat";
+
+const TaskPanel = lazy(() => import("@/components/tasks/TaskPanel").then(m => ({ default: m.TaskPanel })));
+const ClarifyModal = lazy(() => import("./ClarifyModal").then(m => ({ default: m.ClarifyModal })));
+const WelcomeScreen = lazy(() => import("./WelcomeScreen").then(m => ({ default: m.WelcomeScreen })));
+const ContextIndicator = lazy(() => import("./ContextIndicator").then(m => ({ default: m.ContextIndicator })));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapMessages(raw: any[]): ChatMessage[] {
@@ -30,22 +33,45 @@ function mapMessages(raw: any[]): ChatMessage[] {
 type ChatView = "welcome" | "loading" | "messages";
 
 export function ChatArea() {
-  const messages = useChatStore((s) => s.messages);
-  const isStreaming = useChatStore((s) => s.isStreaming);
-  const contextUsage = useChatStore((s) => s.contextUsage);
-  const activeConversationId = useChatStore((s) => s.activeConversationId);
-  const activeAgentId = useChatStore((s) => s.activeAgentId);
-  const conversations = useChatStore((s) => s.conversations);
-  const setPendingInput = useChatStore((s) => s.setPendingInput);
-  const hasMoreMessages = useChatStore((s) => s.hasMoreMessages);
-  const isLoadingMoreMessages = useChatStore((s) => s.isLoadingMoreMessages);
-  const isLoadingConversation = useChatStore((s) => s.isLoadingConversation);
-  const messagesCursor = useChatStore((s) => s.messagesCursor);
-  const prependMessages = useChatStore((s) => s.prependMessages);
-  const setIsLoadingMoreMessages = useChatStore((s) => s.setIsLoadingMoreMessages);
-  const setActiveAgent = useAgentStore((s) => s.setActiveAgent);
-  const setAgentTools = useAgentStore((s) => s.setAgentTools);
+  const {
+    messages,
+    isStreaming,
+    contextUsage,
+    activeConversationId,
+    activeAgentId,
+    conversations,
+    setPendingInput,
+    hasMoreMessages,
+    isLoadingMoreMessages,
+    isLoadingConversation,
+    messagesCursor,
+    prependMessages,
+    setIsLoadingMoreMessages,
+  } = useChatStore(
+    useShallow((s) => ({
+      messages: s.messages,
+      isStreaming: s.isStreaming,
+      contextUsage: s.contextUsage,
+      activeConversationId: s.activeConversationId,
+      activeAgentId: s.activeAgentId,
+      conversations: s.conversations,
+      setPendingInput: s.setPendingInput,
+      hasMoreMessages: s.hasMoreMessages,
+      isLoadingMoreMessages: s.isLoadingMoreMessages,
+      isLoadingConversation: s.isLoadingConversation,
+      messagesCursor: s.messagesCursor,
+      prependMessages: s.prependMessages,
+      setIsLoadingMoreMessages: s.setIsLoadingMoreMessages,
+    })),
+  );
+  const { setActiveAgent, setAgentTools } = useAgentStore(
+    useShallow((s) => ({
+      setActiveAgent: s.setActiveAgent,
+      setAgentTools: s.setAgentTools,
+    })),
+  );
   const { tasks } = useTaskStore();
+  const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [tasksExpanded, setTasksExpanded] = useState(false);
 
@@ -162,11 +188,13 @@ export function ChatArea() {
                 <ChevronRight className="h-3 w-3" />
               )}
               <ListChecks className="h-3.5 w-3.5" />
-              <span>{activeTasks.length} {activeTasks.length === 1 ? "задача" : "задачи"} в работе</span>
+              <span>{activeTasks.length} {activeTasks.length === 1 ? t("chat.taskInProgress1") : t("chat.taskInProgress2")}</span>
             </button>
             {tasksExpanded && (
               <div className="mt-2 mb-1 max-h-48 overflow-y-auto">
-                <TaskPanel />
+                <Suspense fallback={null}>
+                  <TaskPanel />
+                </Suspense>
               </div>
             )}
           </div>
@@ -174,8 +202,12 @@ export function ChatArea() {
       )}
 
       {/* Messages / Welcome / Loading */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label="Сообщения чата">
-        {view === "welcome" && <WelcomeScreen />}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label={t("chat.messagesLabel")}>
+        {view === "welcome" && (
+          <Suspense fallback={null}>
+            <WelcomeScreen />
+          </Suspense>
+        )}
 
         {view === "loading" && (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-4 animate-fade-in">
@@ -205,7 +237,7 @@ export function ChatArea() {
                   {isLoadingMoreMessages ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : null}
-                  {isLoadingMoreMessages ? "Загрузка..." : "Загрузить ранние сообщения"}
+                  {isLoadingMoreMessages ? t("common.loading") : t("chat.loadOlderMessages")}
                 </button>
               </div>
             )}
@@ -231,16 +263,20 @@ export function ChatArea() {
       <div className="shrink-0 px-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
         <div className="max-w-3xl mx-auto">
           {contextUsage && (
-            <ContextIndicator
-              usagePercent={contextUsage.usagePercent}
-              isCompacting={contextUsage.isCompacting}
-            />
+            <Suspense fallback={null}>
+              <ContextIndicator
+                usagePercent={contextUsage.usagePercent}
+                isCompacting={contextUsage.isCompacting}
+              />
+            </Suspense>
           )}
           <MessageInput />
         </div>
       </div>
 
-      <ClarifyModal />
+      <Suspense fallback={null}>
+        <ClarifyModal />
+      </Suspense>
 
     </div>
   );
