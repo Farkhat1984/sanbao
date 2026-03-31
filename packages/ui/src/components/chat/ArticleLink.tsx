@@ -21,6 +21,7 @@ const FALLBACK_LABELS: Record<string, string> = {
   budget_code: "БК РК",
   customs_code: "ТамК РК",
   family_code: "КоБС РК",
+  housing_code: "ЖК РК",
   social_code: "СК РК",
   water_code: "ВК РК",
   law: "Закон РК",

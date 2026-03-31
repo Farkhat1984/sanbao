@@ -182,7 +182,7 @@ export async function validateChatRequest(
   }
 
   // Plan & usage checks
-  const { plan, usage, monthlyUsage } = await getUserPlanAndUsage(userId);
+  const { plan, usage, monthlyUsage, expired } = await getUserPlanAndUsage(userId);
   if (!plan) {
     return { error: jsonError("Нет настроенного тарифа", 500) };
   }
@@ -190,6 +190,16 @@ export async function validateChatRequest(
   const isAdmin = userRole === "ADMIN";
 
   if (!isAdmin) {
+    // Check subscription expiry BEFORE limit checks — otherwise expired users
+    // see "token limit reached" instead of "subscription expired"
+    if (expired) {
+      return {
+        error: NextResponse.json(
+          { error: "Срок действия вашей подписки истёк. Продлите подписку в разделе «Тарифы» для продолжения работы.", expired: true },
+          { status: 403 }
+        ),
+      };
+    }
     if (plan.messagesPerDay > 0 && (usage?.messageCount ?? 0) >= plan.messagesPerDay) {
       return {
         error: NextResponse.json(
