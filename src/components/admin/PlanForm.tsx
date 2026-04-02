@@ -20,7 +20,7 @@ interface PlanData {
   maxAgents: number;
   documentsPerMonth: number;
   canUseAgents: boolean;
-  canUseMultiAgents: boolean;
+  canUseOrganizations: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;
@@ -58,7 +58,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     maxStorageMb: plan.maxStorageMb,
     maxOrganizations: plan.maxOrganizations,
     canUseAgents: plan.canUseAgents,
-    canUseMultiAgents: plan.canUseMultiAgents,
+    canUseOrganizations: plan.canUseOrganizations,
     canUseReasoning: plan.canUseReasoning,
     canUseIntegrations: plan.canUseIntegrations,
     canUseMcp: plan.canUseMcp,
@@ -192,7 +192,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         {toggle("Скиллы", "canUseSkills")}
         {toggle("База знаний", "canUseRag")}
         {toggle("Агенты", "canUseAgents")}
-        {toggle("Мультиагенты", "canUseMultiAgents")}
+        {toggle("Организации", "canUseOrganizations")}
         {toggle("Интеграции", "canUseIntegrations")}
         {toggle("MCP", "canUseMcp")}
         {toggle("Рекомендуемый", "highlighted")}

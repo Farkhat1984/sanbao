@@ -34,7 +34,7 @@ interface PlanInfo {
   maxAgents: number;
   documentsPerMonth: number;
   canUseAgents: boolean;
-  canUseMultiAgents: boolean;
+  canUseOrganizations: boolean;
   canUseIntegrations: boolean;
   canUseMcp: boolean;
   canUseReasoning: boolean;

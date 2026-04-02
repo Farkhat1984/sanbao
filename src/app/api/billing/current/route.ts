@@ -27,7 +27,7 @@ export async function GET() {
           maxAgents: plan.maxAgents,
           documentsPerMonth: plan.documentsPerMonth,
           canUseAgents: plan.canUseAgents,
-          canUseMultiAgents: plan.canUseMultiAgents,
+          canUseOrganizations: plan.canUseOrganizations,
           canUseIntegrations: plan.canUseIntegrations,
           canUseMcp: plan.canUseMcp,
           canUseReasoning: plan.canUseReasoning,

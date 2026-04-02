@@ -18,7 +18,7 @@ interface PlanData {
   maxAgents: number;
   documentsPerMonth: number;
   canUseAgents: boolean;
-  canUseMultiAgents: boolean;
+  canUseOrganizations: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;

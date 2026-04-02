@@ -40,7 +40,7 @@ export async function GET() {
                 maxConversations: true,
                 maxAgents: true,
                 canUseAgents: true,
-                canUseMultiAgents: true,
+                canUseOrganizations: true,
                 canUseIntegrations: true,
                 canUseMcp: true,
                 canUseReasoning: true,
