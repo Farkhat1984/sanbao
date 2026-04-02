@@ -7,10 +7,9 @@ import { AlertTriangle } from "lucide-react";
 
 export default function NewAgentPage() {
   const canUseRag = useBillingStore((s) => s.plan?.canUseRag ?? false);
-  const maxAgents = useBillingStore((s) => s.plan?.maxAgents ?? 0);
+  const canUseAgents = useBillingStore((s) => s.plan?.canUseAgents ?? false);
 
-  // maxAgents: 0 = plan doesn't allow agents at all
-  if (maxAgents === 0) {
+  if (!canUseAgents) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="max-w-md text-center space-y-4 p-6">

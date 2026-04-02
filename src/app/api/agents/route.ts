@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   // Check maxAgents limit (0 = no agents allowed, -1 = unlimited; admins bypass)
   const { plan } = await getUserPlanAndUsage(userId);
   if (session.user.role !== "ADMIN" && plan) {
-    if (plan.maxAgents === 0) {
+    if (!plan.canUseAgents) {
       return jsonError("Создание агентов недоступно на вашем тарифе", 403);
     }
     if (plan.maxAgents > 0) {
