@@ -23,6 +23,7 @@ export async function GET() {
       documentsPerMonth: true,
       canUseAgents: true,
       canUseMultiAgents: true,
+      canUseIntegrations: true,
       canUseReasoning: true,
       canUseSkills: true,
       canUseRag: true,

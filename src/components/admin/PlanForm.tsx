@@ -25,6 +25,7 @@ interface PlanData {
   canUseSkills: boolean;
   canUseRag: boolean;
   canUseGraph: boolean;
+  canUseIntegrations: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;
@@ -58,6 +59,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     canUseAgents: plan.canUseAgents,
     canUseMultiAgents: plan.canUseMultiAgents,
     canUseReasoning: plan.canUseReasoning,
+    canUseIntegrations: plan.canUseIntegrations,
     canUseSkills: plan.canUseSkills,
     canUseRag: plan.canUseRag,
     canUseGraph: plan.canUseGraph,
@@ -189,6 +191,7 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         {toggle("База знаний", "canUseRag")}
         {toggle("Агенты", "canUseAgents")}
         {toggle("Мультиагенты", "canUseMultiAgents")}
+        {toggle("Интеграции", "canUseIntegrations")}
         {toggle("Рекомендуемый", "highlighted")}
       </div>
     </div>

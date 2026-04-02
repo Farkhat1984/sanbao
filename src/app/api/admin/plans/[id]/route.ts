@@ -7,7 +7,7 @@ export const { PUT } = createAdminCrudHandlers({
     "name", "description", "price", "messagesPerDay", "tokensPerMessage",
     "tokensPerMonth", "requestsPerMinute", "contextWindowSize",
     "maxConversations", "maxAgents", "documentsPerMonth",
-    "canUseAgents", "canUseMultiAgents", "canUseReasoning", "canUseSkills",
+    "canUseAgents", "canUseMultiAgents", "canUseIntegrations", "canUseReasoning", "canUseSkills",
     "canUseRag", "canUseGraph", "canChooseProvider",
     "isDefault", "sortOrder", "highlighted", "maxStorageMb", "maxOrganizations",
   ],

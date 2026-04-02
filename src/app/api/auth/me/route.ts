@@ -41,6 +41,7 @@ export async function GET() {
                 maxAgents: true,
                 canUseAgents: true,
                 canUseMultiAgents: true,
+                canUseIntegrations: true,
                 canUseReasoning: true,
                 canUseSkills: true,
                 canUseRag: true,

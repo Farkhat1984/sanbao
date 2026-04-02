@@ -317,6 +317,7 @@ model Plan {
   canUseSkills        Boolean  @default(false)
   canUseRag           Boolean  @default(false)
   canUseGraph         Boolean  @default(false)
+  canUseIntegrations  Boolean  @default(false)
   canChooseProvider   Boolean  @default(false)
   isDefault           Boolean  @default(false)
   sortOrder           Int      @default(0)

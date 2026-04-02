@@ -15,6 +15,7 @@ interface PlanInfo {
   documentsPerMonth: number;
   canUseAgents: boolean;
   canUseMultiAgents: boolean;
+  canUseIntegrations: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;
