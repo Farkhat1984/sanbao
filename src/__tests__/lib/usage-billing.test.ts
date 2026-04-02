@@ -11,7 +11,7 @@ interface PlanLimits {
   tokensPerMonth: number;
   requestsPerMinute: number;
   canUseReasoning: boolean;
-  canUseAdvancedTools: boolean;
+  canUseAgents: boolean;
 }
 
 interface UsageData {
@@ -48,7 +48,7 @@ function checkPlanLimits(
     return { error: "Режим рассуждений недоступен", status: 403 };
   }
 
-  if (options.webSearchEnabled && !plan.canUseAdvancedTools) {
+  if (options.webSearchEnabled && !plan.canUseAgents) {
     return { error: "Веб-поиск недоступен", status: 403 };
   }
 
@@ -61,7 +61,7 @@ describe("Plan enforcement logic", () => {
     tokensPerMonth: 100000,
     requestsPerMinute: 5,
     canUseReasoning: false,
-    canUseAdvancedTools: false,
+    canUseAgents: false,
   };
 
   const proPlan: PlanLimits = {
@@ -69,7 +69,7 @@ describe("Plan enforcement logic", () => {
     tokensPerMonth: 1000000,
     requestsPerMinute: 30,
     canUseReasoning: true,
-    canUseAdvancedTools: true,
+    canUseAgents: true,
   };
 
   const unlimitedPlan: PlanLimits = {
@@ -77,7 +77,7 @@ describe("Plan enforcement logic", () => {
     tokensPerMonth: 0,
     requestsPerMinute: 0,
     canUseReasoning: true,
-    canUseAdvancedTools: true,
+    canUseAgents: true,
   };
 
   describe("Daily message limit", () => {

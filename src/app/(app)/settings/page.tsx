@@ -33,7 +33,8 @@ interface PlanInfo {
   maxConversations: number;
   maxAgents: number;
   documentsPerMonth: number;
-  canUseAdvancedTools: boolean;
+  canUseAgents: boolean;
+  canUseMultiAgents: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;

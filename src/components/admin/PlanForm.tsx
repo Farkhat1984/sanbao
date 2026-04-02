@@ -19,7 +19,8 @@ interface PlanData {
   maxConversations: number;
   maxAgents: number;
   documentsPerMonth: number;
-  canUseAdvancedTools: boolean;
+  canUseAgents: boolean;
+  canUseMultiAgents: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;
@@ -54,7 +55,8 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
     documentsPerMonth: plan.documentsPerMonth,
     maxStorageMb: plan.maxStorageMb,
     maxOrganizations: plan.maxOrganizations,
-    canUseAdvancedTools: plan.canUseAdvancedTools,
+    canUseAgents: plan.canUseAgents,
+    canUseMultiAgents: plan.canUseMultiAgents,
     canUseReasoning: plan.canUseReasoning,
     canUseSkills: plan.canUseSkills,
     canUseRag: plan.canUseRag,
@@ -185,7 +187,8 @@ export function PlanForm({ plan, onSave }: PlanFormProps) {
         {toggle("Режим рассуждений", "canUseReasoning")}
         {toggle("Скиллы", "canUseSkills")}
         {toggle("База знаний", "canUseRag")}
-        {toggle("Продвинутые инструменты", "canUseAdvancedTools")}
+        {toggle("Агенты", "canUseAgents")}
+        {toggle("Мультиагенты", "canUseMultiAgents")}
         {toggle("Рекомендуемый", "highlighted")}
       </div>
     </div>
