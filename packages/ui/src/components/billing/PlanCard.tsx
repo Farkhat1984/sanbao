@@ -1,4 +1,4 @@
-import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Puzzle, Building2, Users, Link2 } from "lucide-react";
+import { Check, X, Sparkles, MessageSquare, Cpu, Zap, FolderOpen, Bot, Layers, Brain, FileText, Database, Puzzle, Building2, Users, Link2, Plug } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ interface PlanCardProps {
     canUseAgents: boolean;
     canUseMultiAgents: boolean;
     canUseIntegrations: boolean;
+    canUseMcp: boolean;
     canUseReasoning: boolean;
     canUseSkills?: boolean;
     canUseRag: boolean;
@@ -91,6 +92,7 @@ export function PlanCard({ plan, isCurrent, onContactAdmin }: PlanCardProps) {
     },
     { enabled: plan.canUseMultiAgents, label: "Мультиагенты", icon: Users },
     { enabled: plan.canUseIntegrations, label: "Интеграции", icon: Link2 },
+    { enabled: plan.canUseMcp, label: "MCP", icon: Plug },
     { enabled: plan.canUseRag, label: "База знаний", icon: Database },
     {
       enabled: (plan.maxOrganizations ?? 0) > 0,

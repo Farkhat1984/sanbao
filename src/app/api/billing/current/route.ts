@@ -29,6 +29,7 @@ export async function GET() {
           canUseAgents: plan.canUseAgents,
           canUseMultiAgents: plan.canUseMultiAgents,
           canUseIntegrations: plan.canUseIntegrations,
+          canUseMcp: plan.canUseMcp,
           canUseReasoning: plan.canUseReasoning,
           canUseSkills: plan.canUseSkills,
           canUseRag: plan.canUseRag,

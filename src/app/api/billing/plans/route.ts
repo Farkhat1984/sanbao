@@ -24,6 +24,7 @@ export async function GET() {
       canUseAgents: true,
       canUseMultiAgents: true,
       canUseIntegrations: true,
+      canUseMcp: true,
       canUseReasoning: true,
       canUseSkills: true,
       canUseRag: true,

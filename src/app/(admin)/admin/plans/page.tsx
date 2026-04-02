@@ -24,6 +24,7 @@ interface PlanData {
   canUseRag: boolean;
   canUseGraph: boolean;
   canUseIntegrations: boolean;
+  canUseMcp: boolean;
   canChooseProvider: boolean;
   isDefault: boolean;
   highlighted: boolean;

@@ -16,6 +16,7 @@ interface PlanInfo {
   canUseAgents: boolean;
   canUseMultiAgents: boolean;
   canUseIntegrations: boolean;
+  canUseMcp: boolean;
   canUseReasoning: boolean;
   canUseSkills: boolean;
   canUseRag: boolean;
