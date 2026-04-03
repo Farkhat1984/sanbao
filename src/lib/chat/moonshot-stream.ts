@@ -213,15 +213,6 @@ export function streamMoonshot(
           upstreamAbort.signal.addEventListener("abort", onUpstreamAbort, { once: true });
 
           let response: Response;
-          if (turn === 0) {
-            logger.info("LLM request config", {
-              provider: providerSlug,
-              model: modelId,
-              enableSearch: webSearchEnabled && useEnableSearch,
-              toolCount: sendTools.length,
-              thinkingEnabled,
-            });
-          }
           try {
             response = await fetch(apiUrl, {
               method: "POST",
@@ -415,10 +406,6 @@ export function streamMoonshot(
           // If model finished with tool_calls, execute them and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
-            logger.info("Tool calls collected", {
-              turn,
-              tools: collectedCalls.map(c => `${c.function.name}(${c.function.arguments.slice(0, 100)})`),
-            });
             // Fallback: if status wasn't sent during streaming
             if (!searchNotified) {
               searchNotified = true;
@@ -431,9 +418,39 @@ export function streamMoonshot(
                 enqueueJson(controller, { t: "s", v: "using_tool" });
               }
             }
+            // For enable_search providers: $web_search calls are phantom — the API
+            // already searched natively. Filter them out and return a hint instead.
+            const realCalls = useEnableSearch
+              ? collectedCalls.filter(c => c.function.name !== "$web_search")
+              : collectedCalls;
+            const phantomCalls = useEnableSearch
+              ? collectedCalls.filter(c => c.function.name === "$web_search")
+              : [];
+
+            if (realCalls.length === 0 && phantomCalls.length > 0) {
+              // All calls were $web_search — skip tool execution, tell model search is done
+              logger.info("Skipping phantom $web_search calls (enable_search active)", { turn });
+              currentMessages.push({
+                role: "assistant",
+                tool_calls: collectedCalls,
+                ...(thinkingEnabled
+                  ? { reasoning_content: turnReasoningContent || "." }
+                  : {}),
+              });
+              for (const tc of phantomCalls) {
+                currentMessages.push({
+                  role: "tool" as const,
+                  tool_call_id: tc.id,
+                  content: "Web search was already performed natively by the API. The search results are already incorporated into your context. Please provide your answer based on the information you have.",
+                });
+              }
+              toolCallTurnCount++;
+              continue;
+            }
+
             currentMessages.push({
               role: "assistant",
-              tool_calls: collectedCalls,
+              tool_calls: realCalls.length > 0 ? realCalls : collectedCalls,
               ...(thinkingEnabled
                 ? { reasoning_content: turnReasoningContent || "." }
                 : {}),
@@ -443,7 +460,7 @@ export function streamMoonshot(
             let toolResults: Awaited<ReturnType<typeof executeToolCalls>>;
             try {
               toolResults = await executeToolCalls(
-                collectedCalls,
+                realCalls.length > 0 ? realCalls : collectedCalls,
                 toolExecCtx,
                 emitStatus
               );
@@ -454,11 +471,19 @@ export function streamMoonshot(
                 error: toolErr instanceof Error ? toolErr.message : String(toolErr),
               });
               // Return error results for each tool so the model can recover
-              toolResults = collectedCalls.map(tc => ({
+              toolResults = (realCalls.length > 0 ? realCalls : collectedCalls).map(tc => ({
                 role: "tool" as const,
                 tool_call_id: tc.id,
                 content: `Error: tool ${tc.function.name} failed — ${toolErr instanceof Error ? toolErr.message : "unknown error"}`,
               }));
+            }
+            // Add phantom $web_search results for enable_search providers
+            for (const tc of phantomCalls) {
+              toolResults.push({
+                role: "tool" as const,
+                tool_call_id: tc.id,
+                content: "Web search was already performed natively by the API. The search results are already incorporated into your context.",
+              });
             }
             for (const msg of toolResults) {
               currentMessages.push({ ...msg });
