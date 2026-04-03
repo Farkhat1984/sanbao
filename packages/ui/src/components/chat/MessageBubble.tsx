@@ -122,7 +122,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
   });
 
   // Auto-apply edits to existing artifacts
-  useAutoApplyEdits({
+  const appliedVersions = useAutoApplyEdits({
     messageId: message.id,
     parts,
     isAssistant,
@@ -209,6 +209,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isLast, agen
               onOpenArtifact={handleOpenArtifact}
               onOpenEditedArtifact={handleOpenEditedArtifact}
               findByTitle={findByTitle}
+              appliedVersions={appliedVersions}
             />
           ) : (
             <p className="whitespace-pre-wrap">{displayContent}</p>

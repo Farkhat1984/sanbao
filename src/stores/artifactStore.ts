@@ -4,9 +4,10 @@ import type { ExportFormat } from "@/lib/export-utils";
 
 type ArtifactTab = "preview" | "edit" | "source";
 
-/** Push current state into the versions history array. */
+/** Push current state into the versions history array (skips duplicates). */
 function pushVersion(artifact: ArtifactData): ArtifactVersion[] {
   const prev: ArtifactVersion[] = artifact.versions ?? [];
+  if (prev.some((v) => v.version === artifact.version)) return prev;
   return [
     ...prev,
     { version: artifact.version, content: artifact.content, timestamp: Date.now() },
@@ -29,8 +30,8 @@ interface ArtifactState {
   trackArtifact: (artifact: ArtifactData) => ArtifactData;
   /** Find a tracked artifact by title (case-insensitive). */
   findByTitle: (title: string) => ArtifactData | undefined;
-  /** Apply search/replace edits to an artifact, increment version, update panel if open. */
-  applyEdits: (id: string, edits: Array<{ old: string; new: string }>) => boolean;
+  /** Apply search/replace edits to an artifact, increment version, update panel if open. Returns new version number or false. */
+  applyEdits: (id: string, edits: Array<{ old: string; new: string }>) => number | false;
   /** Restore a previous version of an artifact by version number. */
   restoreVersion: (id: string, version: number) => void;
 }
@@ -144,7 +145,7 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
       artifacts: s.artifacts.map((a) => (a.id === id ? updated : a)),
       activeArtifact: s.activeArtifact?.id === id ? updated : s.activeArtifact,
     }));
-    return true;
+    return updated.version;
   },
 
   restoreVersion: (id, version) => {

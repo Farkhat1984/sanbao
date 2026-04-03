@@ -21,6 +21,8 @@ interface AssistantContentProps {
   onOpenEditedArtifact: (title: string) => void;
   /** Find artifact by title — returns version info for edit cards */
   findByTitle: (title: string) => { version: number } | undefined;
+  /** Map of title → version number captured at the time edits were applied */
+  appliedVersions: Map<string, number>;
 }
 
 /**
@@ -34,6 +36,7 @@ export function AssistantContent({
   onOpenArtifact,
   onOpenEditedArtifact,
   findByTitle,
+  appliedVersions,
 }: AssistantContentProps) {
   return (
     <div className="prose-sanbao">
@@ -88,7 +91,8 @@ export function AssistantContent({
           }
 
           if (part.type === "edit") {
-            const target = findByTitle(part.title || "");
+            const appliedVer = appliedVersions.get(part.title || "");
+            const displayVersion = appliedVer ?? findByTitle(part.title || "")?.version;
             return (
               <button
                 key={i}
@@ -104,7 +108,7 @@ export function AssistantContent({
                   </p>
                   <p className="text-xs text-success">
                     {part.edits?.length} {part.edits?.length === 1 ? "изменение" : "изменений"}
-                    {target ? ` · v${target.version}` : ""}
+                    {displayVersion != null ? ` · v${displayVersion}` : ""}
                     {" "}&middot; Нажмите чтобы открыть
                   </p>
                 </div>
