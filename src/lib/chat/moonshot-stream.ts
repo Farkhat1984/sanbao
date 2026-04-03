@@ -406,6 +406,10 @@ export function streamMoonshot(
           // If model finished with tool_calls, execute them and loop
           const collectedCalls = Object.values(toolCallMap);
           if (hasToolCallFinish && collectedCalls.length > 0) {
+            logger.info("Tool calls collected", {
+              turn,
+              tools: collectedCalls.map(c => `${c.function.name}(${c.function.arguments.slice(0, 100)})`),
+            });
             // Fallback: if status wasn't sent during streaming
             if (!searchNotified) {
               searchNotified = true;
