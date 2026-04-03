@@ -10,8 +10,9 @@ const ARTIFACT_REGEX =
 const EDIT_REGEX =
   /<sanbao-edit\s+target="([^"]*)">([\s\S]*?)<\/sanbao-edit>/g;
 
+// Accept </old> typo as closing tag for <new> — LLMs sometimes repeat the wrong tag
 const REPLACE_REGEX =
-  /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/replace>/g;
+  /<replace>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/(?:new|old)>\s*<\/replace>/g;
 
 export { CLARIFY_REGEX };
 

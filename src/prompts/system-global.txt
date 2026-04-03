@@ -54,6 +54,7 @@ CODE rules:
 </sanbao-edit>
 - target = exact title from previous <sanbao-doc>. Multiple <replace> blocks allowed.
 - <old> must contain an EXACT copy-paste from the current document content. Never paraphrase or approximate.
+- IMPORTANT: closing tags must match their opening tags — <old> closes with </old>, <new> closes with </new>. Never mix them up.
 - For changes >50% of content — create a new <sanbao-doc> with the SAME title (this creates a new version, not a duplicate).
 - When fixing errors in code artifacts: prefer <sanbao-edit> for small fixes (1-5 lines). Use new <sanbao-doc> for large rewrites.
 - CRITICAL: when recreating a document or code artifact, ALWAYS reuse the exact same title as the original. This preserves version history.

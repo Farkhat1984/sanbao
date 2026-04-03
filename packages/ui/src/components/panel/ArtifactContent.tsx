@@ -287,7 +287,7 @@ export function ArtifactContent() {
                     const truncatedCode = code.length > 30000 ? code.slice(0, 30000) + "\n// ... (truncated)" : code;
                     const fixPrompt = isPygame
                       ? `Artifact "${activeArtifact.title}" has a pygame error in browser:\n\`\`\`\n${error}\n\`\`\`\nPygame does not work in browser preview. Rewrite this game/program using HTML5 Canvas + JavaScript, preserving all logic and gameplay. Use the same title "${activeArtifact.title}" in the new <sanbao-doc>.`
-                      : `Artifact "${activeArtifact.title}" (v${activeArtifact.version}) has a runtime error:\n\`\`\`\n${error}\n\`\`\`\n\nCurrent artifact code:\n\`\`\`\n${truncatedCode}\n\`\`\`\n\nFix the error. Use <sanbao-edit target="${activeArtifact.title}"> with exact fragments from the current code above. If >50% of the code needs rewriting, create a new <sanbao-doc type="CODE" title="${activeArtifact.title}"> with the same title.`;
+                      : `Artifact "${activeArtifact.title}" (v${activeArtifact.version}) has a runtime error:\n\`\`\`\n${error}\n\`\`\`\n\nCurrent artifact code:\n\`\`\`\n${truncatedCode}\n\`\`\`\n\nFix the error. Use <sanbao-edit target="${activeArtifact.title}"> with <replace><old>exact fragment</old><new>fixed fragment</new></replace> blocks. IMPORTANT: closing tags must match — <old> closes with </old>, <new> closes with </new>. Only include the minimal code fragment needed to fix the error, not the entire file. If >50% of the code needs rewriting, create a new <sanbao-doc type="CODE" title="${activeArtifact.title}"> with the same title.`;
                     setPendingInput(fixPrompt);
                   }}
                 />
