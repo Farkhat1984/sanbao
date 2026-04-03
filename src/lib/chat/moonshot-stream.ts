@@ -213,6 +213,15 @@ export function streamMoonshot(
           upstreamAbort.signal.addEventListener("abort", onUpstreamAbort, { once: true });
 
           let response: Response;
+          if (turn === 0) {
+            logger.info("LLM request config", {
+              provider: providerSlug,
+              model: modelId,
+              enableSearch: webSearchEnabled && useEnableSearch,
+              toolCount: sendTools.length,
+              thinkingEnabled,
+            });
+          }
           try {
             response = await fetch(apiUrl, {
               method: "POST",
