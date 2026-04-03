@@ -37,6 +37,9 @@ const WEB_SEARCH_BUILTIN = {
   function: { name: "$web_search" },
 };
 
+// Providers that use enable_search in request body instead of $web_search tool
+const ENABLE_SEARCH_PROVIDERS = new Set(["alibaba", "openrouter"]);
+
 // ─── MCP tool context type (shared) ──────────────────────
 
 import type { McpToolContext } from "@/lib/types/mcp";
@@ -159,6 +162,8 @@ export function streamMoonshot(
         let totalOutputTokens = 0;
 
         // ─── Tool definitions (reused across loop iterations) ──
+        const providerSlug = textModel.provider.slug;
+        const useEnableSearch = ENABLE_SEARCH_PROVIDERS.has(providerSlug);
         const allTools = [
           ...mcpTools.map((t) => ({
             type: "function" as const,
@@ -169,7 +174,8 @@ export function streamMoonshot(
             },
           })),
           ...nativeToolDefs,
-          ...(webSearchEnabled ? [WEB_SEARCH_BUILTIN] : []),
+          // Moonshot/Kimi: $web_search as builtin tool; Alibaba/OpenRouter: use enable_search in body
+          ...(webSearchEnabled && !useEnableSearch ? [WEB_SEARCH_BUILTIN] : []),
         ];
 
         // Track whether any tool-call turn produced user-facing content
@@ -225,6 +231,10 @@ export function streamMoonshot(
                 ...(sendTools.length > 0 ? { tools: sendTools } : {}),
                 ...(!thinkingEnabled
                   ? { thinking: { type: "disabled" } }
+                  : {}),
+                // Alibaba/OpenRouter: native web search via enable_search
+                ...(webSearchEnabled && useEnableSearch
+                  ? { enable_search: true, search_options: { search_strategy: "agent" } }
                   : {}),
               }),
               signal: callAbort.signal,
