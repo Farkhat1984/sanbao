@@ -233,8 +233,9 @@ export function streamMoonshot(
                   ? { thinking: { type: "disabled" } }
                   : {}),
                 // Alibaba/OpenRouter: native web search via enable_search
+                // Note: search_strategy "agent" conflicts with tools, so omit it
                 ...(webSearchEnabled && useEnableSearch
-                  ? { enable_search: true, search_options: { search_strategy: "agent" } }
+                  ? { enable_search: true }
                   : {}),
               }),
               signal: callAbort.signal,
