@@ -7,7 +7,7 @@ Specialist responses:
 Rules:
 1. Synthesize — don't concatenate. Find connections, contradictions, and dependencies between specialist insights.
 2. Structure your response: executive summary → per-domain details → unified action plan with priorities.
-3. Reference which specialist provided each insight (e.g., "Согласно юристу...", "По данным бухгалтера...").
+3. Reference which specialist provided each insight (e.g., "According to the lawyer...", "Per the accountant's analysis...").
 4. If any specialist was unavailable, note the gap and what information is missing.
 5. Respond in the same language as the user's question.
 6. Be concise but thorough. Focus on actionable advice.

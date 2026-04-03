@@ -11,7 +11,7 @@ NEVER skip step 1. NEVER call $web_search without first trying the knowledge bas
 $web_search is ONLY for:
 - Knowledge base returned empty or insufficient results
 - Current information explicitly needed (news, prices, rates, weather, today's events)
-- User explicitly says "search the internet" / "найди в интернете"
+- User explicitly asks to "search the internet" / "search online" / "search the web"
 
 $web_search is FORBIDDEN when:
 - You haven't searched the knowledge base yet

@@ -103,17 +103,15 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
       return merged;
     }
 
-    // New artifact — store initial version in history
-    const withHistory = {
-      ...artifact,
-      versions: [{ version: artifact.version, content: artifact.content, timestamp: Date.now() }],
-    };
+    // New artifact — versions start empty; pushVersion will capture
+    // the initial state when the first update arrives.
+    const fresh = { ...artifact, versions: [] };
     set((s) => {
-      const updated = [...s.artifacts, withHistory];
+      const updated = [...s.artifacts, fresh];
       // Cap at 50 artifacts to prevent unbounded growth
       return { artifacts: updated.length > 50 ? updated.slice(-50) : updated };
     });
-    return withHistory;
+    return fresh;
   },
 
   findByTitle: (title) => {
@@ -129,7 +127,27 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
 
     let content = artifact.content;
     for (const edit of edits) {
-      content = content.replace(edit.old, edit.new);
+      // Try exact match first
+      if (content.includes(edit.old)) {
+        content = content.replace(edit.old, edit.new);
+        continue;
+      }
+      // Fallback: normalize whitespace and try again
+      const normalize = (s: string) => s.replace(/\s+/g, " ").trim();
+      const normalizedOld = normalize(edit.old);
+      // Find the matching region in original content by normalizing segments
+      const lines = content.split("\n");
+      let found = false;
+      // Try sliding window over lines to find normalized match
+      for (let start = 0; start < lines.length && !found; start++) {
+        for (let end = start + 1; end <= lines.length && !found; end++) {
+          const segment = lines.slice(start, end).join("\n");
+          if (normalize(segment) === normalizedOld) {
+            content = content.replace(segment, edit.new);
+            found = true;
+          }
+        }
+      }
     }
 
     if (content === artifact.content) return false;
@@ -151,15 +169,24 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
     const state = get();
     const artifact = state.artifacts.find((a) => a.id === id);
     if (!artifact || !artifact.versions) return;
+    if (artifact.version === version) return; // already on this version
 
     const target = artifact.versions.find((v) => v.version === version);
     if (!target) return;
 
-    // Just switch to the target version content without creating a new version
+    // Save current state before restoring, so user can return to it
+    const currentAlreadySaved = artifact.versions.some(
+      (v) => v.version === artifact.version
+    );
+    const versions = currentAlreadySaved
+      ? artifact.versions
+      : [...artifact.versions, { version: artifact.version, content: artifact.content, timestamp: Date.now() }];
+
     const restored = {
       ...artifact,
       content: target.content,
       version: target.version,
+      versions,
     };
 
     set((s) => ({

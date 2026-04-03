@@ -135,11 +135,11 @@ export async function resolveAgentContext(
   const lazyFiles = [...explicitLazy, ...demotedFiles];
 
   const filesContext = fittedFiles
-    .map((f) => `--- Файл: ${f.fileName} ---\n${f.extractedText}`)
+    .map((f) => `--- File: ${f.fileName} ---\n${f.extractedText}`)
     .join("\n\n");
 
   if (filesContext) {
-    systemPrompt += `\n\n--- Контекст из загруженных файлов ---\n${filesContext}`;
+    systemPrompt += `\n\n--- Uploaded files context ---\n${filesContext}`;
   }
 
   // Note about demoted files so the model knows to use read_knowledge
@@ -147,7 +147,7 @@ export async function resolveAgentContext(
     const demotedList = demotedFiles
       .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
       .join("\n");
-    systemPrompt += `\n\nСледующие файлы слишком большие для включения в контекст. Используй инструмент read_knowledge для доступа к ним:\n${demotedList}`;
+    systemPrompt += `\n\nThe following files are too large for context. Use the read_knowledge tool to access them:\n${demotedList}`;
   }
 
   // Lazy files: only list names, agent must use read_knowledge tool to access
@@ -155,7 +155,7 @@ export async function resolveAgentContext(
     const fileList = lazyFiles
       .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
       .join("\n");
-    systemPrompt += `\n\n--- Файлы знаний (доступны через инструмент read_knowledge) ---\n${fileList}\nДля чтения содержимого этих файлов используй инструмент read_knowledge с поисковым запросом.`;
+    systemPrompt += `\n\n--- Knowledge files (accessible via read_knowledge tool) ---\n${fileList}\nUse the read_knowledge tool with a search query to read file contents.`;
   }
 
   // Collect tools (deduplicate by id)
@@ -311,13 +311,13 @@ export async function resolveAgentContext(
           if (parsed.version === 2 && parsed.index) {
             indexText = parsed.index;
           } else {
-            indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (каталог устарел, выполните повторное обнаружение)";
+            indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (catalog outdated, run rediscovery)";
           }
         } catch {
-          indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (каталог устарел, выполните повторное обнаружение)";
+          indexText = intg.catalog.slice(0, catalogPreviewChars) + "\n... (catalog outdated, run rediscovery)";
         }
-        systemPrompt += `\n\n--- Интеграция: ${intg.name} (${intg.baseUrl}) ---\n${indexText}`;
-        systemPrompt += `\n\nДля просмотра сущностей в категории: odata_catalog(section="..."). Для запросов к данным: odata_query(entity="...").`;
+        systemPrompt += `\n\n--- Integration: ${intg.name} (${intg.baseUrl}) ---\n${indexText}`;
+        systemPrompt += `\n\nTo browse entities in a category: odata_catalog(section="..."). To query data: odata_query(entity="...").`;
       }
     }
   }

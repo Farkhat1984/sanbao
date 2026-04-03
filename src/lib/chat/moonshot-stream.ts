@@ -377,7 +377,7 @@ export function streamMoonshot(
               enqueueJson(controller, { t: "s", v: "answering" });
               currentMessages.push({
                 role: "user" as const,
-                content: "Пожалуйста, ответь на основе уже собранной информации. Не вызывай инструменты, дай финальный ответ.",
+                content: "Please respond based on the information already collected. Do not call any more tools, provide the final answer.",
               });
               enqueueJson(controller, {
                 t: "e",
@@ -461,7 +461,7 @@ export function streamMoonshot(
 
           currentMessages.push({
             role: "user",
-            content: "Ты уже собрал достаточно информации. Дай развёрнутый ответ на исходный вопрос на основе полученных данных. Отвечай обычным текстом в чате, НЕ используй тег <sanbao-doc>. Изображения из статей вставляй inline рядом с текстом, к которому они относятся (формат: ![описание](url)).",
+            content: "You have collected enough information. Provide a detailed answer to the original question based on the data gathered. Respond with plain text in chat, do NOT use <sanbao-doc> tags. Insert article images inline next to the relevant text (format: ![description](url)).",
           });
 
           const finalCallAbort = new AbortController();

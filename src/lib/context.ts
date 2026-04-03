@@ -89,22 +89,22 @@ export function buildSystemPromptWithContext(
   }).format(now);
   const isoStr = now.toISOString();
 
-  let result = `Текущая дата и время: ${dateStr} (${isoStr}, ${DEFAULT_TIMEZONE})\n\n${base}`;
+  let result = `Current date and time: ${dateStr} (${isoStr}, ${DEFAULT_TIMEZONE})\n\n${base}`;
 
   if (userMemory) {
-    result += `\n\n--- ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ (предпочтения и стандарты) ---\n${userMemory}\n--- КОНЕЦ ПАМЯТИ ПОЛЬЗОВАТЕЛЯ ---`;
+    result += `\n\n--- USER MEMORY (preferences and standards) ---\n${userMemory}\n--- END USER MEMORY ---`;
   }
 
   if (summary) {
-    result += `\n\n--- КРАТКОЕ СОДЕРЖАНИЕ ПРЕДЫДУЩЕЙ ЧАСТИ РАЗГОВОРА ---\n${summary}\n--- КОНЕЦ КРАТКОГО СОДЕРЖАНИЯ ---`;
+    result += `\n\n--- CONVERSATION SUMMARY (previous context) ---\n${summary}\n--- END CONVERSATION SUMMARY ---`;
   }
 
   if (planMemory) {
-    result += `\n\n--- ПАМЯТЬ ПЛАНИРОВАНИЯ (ключевые решения и контекст) ---\n${planMemory}\n--- КОНЕЦ ПАМЯТИ ПЛАНИРОВАНИЯ ---`;
+    result += `\n\n--- PLANNING MEMORY (key decisions and context) ---\n${planMemory}\n--- END PLANNING MEMORY ---`;
   }
 
   if (tasksContext) {
-    result += `\n\n--- АКТИВНЫЕ ЗАДАЧИ ---\n${tasksContext}\n--- КОНЕЦ ЗАДАЧ ---`;
+    result += `\n\n--- ACTIVE TASKS ---\n${tasksContext}\n--- END TASKS ---`;
   }
 
   return result;

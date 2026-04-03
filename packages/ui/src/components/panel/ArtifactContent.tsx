@@ -99,7 +99,7 @@ export function ArtifactContent() {
               {ARTIFACT_TYPE_LABELS[activeArtifact.type] || activeArtifact.type}
             </Badge>
             {/* Version selector */}
-            {activeArtifact.versions && activeArtifact.versions.length > 1 ? (
+            {activeArtifact.versions && activeArtifact.versions.length > 0 ? (
               <div className="relative">
                 <button
                   onClick={() => setVersionMenuOpen(!versionMenuOpen)}
@@ -108,35 +108,44 @@ export function ArtifactContent() {
                   v{activeArtifact.version}
                   <ChevronDown className="h-2.5 w-2.5" />
                 </button>
-                {versionMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setVersionMenuOpen(false)}
-                    />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[140px] max-h-[200px] overflow-y-auto">
-                      {[...activeArtifact.versions].reverse().map((v) => (
-                        <button
-                          key={`${v.version}-${v.timestamp}`}
-                          onClick={() => {
-                            restoreVersion(activeArtifact.id, v.version);
-                            setVersionMenuOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between gap-3",
-                            v.version === activeArtifact.version &&
-                              "text-accent font-medium bg-accent-light"
-                          )}
-                        >
-                          <span>v{v.version}</span>
-                          {v.version === activeArtifact.version && (
-                            <Check className="h-3 w-3 text-accent shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+                {versionMenuOpen && (() => {
+                  // Build full version list: previous versions + current
+                  const currentInHistory = activeArtifact.versions!.some(
+                    (v) => v.version === activeArtifact.version
+                  );
+                  const allVersions = currentInHistory
+                    ? activeArtifact.versions!
+                    : [...activeArtifact.versions!, { version: activeArtifact.version, content: activeArtifact.content, timestamp: Date.now() }];
+                  return (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setVersionMenuOpen(false)}
+                      />
+                      <div className="absolute top-full left-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[140px] max-h-[200px] overflow-y-auto">
+                        {[...allVersions].reverse().map((v) => (
+                          <button
+                            key={`${v.version}-${v.timestamp}`}
+                            onClick={() => {
+                              restoreVersion(activeArtifact.id, v.version);
+                              setVersionMenuOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-3 py-1.5 text-xs hover:bg-surface-alt transition-colors cursor-pointer flex items-center justify-between gap-3",
+                              v.version === activeArtifact.version &&
+                                "text-accent font-medium bg-accent-light"
+                            )}
+                          >
+                            <span>v{v.version}</span>
+                            {v.version === activeArtifact.version && (
+                              <Check className="h-3 w-3 text-accent shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <span className="text-[10px] text-text-secondary">
@@ -273,9 +282,12 @@ export function ArtifactContent() {
                   code={activeArtifact.content}
                   onRequestChatFix={(error) => {
                     const isPygame = isPythonCode(activeArtifact.content) && /pygame/i.test(activeArtifact.content);
+                    const code = activeArtifact.content;
+                    // Truncate code to avoid exceeding message limits (keep first 30K chars)
+                    const truncatedCode = code.length > 30000 ? code.slice(0, 30000) + "\n// ... (truncated)" : code;
                     const fixPrompt = isPygame
-                      ? `В артефакте «${activeArtifact.title}» ошибка pygame в браузере:\n\`\`\`\n${error}\n\`\`\`\nPygame не работает в браузерном превью. Перепиши эту игру/программу на HTML5 Canvas + JavaScript, сохранив всю логику и геймплей. Создай новый артефакт.`
-                      : `В артефакте «${activeArtifact.title}» ошибка выполнения:\n\`\`\`\n${error}\n\`\`\`\nИсправь только место с ошибкой.`;
+                      ? `Artifact "${activeArtifact.title}" has a pygame error in browser:\n\`\`\`\n${error}\n\`\`\`\nPygame does not work in browser preview. Rewrite this game/program using HTML5 Canvas + JavaScript, preserving all logic and gameplay. Use the same title "${activeArtifact.title}" in the new <sanbao-doc>.`
+                      : `Artifact "${activeArtifact.title}" (v${activeArtifact.version}) has a runtime error:\n\`\`\`\n${error}\n\`\`\`\n\nCurrent artifact code:\n\`\`\`\n${truncatedCode}\n\`\`\`\n\nFix the error. Use <sanbao-edit target="${activeArtifact.title}"> with exact fragments from the current code above. If >50% of the code needs rewriting, create a new <sanbao-doc type="CODE" title="${activeArtifact.title}"> with the same title.`;
                     setPendingInput(fixPrompt);
                   }}
                 />

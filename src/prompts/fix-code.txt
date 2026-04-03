@@ -8,3 +8,5 @@ Rules:
 - If the code is Python, return only the Python code. Replace Unicode arrows/symbols in strings with ASCII equivalents (e.g. \u2190 \u2192 \u2191 \u2193 with < > ^ v). Ensure all strings use only ASCII-safe characters.
 - Preserve the original formatting and style
 - Do NOT add comments about what was fixed
+- The code must be complete and runnable — never return partial snippets
+- Keep ALL existing functionality intact, only fix the specific error
