@@ -41,7 +41,41 @@ export async function seedProviders(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  console.log("Providers seeded: Moonshot, DeepInfra");
+  const openrouterProvider = await prisma.aiProvider.upsert({
+    where: { slug: "openrouter" },
+    update: {
+      apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
+      apiFormat: "OPENAI_COMPAT",
+    },
+    create: {
+      name: "OpenRouter",
+      slug: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY || "sk-placeholder",
+      isActive: true,
+      priority: 8,
+      apiFormat: "OPENAI_COMPAT",
+    },
+  });
+
+  const alibabaProvider = await prisma.aiProvider.upsert({
+    where: { slug: "alibaba" },
+    update: {
+      apiKey: process.env.ALIBABA_API_KEY || "sk-placeholder",
+      apiFormat: "OPENAI_COMPAT",
+    },
+    create: {
+      name: "Alibaba DashScope",
+      slug: "alibaba",
+      baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      apiKey: process.env.ALIBABA_API_KEY || "sk-placeholder",
+      isActive: true,
+      priority: 9,
+      apiFormat: "OPENAI_COMPAT",
+    },
+  });
+
+  console.log("Providers seeded: Moonshot, DeepInfra, OpenRouter, Alibaba");
 
   // ─── AI Models ─────────────────────────────────────────
 
@@ -120,8 +154,74 @@ export async function seedProviders(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  await prisma.aiModel.upsert({
+    where: {
+      providerId_modelId: {
+        providerId: openrouterProvider.id,
+        modelId: "qwen/qwen3.6-plus:free",
+      },
+    },
+    update: {
+      temperature: 0.7,
+      topP: 0.95,
+      maxTokens: 65536,
+      contextWindow: 1000000,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+    },
+    create: {
+      providerId: openrouterProvider.id,
+      modelId: "qwen/qwen3.6-plus:free",
+      displayName: "Qwen 3.6 Plus",
+      category: "TEXT",
+      temperature: 0.7,
+      topP: 0.95,
+      maxTokens: 65536,
+      contextWindow: 1000000,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+      costPer1kInput: 0,
+      costPer1kOutput: 0,
+      isActive: true,
+      isDefault: false,
+    },
+  });
+
+  await prisma.aiModel.upsert({
+    where: {
+      providerId_modelId: {
+        providerId: alibabaProvider.id,
+        modelId: "qwen3.6-plus",
+      },
+    },
+    update: {
+      temperature: 0.7,
+      topP: 0.95,
+      maxTokens: 65536,
+      contextWindow: 1000000,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+    },
+    create: {
+      providerId: alibabaProvider.id,
+      modelId: "qwen3.6-plus",
+      displayName: "Qwen 3.6 Plus (Alibaba)",
+      category: "TEXT",
+      temperature: 0.7,
+      topP: 0.95,
+      maxTokens: 65536,
+      contextWindow: 1000000,
+      supportsThinking: true,
+      maxThinkingTokens: 32768,
+      costPer1kInput: 0,
+      costPer1kOutput: 0,
+      isActive: true,
+      isDefault: false,
+    },
+  });
+
   console.log(
-    "Models seeded: Kimi K2.5 (TEXT), Flux Schnell (IMAGE), Qwen Image Edit (IMAGE)"
+    "Models seeded: Kimi K2.5 (TEXT), Flux Schnell (IMAGE), Qwen Image Edit (IMAGE), Qwen 3.6 Plus x2 (TEXT)"
   );
 
   // ─── Link models to plans ─────────────────────────────
