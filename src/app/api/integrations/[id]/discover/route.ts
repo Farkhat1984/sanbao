@@ -84,7 +84,7 @@ export async function POST(
     } catch {
       throw new Error(`Ответ сервера не является валидным JSON: ${responseText.slice(0, 100)}`);
     }
-    const entities: string[] = (json.value || []).map((v: { name: string }) => v.name);
+    const entities: string[] = ((json.value as Array<{ name: string }>) || []).map((v) => v.name);
 
     // Build discoveredEntities summary (OData prefix counts for UI)
     const discoveredEntities: Record<string, number> = {};

@@ -95,3 +95,90 @@ export type DiscoveredTool = {
 /** Prisma JSON input type re-export for convenience */
 export type JsonInputValue = Prisma.InputJsonValue;
 
+/** Tool definition used across seed modules */
+export interface ToolDefinition {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  iconColor: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: any;
+  sortOrder: number;
+}
+
+/** Tool definition with agent binding */
+export interface ToolWithAgent extends ToolDefinition {
+  agentId: string;
+}
+
+/** Specialized agent definition with MCP server config */
+export interface SpecializedAgentDef {
+  id: string;
+  name: string;
+  description: string;
+  instructions: string;
+  icon: string;
+  iconColor: string;
+  sortOrder: number;
+  starterPrompts: string[];
+  mcp: {
+    id: string;
+    name: string;
+    url: string;
+    transport: "SSE" | "STREAMABLE_HTTP";
+    apiKey: string | null;
+  };
+}
+
+/**
+ * Upsert a tool and optionally link it to an agent.
+ * Shared logic to avoid repeating the upsert pattern.
+ */
+export async function upsertToolsWithAgentLink(
+  prisma: import("@prisma/client").PrismaClient,
+  tools: ToolDefinition[],
+  agentId?: string
+): Promise<void> {
+  for (const t of tools) {
+    await prisma.tool.upsert({
+      where: { id: t.id },
+      update: {
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+      create: {
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        icon: t.icon,
+        iconColor: t.iconColor,
+        type: "PROMPT_TEMPLATE",
+        config: t.config,
+        isGlobal: true,
+        isActive: true,
+        sortOrder: t.sortOrder,
+      },
+    });
+
+    if (agentId) {
+      const agentExists = await prisma.agent.findUnique({ where: { id: agentId }, select: { id: true } });
+      if (agentExists) {
+        await prisma.agentTool.upsert({
+          where: { agentId_toolId: { agentId, toolId: t.id } },
+          update: {},
+          create: { agentId, toolId: t.id },
+        });
+      } else {
+        console.warn(`Agent ${agentId} not found — skipping tool link for ${t.id}`);
+      }
+    }
+  }
+}

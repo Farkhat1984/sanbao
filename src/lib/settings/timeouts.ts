@@ -17,6 +17,17 @@ export const TIMEOUTS_SETTINGS: SettingDefinition[] = [
     unit: "мс",
   },
   {
+    key: "llm_stream_call_timeout_ms",
+    label: "Таймаут LLM (стрим, за итерацию)",
+    description:
+      "Таймаут каждого LLM-вызова внутри tool-call loop. После вызова инструмента модель может думать долго — этот таймаут должен быть щедрым.",
+    category: "timeouts",
+    type: "number",
+    defaultValue: "120000",
+    validation: { min: 30000, max: 300000 },
+    unit: "мс",
+  },
+  {
     key: "provider_test_timeout_ms",
     label: "Таймаут теста провайдера",
     description:

@@ -172,19 +172,31 @@ async function executeNativeToolCall(
     // fallback empty
   }
 
-  const result = await executeNativeTool(
-    tc.function.name,
-    args,
-    ctx.nativeToolCtx!
-  );
+  try {
+    const result = await executeNativeTool(
+      tc.function.name,
+      args,
+      ctx.nativeToolCtx!
+    );
 
-  return {
-    role: "tool",
-    tool_call_id: tc.id,
-    content: truncateToolResult(
-      result,
-      ctx.toolResultMaxChars,
-      ctx.toolResultTailChars
-    ),
-  };
+    return {
+      role: "tool",
+      tool_call_id: tc.id,
+      content: truncateToolResult(
+        result,
+        ctx.toolResultMaxChars,
+        ctx.toolResultTailChars
+      ),
+    };
+  } catch (err) {
+    logger.warn("Native tool call failed", {
+      tool: tc.function.name,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      role: "tool",
+      tool_call_id: tc.id,
+      content: `Error: native tool ${tc.function.name} failed: ${err instanceof Error ? err.message : "unknown error"}`,
+    };
+  }
 }

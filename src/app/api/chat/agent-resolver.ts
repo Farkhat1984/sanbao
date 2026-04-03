@@ -238,15 +238,21 @@ export async function resolveAgentAndTools(params: {
   const agentMcpTools: McpToolContext[] = [];
 
   // ─── Regular agent resolution ───────────────────────
+  let hasAgentMcpTools = false;
   if (agentId) {
     const ctx = await resolveAgentContext(agentId);
     if (ctx.systemPrompt) {
-      systemPrompt = ctx.systemPrompt + ctx.skillPrompts.join("");
-      agentMcpTools.push(...ctx.mcpTools);
-      // Custom (non-system) agents: suppress artifact creation unless explicitly requested
-      if (!ctx.isSystem) {
+      if (ctx.isSystem) {
+        // System agents: global prompt first (base rules: <sanbao-doc>, style, etc.)
+        // then agent-specific prompt (specialization overrides)
+        systemPrompt = systemPrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
+      } else {
+        // Custom agents: agent prompt replaces global entirely
+        systemPrompt = ctx.systemPrompt + ctx.skillPrompts.join("");
         systemPrompt += "\n\nIMPORTANT: You are a specialized agent. Do NOT create documents (<sanbao-doc>) without explicit user request. Respond with plain text. Create a document ONLY if the user explicitly asks.";
       }
+      agentMcpTools.push(...ctx.mcpTools);
+      hasAgentMcpTools = ctx.mcpTools.length > 0;
     }
   }
 
@@ -269,6 +275,7 @@ export async function resolveAgentAndTools(params: {
     }
     systemPrompt += result.promptAddition;
     agentMcpTools.push(...result.tools);
+    if (result.tools.length > 0) hasAgentMcpTools = true;
   }
 
   // ─── User MCP servers ──────────────────────────────
@@ -321,8 +328,11 @@ export async function resolveAgentAndTools(params: {
     systemPrompt += "\n\n" + planningPrompt;
   }
 
-  // Web search prompt is always included
-  systemPrompt += "\n\n" + websearchPrompt;
+  // Web search prompt: skip for agents with MCP tools (they define their own
+  // tool priority rules in agent instructions to avoid conflicting directives)
+  if (!hasAgentMcpTools && websearchPrompt) {
+    systemPrompt += "\n\n" + websearchPrompt;
+  }
 
   if (thinkingPrompt) {
     systemPrompt += "\n\n" + thinkingPrompt;

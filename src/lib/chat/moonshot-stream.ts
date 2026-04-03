@@ -10,7 +10,6 @@ import type { ResolvedModel } from "@/lib/model-router";
 import {
   DEFAULT_TEMPERATURE,
   DEFAULT_TOP_P,
-  LLM_TIMEOUT_MS,
   TOOL_RESULT_MAX_CHARS,
   TOOL_RESULT_TAIL_CHARS,
 } from "@/lib/constants";
@@ -177,8 +176,9 @@ export function streamMoonshot(
         let hasProducedContent = false;
         // Track tool call turns for forced final answer
         let toolCallTurnCount = 0;
-        // Per-request timeout for each API call (60s default)
-        const perCallTimeoutMs = LLM_TIMEOUT_MS * 2; // 60s
+        // Per-request timeout for each LLM API call (120s default — must be generous
+        // because after tool results the model may take long to synthesize a response)
+        const perCallTimeoutMs = await getSettingNumber("llm_stream_call_timeout_ms").catch(() => 120_000);
 
         // Tool execution context (reused across iterations)
         const toolExecCtx = {
@@ -415,12 +415,27 @@ export function streamMoonshot(
                 : {}),
             });
 
-            // Execute tool calls via orchestrator
-            const toolResults = await executeToolCalls(
-              collectedCalls,
-              toolExecCtx,
-              emitStatus
-            );
+            // Execute tool calls via orchestrator (catch errors to prevent stream abort)
+            let toolResults: Awaited<ReturnType<typeof executeToolCalls>>;
+            try {
+              toolResults = await executeToolCalls(
+                collectedCalls,
+                toolExecCtx,
+                emitStatus
+              );
+            } catch (toolErr) {
+              logger.error("Tool execution crashed", {
+                turn,
+                tools: collectedCalls.map(c => c.function.name),
+                error: toolErr instanceof Error ? toolErr.message : String(toolErr),
+              });
+              // Return error results for each tool so the model can recover
+              toolResults = collectedCalls.map(tc => ({
+                role: "tool" as const,
+                tool_call_id: tc.id,
+                content: `Error: tool ${tc.function.name} failed — ${toolErr instanceof Error ? toolErr.message : "unknown error"}`,
+              }));
+            }
             for (const msg of toolResults) {
               currentMessages.push({ ...msg });
             }
