@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useEffect } from "react";
 import { useChatStore } from "@/stores/chatStore";
+import { useSkillStore } from "@/stores/skillStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useRouter } from "next/navigation";
 import { openArtifactInPanel } from "@/lib/panel-actions";
@@ -60,6 +61,8 @@ export function useStreamChat({
   const clearSwarmAgentResponses = useChatStore((s) => s.clearSwarmAgentResponses);
 
   const addTask = useTaskStore((s) => s.addTask);
+  const activeSkillId = useSkillStore((s) => s.activeSkillId);
+  const setActiveSkillId = useSkillStore((s) => s.setActiveSkillId);
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -181,6 +184,7 @@ export function useStreamChat({
           swarmMode: swarmMode || undefined,
           swarmOrgId: swarmOrgId || undefined,
           multiAgentId: multiAgentId || undefined,
+          skillId: activeSkillId || undefined,
         }),
         signal: abortRef.current.signal,
       });
@@ -425,6 +429,8 @@ export function useStreamChat({
     } finally {
       abortRef.current = null;
       setStreaming(false);
+      // Skills are one-shot: clear after use so the next message is plain
+      setActiveSkillId(null);
     }
   }, [
     input,
@@ -440,6 +446,8 @@ export function useStreamChat({
     thinkingEnabled,
     webSearchEnabled,
     planningEnabled,
+    activeSkillId,
+    setActiveSkillId,
     addMessage,
     addConversation,
     setActiveConversation,

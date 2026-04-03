@@ -59,14 +59,31 @@ export async function POST(
         Accept: "application/json",
       },
       signal: AbortSignal.timeout(INTEGRATION_DISCOVERY_TIMEOUT_MS),
+      redirect: "manual",
     });
+
+    // 1C returns 3xx redirect to login page on auth failure
+    if (res.status >= 300 && res.status < 400) {
+      throw new Error("Сервер перенаправляет на страницу входа — проверьте логин и пароль");
+    }
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`);
     }
 
-    const json = await res.json();
+    // 1C may return 200 with HTML login page instead of JSON on auth failure
+    const responseText = await res.text();
+    if (responseText.trimStart().startsWith("<!DOCTYPE") || responseText.trimStart().startsWith("<html")) {
+      throw new Error("Сервер вернул HTML вместо JSON — проверьте логин, пароль и URL OData");
+    }
+
+    let json: Record<string, unknown>;
+    try {
+      json = JSON.parse(responseText);
+    } catch {
+      throw new Error(`Ответ сервера не является валидным JSON: ${responseText.slice(0, 100)}`);
+    }
     const entities: string[] = (json.value || []).map((v: { name: string }) => v.name);
 
     // Build discoveredEntities summary (OData prefix counts for UI)

@@ -334,7 +334,7 @@ You are a presentation design strategist who creates compelling slide deck outli
       });
     } else {
       await prisma.skill.create({
-        data: { ...skillData, isBuiltIn: true, isPublic: true },
+        data: { ...skillData, isBuiltIn: true, isPublic: true, status: "APPROVED" },
       });
     }
   }
