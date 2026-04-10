@@ -16,6 +16,7 @@ const PROMPT_FILE_MAP: Record<string, string> = {
   prompt_mode_thinking: "mode-thinking",
   prompt_swarm_classify: "swarm-classify",
   prompt_swarm_synthesize: "swarm-synthesize",
+  prompt_agent_base: "agent-base",
 } as const;
 
 // ─── Prompt Registry: all 11 default prompts (loaded from .txt files) ───
@@ -73,6 +74,10 @@ export const PROMPT_META: Record<string, { label: string; description: string }>
   prompt_swarm_synthesize: {
     label: "Swarm: Synthesize",
     description: "Prompt for CEO synthesis in Swarm Mother mode. Placeholders: {{ORG_NAME}}, {{AGENT_RESPONSES}}, {{INACCESSIBLE_NOTE}}.",
+  },
+  prompt_agent_base: {
+    label: "Agent Base Prompt",
+    description: "Hidden base prompt injected into ALL agents (custom, org, multi-agent). Ensures consistent behavior: tool priority, citations, formatting.",
   },
 };
 

@@ -148,31 +148,31 @@ describe("buildSystemPromptWithContext", () => {
 
   it("includes current date", () => {
     const result = buildSystemPromptWithContext(base, null, null);
-    expect(result).toContain("Текущая дата и время:");
+    expect(result).toContain("Current date and time:");
     expect(result).toContain(base);
   });
 
   it("includes user memory when provided", () => {
     const result = buildSystemPromptWithContext(base, null, null, "citation_style: ГОСТ");
-    expect(result).toContain("ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ");
+    expect(result).toContain("USER MEMORY");
     expect(result).toContain("citation_style: ГОСТ");
   });
 
   it("includes conversation summary", () => {
     const result = buildSystemPromptWithContext(base, "User asked about contracts", null);
-    expect(result).toContain("КРАТКОЕ СОДЕРЖАНИЕ");
+    expect(result).toContain("CONVERSATION SUMMARY");
     expect(result).toContain("User asked about contracts");
   });
 
   it("includes plan memory", () => {
     const result = buildSystemPromptWithContext(base, null, "Decision: use ГОСТ format");
-    expect(result).toContain("ПАМЯТЬ ПЛАНИРОВАНИЯ");
+    expect(result).toContain("PLANNING MEMORY");
     expect(result).toContain("Decision: use ГОСТ format");
   });
 
   it("includes tasks context", () => {
     const result = buildSystemPromptWithContext(base, null, null, null, "Task 1: review doc (50%)");
-    expect(result).toContain("АКТИВНЫЕ ЗАДАЧИ");
+    expect(result).toContain("ACTIVE TASKS");
     expect(result).toContain("Task 1: review doc");
   });
 
@@ -180,10 +180,10 @@ describe("buildSystemPromptWithContext", () => {
     const result = buildSystemPromptWithContext(
       base, "summary text", "plan text", "memory text", "tasks text"
     );
-    expect(result).toContain("ПАМЯТЬ ПОЛЬЗОВАТЕЛЯ");
-    expect(result).toContain("КРАТКОЕ СОДЕРЖАНИЕ");
-    expect(result).toContain("ПАМЯТЬ ПЛАНИРОВАНИЯ");
-    expect(result).toContain("АКТИВНЫЕ ЗАДАЧИ");
+    expect(result).toContain("USER MEMORY");
+    expect(result).toContain("CONVERSATION SUMMARY");
+    expect(result).toContain("PLANNING MEMORY");
+    expect(result).toContain("ACTIVE TASKS");
   });
 
   it("omits null sections", () => {

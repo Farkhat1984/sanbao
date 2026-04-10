@@ -53,13 +53,8 @@ export async function loadOrgAgentContext(
   if (orgAgent.instructions) {
     systemPrompt += `\n\n${orgAgent.instructions}`;
   }
-  systemPrompt += "\nUse the search tool to find information in the organization's knowledge base. Use get_source for full context of a found chunk.";
-  systemPrompt += "\n\nKNOWLEDGE BASE SEARCH RULES:";
-  systemPrompt += "\n- Make ONE search query per user question. Do NOT make 3-4 queries in a row — it overflows context.";
-  systemPrompt += "\n- If the first query returns no results, rephrase and try ONE more. Max 2 search calls per message.";
-  systemPrompt += "\n- Use get_source ONLY when you need extended context of a specific found chunk.";
-  systemPrompt += "\n- Search results may contain OCR artifacts (distorted text) — interpret them by meaning.";
-  systemPrompt += "\n\nWhen citing data from the knowledge base, reference the source:\n[description](source://domain/file/chunk_number)\nExample: [Chapter 3](source://ns_proj123/report.pdf/5)";
+  // KB search rules — only if agent actually has MCP tools (added after loading below)
+  // Moved to after MCP tool loading to conditionally include
 
   // Load MCP tools from org agent's pipeline server
   const mcpTools: McpToolContext[] = [];
@@ -112,6 +107,15 @@ export async function loadOrgAgentContext(
         }
       }
     }
+  }
+
+  // KB search rules — only if agent actually has MCP tools
+  if (mcpTools.length > 0) {
+    systemPrompt += "\n\nKNOWLEDGE BASE SEARCH RULES:";
+    systemPrompt += "\n- Make ONE search query per user question. Do NOT make 3-4 queries in a row — it overflows context.";
+    systemPrompt += "\n- If the first query returns no results, rephrase and try ONE more. Max 2 search calls per message.";
+    systemPrompt += "\n- Use get_source ONLY when you need extended context of a specific found chunk.";
+    systemPrompt += "\n- Search results may contain OCR artifacts (distorted text) — interpret them by meaning.";
   }
 
   return {

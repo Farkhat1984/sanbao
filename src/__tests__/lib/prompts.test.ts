@@ -29,8 +29,8 @@ describe("prompts.ts", () => {
   // ─── PROMPT_REGISTRY ──────────────────────────────────────
 
   describe("PROMPT_REGISTRY", () => {
-    it("has exactly 11 keys", () => {
-      expect(Object.keys(PROMPT_REGISTRY)).toHaveLength(11);
+    it("has exactly 12 keys", () => {
+      expect(Object.keys(PROMPT_REGISTRY)).toHaveLength(12);
     });
 
     it("contains all expected prompt keys", () => {
@@ -46,6 +46,7 @@ describe("prompts.ts", () => {
         "prompt_mode_thinking",
         "prompt_swarm_classify",
         "prompt_swarm_synthesize",
+        "prompt_agent_base",
       ];
       for (const key of expectedKeys) {
         expect(PROMPT_REGISTRY).toHaveProperty(key);

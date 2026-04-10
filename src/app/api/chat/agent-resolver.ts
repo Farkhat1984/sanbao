@@ -233,8 +233,13 @@ export async function resolveAgentAndTools(params: {
   const { userId, planId, thinkingEnabled, planningEnabled, maxMcpTools } = params;
   let { agentId, orgAgentId, skillId, conversationId } = params;
 
-  // Load admin-editable system prompt from DB (cached 60s)
+  // Load admin-editable prompts from DB (cached 60s)
+  // Three-layer prompt architecture:
+  //   Layer 1: Global prompt (system-global.txt) — full Sanbao identity for general chat
+  //   Layer 2: Agent base prompt (agent-base.txt) — hidden rules for ALL agents (tool priority, citations, formatting)
+  //   Layer 3: User instructions — what the user/admin writes for the agent
   let systemPrompt = await getPrompt("prompt_system_global");
+  const agentBasePrompt = await getPrompt("prompt_agent_base");
   const agentMcpTools: McpToolContext[] = [];
 
   // ─── Regular agent resolution ───────────────────────
@@ -247,9 +252,10 @@ export async function resolveAgentAndTools(params: {
         // then agent-specific prompt (specialization overrides)
         systemPrompt = systemPrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
       } else {
-        // Custom agents: agent prompt replaces global entirely
-        systemPrompt = ctx.systemPrompt + ctx.skillPrompts.join("");
-        systemPrompt += "\n\nIMPORTANT: You are a specialized agent. Do NOT create documents (<sanbao-doc>) without explicit user request. Respond with plain text. Create a document ONLY if the user explicitly asks.";
+        // Custom agents: agent-base prompt (hidden platform rules) + user instructions
+        // Agent-base ensures consistent behavior (tool priority, citations, formatting)
+        // regardless of what the user writes in their instructions.
+        systemPrompt = agentBasePrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
       }
       agentMcpTools.push(...ctx.mcpTools);
       hasAgentMcpTools = ctx.mcpTools.length > 0;
@@ -273,7 +279,10 @@ export async function resolveAgentAndTools(params: {
     if ("error" in result) {
       return { error: result.error };
     }
-    systemPrompt += result.promptAddition;
+    // Org agents: replace global with agent-base + org-specific prompt
+    // This ensures org agents get platform rules (tool priority, citations)
+    // without the full Sanbao identity prompt that's meant for general chat.
+    systemPrompt = agentBasePrompt + result.promptAddition;
     agentMcpTools.push(...result.tools);
     if (result.tools.length > 0) hasAgentMcpTools = true;
   }
@@ -328,9 +337,10 @@ export async function resolveAgentAndTools(params: {
     systemPrompt += "\n\n" + planningPrompt;
   }
 
-  // Web search prompt: skip for agents with MCP tools (they define their own
-  // tool priority rules in agent instructions to avoid conflicting directives)
-  if (!hasAgentMcpTools && websearchPrompt) {
+  // Web search prompt: ALWAYS add when available.
+  // For agents with MCP tools it's even more critical — the prompt enforces
+  // "search knowledge base FIRST, web search ONLY as fallback" priority.
+  if (websearchPrompt) {
     systemPrompt += "\n\n" + websearchPrompt;
   }
 

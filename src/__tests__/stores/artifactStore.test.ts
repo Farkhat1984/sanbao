@@ -150,9 +150,10 @@ describe("artifactStore", () => {
       useArtifactStore.getState().updateContent("art-1", "Version 2");
 
       const art = useArtifactStore.getState().artifacts[0];
-      expect(art.versions).toHaveLength(2);
+      // pushVersion deduplicates: version 1 already saved by openArtifact
+      expect(art.versions).toHaveLength(1);
       expect(art.versions![0].content).toBe("Original content");
-      expect(art.versions![1].content).toBe("Original content"); // pushVersion saves current before update
+      expect(art.versions![0].version).toBe(1);
     });
 
     it("should update active artifact if it matches", () => {
@@ -186,7 +187,8 @@ describe("artifactStore", () => {
         { old: "world", new: "universe" },
       ]);
 
-      expect(result).toBe(true);
+      // applyEdits returns new version number on success
+      expect(result).toBe(2);
       expect(useArtifactStore.getState().artifacts[0].content).toBe("Hello universe");
     });
 
@@ -238,7 +240,9 @@ describe("artifactStore", () => {
       useArtifactStore.getState().applyEdits("art-1", [{ old: "v1", new: "v2" }]);
 
       const versions = useArtifactStore.getState().artifacts[0].versions!;
-      expect(versions.length).toBeGreaterThanOrEqual(2);
+      // pushVersion deduplicates: version 1 already saved by openArtifact
+      expect(versions.length).toBeGreaterThanOrEqual(1);
+      expect(versions[0].content).toBe("v1");
     });
   });
 

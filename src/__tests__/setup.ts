@@ -221,7 +221,7 @@ vi.mock("@/lib/prisma", () => ({
 // ─── Mock usage helper ─────────────────────────────────────
 vi.mock("@/lib/usage", () => ({
   getUserPlanAndUsage: vi.fn().mockResolvedValue({
-    plan: { maxConversations: 100, maxStorageMb: 500 },
+    plan: { maxConversations: 100, maxStorageMb: 500, maxAgents: -1, canUseAgents: true },
     usage: { messagesCount: 0 },
   }),
   incrementTokens: vi.fn(),

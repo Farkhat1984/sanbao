@@ -253,6 +253,7 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
     getPrompt.mockImplementation(async (key: string) => {
       const map: Record<string, string> = {
         prompt_system_global: "Global system prompt with <sanbao-doc> tag rules.",
+        prompt_agent_base: "Agent base prompt with tool priority rules and <sanbao-doc> formatting.",
         prompt_mode_websearch: "Use $web_search tool for real-time data.",
         prompt_mode_planning: "Planning mode instructions.",
         prompt_mode_thinking: "Thinking mode instructions.",
@@ -308,7 +309,7 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
     expect(globalIndex).toBeLessThan(agentIndex);
   });
 
-  it("system agent with MCP tools does NOT get websearch prompt appended", async () => {
+  it("system agent with MCP tools DOES get websearch prompt appended", async () => {
     resolveAgentContext.mockResolvedValue({
       systemPrompt: "You are a system agent with MCP tools.",
       promptTools: [],
@@ -337,9 +338,8 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
 
     const prompt = result.data.systemPrompt;
 
-    // Websearch prompt should NOT be appended when agent has MCP tools
-    expect(prompt).not.toContain("$web_search");
-    expect(prompt).not.toContain("Use $web_search tool");
+    // Websearch prompt is ALWAYS appended — it enforces KB-first priority
+    expect(prompt).toContain("$web_search");
   });
 
   it("default chat (no agent) DOES get websearch prompt appended", async () => {
@@ -357,7 +357,7 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
     expect(prompt).toContain("$web_search");
   });
 
-  it("custom (non-system) agent gets specialized agent suppression message", async () => {
+  it("custom (non-system) agent gets agent-base prompt instead of global", async () => {
     resolveAgentContext.mockResolvedValue({
       systemPrompt: "Custom agent instructions: help with writing.",
       promptTools: [],
@@ -376,13 +376,14 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
 
     const prompt = result.data.systemPrompt;
 
-    // Custom agent should get the suppression message
-    expect(prompt).toContain("You are a specialized agent");
-    expect(prompt).toContain("Do NOT create documents");
+    // Custom agent should get agent-base prompt (hidden platform rules)
+    expect(prompt).toContain("Agent base prompt");
     expect(prompt).toContain("<sanbao-doc>");
 
+    // User instructions should be present
+    expect(prompt).toContain("Custom agent instructions: help with writing.");
+
     // Global prompt should NOT be present for custom agents
-    // (custom agents replace global entirely)
     expect(prompt).not.toContain("Global system prompt with <sanbao-doc> tag rules.");
   });
 
@@ -556,7 +557,8 @@ describe("Fix 3: Stream stability — tool execution error handling", () => {
     nativeToolCtx: {
       userId: "test-user-1",
       conversationId: "conv-1",
-      planId: "plan-free",
+      agentId: null,
+      sessionUser: { name: "Test User", email: "test@test.com" },
     } as import("@/lib/native-tools").NativeToolContext,
     mcpCallContext: { userId: "test-user-1", conversationId: "conv-1" },
     mcpToolTimeoutMs: 30000,

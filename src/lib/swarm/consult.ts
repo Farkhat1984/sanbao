@@ -5,6 +5,9 @@ import { callMcpTool } from "@/lib/mcp-client";
 import { TOOL_RESULT_MAX_CHARS, TOOL_RESULT_TAIL_CHARS, DEFAULT_MAX_TOKENS } from "@/lib/constants";
 import { getSettingNumber } from "@/lib/settings";
 
+// Cached agent base prompt (loaded once per process)
+let _agentBasePromptCache: string | null = null;
+
 interface ConsultOptions {
   userMessage: string;
   conversationHistory: Array<{ role: string; content: string }>;
@@ -36,7 +39,11 @@ async function consultAgent(
   maxToolTurns: number,
   signal?: AbortSignal
 ): Promise<string> {
-  const systemPrompt = agentCtx.systemPrompt + agentCtx.skillPrompts.join("");
+  // Prepend agent-base prompt (hidden platform rules: tool priority, citations, formatting)
+  if (!_agentBasePromptCache) {
+    _agentBasePromptCache = await getPrompt("prompt_agent_base");
+  }
+  const systemPrompt = _agentBasePromptCache + "\n\n" + agentCtx.systemPrompt + agentCtx.skillPrompts.join("");
 
   // Build tools array for the agent's MCP tools
   const tools = agentCtx.mcpTools.map((t) => ({
