@@ -23,7 +23,7 @@ export interface Agent {
   isSystem?: boolean;
   files: AgentFile[];
   skills?: Array<{ id: string; skill: { id: string; name: string; icon: string; iconColor: string } }>;
-  mcpServers?: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string } }>;
+  mcpServers?: Array<{ id: string; mcpServer: { id: string; name: string; url: string; status: string; discoveredTools?: unknown[] | null } }>;
   tools?: Array<{ id: string; tool: { id: string; name: string; icon: string; iconColor: string } }>;
   integrations?: Array<{ id: string; integration: { id: string; name: string; type: string; status: string } }>;
   knowledgeStatus?: "NONE" | "PROCESSING" | "READY" | "PUBLISHED" | "ERROR";

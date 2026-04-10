@@ -4,19 +4,18 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Database,
   Upload,
-  RefreshCw,
   CheckCircle2,
   AlertCircle,
   Loader2,
   Lock,
   FileText,
   X,
-  Play,
-  Rocket,
+  Trash2,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Pipeline stage labels in Russian — keys match orchestrator SSE lowercase stage names */
+/** Pipeline stage labels — keys match orchestrator SSE lowercase stage names */
 const STAGE_LABELS: Record<string, string> = {
   pre_analyze: "Предварительный анализ...",
   extract: "Извлечение текста...",
@@ -43,13 +42,9 @@ interface AgentKnowledgeSectionProps {
   agentId: string;
   knowledgeStatus: KnowledgeStatus;
   knowledgeFiles: KnowledgeFile[];
-  /** True when the user's plan does not support LeemaDB knowledge bases */
   disabled?: boolean;
-  /** Called after upload/process/publish to refresh parent data */
   onRefresh?: () => void;
-  /** Error message from the server (shown in ERROR state) */
   errorMessage?: string;
-  /** Number of discovered MCP tools after publish */
   toolCount?: number;
 }
 
@@ -60,7 +55,7 @@ interface ProgressEvent {
   status?: string;
 }
 
-const MAX_KNOWLEDGE_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_KNOWLEDGE_FILE_SIZE = 100 * 1024 * 1024;
 const ACCEPTED_FORMATS = ".pdf,.docx,.xlsx,.txt,.csv,.html,.doc,.xls";
 
 export function AgentKnowledgeSection({
@@ -76,12 +71,13 @@ export function AgentKnowledgeSection({
   const [files, setFiles] = useState<KnowledgeFile[]>(knowledgeFiles);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [stageName, setStageName] = useState("Подготовка...");
+  const [cancelling, setCancelling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const esRef = useRef<EventSource | null>(null);
 
@@ -91,7 +87,6 @@ export function AgentKnowledgeSection({
     setFiles(knowledgeFiles);
   }, [knowledgeStatus, knowledgeFiles]);
 
-  /** Persist knowledge status to DB so it survives page refresh */
   const persistStatus = useCallback(
     async (newStatus: KnowledgeStatus) => {
       try {
@@ -101,11 +96,37 @@ export function AgentKnowledgeSection({
           body: JSON.stringify({ status: newStatus }),
         });
       } catch {
-        // Best-effort — the UI already updated locally
+        // Best-effort
       }
     },
     [agentId]
   );
+
+  /** Auto-publish after processing completes (SSE reports READY) */
+  const autoPublish = useCallback(async () => {
+    setStageName("Публикация MCP...");
+    setProgress(95);
+    try {
+      const res = await fetch(
+        `/api/agents/${agentId}/knowledge/publish`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        let msg = "Ошибка публикации";
+        try { msg = JSON.parse(text).error || msg; } catch { /* */ }
+        throw new Error(msg);
+      }
+      setProgress(100);
+      setStageName("Готово!");
+      setStatus("PUBLISHED");
+      onRefresh?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка публикации");
+      setStatus("ERROR");
+      persistStatus("ERROR");
+    }
+  }, [agentId, onRefresh, persistStatus]);
 
   // SSE progress listener when status is PROCESSING
   useEffect(() => {
@@ -120,7 +141,8 @@ export function AgentKnowledgeSection({
       try {
         const data: ProgressEvent = JSON.parse(event.data);
         if (data.progress !== undefined) {
-          setProgress(Math.min(data.progress, 100));
+          // Reserve 5% for publish step
+          setProgress(Math.min(Math.round(data.progress * 0.9), 90));
         }
         if (data.stage) {
           setStageName(STAGE_LABELS[data.stage] || data.stage);
@@ -129,19 +151,15 @@ export function AgentKnowledgeSection({
           setStageName(data.message);
         }
         if (data.status === "completed" || data.status === "done") {
-          setProgress(100);
-          setStageName("Готово!");
           es.close();
-          setStatus("READY");
-          persistStatus("READY");
-          onRefresh?.();
+          // Auto-publish immediately
+          autoPublish();
         }
         if (data.status === "error") {
           setStageName("Ошибка обработки");
           es.close();
           setStatus("ERROR");
           persistStatus("ERROR");
-          onRefresh?.();
         }
       } catch {
         // Ignore parse errors
@@ -155,7 +173,7 @@ export function AgentKnowledgeSection({
     return () => {
       es.close();
     };
-  }, [status, agentId, onRefresh, persistStatus]);
+  }, [status, agentId, persistStatus, autoPublish]);
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} Б`;
@@ -198,93 +216,104 @@ export function AgentKnowledgeSection({
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const handleUpload = async () => {
+  /** Unified flow: upload → process → (SSE) → auto-publish */
+  const handleUploadAndProcess = async () => {
     if (stagedFiles.length === 0) return;
-    setUploading(true);
+    setBusy(true);
     setError(null);
+    setProgress(0);
+    setStageName("Загрузка файлов...");
 
     try {
+      // Step 1: Upload files
       const formData = new FormData();
       stagedFiles.forEach((f) => formData.append("files", f));
 
-      const res = await fetch(
+      const uploadRes = await fetch(
         `/api/agents/${agentId}/knowledge/upload`,
         { method: "POST", body: formData }
       );
 
-      if (!res.ok) {
-        const text = await res.text();
+      if (!uploadRes.ok) {
+        const text = await uploadRes.text();
         let msg = "Ошибка загрузки";
         try { msg = JSON.parse(text).error || msg; } catch { msg = text.slice(0, 200); }
         throw new Error(msg);
       }
 
-      // Update local file list from response
-      const uploaded = await res.json();
+      const uploaded = await uploadRes.json();
       if (Array.isArray(uploaded)) {
-        setFiles((prev) => [...prev, ...uploaded.map((f: KnowledgeFile) => f)]);
+        setFiles((prev) => [...prev, ...uploaded]);
       }
       setStagedFiles([]);
-      setUploading(false);
-      // Auto-start processing
-      await handleProcess();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка загрузки");
-    } finally {
-      setUploading(false);
-    }
-  };
 
-  const handleProcess = async () => {
-    setProcessing(true);
-    setError(null);
-    setProgress(0);
-    setStageName("Подготовка...");
-
-    try {
-      const res = await fetch(
+      // Step 2: Start processing
+      setStageName("Запуск обработки...");
+      const processRes = await fetch(
         `/api/agents/${agentId}/knowledge/process`,
         { method: "POST" }
       );
 
-      if (!res.ok) {
-        const text = await res.text();
+      if (!processRes.ok) {
+        const text = await processRes.text();
         let msg = "Ошибка запуска обработки";
-        try { msg = JSON.parse(text).error || msg; } catch { /* HTML response */ }
+        try { msg = JSON.parse(text).error || msg; } catch { /* */ }
         throw new Error(msg);
       }
 
+      // Step 3: SSE will handle progress → auto-publish
       setStatus("PROCESSING");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка запуска обработки");
+      setError(e instanceof Error ? e.message : "Ошибка");
+      setStatus("ERROR");
+      persistStatus("ERROR");
     } finally {
-      setProcessing(false);
+      setBusy(false);
     }
   };
 
-  const handlePublish = async () => {
-    setPublishing(true);
-    setError(null);
-
+  /** Cancel processing */
+  const handleCancel = async () => {
+    setCancelling(true);
     try {
-      const res = await fetch(
-        `/api/agents/${agentId}/knowledge/publish`,
-        { method: "POST" }
-      );
+      esRef.current?.close();
+      await fetch(`/api/agents/${agentId}/knowledge/cancel`, {
+        method: "POST",
+      });
+      setStatus("NONE");
+      setProgress(0);
+      setStageName("Подготовка...");
+      onRefresh?.();
+    } catch {
+      setError("Не удалось отменить обработку");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
+  /** Delete entire knowledge base */
+  const handleDelete = async () => {
+    setDeleting(true);
+    setShowDeleteConfirm(false);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/knowledge/delete`, {
+        method: "POST",
+      });
       if (!res.ok) {
         const text = await res.text();
-        let msg = "Ошибка публикации";
-        try { msg = JSON.parse(text).error || msg; } catch { /* HTML response */ }
+        let msg = "Ошибка удаления";
+        try { msg = JSON.parse(text).error || msg; } catch { /* */ }
         throw new Error(msg);
       }
-
-      setStatus("PUBLISHED");
+      setStatus("NONE");
+      setFiles([]);
+      setProgress(0);
+      setError(null);
       onRefresh?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка публикации");
+      setError(e instanceof Error ? e.message : "Ошибка удаления");
     } finally {
-      setPublishing(false);
+      setDeleting(false);
     }
   };
 
@@ -309,26 +338,17 @@ export function AgentKnowledgeSection({
     );
   }
 
+  const isWorking = status === "PROCESSING" || busy;
+
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Database className="h-4 w-4 text-accent" />
-          <span className="text-sm font-medium text-text-primary">
-            База знаний LeemaDB
-          </span>
-        </div>
-        <KnowledgeStatusBadge status={status} toolCount={toolCount} />
-      </div>
-
       {/* Error banner */}
       {(status === "ERROR" || error) && (
         <div className="p-3 rounded-xl bg-error/10 border border-error/20 flex items-start gap-3">
           <AlertCircle className="h-4 w-4 text-error shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-error">
-              {error || errorMessage || "Произошла ошибка при обработке файлов"}
+              {error || errorMessage || "Произошла ошибка при обработке"}
             </p>
           </div>
           <button
@@ -341,18 +361,29 @@ export function AgentKnowledgeSection({
         </div>
       )}
 
-      {/* Processing progress */}
-      {status === "PROCESSING" && (
+      {/* Processing progress bar (replaces upload button) */}
+      {isWorking && (
         <div className="p-4 rounded-xl bg-surface-alt border border-border space-y-3">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 text-accent animate-spin" />
-            <span className="text-sm text-text-primary font-medium">
-              Обработка файлов
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 text-accent animate-spin" />
+              <span className="text-sm text-text-primary font-medium">
+                {stageName}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="h-7 px-3 rounded-lg border border-border text-text-secondary text-xs font-medium hover:text-error hover:border-error/30 hover:bg-error/5 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Square className="h-3 w-3" />
+              {cancelling ? "Отмена..." : "Остановить"}
+            </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-secondary">{stageName}</span>
+              <span className="text-text-secondary">Прогресс</span>
               <span className="text-text-primary font-medium tabular-nums">
                 {progress}%
               </span>
@@ -371,51 +402,23 @@ export function AgentKnowledgeSection({
         </div>
       )}
 
-      {/* Upload zone (shown in NONE state, or PUBLISHED/READY when user is staging new files) */}
-      {(status === "NONE" || (status === "PUBLISHED" && stagedFiles.length > 0) || (status === "READY" && stagedFiles.length > 0)) && (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-            className={cn(
-              "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
-              isDragging
-                ? "border-accent bg-accent-light"
-                : "border-border hover:border-border-hover hover:bg-surface-alt",
-              uploading && "pointer-events-none opacity-60"
-            )}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              accept={ACCEPTED_FORMATS}
-            />
-            {uploading ? (
-              <Loader2 className="h-8 w-8 text-accent mx-auto mb-2 animate-spin" />
-            ) : (
-              <Upload className="h-8 w-8 text-text-secondary mx-auto mb-2" />
-            )}
-            <p className="text-sm text-text-secondary">
-              {uploading
-                ? "Загрузка..."
-                : "Перетащите файлы или нажмите для выбора"}
-            </p>
-            <p className="text-xs text-text-muted mt-1">
-              PDF, DOCX, XLSX, TXT, CSV, HTML до 100 МБ
-            </p>
-          </div>
-        )}
-
-      {/* "Add more files" trigger for PUBLISHED/READY states when no staged files yet */}
-      {(status === "PUBLISHED" || status === "READY") && stagedFiles.length === 0 && (
-        <div className="relative">
+      {/* Upload zone — shown when NONE/ERROR (not working) */}
+      {!isWorking && (status === "NONE" || status === "ERROR") && (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
+            isDragging
+              ? "border-accent bg-accent-light"
+              : "border-border hover:border-border-hover hover:bg-surface-alt"
+          )}
+        >
           <input
             ref={inputRef}
             type="file"
@@ -424,19 +427,18 @@ export function AgentKnowledgeSection({
             className="hidden"
             accept={ACCEPTED_FORMATS}
           />
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="w-full h-9 rounded-xl border border-dashed border-border text-sm text-text-secondary hover:text-text-primary hover:border-border-hover hover:bg-surface-alt transition-colors flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Добавить файлы
-          </button>
+          <Upload className="h-8 w-8 text-text-secondary mx-auto mb-2" />
+          <p className="text-sm text-text-secondary">
+            Перетащите файлы или нажмите для выбора
+          </p>
+          <p className="text-xs text-text-muted mt-1">
+            PDF, DOCX, XLSX, TXT, CSV, HTML до 100 МБ
+          </p>
         </div>
       )}
 
       {/* Staged files (pending upload) */}
-      {stagedFiles.length > 0 && (
+      {stagedFiles.length > 0 && !isWorking && (
         <div className="space-y-2">
           {stagedFiles.map((file, i) => (
             <div
@@ -449,7 +451,7 @@ export function AgentKnowledgeSection({
                   {file.name}
                 </p>
                 <p className="text-xs text-warning">
-                  {formatSize(file.size)} · ожидает загрузки
+                  {formatSize(file.size)}
                 </p>
               </div>
               <button
@@ -464,143 +466,111 @@ export function AgentKnowledgeSection({
 
           <button
             type="button"
-            onClick={handleUpload}
-            disabled={uploading}
-            className="w-full h-9 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
+            onClick={handleUploadAndProcess}
+            className="w-full h-10 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            {uploading
-              ? "Загрузка..."
-              : `Загрузить ${stagedFiles.length} файл(ов)`}
+            <Upload className="h-4 w-4" />
+            Загрузить и обработать ({stagedFiles.length})
           </button>
         </div>
       )}
 
-      {/* Existing knowledge file list */}
-      {files.length > 0 && status !== "PROCESSING" && (
-        <div className="space-y-2">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-surface-alt border border-border"
-            >
-              <FileText className="h-4 w-4 text-text-secondary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-text-primary truncate">
-                  {file.fileName}
-                </p>
-                <p className="text-xs text-text-secondary">
-                  {formatSize(file.fileSize)}
-                </p>
-              </div>
-              {status === "PUBLISHED" && (
-                <span className="inline-flex items-center gap-1 text-xs text-success">
-                  <CheckCircle2 className="h-3 w-3" />
-                  индексирован
-                </span>
-              )}
-              {status === "READY" && (
-                <span className="inline-flex items-center gap-1 text-xs text-accent">
-                  <CheckCircle2 className="h-3 w-3" />
-                  обработан
+      {/* Published/Ready state — file list + actions */}
+      {!isWorking && (status === "PUBLISHED" || status === "READY") && (
+        <>
+          {/* Status header */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-success/5 border border-success/20">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium text-text-primary">
+                {status === "PUBLISHED"
+                  ? "База знаний активна"
+                  : "Обработка завершена"}
+              </span>
+              {toolCount !== undefined && toolCount > 0 && (
+                <span className="text-xs text-text-secondary">
+                  ({toolCount} инструментов)
                 </span>
               )}
             </div>
-          ))}
-        </div>
-      )}
+            <div className="flex items-center gap-2">
+              {/* Add more files */}
+              <input
+                ref={inputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                accept={ACCEPTED_FORMATS}
+              />
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="h-7 px-3 rounded-lg border border-border text-text-secondary text-xs font-medium hover:text-text-primary hover:bg-surface-alt transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Upload className="h-3 w-3" />
+                Добавить
+              </button>
+              {/* Delete knowledge */}
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="h-7 px-3 rounded-lg bg-error text-white text-xs font-medium hover:bg-error/90 transition-colors cursor-pointer"
+                  >
+                    {deleting ? "Удаление..." : "Да, удалить"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="h-7 px-2 rounded-lg border border-border text-text-secondary text-xs hover:bg-surface-alt transition-colors cursor-pointer"
+                  >
+                    Нет
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
 
-      {/* Action buttons */}
-      {status === "NONE" && files.length > 0 && stagedFiles.length === 0 && (
-        <button
-          type="button"
-          onClick={handleProcess}
-          disabled={processing}
-          className="h-9 px-4 rounded-xl bg-warning text-white text-sm font-medium flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-        >
-          {processing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4" />
+          {/* File list */}
+          {files.length > 0 && (
+            <div className="space-y-1.5">
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-alt/50"
+                >
+                  <FileText className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                  <span className="text-sm text-text-primary truncate flex-1">
+                    {file.fileName}
+                  </span>
+                  <span className="text-xs text-text-secondary shrink-0 tabular-nums">
+                    {formatSize(file.fileSize)}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
-          {processing ? "Запуск..." : "Обработать"}
-        </button>
+        </>
       )}
 
-      {status === "READY" && stagedFiles.length === 0 && (
-        <button
-          type="button"
-          onClick={handlePublish}
-          disabled={publishing}
-          className="h-9 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
-        >
-          {publishing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Rocket className="h-4 w-4" />
-          )}
-          {publishing ? "Публикация..." : "Опубликовать"}
-        </button>
-      )}
-
-      {/* Helper text */}
-      {status === "NONE" && files.length === 0 && stagedFiles.length === 0 && (
+      {/* Helper text — empty state */}
+      {status === "NONE" && files.length === 0 && stagedFiles.length === 0 && !isWorking && (
         <p className="text-xs text-text-muted">
-          Загрузите файлы для обработки через AI-пайплайн. Агент получит
-          возможность поиска по содержимому с помощью векторного индекса.
+          Загрузите документы для создания базы знаний. Агент получит инструменты
+          семантического поиска по содержимому файлов.
         </p>
       )}
     </div>
   );
-}
-
-/** Status badge shown in the section header */
-function KnowledgeStatusBadge({
-  status,
-  toolCount,
-}: {
-  status: KnowledgeStatus;
-  toolCount?: number;
-}) {
-  switch (status) {
-    case "PROCESSING":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-warning/10 text-warning text-xs font-medium">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Обработка
-        </span>
-      );
-    case "READY":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/10 text-accent text-xs font-medium">
-          <CheckCircle2 className="h-3 w-3" />
-          Обработано
-        </span>
-      );
-    case "PUBLISHED":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-success/10 text-success text-xs font-medium">
-          <CheckCircle2 className="h-3 w-3" />
-          Опубликовано
-          {toolCount !== undefined && toolCount > 0 && (
-            <span className="ml-1 text-success/70">
-              ({toolCount} инстр.)
-            </span>
-          )}
-        </span>
-      );
-    case "ERROR":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-error/10 text-error text-xs font-medium">
-          <AlertCircle className="h-3 w-3" />
-          Ошибка
-        </span>
-      );
-    default:
-      return null;
-  }
 }

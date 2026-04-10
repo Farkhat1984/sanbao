@@ -197,6 +197,27 @@ export async function getProjectProgress(
   return res;
 }
 
+export async function getProject(
+  nsApiKey: string,
+  projectId: string
+): Promise<{ id: string; status: string; current_job_id?: string }> {
+  const res = await cortexFetch(`/api/projects/${projectId}`, {
+    method: "GET",
+    apiKey: nsApiKey,
+  });
+  return res.json();
+}
+
+export async function cancelJob(
+  nsApiKey: string,
+  jobId: string
+): Promise<void> {
+  await cortexFetch(`/api/jobs/${jobId}/cancel`, {
+    method: "POST",
+    apiKey: nsApiKey,
+  });
+}
+
 export async function deleteProject(
   nsApiKey: string,
   projectId: string

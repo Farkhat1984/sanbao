@@ -248,9 +248,13 @@ export async function resolveAgentAndTools(params: {
     const ctx = await resolveAgentContext(agentId);
     if (ctx.systemPrompt) {
       if (ctx.isSystem) {
-        // System agents: global prompt first (base rules: <sanbao-doc>, style, etc.)
-        // then agent-specific prompt (specialization overrides)
-        systemPrompt = systemPrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
+        // System agents: three-layer hierarchy
+        //   1. Global prompt (system-global.txt) — Sanbao identity, doc creation, formatting
+        //   2. Agent base prompt (agent-base.txt) — tool priority, citations, response rules
+        //   3. Agent instructions — domain-specific (jurisdiction, MCP tools, algorithms)
+        // This ensures system agents respect KB-first priority from agent-base.txt
+        // instead of relying on duplicated rules in their own instructions.
+        systemPrompt = systemPrompt + "\n\n" + agentBasePrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
       } else {
         // Custom agents: agent-base prompt (hidden platform rules) + user instructions
         // Agent-base ensures consistent behavior (tool priority, citations, formatting)

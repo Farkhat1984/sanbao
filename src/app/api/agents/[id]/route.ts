@@ -7,7 +7,7 @@ import { deleteProject } from "@/lib/ai-cortex-client";
 const AGENT_INCLUDE = {
   files: true,
   skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
-  mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+  mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true, discoveredTools: true } } } },
   tools: { include: { tool: { select: { id: true, name: true, icon: true, iconColor: true } } } },
   integrations: { include: { integration: { select: { id: true, name: true, type: true, status: true, entityCount: true } } } },
 };

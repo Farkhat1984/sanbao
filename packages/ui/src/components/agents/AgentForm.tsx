@@ -354,22 +354,24 @@ export function AgentForm({
               />
             </div>
 
-            {/* LeemaDB Knowledge Base */}
-            <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">
-                База знаний LeemaDB
-              </label>
-              <AgentKnowledgeSection
-                agentId={agent?.id || ""}
-                knowledgeStatus={knowledgeStatus}
-                knowledgeFiles={knowledgeFiles}
-                disabled={!canUseRag}
-                onRefresh={onKnowledgeRefresh}
-              />
-              <p className="text-xs text-text-secondary mt-1">
-                Файлы обрабатываются через AI-пайплайн для векторного поиска
-              </p>
-            </div>
+            {/* LeemaDB Knowledge Base — only for existing agents (need ID for API calls) */}
+            {isEdit && agent?.id && (
+              <div>
+                <label className="text-sm font-medium text-text-primary mb-2 block">
+                  База знаний LeemaDB
+                </label>
+                <AgentKnowledgeSection
+                  agentId={agent.id}
+                  knowledgeStatus={knowledgeStatus}
+                  knowledgeFiles={knowledgeFiles}
+                  disabled={!canUseRag}
+                  onRefresh={onKnowledgeRefresh}
+                />
+                <p className="text-xs text-text-secondary mt-1">
+                  Файлы обрабатываются через AI-пайплайн для векторного поиска
+                </p>
+              </div>
+            )}
 
             {/* Skills */}
             <div>

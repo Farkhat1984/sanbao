@@ -374,6 +374,7 @@ export default function AgentDetailPage() {
               knowledgeFiles={knowledgeFiles}
               disabled={!canUseRag}
               onRefresh={loadAgent}
+              toolCount={agent?.mcpServers?.reduce((sum, ms) => sum + (Array.isArray(ms.mcpServer.discoveredTools) ? ms.mcpServer.discoveredTools.length : 0), 0)}
             />
           </div>
         )}

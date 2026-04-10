@@ -53,5 +53,21 @@ export default function EditAgentPage() {
     );
   }
 
-  return <AgentForm agent={agent} canUseRag={canUseRag} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const agentData = agent as any;
+
+  return (
+    <AgentForm
+      agent={agent}
+      canUseRag={canUseRag}
+      knowledgeStatus={agentData.knowledgeStatus}
+      knowledgeFiles={agentData.knowledgeFiles}
+      onKnowledgeRefresh={() => {
+        fetch(`/api/agents/${id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => { if (data) setAgent(data); })
+          .catch(() => {});
+      }}
+    />
+  );
 }

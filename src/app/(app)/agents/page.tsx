@@ -220,6 +220,34 @@ export default function AgentsPage() {
     }
   };
 
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateAgent = async () => {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Новый агент",
+          instructions: "Ты — полезный AI-ассистент.",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        alert(data?.error || "Ошибка создания агента");
+        return;
+      }
+      const created = await res.json();
+      router.push(`/agents/${created.id}/edit`);
+    } catch {
+      alert("Ошибка создания агента");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="h-full">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -234,11 +262,12 @@ export default function AgentsPage() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/agents/new")}
-            className="h-10 px-5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
+            onClick={handleCreateAgent}
+            disabled={creating}
+            className="h-10 px-5 rounded-2xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
           >
-            <Plus className="h-4 w-4" />
-            Создать агента
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {creating ? "Создание..." : "Создать агента"}
           </button>
         </div>
 
