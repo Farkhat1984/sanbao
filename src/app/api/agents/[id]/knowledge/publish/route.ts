@@ -36,11 +36,13 @@ export async function POST(
 
   // Publish in AI Cortex
   let endpoint: string;
+  let internalEndpoint: string;
   let domain: string;
   try {
     const agentSlug = `agent_${id}`;
     const pubResult = await publishProject(nsApiKey, agent.projectId, agentSlug);
-    endpoint = pubResult.endpoint;
+    endpoint = pubResult.endpoint;           // Public URL (https://leema.kz/mcp/...)
+    internalEndpoint = pubResult.internalEndpoint; // Docker URL (http://orchestrator:8120/mcp/...)
     domain = pubResult.domain;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Ошибка публикации";
@@ -76,9 +78,9 @@ export async function POST(
     });
   }
 
-  // Discover tools via the MCP endpoint
+  // Discover tools via internal Docker endpoint (public URL not reachable from container)
   const { tools, error: discoverError } = await connectAndDiscoverTools(
-    endpoint,
+    internalEndpoint,
     "STREAMABLE_HTTP",
     nsApiKey
   );

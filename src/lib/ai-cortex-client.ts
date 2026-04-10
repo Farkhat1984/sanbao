@@ -2,6 +2,7 @@ import { getSettingNumber } from "@/lib/settings";
 import { CircuitBreaker } from "@/lib/circuit-breaker";
 
 const AI_CORTEX_URL = process.env.AI_CORTEX_URL || "http://orchestrator:8120";
+const AI_CORTEX_PUBLIC_URL = process.env.AI_CORTEX_PUBLIC_URL || AI_CORTEX_URL;
 const AI_CORTEX_MASTER_KEY = process.env.AI_CORTEX_AUTH_TOKEN || "";
 
 /** Fallback values used when settings DB is unavailable */
@@ -154,7 +155,7 @@ export async function publishProject(
   nsApiKey: string,
   projectId: string,
   agentName?: string
-): Promise<{ endpoint: string; domain: string }> {
+): Promise<{ endpoint: string; internalEndpoint: string; domain: string }> {
   const timeoutProcess = await getSettingNumber("ai_cortex_timeout_process_ms")
     .catch(() => TIMEOUT_PROCESS_FALLBACK);
   const body: Record<string, string> = {};
@@ -168,11 +169,12 @@ export async function publishProject(
   });
   const data = await res.json();
   const domain = data.domain || `project_${projectId}`;
-  // Use per-domain MCP endpoint (auto-injects domain into tool args)
-  const endpoint = data.endpoint
-    ? `${AI_CORTEX_URL}${data.endpoint}`
-    : `${AI_CORTEX_URL}/mcp/${domain}`;
-  return { endpoint, domain };
+  const mcpPath = data.endpoint || `/mcp/${domain}`;
+  // Public URL for MCP servers stored in DB (accessible via Cloudflare tunnel)
+  const endpoint = `${AI_CORTEX_PUBLIC_URL}${mcpPath}`;
+  // Internal URL for server-side tool discovery (Docker network)
+  const internalEndpoint = `${AI_CORTEX_URL}${mcpPath}`;
+  return { endpoint, internalEndpoint, domain };
 }
 
 export async function getProjectProgress(

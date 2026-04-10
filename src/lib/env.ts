@@ -38,6 +38,7 @@ const redisSchema = z.object({
 
 const aiCortexSchema = z.object({
   AI_CORTEX_URL: z.string().url().default("http://orchestrator:8120"),
+  AI_CORTEX_PUBLIC_URL: z.string().url().default("https://leema.kz"),
   AI_CORTEX_AUTH_TOKEN: z.string().optional(),
   ORCHESTRATOR_URL: z.string().url().optional(),
   UNIFIED_MCP_URL: z.string().url().optional(),
