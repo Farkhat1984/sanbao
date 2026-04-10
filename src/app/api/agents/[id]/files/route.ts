@@ -97,9 +97,9 @@ export async function POST(
     }
   }
 
-  // Large files default to lazy mode (accessible via read_knowledge tool)
-  // to prevent context overflow in the system prompt
-  const inContext = file.size <= 100_000;
+  // All permanent memory files are always in context — the context budget
+  // in tool-resolver.ts handles overflow by truncating, not hiding
+  const inContext = true;
 
   const agentFile = await prisma.agentFile.create({
     data: {

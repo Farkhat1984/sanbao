@@ -114,48 +114,29 @@ export async function resolveAgentContext(
   // In-context files: inject content directly into system prompt (with budget cap)
   const MAX_CONTEXT_CHARS = await getSettingNumber('tool_agent_max_context_chars');
 
-  const wantInContext = agent.files.filter((f) => f.inContext !== false && f.extractedText);
-  const explicitLazy = agent.files.filter((f) => f.inContext === false);
+  const contextFiles = agent.files.filter((f) => f.extractedText);
 
-  // Fit files into context budget, demote oversized to lazy
-  const fittedFiles: typeof wantInContext = [];
-  const demotedFiles: typeof wantInContext = [];
+  // Fit files into context budget; overflow files get truncated previews
   let contextBudget = MAX_CONTEXT_CHARS;
+  const parts: string[] = [];
 
-  for (const f of wantInContext) {
-    const len = f.extractedText!.length;
-    if (len <= contextBudget) {
-      fittedFiles.push(f);
-      contextBudget -= len;
-    } else {
-      demotedFiles.push(f);
+  for (const f of contextFiles) {
+    const text = f.extractedText!;
+    if (text.length <= contextBudget) {
+      // Full file fits
+      parts.push(`--- File: ${f.fileName} ---\n${text}`);
+      contextBudget -= text.length;
+    } else if (contextBudget > 500) {
+      // Include truncated preview with remaining budget
+      const truncated = text.slice(0, contextBudget - 50);
+      parts.push(`--- File: ${f.fileName} (truncated) ---\n${truncated}\n... [file truncated, ${Math.round(text.length / 1024)}KB total]`);
+      contextBudget = 0;
     }
+    // else: no budget left, skip silently
   }
 
-  const lazyFiles = [...explicitLazy, ...demotedFiles];
-
-  const filesContext = fittedFiles
-    .map((f) => `--- File: ${f.fileName} ---\n${f.extractedText}`)
-    .join("\n\n");
-
-  if (filesContext) {
-    systemPrompt += `\n\n--- Uploaded files context ---\n${filesContext}`;
-  }
-
-  // Note about demoted files so the model knows to use read_knowledge
-  if (demotedFiles.length > 0) {
-    const demotedList = demotedFiles
-      .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
-      .join("\n");
-    systemPrompt += `\n\nThe following files are too large for context. Use the read_knowledge tool to access them:\n${demotedList}`;
-  }
-
-  // Lazy files: only list names, agent must use read_knowledge tool to access
-  if (lazyFiles.length > 0) {
-    const fileList = lazyFiles
-      .map((f) => `- ${f.fileName} (${Math.round(f.fileSize / 1024)}KB)`)
-      .join("\n");
-    systemPrompt += `\n\n--- Knowledge files (accessible via read_knowledge tool) ---\n${fileList}\nUse the read_knowledge tool with a search query to read file contents.`;
+  if (parts.length > 0) {
+    systemPrompt += `\n\n--- Uploaded files context ---\n${parts.join("\n\n")}`;
   }
 
   // Collect tools (deduplicate by id)

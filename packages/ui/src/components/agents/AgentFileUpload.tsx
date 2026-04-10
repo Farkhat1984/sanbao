@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, FileText, Loader2, BookOpen, Archive, CheckCircle2, ImageIcon, AlertCircle, Lock } from "lucide-react";
+import { Upload, X, FileText, Loader2, CheckCircle2, ImageIcon, AlertCircle, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentFile } from "@/types/agent";
 import { MAX_FILE_SIZE } from "@/lib/constants";
@@ -26,7 +26,6 @@ export function AgentFileUpload({
   files,
   onFileAdded,
   onFileRemoved,
-  onFileUpdated,
   onQueuedFilesChange,
   uploadUrl,
   disabled,
@@ -122,23 +121,6 @@ export function AgentFileUpload({
     }
   };
 
-  const handleToggleContext = async (fileId: string, currentInContext: boolean) => {
-    if (!baseUrl) return;
-    try {
-      const res = await fetch(baseUrl, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileId, inContext: !currentInContext }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        onFileUpdated?.(updated);
-      }
-    } catch {
-      // silent
-    }
-  };
-
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -214,7 +196,7 @@ export function AgentFileUpload({
       </div>
       {baseUrl && (
         <p className="text-xs text-text-muted">
-          Текст из файлов автоматически извлекается и используется агентом в чате как база знаний
+          Текст извлекается автоматически и всегда доступен агенту как постоянный контекст
         </p>
       )}
 
@@ -225,68 +207,45 @@ export function AgentFileUpload({
       {/* File List */}
       {files.length > 0 && (
         <div className="space-y-2">
-          {files.map((file) => {
-            const isInContext = file.inContext !== false;
-            return (
-              <div
-                key={file.id}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl bg-surface-alt border border-border",
-                  !isInContext && "opacity-60"
-                )}
-              >
-                <FileText className="h-4 w-4 text-text-secondary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary truncate">
-                    {file.fileName}
-                  </p>
-                  <p className="text-xs text-text-secondary flex items-center gap-1.5">
-                    {formatSize(file.fileSize)}
-                    {!isInContext && " · по запросу"}
-                    {file.fileType?.startsWith("image/") ? (
-                      <span className="inline-flex items-center gap-0.5 text-text-muted">
-                        · <ImageIcon className="h-3 w-3" /> изображение
-                      </span>
-                    ) : file.extractedText ? (
-                      <span className="inline-flex items-center gap-0.5 text-success">
-                        · <CheckCircle2 className="h-3 w-3" /> текст извлечён
-                      </span>
-                    ) : file.extractedText === null && file.id ? (
-                      <span className="inline-flex items-center gap-0.5 text-warning">
-                        · <AlertCircle className="h-3 w-3" /> текст не извлечён
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleContext(file.id, isInContext);
-                  }}
-                  title={isInContext ? "В контексте — нажмите чтобы перевести в режим 'по запросу'" : "По запросу — нажмите чтобы включить в контекст"}
-                  className={cn(
-                    "h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer",
-                    isInContext
-                      ? "text-accent hover:text-text-secondary hover:bg-surface-hover"
-                      : "text-text-secondary hover:text-accent hover:bg-accent/10"
-                  )}
-                >
-                  {isInContext ? <BookOpen className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(file.id);
-                  }}
-                  className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+          {files.map((file) => (
+            <div
+              key={file.id}
+              className="flex items-center gap-3 p-3 rounded-xl bg-surface-alt border border-border"
+            >
+              <FileText className="h-4 w-4 text-text-secondary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-primary truncate">
+                  {file.fileName}
+                </p>
+                <p className="text-xs text-text-secondary flex items-center gap-1.5">
+                  {formatSize(file.fileSize)}
+                  {file.fileType?.startsWith("image/") ? (
+                    <span className="inline-flex items-center gap-0.5 text-text-muted">
+                      · <ImageIcon className="h-3 w-3" /> изображение
+                    </span>
+                  ) : file.extractedText ? (
+                    <span className="inline-flex items-center gap-0.5 text-success">
+                      · <CheckCircle2 className="h-3 w-3" /> текст извлечён
+                    </span>
+                  ) : file.extractedText === null && file.id ? (
+                    <span className="inline-flex items-center gap-0.5 text-warning">
+                      · <AlertCircle className="h-3 w-3" /> текст не извлечён
+                    </span>
+                  ) : null}
+                </p>
               </div>
-            );
-          })}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(file.id);
+                }}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
