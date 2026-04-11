@@ -4,6 +4,7 @@ import { decrypt } from "@/lib/crypto";
 import { publishProject } from "@/lib/ai-cortex-client";
 import { connectAndDiscoverTools } from "@/lib/mcp-client";
 import { logAudit } from "@/lib/audit";
+import { invalidateAgentContextCache } from "@/lib/tool-resolver";
 import type { Prisma } from "@prisma/client";
 
 export async function POST(
@@ -101,12 +102,25 @@ export async function POST(
     });
   }
 
-  // Link agent to MCP server if not already linked
+  // Link agent to MCP server if not already linked, and set domain mappings
   if (!existingLink) {
     await prisma.agentMcpServer.create({
-      data: { agentId: id, mcpServerId: mcpServer.id },
+      data: {
+        agentId: id,
+        mcpServerId: mcpServer.id,
+        domainMappings: { defaultDomain: domain },
+      },
+    });
+  } else {
+    // Update domain mappings on existing link
+    await prisma.agentMcpServer.update({
+      where: { id: existingLink.id },
+      data: { domainMappings: { defaultDomain: domain } },
     });
   }
+
+  // Invalidate cached agent context so new MCP tools/domain are picked up immediately
+  invalidateAgentContextCache(id);
 
   // Update agent knowledge status
   const updated = await prisma.agent.update({

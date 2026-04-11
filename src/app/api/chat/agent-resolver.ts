@@ -260,6 +260,13 @@ export async function resolveAgentAndTools(params: {
         // Agent-base ensures consistent behavior (tool priority, citations, formatting)
         // regardless of what the user writes in their instructions.
         systemPrompt = agentBasePrompt + "\n\n" + ctx.systemPrompt + ctx.skillPrompts.join("");
+
+        // If custom agent has knowledge base MCP tools, add strong KB-first enforcement
+        // Generic agent-base rules are too weak — LLM skips MCP tools for $web_search
+        if (ctx.mcpTools.length > 0) {
+          const kbToolNames = ctx.mcpTools.map(t => t.name).join(", ");
+          systemPrompt += `\n\n# KNOWLEDGE BASE PRIORITY (MANDATORY)\nYou have a dedicated knowledge base with these tools: ${kbToolNames}\nFor ANY user question, you MUST call one of these tools FIRST before considering $web_search or your training knowledge.\nIf the knowledge base returns results, use them as your primary source.\nOnly use $web_search if your knowledge base tools return empty or insufficient results.\nNever skip your knowledge base tools — this is a CRITICAL requirement.`;
+        }
       }
       agentMcpTools.push(...ctx.mcpTools);
       hasAgentMcpTools = ctx.mcpTools.length > 0;

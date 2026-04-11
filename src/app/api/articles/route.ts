@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { callMcpTool } from "@/lib/mcp-client";
 import { requireAuth, jsonOk, jsonError } from "@/lib/api-helpers";
+import { prisma } from "@/lib/prisma";
+import { decrypt } from "@/lib/crypto";
 
 const UNIFIED_MCP_URL =
   process.env.UNIFIED_MCP_URL || "http://orchestrator:8120/mcp";
@@ -36,8 +38,35 @@ export async function GET(request: NextRequest) {
       return jsonError("Invalid source URI components", 400);
     }
 
+    // Determine which MCP endpoint to use based on domain
+    let mcpUrl = UNIFIED_MCP_URL;
+    let mcpToken = CORTEX_TOKEN;
+
+    // For custom agent knowledge bases (domain starts with agent_),
+    // look up the specific MCP server since unified endpoint doesn't serve custom domains
+    if (domain.startsWith("agent_")) {
+      const mcpServer = await prisma.mcpServer.findFirst({
+        where: {
+          userId,
+          url: { contains: domain },
+          status: "CONNECTED",
+        },
+        select: { url: true, apiKey: true },
+      });
+      if (mcpServer) {
+        // Use internal Docker URL (replace public leema.kz URL with internal orchestrator)
+        mcpUrl = mcpServer.url.replace(
+          /https?:\/\/[^/]+/,
+          process.env.AI_CORTEX_URL || "http://orchestrator:8120"
+        );
+        if (mcpServer.apiKey) {
+          mcpToken = decrypt(mcpServer.apiKey);
+        }
+      }
+    }
+
     const { result: srcResult, error: srcError } = await callMcpTool(
-      UNIFIED_MCP_URL, "STREAMABLE_HTTP", CORTEX_TOKEN,
+      mcpUrl, "STREAMABLE_HTTP", mcpToken,
       "get_source", { source_file: sourceFile, chunk_index: chunkIndex, domain }, ctx,
     );
     if (srcError) return jsonError(`MCP error: ${srcError}`, 502);
