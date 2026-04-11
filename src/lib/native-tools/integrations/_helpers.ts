@@ -6,7 +6,7 @@ import { decrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
 import { getSettingNumber } from "@/lib/settings";
 import type { Integration, IntegrationType } from "@prisma/client";
-import type { WhatsAppCredentials } from "@/types/integration";
+import type { WhatsAppCredentials, TelegramCredentials } from "@/types/integration";
 
 /**
  * Look up a user's connected Integration by name or return the first connected one.
@@ -58,6 +58,48 @@ export async function makeWhatsAppRequest(
 ): Promise<Response> {
   const creds = JSON.parse(decrypt(integration.credentials)) as WhatsAppCredentials;
   const url = `${integration.baseUrl}/api/whatsapp/${creds.instanceId}/${path}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs ?? 30_000);
+
+  try {
+    return await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": creds.apiKey,
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Look up a user's connected Telegram integration.
+ */
+export async function getTelegramIntegrationForUser(
+  userId: string,
+  integrationName?: string
+): Promise<Integration | null> {
+  return getIntegrationForUser(userId, integrationName, "TELEGRAM");
+}
+
+/**
+ * Make an authenticated request to the rk-tg Telegram service.
+ * Decrypts stored credentials and adds x-api-key header.
+ */
+export async function makeTelegramRequest(
+  integration: Integration,
+  method: string,
+  path: string,
+  body?: Record<string, unknown>,
+  timeoutMs?: number
+): Promise<Response> {
+  const creds = JSON.parse(decrypt(integration.credentials)) as TelegramCredentials;
+  const url = `${integration.baseUrl}/api/telegram/${creds.instanceId}/${path}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs ?? 30_000);

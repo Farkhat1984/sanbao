@@ -3,7 +3,7 @@ import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } f
 import { integrationUpdateSchema } from "@/lib/validation";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
-import type { WhatsAppCredentials } from "@/types/integration";
+import type { WhatsAppCredentials, TelegramCredentials } from "@/types/integration";
 
 export async function GET(
   _req: Request,
@@ -103,6 +103,19 @@ export async function DELETE(
   if (existing.type === "WHATSAPP") {
     try {
       const creds = JSON.parse(decrypt(existing.credentials)) as WhatsAppCredentials;
+      await fetch(`${existing.baseUrl}/api/instances/${creds.instanceId}`, {
+        method: "DELETE",
+        headers: { "x-api-key": creds.apiKey },
+      });
+    } catch {
+      // Log but don't block deletion
+    }
+  }
+
+  // Clean up rk-tg instance for Telegram integrations
+  if (existing.type === "TELEGRAM") {
+    try {
+      const creds = JSON.parse(decrypt(existing.credentials)) as TelegramCredentials;
       await fetch(`${existing.baseUrl}/api/instances/${creds.instanceId}`, {
         method: "DELETE",
         headers: { "x-api-key": creds.apiKey },

@@ -295,6 +295,16 @@ export async function resolveAgentContext(
         systemPrompt += `\n- whatsapp_contacts(search?) — поиск и список контактов`;
         systemPrompt += `\n- whatsapp_messages(phone?, limit?) — последние сообщения`;
         systemPrompt += `\n\nФормат номера: международный без «+» (например: 77001234567)`;
+      } else if (intg.type === "TELEGRAM") {
+        systemPrompt += `\n\n--- Интеграция: ${intg.name} (Telegram) ---`;
+        systemPrompt += `\nУ вас есть Telegram бот "${intg.name}". Доступные инструменты:`;
+        systemPrompt += `\n- telegram_send(chatId, message, parseMode?) — отправить текстовое сообщение`;
+        systemPrompt += `\n- telegram_send_media(chatId, url, type?, caption?) — отправить медиа (photo/document/voice/video)`;
+        systemPrompt += `\n- telegram_send_keyboard(chatId, message, buttons) — отправить сообщение с inline-кнопками`;
+        systemPrompt += `\n- telegram_chats(limit?) — список недавних чатов`;
+        systemPrompt += `\n- telegram_messages(chatId?, limit?) — последние сообщения`;
+        systemPrompt += `\n- telegram_bot_info() — информация о боте`;
+        systemPrompt += `\n\nchatId — числовой ID чата Telegram. Можно отправлять inline-кнопки (keyboard).`;
       } else if (intg.catalog) {
         let indexText: string;
         try {

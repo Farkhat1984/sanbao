@@ -15,6 +15,9 @@ import "./integrations/odata-1c";
 // Integration tools: WhatsApp
 import "./integrations/whatsapp";
 
+// Integration tools: Telegram
+import "./integrations/telegram";
+
 // Re-export everything from registry
 export {
   registerNativeTool,

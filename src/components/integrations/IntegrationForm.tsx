@@ -19,9 +19,12 @@ type Step = "type" | "config" | "test" | "qr" | "done";
 
 const ODATA_STEPS: Step[] = ["type", "config", "test", "done"];
 const WHATSAPP_STEPS: Step[] = ["type", "config", "qr", "done"];
+const TELEGRAM_STEPS: Step[] = ["type", "config", "done"];
 
 function getSteps(type: string): Step[] {
-  return type === "WHATSAPP" ? WHATSAPP_STEPS : ODATA_STEPS;
+  if (type === "WHATSAPP") return WHATSAPP_STEPS;
+  if (type === "TELEGRAM") return TELEGRAM_STEPS;
+  return ODATA_STEPS;
 }
 
 export function IntegrationForm({ integration }: IntegrationFormProps) {
@@ -39,15 +42,22 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
   const [testing, setTesting] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null);
+  const [botToken, setBotToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(integration?.id || null);
 
   const isWhatsApp = type === "WHATSAPP";
+  const isTelegram = type === "TELEGRAM";
   const steps = getSteps(type);
 
   const handleSave = async () => {
     if (isWhatsApp) {
       if (!name.trim()) {
+        setError(t("integration.fillRequired"));
+        return;
+      }
+    } else if (isTelegram) {
+      if (!name.trim() || !botToken.trim()) {
         setError(t("integration.fillRequired"));
         return;
       }
@@ -67,6 +77,9 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
 
       if (isWhatsApp) {
         if (!isEdit) body.type = "WHATSAPP";
+      } else if (isTelegram) {
+        if (!isEdit) body.type = "TELEGRAM";
+        body.botToken = botToken;
       } else {
         body.baseUrl = baseUrl;
         if (!isEdit) body.type = type;
@@ -82,14 +95,14 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || t("integration.saveError"));
+        throw new Error(data.error || (isTelegram ? t("integration.telegramError") : t("integration.saveError")));
       }
 
       const data = await res.json();
       setCreatedId(data.id);
-      setStep(isWhatsApp ? "qr" : "test");
+      setStep(isWhatsApp ? "qr" : isTelegram ? "done" : "test");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("integration.saveError"));
+      setError(e instanceof Error ? e.message : (isTelegram ? t("integration.telegramError") : t("integration.saveError")));
     } finally {
       setSaving(false);
     }
@@ -179,12 +192,14 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
           baseUrl={baseUrl}
           username={username}
           password={password}
+          botToken={botToken}
           saving={saving}
           error={error}
           onNameChange={setName}
           onBaseUrlChange={setBaseUrl}
           onUsernameChange={setUsername}
           onPasswordChange={setPassword}
+          onBotTokenChange={setBotToken}
           onSave={handleSave}
           onBack={() => setStep("type")}
         />
@@ -214,7 +229,11 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
         <StepDone
           onGoToIntegrations={navigateToIntegrations}
           onGoToAgents={navigateToAgents}
-          description={isWhatsApp ? t("integration.whatsappDoneDescription") : undefined}
+          description={
+            isWhatsApp ? t("integration.whatsappDoneDescription") :
+            isTelegram ? t("integration.telegramDoneDescription") :
+            undefined
+          }
         />
       )}
     </div>

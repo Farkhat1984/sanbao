@@ -221,7 +221,15 @@
     "qrRefresh": "QR-кодты жаңарту",
     "qrError": "QR-кодты алу мүмкін болмады",
     "whatsappDoneDescription": "WhatsApp қосылды. Енді бұл интеграцияны агентке қосуға болады.",
-    "reconnect": "Қайта қосу"
+    "reconnect": "Қайта қосу",
+    "telegramDescription": "Telegram ботын хабарлама жіберу және қабылдау үшін қосу",
+    "telegramNamePlaceholder": "Мысалы: Қолдау боты",
+    "botToken": "Бот токені",
+    "botTokenPlaceholder": "@BotFather-ден алған токенді қойыңыз",
+    "botTokenHint": "@BotFather-ге Telegram-да /newbot жіберіп, нұсқауларды орындаңыз.",
+    "telegramConnected": "Бот қосылды!",
+    "telegramDoneDescription": "Telegram бот қосылды. Енді бұл интеграцияны агентке қосуға болады.",
+    "telegramError": "Қате токен немесе қосылу қатесі"
   },
   "adminModels": {
     "newModel": "Жаңа модель",

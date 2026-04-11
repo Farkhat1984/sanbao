@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, MessageCircle, Circle, Trash2, RefreshCw } from "lucide-react";
+import { Database, MessageCircle, Send, Circle, Trash2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IntegrationSummary } from "@/types/integration";
 
@@ -22,6 +22,7 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
 const TYPE_CONFIG: Record<string, { label: string; Icon: typeof Database; iconColor: string }> = {
   ODATA_1C: { label: "1С OData", Icon: Database, iconColor: "text-accent" },
   WHATSAPP: { label: "WhatsApp", Icon: MessageCircle, iconColor: "text-[#25D366]" },
+  TELEGRAM: { label: "Telegram", Icon: Send, iconColor: "text-[#0088cc]" },
 };
 
 export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect, onClick }: IntegrationCardProps) {
@@ -29,6 +30,8 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
   const typeConfig = TYPE_CONFIG[integration.type] || TYPE_CONFIG.ODATA_1C;
   const { Icon, iconColor } = typeConfig;
   const isWhatsApp = integration.type === "WHATSAPP";
+  const isTelegram = integration.type === "TELEGRAM";
+  const isMessenger = isWhatsApp || isTelegram;
 
   return (
     <div
@@ -36,7 +39,7 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
       onClick={() => onClick?.(integration.id)}
     >
       <div className="flex items-start gap-3 mb-3">
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", isWhatsApp ? "bg-[#25D366]/10" : "bg-accent/10")}>
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", isWhatsApp ? "bg-[#25D366]/10" : isTelegram ? "bg-[#0088cc]/10" : "bg-accent/10")}>
           <Icon className={cn("h-5 w-5", iconColor)} />
         </div>
         <div className="flex-1 min-w-0">
@@ -44,7 +47,7 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
             <h3 className="text-sm font-semibold text-text-primary truncate">{integration.name}</h3>
             <Circle className={cn("h-2 w-2 shrink-0", status.color)} />
           </div>
-          {!isWhatsApp && (
+          {!isMessenger && (
             <p className="text-xs text-text-secondary truncate mt-0.5">{integration.baseUrl}</p>
           )}
         </div>
@@ -58,7 +61,7 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
           <span className={cn("text-[11px] font-medium", status.color.split(" ")[0])}>
             {status.label}
           </span>
-          {!isWhatsApp && integration.entityCount > 0 && (
+          {!isMessenger && integration.entityCount > 0 && (
             <span className="text-[11px] text-text-secondary tabular-nums">
               {integration.entityCount} сущн.
             </span>
@@ -66,7 +69,7 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!isWhatsApp && onDiscover && integration.status !== "DISCOVERING" && (
+          {!isMessenger && onDiscover && integration.status !== "DISCOVERING" && (
             <button
               onClick={(e) => { e.stopPropagation(); onDiscover(integration.id); }}
               className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"
@@ -75,7 +78,7 @@ export function IntegrationCard({ integration, onDelete, onDiscover, onReconnect
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           )}
-          {isWhatsApp && onReconnect && integration.status !== "CONNECTED" && (
+          {isMessenger && onReconnect && integration.status !== "CONNECTED" && (
             <button
               onClick={(e) => { e.stopPropagation(); onReconnect(integration.id); }}
               className="h-7 w-7 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"

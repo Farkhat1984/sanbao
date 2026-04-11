@@ -1,4 +1,4 @@
-import { ArrowRight, Database, MessageCircle } from "lucide-react";
+import { ArrowRight, Database, MessageCircle, Send } from "lucide-react";
 import { INTEGRATION_TYPES } from "@/lib/constants";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { ElementType } from "react";
@@ -6,11 +6,13 @@ import type { ElementType } from "react";
 const ICON_MAP: Record<string, ElementType> = {
   Database,
   MessageCircle,
+  Send,
 };
 
 const DESCRIPTION_KEYS: Record<string, string> = {
   ODATA_1C: "integration.odataDescription",
   WHATSAPP: "integration.whatsappDescription",
+  TELEGRAM: "integration.telegramDescription",
 };
 
 interface StepTypeSelectorProps {

@@ -108,6 +108,58 @@ export async function POST(req: Request) {
     return jsonOk(serializeDates(integration), 201);
   }
 
+  if (type === "TELEGRAM") {
+    const tgServiceUrl = process.env.TELEGRAM_SERVICE_URL || "http://rk-tg:3001";
+    const tgServiceKey = process.env.TELEGRAM_SERVICE_API_KEY;
+    if (!tgServiceKey) {
+      return jsonError("Telegram сервис не настроен", 500);
+    }
+
+    const { botToken } = parsed.data;
+
+    // Create instance in rk-tg
+    let rkInstance: { id: string };
+    try {
+      const rkRes = await fetch(`${tgServiceUrl}/api/instances`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": tgServiceKey,
+        },
+        body: JSON.stringify({ name: `sanbao_${userId}_${name}`, botToken }),
+      });
+      if (!rkRes.ok) {
+        const errText = await rkRes.text().catch(() => "");
+        throw new Error(`rk-tg HTTP ${rkRes.status}: ${errText.slice(0, 200)}`);
+      }
+      rkInstance = await rkRes.json();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return jsonError(`Не удалось создать Telegram инстанс: ${msg}`, 502);
+    }
+
+    // Encrypt credentials (instanceId + service apiKey + botToken)
+    const credentials = encrypt(JSON.stringify({
+      instanceId: rkInstance.id,
+      apiKey: tgServiceKey,
+      botToken,
+    }));
+
+    const integration = await prisma.integration.create({
+      data: {
+        userId,
+        name,
+        type: "TELEGRAM",
+        baseUrl: tgServiceUrl,
+        status: "CONNECTED",
+        credentials,
+      },
+      select: INTEGRATION_SELECT,
+    });
+
+    return jsonOk(serializeDates(integration), 201);
+  }
+
   // OData 1C flow
   const { baseUrl, username, password } = parsed.data;
 

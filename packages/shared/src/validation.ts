@@ -142,6 +142,11 @@ export const integrationCreateSchema = z.discriminatedUnion("type", [
     type: z.literal("WHATSAPP"),
     name: z.string().min(1).max(200).transform((s) => s.trim()),
   }),
+  z.object({
+    type: z.literal("TELEGRAM"),
+    name: z.string().min(1).max(200).transform((s) => s.trim()),
+    botToken: z.string().min(30).max(200),
+  }),
 ]);
 
 export const integrationUpdateSchema = z.object({

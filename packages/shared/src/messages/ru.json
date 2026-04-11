@@ -221,7 +221,15 @@
     "qrRefresh": "Обновить QR-код",
     "qrError": "Не удалось получить QR-код",
     "whatsappDoneDescription": "WhatsApp подключён. Теперь вы можете добавить эту интеграцию к агенту.",
-    "reconnect": "Переподключить"
+    "reconnect": "Переподключить",
+    "telegramDescription": "Подключение Telegram бота для отправки и получения сообщений",
+    "telegramNamePlaceholder": "Например: Бот поддержки",
+    "botToken": "Токен бота",
+    "botTokenPlaceholder": "Вставьте токен от @BotFather",
+    "botTokenHint": "Получите токен у @BotFather в Telegram. Отправьте /newbot и следуйте инструкциям.",
+    "telegramConnected": "Бот подключён!",
+    "telegramDoneDescription": "Telegram бот подключён. Теперь вы можете добавить эту интеграцию к агенту.",
+    "telegramError": "Неверный токен или ошибка подключения"
   },
   "adminModels": {
     "newModel": "Новая модель",

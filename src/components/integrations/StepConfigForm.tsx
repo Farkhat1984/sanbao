@@ -8,12 +8,14 @@ interface StepConfigFormProps {
   baseUrl: string;
   username: string;
   password: string;
+  botToken?: string;
   saving: boolean;
   error: string | null;
   onNameChange: (value: string) => void;
   onBaseUrlChange: (value: string) => void;
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
+  onBotTokenChange?: (value: string) => void;
   onSave: () => void;
   onBack: () => void;
 }
@@ -25,21 +27,26 @@ export function StepConfigForm({
   baseUrl,
   username,
   password,
+  botToken,
   saving,
   error,
   onNameChange,
   onBaseUrlChange,
   onUsernameChange,
   onPasswordChange,
+  onBotTokenChange,
   onSave,
   onBack,
 }: StepConfigFormProps) {
   const { t } = useTranslation();
   const isWhatsApp = type === "WHATSAPP";
+  const isTelegram = type === "TELEGRAM";
 
   const isValid = isWhatsApp
     ? !!name.trim()
-    : !!name.trim() && !!baseUrl.trim();
+    : isTelegram
+      ? !!name.trim() && !!(botToken?.trim())
+      : !!name.trim() && !!baseUrl.trim();
 
   return (
     <div className="space-y-6">
@@ -52,13 +59,35 @@ export function StepConfigForm({
             type="text"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            placeholder={isWhatsApp ? t("integration.whatsappNamePlaceholder") : t("integration.namePlaceholder")}
+            placeholder={
+              isWhatsApp ? t("integration.whatsappNamePlaceholder") :
+              isTelegram ? t("integration.telegramNamePlaceholder") :
+              t("integration.namePlaceholder")
+            }
             maxLength={200}
             className="w-full h-10 px-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
           />
         </div>
 
-        {!isWhatsApp && (
+        {isTelegram && (
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">
+              {t("integration.botToken")} <span className="text-error">*</span>
+            </label>
+            <input
+              type="text"
+              value={botToken || ""}
+              onChange={(e) => onBotTokenChange?.(e.target.value)}
+              placeholder={t("integration.botTokenPlaceholder")}
+              className="w-full h-10 px-4 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors font-mono text-xs"
+            />
+            <p className="text-xs text-text-secondary mt-1">
+              {t("integration.botTokenHint")}
+            </p>
+          </div>
+        )}
+
+        {!isWhatsApp && !isTelegram && (
           <>
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">

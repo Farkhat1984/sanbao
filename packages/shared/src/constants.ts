@@ -196,6 +196,7 @@ export const IMPORTMAP_PACKAGES: Record<string, string> = {
 export const INTEGRATION_TYPES = [
   { value: "ODATA_1C", label: "1С OData", icon: "Database" },
   { value: "WHATSAPP", label: "WhatsApp", icon: "MessageCircle" },
+  { value: "TELEGRAM", label: "Telegram", icon: "Send" },
 ] as const;
 export const INTEGRATION_DISCOVERY_TIMEOUT_MS = 15_000;
 export const WHATSAPP_QR_POLL_INTERVAL_MS = 3_000;

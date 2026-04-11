@@ -37,3 +37,9 @@ export interface WhatsAppCredentials {
   instanceId: string;
   apiKey: string;
 }
+
+export interface TelegramCredentials {
+  instanceId: string;
+  apiKey: string;
+  botToken: string;
+}
