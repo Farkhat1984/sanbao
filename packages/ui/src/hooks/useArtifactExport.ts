@@ -23,8 +23,37 @@ interface UseArtifactExportOptions {
 }
 
 /**
+ * Request a screenshot from the iframe via postMessage.
+ * The iframe has a `capture-screenshot` handler that returns a data URL.
+ */
+function captureIframeScreenshot(previewRef: RefObject<HTMLDivElement | null>): Promise<string | null> {
+  return new Promise((resolve) => {
+    const iframe = previewRef.current?.querySelector("iframe") as HTMLIFrameElement | null;
+    if (!iframe?.contentWindow) {
+      resolve(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", handler);
+      resolve(null);
+    }, 5000);
+
+    function handler(e: MessageEvent) {
+      if (!e.data || e.data.type !== "screenshot-result") return;
+      window.removeEventListener("message", handler);
+      clearTimeout(timeout);
+      resolve(e.data.dataUrl || null);
+    }
+
+    window.addEventListener("message", handler);
+    iframe.contentWindow.postMessage({ type: "capture-screenshot" }, "*");
+  });
+}
+
+/**
  * Encapsulates all download/export logic for artifacts.
- * Supports IMAGE (PNG), CODE (.py/.tsx), and document formats (DOCX, PDF, TXT, XLSX, HTML, MD).
+ * Supports IMAGE (PNG), CODE (.py/.tsx + screenshot PNG), and document formats (DOCX, PDF, TXT, XLSX, HTML, MD).
  */
 export function useArtifactExport({ artifact, previewRef, activeTab, setTab, downloadFormat }: UseArtifactExportOptions) {
   const [isExporting, setIsExporting] = useState(false);
@@ -42,8 +71,28 @@ export function useArtifactExport({ artifact, previewRef, activeTab, setTab, dow
         return;
       }
 
-      // CODE type: download as .py or .tsx
+      // CODE type: download code or screenshot based on format
       if (artifact.type === "CODE") {
+        if (downloadFormat === "pdf") {
+          // Screenshot as PNG from iframe
+          if (activeTab !== "preview") {
+            setTab("preview");
+            await new Promise<void>((r) => setTimeout(r, 500));
+          }
+          const dataUrl = await captureIframeScreenshot(previewRef);
+          if (dataUrl) {
+            const a = document.createElement("a");
+            a.href = dataUrl;
+            a.download = `${sanitizeFilename(artifact.title)}.png`;
+            a.click();
+          } else {
+            // Fallback: download source code
+            const ext = isPythonCode(artifact.content) ? ".py" : ".tsx";
+            exportAsText(artifact.content, artifact.title, ext);
+          }
+          return;
+        }
+        // Default: download source code
         const ext = isPythonCode(artifact.content) ? ".py" : ".tsx";
         exportAsText(artifact.content, artifact.title, ext);
         return;

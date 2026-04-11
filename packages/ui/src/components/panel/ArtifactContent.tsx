@@ -169,7 +169,7 @@ export function ArtifactContent() {
           </button>
 
           {/* Format selector + Download */}
-          {activeArtifact.type === "IMAGE" || activeArtifact.type === "CODE" ? (
+          {activeArtifact.type === "IMAGE" ? (
             <button
               onClick={handleDownload}
               disabled={isExporting}
@@ -210,7 +210,10 @@ export function ArtifactContent() {
                     onClick={() => setFormatMenuOpen(false)}
                   />
                   <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
-                    {(["docx", "pdf", "txt", "xlsx", "html", "md"] as ExportFormat[]).map((fmt) => (
+                    {(activeArtifact.type === "CODE"
+                      ? (["txt", "pdf"] as ExportFormat[])
+                      : (["docx", "pdf", "txt", "xlsx", "html", "md"] as ExportFormat[])
+                    ).map((fmt) => (
                       <button
                         key={fmt}
                         onClick={() => handleSelectFormat(fmt)}
@@ -221,12 +224,21 @@ export function ArtifactContent() {
                         )}
                       >
                         <span>
-                          {fmt === "docx" && "Word (.docx)"}
-                          {fmt === "pdf" && "PDF (.pdf)"}
-                          {fmt === "txt" && "Текст (.txt)"}
-                          {fmt === "xlsx" && "Excel (.xlsx)"}
-                          {fmt === "html" && "HTML (.html)"}
-                          {fmt === "md" && "Markdown (.md)"}
+                          {activeArtifact.type === "CODE" ? (
+                            <>
+                              {fmt === "txt" && "Код (.py/.tsx)"}
+                              {fmt === "pdf" && "Скриншот (.png)"}
+                            </>
+                          ) : (
+                            <>
+                              {fmt === "docx" && "Word (.docx)"}
+                              {fmt === "pdf" && "PDF (.pdf)"}
+                              {fmt === "txt" && "Текст (.txt)"}
+                              {fmt === "xlsx" && "Excel (.xlsx)"}
+                              {fmt === "html" && "HTML (.html)"}
+                              {fmt === "md" && "Markdown (.md)"}
+                            </>
+                          )}
                         </span>
                         {downloadFormat === fmt && (
                           <Check className="h-3 w-3 text-accent" />

@@ -147,6 +147,37 @@ export function buildPythonHtml(code: string): string {
     window.addEventListener('unhandledrejection', function(e) {
       window.parent.postMessage({type:'preview-error', message:'Unhandled Promise: ' + (e.reason ? e.reason.toString() : 'unknown')}, '*');
     });
+
+    // Screenshot capture via postMessage
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'capture-screenshot') return;
+      try {
+        if (typeof Plotly !== 'undefined') {
+          var plots = document.querySelectorAll('.js-plotly-plot');
+          if (plots.length > 0) {
+            Plotly.toImage(plots[0], {format:'png', width:1200, height:800, scale:2})
+              .then(function(url) {
+                window.parent.postMessage({type:'screenshot-result', dataUrl: url}, '*');
+              });
+            return;
+          }
+        }
+        var canvas = document.querySelector('canvas');
+        if (canvas) {
+          window.parent.postMessage({type:'screenshot-result', dataUrl: canvas.toDataURL('image/png')}, '*');
+          return;
+        }
+        // For matplotlib: grab the rendered <img> elements
+        var imgs = document.querySelectorAll('#plot img');
+        if (imgs.length > 0) {
+          window.parent.postMessage({type:'screenshot-result', dataUrl: imgs[0].src}, '*');
+          return;
+        }
+        window.parent.postMessage({type:'screenshot-result', dataUrl: null}, '*');
+      } catch(err) {
+        window.parent.postMessage({type:'screenshot-result', dataUrl: null, error: err.toString()}, '*');
+      }
+    });
   })();
 
   ${usesPygame ? `
@@ -553,7 +584,7 @@ export function buildPreviewHtml(code: string): string {
     return buildPythonHtml(code);
   }
 
-  // Error reporter script — injected into any HTML
+  // Error reporter + screenshot handler — injected into any HTML
   const errorReporter = `<script>
 (function(){
   window.onerror = function(msg, url, line, col, error) {
@@ -564,6 +595,34 @@ export function buildPreviewHtml(code: string): string {
   };
   window.addEventListener('unhandledrejection', function(e) {
     window.parent.postMessage({type:'preview-error', message:'Unhandled Promise: ' + (e.reason ? e.reason.toString() : 'unknown')}, '*');
+  });
+
+  // Screenshot capture via postMessage
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'capture-screenshot') return;
+    try {
+      // Try plotly first — export all plotly charts as high-res images
+      if (typeof Plotly !== 'undefined') {
+        var plots = document.querySelectorAll('.js-plotly-plot');
+        if (plots.length > 0) {
+          Plotly.toImage(plots[0], {format:'png', width:1200, height:800, scale:2})
+            .then(function(url) {
+              window.parent.postMessage({type:'screenshot-result', dataUrl: url}, '*');
+            });
+          return;
+        }
+      }
+      // Fallback: capture canvas element
+      var canvas = document.querySelector('canvas');
+      if (canvas) {
+        window.parent.postMessage({type:'screenshot-result', dataUrl: canvas.toDataURL('image/png')}, '*');
+        return;
+      }
+      // Fallback: use html2canvas if available, or report that we need it
+      window.parent.postMessage({type:'screenshot-result', dataUrl: null, needsHtml2canvas: true}, '*');
+    } catch(err) {
+      window.parent.postMessage({type:'screenshot-result', dataUrl: null, error: err.toString()}, '*');
+    }
   });
 })();
 <\/script>`;
