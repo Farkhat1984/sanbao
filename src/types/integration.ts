@@ -32,3 +32,8 @@ export interface IntegrationFormData {
   username: string;
   password: string;
 }
+
+export interface WhatsAppCredentials {
+  instanceId: string;
+  apiKey: string;
+}

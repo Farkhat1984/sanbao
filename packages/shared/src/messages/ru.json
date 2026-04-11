@@ -186,8 +186,10 @@
     "backToIntegrations": "Назад к интеграциям",
     "selectType": "Выберите тип интеграции",
     "odataDescription": "OData API для обмена данными с 1С:Предприятие",
+    "whatsappDescription": "Подключение WhatsApp для отправки и получения сообщений",
     "name": "Название",
     "namePlaceholder": "Например: 1С Бухгалтерия",
+    "whatsappNamePlaceholder": "Например: Рабочий WhatsApp",
     "url": "URL OData API",
     "urlPlaceholder": "http://server:port/base/odata/standard.odata/",
     "urlHint": "Полный URL до корня OData-сервиса 1С",
@@ -210,7 +212,16 @@
     "doneTitle": "Интеграция подключена",
     "doneDescription": "Сущности обнаружены. Теперь вы можете подключить эту интеграцию к агенту.",
     "goToIntegrations": "К интеграциям",
-    "goToAgents": "К агентам"
+    "goToAgents": "К агентам",
+    "qrTitle": "Отсканируйте QR-код",
+    "qrDescription": "Откройте WhatsApp на телефоне → Настройки → Привязанные устройства → Привязать устройство",
+    "qrWaiting": "Ожидание сканирования...",
+    "qrConnecting": "Подключение...",
+    "qrConnected": "WhatsApp подключён!",
+    "qrRefresh": "Обновить QR-код",
+    "qrError": "Не удалось получить QR-код",
+    "whatsappDoneDescription": "WhatsApp подключён. Теперь вы можете добавить эту интеграцию к агенту.",
+    "reconnect": "Переподключить"
   },
   "adminModels": {
     "newModel": "Новая модель",

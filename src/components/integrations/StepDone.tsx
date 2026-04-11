@@ -4,9 +4,10 @@ import { useTranslation } from "@/hooks/useTranslation";
 interface StepDoneProps {
   onGoToIntegrations: () => void;
   onGoToAgents: () => void;
+  description?: string;
 }
 
-export function StepDone({ onGoToIntegrations, onGoToAgents }: StepDoneProps) {
+export function StepDone({ onGoToIntegrations, onGoToAgents, description }: StepDoneProps) {
   const { t } = useTranslation();
 
   return (
@@ -16,7 +17,7 @@ export function StepDone({ onGoToIntegrations, onGoToAgents }: StepDoneProps) {
       </div>
       <h2 className="text-lg font-semibold text-text-primary mb-2">{t("integration.doneTitle")}</h2>
       <p className="text-sm text-text-secondary mb-6">
-        {t("integration.doneDescription")}
+        {description || t("integration.doneDescription")}
       </p>
       <div className="flex items-center gap-3 justify-center">
         <button

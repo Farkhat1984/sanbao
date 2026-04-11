@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, jsonOk, jsonError, jsonValidationError, serializeDates } from "@/lib/api-helpers";
 import { integrationUpdateSchema } from "@/lib/validation";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, decrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
+import type { WhatsAppCredentials } from "@/types/integration";
 
 export async function GET(
   _req: Request,
@@ -97,6 +98,19 @@ export async function DELETE(
 
   const existing = await prisma.integration.findFirst({ where: { id, userId } });
   if (!existing) return jsonError("Интеграция не найдена", 404);
+
+  // Clean up rk-wa instance for WhatsApp integrations
+  if (existing.type === "WHATSAPP") {
+    try {
+      const creds = JSON.parse(decrypt(existing.credentials)) as WhatsAppCredentials;
+      await fetch(`${existing.baseUrl}/api/instances/${creds.instanceId}`, {
+        method: "DELETE",
+        headers: { "x-api-key": creds.apiKey },
+      });
+    } catch {
+      // Log but don't block deletion
+    }
+  }
 
   await prisma.integration.delete({ where: { id } });
 

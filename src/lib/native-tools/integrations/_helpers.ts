@@ -5,15 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/crypto";
 import { isUrlSafeAsync } from "@/lib/ssrf";
 import { getSettingNumber } from "@/lib/settings";
-import type { Integration } from "@prisma/client";
+import type { Integration, IntegrationType } from "@prisma/client";
+import type { WhatsAppCredentials } from "@/types/integration";
 
 /**
  * Look up a user's connected Integration by name or return the first connected one.
  * Only returns integrations with status=CONNECTED.
+ * Optional type filter prevents cross-type matches.
  */
 export async function getIntegrationForUser(
   userId: string,
-  integrationName?: string
+  integrationName?: string,
+  type?: IntegrationType
 ): Promise<Integration | null> {
   if (integrationName) {
     return prisma.integration.findFirst({
@@ -21,15 +24,57 @@ export async function getIntegrationForUser(
         userId,
         name: { equals: integrationName, mode: "insensitive" },
         status: "CONNECTED",
+        ...(type ? { type } : {}),
       },
     });
   }
 
-  // No name specified — return the first connected integration
   return prisma.integration.findFirst({
-    where: { userId, status: "CONNECTED" },
+    where: { userId, status: "CONNECTED", ...(type ? { type } : {}) },
     orderBy: { updatedAt: "desc" },
   });
+}
+
+/**
+ * Look up a user's connected WhatsApp integration.
+ */
+export async function getWhatsAppIntegrationForUser(
+  userId: string,
+  integrationName?: string
+): Promise<Integration | null> {
+  return getIntegrationForUser(userId, integrationName, "WHATSAPP");
+}
+
+/**
+ * Make an authenticated request to the rk-wa WhatsApp service.
+ * Decrypts stored credentials and adds x-api-key header.
+ */
+export async function makeWhatsAppRequest(
+  integration: Integration,
+  method: string,
+  path: string,
+  body?: Record<string, unknown>,
+  timeoutMs?: number
+): Promise<Response> {
+  const creds = JSON.parse(decrypt(integration.credentials)) as WhatsAppCredentials;
+  const url = `${integration.baseUrl}/api/whatsapp/${creds.instanceId}/${path}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs ?? 30_000);
+
+  try {
+    return await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": creds.apiKey,
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

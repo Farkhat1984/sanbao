@@ -250,6 +250,44 @@ services:
           memory: 256M
 
   # =========================================================================
+  # WhatsApp Integration (rk-wa)
+  # =========================================================================
+
+  rk-wa:
+    build:
+      context: ../rk-wa
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_PROVIDER=sqlite
+      - SQLITE_DATABASE_URL=file:/usr/src/app/data/whatsapp-api.db
+      - JWT_SECRET=${RK_WA_JWT_SECRET:?RK_WA_JWT_SECRET must be set in .env}
+      - JWT_EXPIRATION=30d
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=https://sanbao.ai
+      - ADMIN_EMAIL=${RK_WA_ADMIN_EMAIL:-whatsapp-service@sanbao.ai}
+      - ADMIN_PASSWORD=${RK_WA_ADMIN_PASSWORD:?RK_WA_ADMIN_PASSWORD must be set in .env}
+      - ADMIN_FIRST_NAME=Sanbao
+      - ADMIN_LAST_NAME=Service
+    volumes:
+      - rk_wa_data:/usr/src/app/data
+      - rk_wa_instances:/usr/src/app/instances
+      - rk_wa_uploads:/usr/src/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # =========================================================================
   # Sanbao App
   # =========================================================================
 
@@ -263,6 +301,8 @@ services:
       DIRECT_DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-sanbao}?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
       AI_CORTEX_PUBLIC_URL: https://leema.kz
+      WHATSAPP_SERVICE_URL: http://rk-wa:3000
+      WHATSAPP_SERVICE_API_KEY: ${WHATSAPP_SERVICE_API_KEY:-}
       NODE_ENV: production
       HOSTNAME: "0.0.0.0"
       SHUTDOWN_DRAIN_MS: "15000"
@@ -312,3 +352,6 @@ volumes:
   pgdata:
   redisdata:
   orchestrator_data:
+  rk_wa_data:
+  rk_wa_instances:
+  rk_wa_uploads:

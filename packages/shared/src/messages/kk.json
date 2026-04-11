@@ -186,8 +186,10 @@
     "backToIntegrations": "Интеграцияларға оралу",
     "selectType": "Интеграция түрін таңдаңыз",
     "odataDescription": "1С:Кәсіпорынмен деректер алмасу үшін OData API",
+    "whatsappDescription": "Хабарламалар жіберу және алу үшін WhatsApp қосылымы",
     "name": "Атауы",
     "namePlaceholder": "Мысалы: 1С Бухгалтерия",
+    "whatsappNamePlaceholder": "Мысалы: Жұмыс WhatsApp",
     "url": "OData API URL",
     "urlPlaceholder": "http://server:port/base/odata/standard.odata/",
     "urlHint": "1С OData-сервисінің толық URL мекенжайы",
@@ -210,7 +212,16 @@
     "doneTitle": "Интеграция қосылды",
     "doneDescription": "Нысандар анықталды. Енді бұл интеграцияны агентке қосуға болады.",
     "goToIntegrations": "Интеграцияларға",
-    "goToAgents": "Агенттерге"
+    "goToAgents": "Агенттерге",
+    "qrTitle": "QR-кодты сканерлеңіз",
+    "qrDescription": "Телефонда WhatsApp ашыңыз → Параметрлер → Байланыстырылған құрылғылар → Құрылғыны байланыстыру",
+    "qrWaiting": "Сканерлеуді күту...",
+    "qrConnecting": "Қосылу...",
+    "qrConnected": "WhatsApp қосылды!",
+    "qrRefresh": "QR-кодты жаңарту",
+    "qrError": "QR-кодты алу мүмкін болмады",
+    "whatsappDoneDescription": "WhatsApp қосылды. Енді бұл интеграцияны агентке қосуға болады.",
+    "reconnect": "Қайта қосу"
   },
   "adminModels": {
     "newModel": "Жаңа модель",

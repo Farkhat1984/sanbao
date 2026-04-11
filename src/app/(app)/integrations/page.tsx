@@ -99,6 +99,10 @@ export default function IntegrationsPage() {
     }
   }
 
+  function handleReconnect(id: string) {
+    router.push(`/integrations/${id}/edit`);
+  }
+
   async function handleDeleteConfirm() {
     if (!deleteId) return;
     const id = deleteId;
@@ -167,6 +171,7 @@ export default function IntegrationsPage() {
                     integration={intg}
                     onDelete={(id) => setDeleteId(id)}
                     onDiscover={handleDiscover}
+                    onReconnect={handleReconnect}
                     onClick={(id) => router.push(`/integrations/${id}/edit`)}
                   />
                 ))}
@@ -205,7 +210,7 @@ export default function IntegrationsPage() {
                 </div>
                 <h2 className="text-lg font-semibold text-text-primary mb-2">Нет интеграций</h2>
                 <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
-                  Подключите 1С или другую внешнюю систему для обмена данными через AI-агента
+                  Подключите 1С, WhatsApp или другую систему для обмена данными через AI-агента
                 </p>
                 <button
                   onClick={() => router.push("/integrations/new")}

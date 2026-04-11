@@ -1535,6 +1535,7 @@ enum NotificationType {
 
 enum IntegrationType {
   ODATA_1C
+  WHATSAPP
 }
 
 enum IntegrationStatus {

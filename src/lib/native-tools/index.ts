@@ -12,6 +12,9 @@ import "./core/content";
 // Integration tools: OData 1C
 import "./integrations/odata-1c";
 
+// Integration tools: WhatsApp
+import "./integrations/whatsapp";
+
 // Re-export everything from registry
 export {
   registerNativeTool,

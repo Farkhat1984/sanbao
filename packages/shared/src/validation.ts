@@ -130,13 +130,19 @@ export const orgAgentCreateSchema = z.object({
 
 // ─── Integration ────────────────────────────────────────
 
-export const integrationCreateSchema = z.object({
-  name: z.string().min(1).max(200).transform((s) => s.trim()),
-  type: z.enum(["ODATA_1C"]),
-  baseUrl: z.string().url().max(500),
-  username: z.string().min(1).max(200),
-  password: z.string().min(1).max(500),
-});
+export const integrationCreateSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("ODATA_1C"),
+    name: z.string().min(1).max(200).transform((s) => s.trim()),
+    baseUrl: z.string().url().max(500),
+    username: z.string().min(1).max(200),
+    password: z.string().min(1).max(500),
+  }),
+  z.object({
+    type: z.literal("WHATSAPP"),
+    name: z.string().min(1).max(200).transform((s) => s.trim()),
+  }),
+]);
 
 export const integrationUpdateSchema = z.object({
   name: z.string().min(1).max(200).transform((s) => s.trim()),

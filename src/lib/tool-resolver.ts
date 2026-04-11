@@ -283,9 +283,19 @@ export async function resolveAgentContext(
   // 4. Agent's integrations — inject compact catalog index into system prompt
   const catalogPreviewChars = await getSettingNumber('tool_catalog_preview_chars');
   if ("integrations" in agent && Array.isArray(agent.integrations)) {
-    for (const ai of agent.integrations as Array<{ integration: { status: string; catalog: string | null; name: string; baseUrl: string } }>) {
+    for (const ai of agent.integrations as Array<{ integration: { status: string; type: string; catalog: string | null; name: string; baseUrl: string } }>) {
       const intg = ai.integration;
-      if (intg.status === "CONNECTED" && intg.catalog) {
+      if (intg.status !== "CONNECTED") continue;
+
+      if (intg.type === "WHATSAPP") {
+        systemPrompt += `\n\n--- Интеграция: ${intg.name} (WhatsApp) ---`;
+        systemPrompt += `\nУ вас есть WhatsApp интеграция "${intg.name}". Доступные инструменты:`;
+        systemPrompt += `\n- whatsapp_send(phone, message) — отправить текстовое сообщение`;
+        systemPrompt += `\n- whatsapp_send_media(phone, url, caption) — отправить медиа (изображение, видео, документ) по URL`;
+        systemPrompt += `\n- whatsapp_contacts(search?) — поиск и список контактов`;
+        systemPrompt += `\n- whatsapp_messages(phone?, limit?) — последние сообщения`;
+        systemPrompt += `\n\nФормат номера: международный без «+» (например: 77001234567)`;
+      } else if (intg.catalog) {
         let indexText: string;
         try {
           const parsed = JSON.parse(intg.catalog);

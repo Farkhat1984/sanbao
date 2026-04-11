@@ -57,7 +57,59 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonValidationError(parsed.error);
   }
-  const { name, type, baseUrl, username, password } = parsed.data;
+
+  const { name, type } = parsed.data;
+
+  if (type === "WHATSAPP") {
+    const waServiceUrl = process.env.WHATSAPP_SERVICE_URL || "http://rk-wa:3000";
+    const waServiceKey = process.env.WHATSAPP_SERVICE_API_KEY;
+    if (!waServiceKey) {
+      return jsonError("WhatsApp сервис не настроен", 500);
+    }
+
+    // Create instance in rk-wa
+    let rkInstance: { id: string };
+    try {
+      const rkRes = await fetch(`${waServiceUrl}/api/instances`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": waServiceKey,
+        },
+        body: JSON.stringify({ name: `sanbao_${userId}_${name}` }),
+      });
+      if (!rkRes.ok) {
+        const errText = await rkRes.text().catch(() => "");
+        throw new Error(`rk-wa HTTP ${rkRes.status}: ${errText.slice(0, 200)}`);
+      }
+      rkInstance = await rkRes.json();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return jsonError(`Не удалось создать WhatsApp инстанс: ${msg}`, 502);
+    }
+
+    // Encrypt credentials (instanceId + service apiKey)
+    const credentials = encrypt(JSON.stringify({
+      instanceId: rkInstance.id,
+      apiKey: waServiceKey,
+    }));
+
+    const integration = await prisma.integration.create({
+      data: {
+        userId,
+        name,
+        type: "WHATSAPP",
+        baseUrl: waServiceUrl,
+        credentials,
+      },
+      select: INTEGRATION_SELECT,
+    });
+
+    return jsonOk(serializeDates(integration), 201);
+  }
+
+  // OData 1C flow
+  const { baseUrl, username, password } = parsed.data;
 
   // SSRF check
   const safe = await isUrlSafeAsync(baseUrl);

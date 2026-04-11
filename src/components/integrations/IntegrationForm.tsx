@@ -8,15 +8,21 @@ import type { Integration } from "@/types/integration";
 import { StepTypeSelector } from "./StepTypeSelector";
 import { StepConfigForm } from "./StepConfigForm";
 import { StepTestConnection } from "./StepTestConnection";
+import { StepQrCode } from "./StepQrCode";
 import { StepDone } from "./StepDone";
 
 interface IntegrationFormProps {
   integration?: Integration;
 }
 
-type Step = "type" | "config" | "test" | "done";
+type Step = "type" | "config" | "test" | "qr" | "done";
 
-const STEPS: Step[] = ["type", "config", "test", "done"];
+const ODATA_STEPS: Step[] = ["type", "config", "test", "done"];
+const WHATSAPP_STEPS: Step[] = ["type", "config", "qr", "done"];
+
+function getSteps(type: string): Step[] {
+  return type === "WHATSAPP" ? WHATSAPP_STEPS : ODATA_STEPS;
+}
 
 export function IntegrationForm({ integration }: IntegrationFormProps) {
   const router = useRouter();
@@ -36,10 +42,20 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(integration?.id || null);
 
+  const isWhatsApp = type === "WHATSAPP";
+  const steps = getSteps(type);
+
   const handleSave = async () => {
-    if (!name.trim() || !baseUrl.trim() || (!isEdit && (!username.trim() || !password.trim()))) {
-      setError(t("integration.fillRequired"));
-      return;
+    if (isWhatsApp) {
+      if (!name.trim()) {
+        setError(t("integration.fillRequired"));
+        return;
+      }
+    } else {
+      if (!name.trim() || !baseUrl.trim() || (!isEdit && (!username.trim() || !password.trim()))) {
+        setError(t("integration.fillRequired"));
+        return;
+      }
     }
 
     setSaving(true);
@@ -47,10 +63,16 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
 
     try {
       const url = isEdit ? `/api/integrations/${integration.id}` : "/api/integrations";
-      const body: Record<string, string> = { name, baseUrl };
-      if (!isEdit) body.type = type;
-      if (username) body.username = username;
-      if (password) body.password = password;
+      const body: Record<string, string> = { name };
+
+      if (isWhatsApp) {
+        if (!isEdit) body.type = "WHATSAPP";
+      } else {
+        body.baseUrl = baseUrl;
+        if (!isEdit) body.type = type;
+        if (username) body.username = username;
+        if (password) body.password = password;
+      }
 
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
@@ -65,7 +87,7 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
 
       const data = await res.json();
       setCreatedId(data.id);
-      setStep("test");
+      setStep(isWhatsApp ? "qr" : "test");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("integration.saveError"));
     } finally {
@@ -131,15 +153,15 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
       </h1>
 
       {/* Step indicator */}
-      {!isEdit && (
+      {!isEdit && steps.length > 0 && (
         <div className="flex items-center gap-2 mb-8">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full transition-colors ${
                 step === s ? "bg-accent" :
-                (STEPS.indexOf(step) > i ? "bg-accent/50" : "bg-border")
+                (steps.indexOf(step) > i ? "bg-accent/50" : "bg-border")
               }`} />
-              {i < 3 && <div className="w-8 h-px bg-border" />}
+              {i < steps.length - 1 && <div className="w-8 h-px bg-border" />}
             </div>
           ))}
         </div>
@@ -152,6 +174,7 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
       {step === "config" && (
         <StepConfigForm
           isEdit={isEdit}
+          type={type}
           name={name}
           baseUrl={baseUrl}
           username={username}
@@ -179,10 +202,19 @@ export function IntegrationForm({ integration }: IntegrationFormProps) {
         />
       )}
 
+      {step === "qr" && createdId && (
+        <StepQrCode
+          integrationId={createdId}
+          onConnected={() => setStep("done")}
+          onBack={() => setStep("config")}
+        />
+      )}
+
       {step === "done" && (
         <StepDone
           onGoToIntegrations={navigateToIntegrations}
           onGoToAgents={navigateToAgents}
+          description={isWhatsApp ? t("integration.whatsappDoneDescription") : undefined}
         />
       )}
     </div>
