@@ -294,6 +294,9 @@ export function ArtifactContent() {
                   code={activeArtifact.content}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   fileData={typeof window !== "undefined" ? (window as any).__SANBAO_FILE_DATA__ : undefined}
+                  onAutoFixed={(fixedCode) => {
+                    updateContent(activeArtifact.id, fixedCode);
+                  }}
                   onRequestChatFix={(error) => {
                     const isPygame = isPythonCode(activeArtifact.content) && /pygame/i.test(activeArtifact.content);
                     const code = activeArtifact.content;

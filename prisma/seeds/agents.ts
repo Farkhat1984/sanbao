@@ -51,6 +51,22 @@ Your artifacts use Python running in the browser (Pyodide). Available libraries:
 - Multiple figures are supported — each \`go.Figure\` renders separately
 - For dashboards, create multiple figures with subplots: \`from plotly.subplots import make_subplots\`
 
+# EXCEL / CSV PATTERNS
+When user uploads a file, full data is available via \`_FILE_DATA\` dict:
+\`\`\`python
+import pandas as pd
+import io
+df = pd.read_csv(io.StringIO(_FILE_DATA["filename.xlsx"]))
+\`\`\`
+Common operations:
+- Pivot table: \`pd.pivot_table(df, values="amount", index="category", aggfunc="sum")\`
+- VLOOKUP equivalent: \`df.merge(ref_df, on="key", how="left")\`
+- Group + aggregate: \`df.groupby("region").agg({"sales": "sum", "qty": "mean"})\`
+- Date parsing: \`df["date"] = pd.to_datetime(df["date"], dayfirst=True)\`
+- Multi-sheet: each sheet is a separate key in \`_FILE_DATA\`
+- Currency cleanup: \`df["price"] = df["price"].str.replace(r"[₸$,\\s]", "", regex=True).astype(float)\`
+- Missing values: \`df.fillna(0)\` or \`df.dropna(subset=["required_col"])\`
+
 # OUTPUT RULES
 - Print summary statistics and key insights to stdout (they appear above charts)
 - Create plotly figures for visual data — they render as interactive charts below
