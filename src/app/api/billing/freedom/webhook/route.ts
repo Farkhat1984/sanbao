@@ -4,6 +4,7 @@ import { verifySignature, buildCallbackResponse } from "@/lib/freedom-pay";
 import { logger, fireAndForget } from "@/lib/logger";
 import { invalidatePlanCache } from "@/lib/usage";
 import { sendInvoiceEmail, sendPaymentFailedNotification } from "@/lib/invoice";
+import { logSubscriptionChange } from "@/lib/subscription-history";
 
 /**
  * Freedom Pay result_url callback.
@@ -88,7 +89,12 @@ export async function POST(req: Request) {
           const expiresAt = new Date();
           expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-          await tx.subscription.upsert({
+          const currentSub = await tx.subscription.findUnique({
+            where: { userId: payment.userId },
+            select: { id: true, planId: true },
+          });
+
+          const sub = await tx.subscription.upsert({
             where: { userId: payment.userId },
             create: {
               userId: payment.userId,
@@ -98,6 +104,19 @@ export async function POST(req: Request) {
             update: {
               planId,
               expiresAt,
+            },
+          });
+
+          await tx.subscriptionHistory.create({
+            data: {
+              subscriptionId: sub.id,
+              userId: payment.userId,
+              action: currentSub ? "RENEWED" : "ACTIVATED",
+              fromPlanId: currentSub?.planId ?? null,
+              toPlanId: planId,
+              expiresAt,
+              reason: "Оплата через Freedom Pay",
+              performedBy: "freedom",
             },
           });
         }

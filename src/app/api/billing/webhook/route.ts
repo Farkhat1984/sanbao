@@ -5,6 +5,7 @@ import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { fireAndForget, logger } from "@/lib/logger";
 import { invalidatePlanCache } from "@/lib/usage";
 import { getStripe } from "@/lib/stripe-client";
+import { logSubscriptionChange } from "@/lib/subscription-history";
 
 /**
  * Stripe webhook handler.
@@ -54,10 +55,29 @@ export async function POST(req: Request) {
       if (userId && planSlug) {
         const plan = await prisma.plan.findUnique({ where: { slug: planSlug } });
         if (plan) {
-          await prisma.subscription.upsert({
+          const currentSub = await prisma.subscription.findUnique({
             where: { userId },
-            update: { planId: plan.id },
-            create: { userId, planId: plan.id },
+            select: { id: true, planId: true },
+          });
+
+          const expiresAt = new Date();
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+          const sub = await prisma.subscription.upsert({
+            where: { userId },
+            update: { planId: plan.id, expiresAt },
+            create: { userId, planId: plan.id, expiresAt },
+          });
+
+          await logSubscriptionChange({
+            subscriptionId: sub.id,
+            userId,
+            action: currentSub ? "RENEWED" : "ACTIVATED",
+            fromPlanId: currentSub?.planId ?? null,
+            toPlanId: plan.id,
+            expiresAt,
+            reason: "Оплата через Stripe",
+            performedBy: "stripe",
           });
 
           // Invalidate plan cache so the user sees their new plan immediately
@@ -157,10 +177,28 @@ export async function POST(req: Request) {
       if (deletedUserId) {
         const freePlan = await prisma.plan.findFirst({ where: { isDefault: true } });
         if (freePlan) {
+          const currentSub = await prisma.subscription.findUnique({
+            where: { userId: deletedUserId },
+            select: { id: true, planId: true },
+          });
+
           await prisma.subscription.updateMany({
             where: { userId: deletedUserId },
-            data: { planId: freePlan.id },
+            data: { planId: freePlan.id, expiresAt: null },
           });
+
+          if (currentSub) {
+            await logSubscriptionChange({
+              subscriptionId: currentSub.id,
+              userId: deletedUserId,
+              action: "CANCELLED",
+              fromPlanId: currentSub.planId,
+              toPlanId: freePlan.id,
+              reason: "Подписка отменена в Stripe",
+              performedBy: "stripe",
+            });
+          }
+
           await invalidatePlanCache(deletedUserId);
         }
       }

@@ -295,6 +295,61 @@ export async function orgInviteEmail(data: {
   };
 }
 
+export async function subscriptionActivatedEmail(data: {
+  userName: string;
+  planName: string;
+  expiresAt: string;
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("SUBSCRIPTION_ACTIVATED");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
+  return {
+    subject: "Подписка активирована — Sanbao",
+    html: baseLayout(`
+      <h2 style="margin:0 0 16px;color:#1C2B3A;">Подписка активирована!</h2>
+      <p style="color:#5E7A8A;line-height:1.6;">Здравствуйте, ${data.userName}!</p>
+      <p style="color:#5E7A8A;line-height:1.6;">Вам активирован тариф <strong style="color:#8FAF9F;">${data.planName}</strong>.</p>
+      <p style="color:#5E7A8A;line-height:1.6;">Срок действия: до <strong>${data.expiresAt}</strong>.</p>
+      <p style="color:#5E7A8A;line-height:1.6;">Теперь вам доступны все возможности тарифа. Приятной работы!</p>
+    `),
+  };
+}
+
+export async function subscriptionExpiredEmail(data: {
+  userName: string;
+  planName: string;
+  reason: string;
+}): Promise<{ subject: string; html: string }> {
+  const custom = await getCustomTemplate("SUBSCRIPTION_EXPIRED");
+  if (custom) {
+    let subject = custom.subject;
+    let html = custom.html;
+    for (const [k, v] of Object.entries(data)) {
+      const re = new RegExp(`\\{\\{${k}\\}\\}`, "g");
+      subject = subject.replace(re, v);
+      html = html.replace(re, v);
+    }
+    return { subject, html };
+  }
+  return {
+    subject: "Подписка завершена — Sanbao",
+    html: baseLayout(`
+      <h2 style="margin:0 0 16px;color:#1C2B3A;">Подписка завершена</h2>
+      <p style="color:#5E7A8A;line-height:1.6;">Здравствуйте, ${data.userName}!</p>
+      <p style="color:#5E7A8A;line-height:1.6;">Ваша подписка на тариф <strong>${data.planName}</strong> завершена (${data.reason}).</p>
+      <p style="color:#5E7A8A;line-height:1.6;">Вы были переведены на бесплатный тариф. Для продолжения использования всех возможностей продлите подписку в настройках.</p>
+    `),
+  };
+}
+
 export async function paymentFailedEmail(data: {
   userName: string;
   planName: string;

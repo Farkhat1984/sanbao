@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendEmail, invoiceEmail, subscriptionExpiringEmail, paymentFailedEmail } from "@/lib/email";
+import { sendEmail, invoiceEmail, subscriptionExpiringEmail, subscriptionActivatedEmail, subscriptionExpiredEmail, paymentFailedEmail } from "@/lib/email";
 
 // ─── Invoice number generation ──────────────────────────
 
@@ -108,6 +108,67 @@ export async function sendPaymentFailedNotification(opts: {
     subject,
     html,
     type: "PAYMENT_FAILED",
+    userId: opts.userId,
+  });
+}
+
+// ─── Subscription activated notification ────────────────
+
+export async function sendSubscriptionActivatedEmail(opts: {
+  userId: string;
+  planName: string;
+  expiresAt: Date;
+}) {
+  const user = await prisma.user.findUnique({
+    where: { id: opts.userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) return false;
+
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
+
+  const { subject, html } = await subscriptionActivatedEmail({
+    userName: user.name || "Пользователь",
+    planName: opts.planName,
+    expiresAt: formatDate(opts.expiresAt),
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject,
+    html,
+    type: "SUBSCRIPTION_ACTIVATED",
+    userId: opts.userId,
+  });
+}
+
+// ─── Subscription expired notification ──────────────────
+
+export async function sendSubscriptionExpiredEmail(opts: {
+  userId: string;
+  planName: string;
+  reason: string;
+}) {
+  const user = await prisma.user.findUnique({
+    where: { id: opts.userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) return false;
+
+  const { subject, html } = await subscriptionExpiredEmail({
+    userName: user.name || "Пользователь",
+    planName: opts.planName,
+    reason: opts.reason,
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject,
+    html,
+    type: "SUBSCRIPTION_EXPIRED",
     userId: opts.userId,
   });
 }
