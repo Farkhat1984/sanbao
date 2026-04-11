@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Bot, FileText, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { cn } from "@sanbao/shared/utils";
+import { ArrowLeft, Plus, Bot, FileText, Loader2, MessageSquare, Pencil } from "lucide-react";
 import { useInfiniteScroll } from "@sanbao/ui/hooks/useInfiniteScroll";
+import { useChatStore } from "@/stores/chatStore";
 
 interface OrgAgentItem {
   id: string;
@@ -14,14 +14,6 @@ interface OrgAgentItem {
   fileCount: number;
   createdAt: string;
 }
-
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  CREATING: { label: "Создание", icon: Loader2, color: "text-accent" },
-  PROCESSING: { label: "Обработка", icon: Loader2, color: "text-warning" },
-  READY: { label: "Готов", icon: CheckCircle, color: "text-success" },
-  PUBLISHED: { label: "Опубликован", icon: CheckCircle, color: "text-accent" },
-  ERROR: { label: "Ошибка", icon: AlertCircle, color: "text-error" },
-};
 
 const ORG_AGENTS_LIMIT = 20;
 
@@ -93,6 +85,30 @@ export default function OrgAgentsPage({
 
   const isAdmin = role === "OWNER" || role === "ADMIN";
 
+  const handleStartChat = async (agentId: string, agentName: string) => {
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Чат с ${agentName}`,
+          orgAgentId: agentId,
+        }),
+      });
+      if (!res.ok) return;
+      const conversation = await res.json();
+      const store = useChatStore.getState();
+      store.addConversation(conversation);
+      store.setActiveConversation(conversation.id);
+      store.setOrgAgentId(agentId);
+      store.setActiveAgentId(null);
+      store.setMessages([]);
+      router.push(`/chat/${conversation.id}`);
+    } catch {
+      // silent
+    }
+  };
+
   return (
     <div className="h-full">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -137,21 +153,17 @@ export default function OrgAgentsPage({
         {!isLoading && agents.length > 0 && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {agents.map((agent) => {
-                const config = STATUS_CONFIG[agent.status] || STATUS_CONFIG.CREATING;
-                const StatusIcon = config.icon;
-                return (
-                  <button
+              {agents.map((agent) => (
+                  <div
                     key={agent.id}
-                    onClick={() => router.push(`/organizations/${orgId}/agents/${agent.id}`)}
-                    className="p-5 rounded-2xl border border-border bg-surface hover:border-border-hover hover:shadow-sm transition-all text-left cursor-pointer group"
+                    className="p-5 rounded-2xl border border-border bg-surface transition-all group"
                   >
                     <div className="flex items-start gap-3 mb-3">
                       <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
                         <Bot className="h-5 w-5 text-accent" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-text-primary truncate group-hover:text-accent transition-colors">
+                        <h3 className="font-semibold text-text-primary truncate">
                           {agent.name}
                         </h3>
                         {agent.description && (
@@ -159,19 +171,30 @@ export default function OrgAgentsPage({
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-text-secondary">
-                      <span className={cn("flex items-center gap-1", config.color)}>
-                        <StatusIcon className={cn("h-3.5 w-3.5", agent.status === "PROCESSING" && "animate-spin")} />
-                        {config.label}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="h-3.5 w-3.5" />
-                        {agent.fileCount} файл(ов)
-                      </span>
+                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-4">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>{agent.fileCount} файл(ов)</span>
                     </div>
-                  </button>
-                );
-              })}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleStartChat(agent.id, agent.name)}
+                        className="h-8 px-4 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Начать чат
+                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => router.push(`/organizations/${orgId}/agents/${agent.id}/edit`)}
+                          className="h-8 px-3 rounded-lg border border-border text-text-secondary hover:text-text-primary text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Редактировать
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
             </div>
 
             {/* Infinite scroll sentinel */}

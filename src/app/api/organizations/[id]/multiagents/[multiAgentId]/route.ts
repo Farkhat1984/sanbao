@@ -21,11 +21,19 @@ export async function GET(
       members: true,
       files: { orderBy: { createdAt: "desc" } },
       createdBy: { select: { id: true, name: true } },
+      userAccess: { select: { userId: true } },
     },
   });
 
   if (!multiAgent || multiAgent.orgId !== orgId) {
     return jsonError("Мультиагент не найден", 404);
+  }
+
+  // Access check for non-admins
+  const isAdmin = membership.role === "OWNER" || membership.role === "ADMIN";
+  if (!isAdmin && multiAgent.accessMode === "SPECIFIC") {
+    const hasAccess = multiAgent.userAccess.some((ua) => ua.userId === userId);
+    if (!hasAccess) return jsonError("Нет доступа к этому мультиагенту", 403);
   }
 
   return jsonOk({

@@ -46,6 +46,9 @@ interface AgentKnowledgeSectionProps {
   onRefresh?: () => void;
   errorMessage?: string;
   toolCount?: number;
+  /** Override API base path. Defaults to `/api/agents/${agentId}/knowledge`.
+   *  For org agents use `/api/organizations/${orgId}/agents/${agentId}`. */
+  basePath?: string;
 }
 
 interface ProgressEvent {
@@ -66,7 +69,9 @@ export function AgentKnowledgeSection({
   onRefresh,
   errorMessage,
   toolCount,
+  basePath: basePathProp,
 }: AgentKnowledgeSectionProps) {
+  const basePath = basePathProp || `/api/agents/${agentId}/knowledge`;
   const [status, setStatus] = useState<KnowledgeStatus>(knowledgeStatus);
   const [files, setFiles] = useState<KnowledgeFile[]>(knowledgeFiles);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
@@ -90,7 +95,7 @@ export function AgentKnowledgeSection({
   const persistStatus = useCallback(
     async (newStatus: KnowledgeStatus) => {
       try {
-        await fetch(`/api/agents/${agentId}/knowledge/status`, {
+        await fetch(`${basePath}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
@@ -108,7 +113,7 @@ export function AgentKnowledgeSection({
     setProgress(95);
     try {
       const res = await fetch(
-        `/api/agents/${agentId}/knowledge/publish`,
+        `${basePath}/publish`,
         { method: "POST" }
       );
       if (!res.ok) {
@@ -133,7 +138,7 @@ export function AgentKnowledgeSection({
     if (status !== "PROCESSING") return;
 
     const es = new EventSource(
-      `/api/agents/${agentId}/knowledge/progress`
+      `${basePath}/progress`
     );
     esRef.current = es;
 
@@ -166,8 +171,29 @@ export function AgentKnowledgeSection({
       }
     };
 
-    es.onerror = () => {
+    es.onerror = async () => {
       es.close();
+      // SSE disconnected (e.g. Cloudflare 524 timeout).
+      // Poll orchestrator to check if pipeline actually completed.
+      try {
+        const res = await fetch(`${basePath}/process`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "ready" || data.status === "published") {
+            // Pipeline completed while SSE was disconnected — auto-publish
+            autoPublish();
+            return;
+          }
+        }
+      } catch {
+        // Ignore poll errors
+      }
+      // If pipeline is still running, reconnect SSE after a short delay
+      setTimeout(() => {
+        setStatus("PROCESSING"); // triggers useEffect to reconnect
+      }, 3_000);
     };
 
     return () => {
@@ -230,7 +256,7 @@ export function AgentKnowledgeSection({
       stagedFiles.forEach((f) => formData.append("files", f));
 
       const uploadRes = await fetch(
-        `/api/agents/${agentId}/knowledge/upload`,
+        `${basePath}/upload`,
         { method: "POST", body: formData }
       );
 
@@ -250,7 +276,7 @@ export function AgentKnowledgeSection({
       // Step 2: Start processing
       setStageName("Запуск обработки...");
       const processRes = await fetch(
-        `/api/agents/${agentId}/knowledge/process`,
+        `${basePath}/process`,
         { method: "POST" }
       );
 
@@ -277,7 +303,7 @@ export function AgentKnowledgeSection({
     setCancelling(true);
     try {
       esRef.current?.close();
-      await fetch(`/api/agents/${agentId}/knowledge/cancel`, {
+      await fetch(`${basePath}/cancel`, {
         method: "POST",
       });
       setStatus("NONE");
@@ -296,7 +322,7 @@ export function AgentKnowledgeSection({
     setDeleting(true);
     setShowDeleteConfirm(false);
     try {
-      const res = await fetch(`/api/agents/${agentId}/knowledge/delete`, {
+      const res = await fetch(`${basePath}/delete`, {
         method: "POST",
       });
       if (!res.ok) {

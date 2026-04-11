@@ -31,11 +31,13 @@ export async function POST(
 
   // Publish in AI Cortex with agent name for tool generation
   let endpoint: string;
+  let internalEndpoint: string;
   let domain: string;
   try {
     const agentSlug = `agent_${agentId}`;
     const result = await publishProject(nsApiKey, agent.projectId, agentSlug);
     endpoint = result.endpoint;
+    internalEndpoint = result.internalEndpoint;
     domain = result.domain;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Ошибка публикации";
@@ -63,9 +65,9 @@ export async function POST(
     });
   }
 
-  // Discover tools via the unified /mcp endpoint
+  // Discover tools via internal Docker endpoint (public URL not reachable from container)
   const { tools, error: discoverError } = await connectAndDiscoverTools(
-    endpoint,
+    internalEndpoint,
     "STREAMABLE_HTTP",
     nsApiKey
   );

@@ -49,14 +49,31 @@ export async function GET() {
     }
   }
 
-  const multiAgents = await prisma.multiAgent.findMany({
+  const allMultiAgents = await prisma.multiAgent.findMany({
     where: { orgId: { in: orgIds } },
     include: {
       org: { select: { id: true, name: true, slug: true } },
       members: { select: { agentType: true, agentId: true } },
+      userAccess: { select: { userId: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
+
+  // Filter multiagents by access mode
+  const filteredMultiAgents = [];
+  for (const ma of allMultiAgents) {
+    const role = roleMap.get(ma.orgId);
+    if (!role) continue;
+
+    if (ma.accessMode === "ALL_MEMBERS") {
+      filteredMultiAgents.push(ma);
+    } else if (role === "OWNER" || role === "ADMIN") {
+      filteredMultiAgents.push(ma);
+    } else {
+      const hasAccess = ma.userAccess.some((ua) => ua.userId === userId);
+      if (hasAccess) filteredMultiAgents.push(ma);
+    }
+  }
 
   return jsonOk({
     agents: filtered.map((a) => serializeDates({
@@ -70,7 +87,7 @@ export async function GET() {
       mcpServer: a.mcpServer,
       swarmEnabled: a.org.swarmEnabled,
     })),
-    multiAgents: multiAgents.map((ma) => serializeDates({
+    multiAgents: filteredMultiAgents.map((ma) => serializeDates({
       id: ma.id,
       orgId: ma.orgId,
       orgName: ma.org.name,

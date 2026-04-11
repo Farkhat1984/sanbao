@@ -15,8 +15,18 @@ export async function GET(
   });
   if (!membership) return jsonError("Нет доступа", 403);
 
+  const isAdmin = membership.role === "OWNER" || membership.role === "ADMIN";
+
   const multiAgents = await prisma.multiAgent.findMany({
-    where: { orgId },
+    where: {
+      orgId,
+      ...(!isAdmin && {
+        OR: [
+          { accessMode: "ALL_MEMBERS" },
+          { userAccess: { some: { userId } } },
+        ],
+      }),
+    },
     include: {
       members: true,
       createdBy: { select: { id: true, name: true } },

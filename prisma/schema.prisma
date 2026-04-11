@@ -91,8 +91,9 @@ model User {
   integrations   Integration[]
   ownedOrgs      Organization[] @relation("OrgOwner")
   orgMembers     OrgMember[]
-  orgAgentAccess OrgAgentMember[]
-  multiAgents    MultiAgent[] @relation("MultiAgentCreator")
+  orgAgentAccess      OrgAgentMember[]
+  multiAgentAccess    MultiAgentUserAccess[]
+  multiAgents         MultiAgent[] @relation("MultiAgentCreator")
   deviceTokens   DeviceToken[]
 
   createdAt DateTime @default(now())
@@ -1273,11 +1274,13 @@ model MultiAgent {
   iconColor      String?
   starterPrompts String[] @default([])
   createdById    String
+  accessMode     OrgAgentAccess @default(ALL_MEMBERS)
 
-  org       Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  createdBy User              @relation("MultiAgentCreator", fields: [createdById], references: [id])
-  members   MultiAgentMember[]
-  files     MultiAgentFile[]
+  org        Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy  User                    @relation("MultiAgentCreator", fields: [createdById], references: [id])
+  members    MultiAgentMember[]
+  files      MultiAgentFile[]
+  userAccess MultiAgentUserAccess[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1314,6 +1317,20 @@ model MultiAgentMember {
 
   @@unique([multiAgentId, agentId])
   @@index([multiAgentId])
+}
+
+model MultiAgentUserAccess {
+  id           String @id @default(cuid())
+  multiAgentId String
+  userId       String
+
+  multiAgent MultiAgent @relation(fields: [multiAgentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([multiAgentId, userId])
 }
 
 // ─── Integrations ──────────────────────────────────────

@@ -30,8 +30,49 @@ export async function GET(
   try {
     const response = await getProjectProgress(nsApiKey, agent.projectId);
 
-    // Proxy the SSE stream
-    return new Response(response.body, {
+    // Inject keepalive comments every 15s to prevent Cloudflare 524 timeout.
+    // Cloudflare kills connections with no data for 100s.
+    // The analyze phase can take 2+ minutes with no progress events.
+    const upstream = response.body;
+    if (!upstream) return jsonError("Нет данных", 502);
+
+    const reader = upstream.getReader();
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+
+        const sendKeepalive = () => {
+          try {
+            controller.enqueue(encoder.encode(": keepalive\n\n"));
+          } catch {
+            // Stream already closed
+          }
+        };
+
+        // Start keepalive timer
+        keepaliveTimer = setInterval(sendKeepalive, 15_000);
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+          controller.close();
+        } catch {
+          controller.close();
+        } finally {
+          if (keepaliveTimer) clearInterval(keepaliveTimer);
+        }
+      },
+      cancel() {
+        reader.cancel();
+      },
+    });
+
+    return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",

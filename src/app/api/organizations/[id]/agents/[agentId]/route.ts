@@ -25,11 +25,19 @@ export async function GET(
       mcpServer: { select: { id: true, name: true, url: true, status: true, discoveredTools: true } },
       skills: { include: { skill: { select: { id: true, name: true, icon: true, iconColor: true } } } },
       mcpServers: { include: { mcpServer: { select: { id: true, name: true, url: true, status: true } } } },
+      members: { select: { userId: true } },
       _count: { select: { files: true, members: true, conversations: true } },
     },
   });
 
   if (!agent) return jsonError("Агент не найден", 404);
+
+  // Access check for non-admins
+  const isAdmin = memberResult.member.role === "OWNER" || memberResult.member.role === "ADMIN";
+  if (!isAdmin && agent.accessMode === "SPECIFIC") {
+    const hasAccess = agent.members.some((m) => m.userId === userId);
+    if (!hasAccess) return jsonError("Нет доступа к этому агенту", 403);
+  }
 
   return jsonOk(serializeDates({
     ...agent,

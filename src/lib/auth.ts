@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
 import bcrypt from "bcryptjs";
 import { timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
@@ -67,8 +68,71 @@ async function getSessionTtlHours(): Promise<number> {
   }
 }
 
+// ─── Custom adapter: prevent auto-linking when user already has a Google account ───
+// Google can return the same email for different Google accounts (e.g. linked accounts).
+// Default PrismaAdapter would merge them into one User. This wrapper intercepts linkAccount
+// to detect and fix this before the Account record is created.
+function createAdapter(): Adapter {
+  const base = PrismaAdapter(prisma);
+
+  const originalLinkAccount = base.linkAccount!.bind(base);
+
+  base.linkAccount = async (account): Promise<void> => {
+    // Check if this user already has a DIFFERENT OAuth account for the same provider
+    const existingAccount = await prisma.account.findFirst({
+      where: {
+        userId: account.userId,
+        provider: account.provider,
+      },
+    });
+
+    if (existingAccount && existingAccount.providerAccountId !== account.providerAccountId) {
+      // User already has a different Google account linked.
+      // Create a separate user for this new Google account.
+      const existingUser = await prisma.user.findUnique({
+        where: { id: account.userId },
+        select: { email: true, name: true, image: true },
+      });
+
+      const uniqueEmail = `${account.provider}_${account.providerAccountId}@oauth.sanbao.ai`;
+      const newUser = await prisma.user.create({
+        data: {
+          email: uniqueEmail,
+          name: existingUser?.name ?? null,
+          image: existingUser?.image ?? null,
+          emailVerified: new Date(),
+        },
+      });
+
+      // Auto-assign free subscription
+      const freePlan = await prisma.plan.findFirst({ where: { isDefault: true } });
+      if (freePlan) {
+        await prisma.subscription.upsert({
+          where: { userId: newUser.id },
+          update: {},
+          create: { userId: newUser.id, planId: freePlan.id },
+        });
+      }
+
+      logger.info("Created separate user for duplicate OAuth provider", {
+        context: "AUTH",
+        provider: account.provider,
+        newUserId: newUser.id,
+        originalUserId: account.userId,
+      });
+
+      // Link to the new user instead
+      account.userId = newUser.id;
+    }
+
+    await originalLinkAccount(account);
+  };
+
+  return base;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: createAdapter(),
   trustHost: true,
   session: {
     strategy: "jwt",
@@ -208,12 +272,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id;
+        let userId = user.id as string;
+
+        // If linkAccount redirected to a different user (duplicate OAuth provider),
+        // resolve the actual user from the Account table.
+        if (account?.provider && account?.providerAccountId) {
+          const linked = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            select: { userId: true },
+          });
+          if (linked && linked.userId !== userId) {
+            userId = linked.userId;
+          }
+        }
+
+        token.id = userId;
         token.iat = Math.floor(Date.now() / 1000);
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id as string },
+          where: { id: userId },
           select: { role: true, twoFactorEnabled: true, securityStamp: true },
         });
         if (dbUser) {

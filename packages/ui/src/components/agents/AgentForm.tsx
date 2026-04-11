@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Loader2, Sparkles, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
 import { AgentKnowledgeSection } from "./AgentKnowledgeSection";
+import { AgentAccessSection } from "./AgentAccessSection";
 import { AgentSkillPicker } from "./AgentSkillPicker";
 import { AgentMcpPicker } from "./AgentMcpPicker";
 import { AgentIntegrationPicker } from "./AgentIntegrationPicker";
@@ -142,17 +143,7 @@ export function AgentForm({
         }
       }
 
-      // Redirect: org agent → detail page, regular agent → list
-      if (orgId) {
-        const targetId = isEdit ? agent!.id : created?.id;
-        if (targetId) {
-          router.push(`/organizations/${orgId}/agents/${targetId}`);
-        } else {
-          router.push(backUrl);
-        }
-      } else {
-        router.push(backUrl);
-      }
+      router.push(backUrl);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка сохранения");
@@ -337,7 +328,7 @@ export function AgentForm({
           <h2 className="text-sm font-semibold text-text-primary mb-4">Возможности</h2>
 
           <div className="space-y-6">
-            {/* Files — context extraction */}
+            {/* Documents in context — same for all agents */}
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">
                 Документы в контексте
@@ -349,12 +340,13 @@ export function AgentForm({
                 onFileRemoved={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
                 onFileUpdated={(f) => setFiles((prev) => prev.map((pf) => pf.id === f.id ? f : pf))}
                 onQueuedFilesChange={!isEdit ? setPendingFiles : undefined}
+                uploadUrl={orgId && agent?.id ? `/api/organizations/${orgId}/agents/${agent.id}/files` : undefined}
                 disabled={!canUseRag}
                 disabledMessage="Файлы знаний доступны только на тарифе Business"
               />
             </div>
 
-            {/* LeemaDB Knowledge Base — only for existing agents (need ID for API calls) */}
+            {/* LeemaDB Knowledge Base — on edit only */}
             {isEdit && agent?.id && (
               <div>
                 <label className="text-sm font-medium text-text-primary mb-2 block">
@@ -366,6 +358,7 @@ export function AgentForm({
                   knowledgeFiles={knowledgeFiles}
                   disabled={!canUseRag}
                   onRefresh={onKnowledgeRefresh}
+                  basePath={orgId ? `/api/organizations/${orgId}/agents/${agent.id}` : undefined}
                 />
                 <p className="text-xs text-text-secondary mt-1">
                   Файлы обрабатываются через AI-пайплайн для векторного поиска
@@ -417,6 +410,21 @@ export function AgentForm({
 
           </div>
         </div>
+
+        {/* Section 4: Access Management — only for existing org agents */}
+        {orgId && isEdit && agent?.id && (
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-text-secondary" />
+              Доступ
+            </h2>
+            <AgentAccessSection
+              accessPath={`/api/organizations/${orgId}/agents/${agent.id}/access`}
+              membersPath={`/api/organizations/${orgId}/members`}
+              entityLabel="агенту"
+            />
+          </div>
+        )}
 
         {/* Error */}
         {error && (

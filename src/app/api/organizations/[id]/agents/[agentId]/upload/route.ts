@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireOrgMember } from "@/lib/org-auth";
 import { checkOrgLimit, checkOrgFileSize } from "@/lib/org-limits";
 import { MAX_AGENT_FILE_SIZE } from "@/lib/constants";
-import { decrypt } from "@/lib/crypto";
+import { encrypt, decrypt } from "@/lib/crypto";
 import { uploadFile as uploadToS3 } from "@/lib/storage";
-import { uploadFile as uploadToCortex } from "@/lib/ai-cortex-client";
+import { createNamespace, createProject, uploadFile as uploadToCortex } from "@/lib/ai-cortex-client";
 
 export async function POST(
   req: Request,
@@ -23,10 +23,42 @@ export async function POST(
     where: { id: agentId, orgId: id },
   });
   if (!agent) return jsonError("Агент не найден", 404);
-  if (!agent.projectId) return jsonError("Проект не создан", 400);
 
   const org = await prisma.organization.findUnique({ where: { id } });
-  if (!org?.nsApiKey) return jsonError("Namespace не настроен", 400);
+  if (!org) return jsonError("Организация не найдена", 404);
+
+  // Lazy-create namespace if needed
+  let nsApiKey = org.nsApiKey ? decrypt(org.nsApiKey) : null;
+  if (!nsApiKey) {
+    try {
+      const ns = await createNamespace(org.namespace, org.name);
+      nsApiKey = ns.apiKey;
+      await prisma.organization.update({
+        where: { id },
+        data: { nsApiKey: encrypt(nsApiKey) },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ошибка создания namespace";
+      return jsonError(msg, 502);
+    }
+  }
+
+  // Lazy-create project if needed (e.g., after knowledge deletion)
+  let projectId = agent.projectId;
+  if (!projectId) {
+    try {
+      const agentSlug = `agent_${agentId}`;
+      const project = await createProject(nsApiKey, agentSlug, agent.name);
+      projectId = project.id;
+      await prisma.orgAgent.update({
+        where: { id: agentId },
+        data: { projectId },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ошибка создания проекта";
+      return jsonError(msg, 502);
+    }
+  }
 
   const formData = await req.formData().catch(() => null);
   if (!formData) return jsonError("Неверные данные формы", 400);
@@ -45,7 +77,6 @@ export async function POST(
     if (!fileLimit.allowed) return jsonError(fileLimit.error!, 403);
   }
 
-  const nsApiKey = decrypt(org.nsApiKey);
   const uploaded: Array<{ id: string; fileName: string; fileSize: number }> = [];
 
   for (const file of files) {
@@ -70,7 +101,7 @@ export async function POST(
 
     // Upload to AI Cortex
     try {
-      await uploadToCortex(nsApiKey, agent.projectId, buffer, file.name);
+      await uploadToCortex(nsApiKey, projectId!, buffer, file.name);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Ошибка загрузки в AI Cortex";
       return jsonError(`${file.name}: ${msg}`, 502);

@@ -23,8 +23,19 @@ export async function GET(
   const cursor = searchParams.get("cursor");
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 100);
 
+  const isAdmin = memberResult.member.role === "OWNER" || memberResult.member.role === "ADMIN";
+
   const agents = await prisma.orgAgent.findMany({
-    where: { orgId: id },
+    where: {
+      orgId: id,
+      // Non-admins only see ALL_MEMBERS agents or agents they have explicit access to
+      ...(!isAdmin && {
+        OR: [
+          { accessMode: "ALL_MEMBERS" },
+          { members: { some: { userId } } },
+        ],
+      }),
+    },
     include: { _count: { select: { files: true } } },
     orderBy: { createdAt: "desc" },
     take: limit + 1,
@@ -37,16 +48,8 @@ export async function GET(
     ? agents[agents.length - 1].id
     : null;
 
-  // Filter by access
-  const filtered = agents.filter((a) => {
-    if (a.accessMode === "ALL_MEMBERS") return true;
-    if (memberResult.member.role === "OWNER" || memberResult.member.role === "ADMIN") return true;
-    // SPECIFIC: check OrgAgentMember (we'd need a subquery, do it simply)
-    return true; // Will be filtered on detail page
-  });
-
   return jsonOk({
-    agents: filtered.map((a) => serializeDates({
+    agents: agents.map((a) => serializeDates({
       ...a,
       fileCount: a._count.files,
     })),

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Save, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Loader2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AgentIconPicker } from "./AgentIconPicker";
 import { AgentFileUpload } from "./AgentFileUpload";
+import { AgentAccessSection } from "./AgentAccessSection";
 import { AgentPicker } from "./AgentPicker";
 import { StarterPromptsEditor } from "./StarterPromptsEditor";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -243,6 +244,21 @@ export function MultiAgentForm({ orgId, multiAgent, canUseRag = false }: MultiAg
             orgId={orgId}
           />
         </div>
+
+        {/* Section 5: Access Management — only for existing multiagents */}
+        {isEdit && multiAgent?.id && (
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4 text-text-secondary" />
+              Доступ
+            </h2>
+            <AgentAccessSection
+              accessPath={`/api/organizations/${orgId}/multiagents/${multiAgent.id}/access`}
+              membersPath={`/api/organizations/${orgId}/members`}
+              entityLabel="мультиагенту"
+            />
+          </div>
+        )}
 
         {/* Error */}
         {error && (
