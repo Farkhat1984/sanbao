@@ -29,6 +29,7 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   xlsx: "XLSX",
   html: "HTML",
   md: "MD",
+  png: "PNG",
 };
 
 export function ArtifactContent() {
@@ -61,6 +62,17 @@ export function ArtifactContent() {
       });
     }
   }, [activeTabId, tabs]);
+
+  // Reset download format to a valid default when artifact type changes
+  useEffect(() => {
+    if (!activeArtifact) return;
+    if (activeArtifact.type === "CODE") {
+      setDownloadFormat("txt");
+    } else if (activeArtifact.type !== "IMAGE") {
+      setDownloadFormat("docx");
+    }
+  }, [activeArtifact?.id, activeArtifact?.type, setDownloadFormat]);
+
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -211,7 +223,7 @@ export function ArtifactContent() {
                   />
                   <div className="absolute top-full right-0 mt-1 z-50 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
                     {(activeArtifact.type === "CODE"
-                      ? (["txt", "pdf"] as ExportFormat[])
+                      ? (["txt", "png", "xlsx"] as ExportFormat[])
                       : (["docx", "pdf", "txt", "xlsx", "html", "md"] as ExportFormat[])
                     ).map((fmt) => (
                       <button
@@ -227,7 +239,8 @@ export function ArtifactContent() {
                           {activeArtifact.type === "CODE" ? (
                             <>
                               {fmt === "txt" && "Код (.py/.tsx)"}
-                              {fmt === "pdf" && "Скриншот (.png)"}
+                              {fmt === "png" && "Скриншот (.png)"}
+                              {fmt === "xlsx" && "Данные (.xlsx)"}
                             </>
                           ) : (
                             <>
@@ -290,6 +303,7 @@ export function ArtifactContent() {
                 </pre>
               )}
               {activeTab === "preview" && (
+                <div ref={previewRef} className="h-full">
                 <CodePreview
                   code={activeArtifact.content}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -308,6 +322,7 @@ export function ArtifactContent() {
                     setPendingInput(fixPrompt);
                   }}
                 />
+                </div>
               )}
               {activeTab === "edit" && (
                 <DocumentEditor

@@ -182,6 +182,18 @@ export function buildPythonHtml(code: string, fileData?: Record<string, string>)
         window.parent.postMessage({type:'screenshot-result', dataUrl: null, error: err.toString()}, '*');
       }
     });
+
+    // Text output capture via postMessage (for xlsx export of print() results)
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'capture-text-output') return;
+      try {
+        var outputEl = document.getElementById('output');
+        var text = outputEl ? outputEl.textContent : '';
+        window.parent.postMessage({type:'text-output-result', text: text || ''}, '*');
+      } catch(err) {
+        window.parent.postMessage({type:'text-output-result', text: ''}, '*');
+      }
+    });
   })();
 
   ${usesPygame ? `
@@ -193,13 +205,40 @@ export function buildPythonHtml(code: string, fileData?: Record<string, string>)
   };
   ` : ""}
   </script>
-  <script src="${PYODIDE_CDN_URL}"></script>
   <script>
   (async function() {
     var output = document.getElementById('output');
     var loading = document.getElementById('loading');
 
     try {
+      // Dynamically load Pyodide with error handling + fallback CDN
+      if (typeof loadPyodide === 'undefined') {
+        var _pyodideCDNs = [
+          "${PYODIDE_CDN_URL}",
+          "https://pyodide.pages.dev/v0.27.4/full/pyodide.js"
+        ];
+        var _loaded = false;
+        for (var _ci = 0; _ci < _pyodideCDNs.length; _ci++) {
+          try {
+            loading.textContent = 'Загрузка Python' + (_ci > 0 ? ' (резервный CDN)...' : '...');
+            await new Promise(function(resolve, reject) {
+              var s = document.createElement('script');
+              s.src = _pyodideCDNs[_ci];
+              s.onload = resolve;
+              s.onerror = function() { reject(new Error('CDN load failed: ' + _pyodideCDNs[_ci])); };
+              document.head.appendChild(s);
+            });
+            _loaded = true;
+            break;
+          } catch(_cdnErr) {
+            console.warn(_cdnErr.message);
+          }
+        }
+        if (!_loaded) {
+          throw new Error('Не удалось загрузить Python (Pyodide). Проверьте интернет-соединение.');
+        }
+      }
+
       var pyodide = await loadPyodide({
         indexURL: "${PYODIDE_CDN_URL.replace("/pyodide.js", "/")}"
       });
@@ -650,6 +689,18 @@ export function buildPreviewHtml(code: string, fileData?: Record<string, string>
       window.parent.postMessage({type:'screenshot-result', dataUrl: null, needsHtml2canvas: true}, '*');
     } catch(err) {
       window.parent.postMessage({type:'screenshot-result', dataUrl: null, error: err.toString()}, '*');
+    }
+  });
+
+  // Text output capture via postMessage (for xlsx export)
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'capture-text-output') return;
+    try {
+      var outputEl = document.getElementById('output') || document.getElementById('root');
+      var text = outputEl ? outputEl.textContent : '';
+      window.parent.postMessage({type:'text-output-result', text: text || ''}, '*');
+    } catch(err) {
+      window.parent.postMessage({type:'text-output-result', text: ''}, '*');
     }
   });
 })();

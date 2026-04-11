@@ -1,32 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { RefreshCw, Maximize2, Minimize2, Wrench, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { RefreshCw, Maximize2, Minimize2, Wrench, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildPreviewHtml } from "@/lib/code-preview-builder";
-import { MAX_AUTO_FIX_ATTEMPTS } from "@/lib/constants";
 
 interface CodePreviewProps {
   code: string;
   /** File data map (filename → CSV) for large tabular files — injected into Python sandbox */
   fileData?: Record<string, string>;
-  /** Called when auto-fix produces new code — parent should update the artifact */
+  /** @deprecated Auto-fix disabled — kept for API compatibility */
   onAutoFixed?: (fixedCode: string) => void;
   onRequestChatFix?: (error: string) => void;
 }
 
 export { isPythonCode } from "@/lib/code-preview-builder";
 
-export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: CodePreviewProps) {
+export function CodePreview({ code, fileData, onRequestChatFix }: CodePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [key, setKey] = useState(0);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sentToChat, setSentToChat] = useState(false);
-  const [isAutoFixing, setIsAutoFixing] = useState(false);
-  const [autoFixAttempt, setAutoFixAttempt] = useState(0);
-  const autoFixRef = useRef(0); // track attempts across renders
 
   const html = useMemo(() => buildPreviewHtml(code, fileData), [code, fileData, key]);
 
@@ -35,41 +31,7 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
     setHasError(false);
     setErrorMessage("");
     setSentToChat(false);
-    setIsAutoFixing(false);
-    // Don't reset autoFixAttempt here — it persists across fix cycles
   }, [code]);
-
-  // Auto-fix: call /api/fix-code and update artifact
-  const attemptAutoFix = useCallback(async (error: string, currentCode: string) => {
-    if (autoFixRef.current >= MAX_AUTO_FIX_ATTEMPTS) return;
-    autoFixRef.current++;
-    setAutoFixAttempt(autoFixRef.current);
-    setIsAutoFixing(true);
-
-    try {
-      const res = await fetch("/api/fix-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: currentCode, error }),
-      });
-
-      if (!res.ok) {
-        setIsAutoFixing(false);
-        return;
-      }
-
-      const { fixedCode } = await res.json();
-      if (fixedCode && fixedCode !== currentCode && onAutoFixed) {
-        setHasError(false);
-        setErrorMessage("");
-        onAutoFixed(fixedCode);
-      } else {
-        setIsAutoFixing(false);
-      }
-    } catch {
-      setIsAutoFixing(false);
-    }
-  }, [onAutoFixed]);
 
   // Listen for postMessage from iframe
   useEffect(() => {
@@ -78,27 +40,16 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
       if (!e.data || typeof e.data !== "object") return;
 
       if (e.data.type === "preview-error") {
-        const err = e.data.message || "Unknown error";
         setHasError(true);
-        setErrorMessage(err);
-        setIsAutoFixing(false);
-
-        // Auto-fix if we haven't exceeded attempts and onAutoFixed is provided
-        if (onAutoFixed && autoFixRef.current < MAX_AUTO_FIX_ATTEMPTS) {
-          attemptAutoFix(err, code);
-        }
+        setErrorMessage(e.data.message || "Unknown error");
       } else if (e.data.type === "preview-ready") {
         setHasError(false);
         setErrorMessage("");
-        setIsAutoFixing(false);
-        // Reset attempt counter on success
-        autoFixRef.current = 0;
-        setAutoFixAttempt(0);
       }
     }
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [code, onAutoFixed, attemptAutoFix]);
+  }, []);
 
   const handleRequestFix = () => {
     if (!onRequestChatFix || !errorMessage) return;
@@ -109,8 +60,6 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
   const handleRefresh = () => {
     setHasError(false);
     setErrorMessage("");
-    autoFixRef.current = 0;
-    setAutoFixAttempt(0);
     setKey((k) => k + 1);
   };
 
@@ -125,12 +74,6 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
           <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wide">
             Live Preview
           </span>
-          {isAutoFixing && (
-            <span className="flex items-center gap-1 text-[10px] text-warning font-medium">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Авто-исправление ({autoFixAttempt}/{MAX_AUTO_FIX_ATTEMPTS})
-            </span>
-          )}
           {sentToChat && (
             <span className="flex items-center gap-1 text-[10px] text-success font-medium">
               <Check className="h-3 w-3" />
@@ -139,7 +82,7 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
           )}
         </div>
         <div className="flex items-center gap-1">
-          {hasError && !isAutoFixing && onRequestChatFix && !sentToChat && (
+          {hasError && onRequestChatFix && !sentToChat && (
             <button
               onClick={handleRequestFix}
               className="h-6 px-2 rounded-md flex items-center gap-1 text-[10px] text-warning hover:bg-surface transition-colors cursor-pointer"
@@ -171,7 +114,7 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
       </div>
 
       {/* Error bar */}
-      {hasError && errorMessage && !isAutoFixing && (
+      {hasError && errorMessage && (
         <div className="px-3 py-2 bg-error/10 border-b border-error/20 shrink-0">
           <pre className="text-[11px] text-error font-mono whitespace-pre-wrap break-words max-h-20 overflow-y-auto">
             {errorMessage}
@@ -179,13 +122,13 @@ export function CodePreview({ code, fileData, onAutoFixed, onRequestChatFix }: C
         </div>
       )}
 
-      {/* iframe — srcdoc instead of blob URL */}
+      {/* iframe */}
       <div className="flex-1 relative bg-white">
         <iframe
           ref={iframeRef}
           key={key}
           srcDoc={html}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-same-origin"
           className="w-full h-full border-0"
           title="Code Preview"
         />

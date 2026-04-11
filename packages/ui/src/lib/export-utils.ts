@@ -1,4 +1,4 @@
-export type ExportFormat = "docx" | "pdf" | "txt" | "xlsx" | "html" | "md";
+export type ExportFormat = "docx" | "pdf" | "txt" | "xlsx" | "html" | "md" | "png";
 
 export function sanitizeFilename(name: string): string {
   return name

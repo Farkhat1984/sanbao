@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const textModel = await resolveModel("CODE");
+    const textModel = await resolveModel("CODE") ?? await resolveModel("TEXT");
     if (!textModel) {
       return jsonError("No code model configured", 503);
     }

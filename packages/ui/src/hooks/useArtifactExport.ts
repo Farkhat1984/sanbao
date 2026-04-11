@@ -52,6 +52,35 @@ function captureIframeScreenshot(previewRef: RefObject<HTMLDivElement | null>): 
 }
 
 /**
+ * Request text output from the iframe via postMessage.
+ * The iframe returns its #output textContent (Python print() results).
+ */
+function captureIframeTextOutput(previewRef: RefObject<HTMLDivElement | null>): Promise<string | null> {
+  return new Promise((resolve) => {
+    const iframe = previewRef.current?.querySelector("iframe") as HTMLIFrameElement | null;
+    if (!iframe?.contentWindow) {
+      resolve(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", handler);
+      resolve(null);
+    }, 3000);
+
+    function handler(e: MessageEvent) {
+      if (!e.data || e.data.type !== "text-output-result") return;
+      window.removeEventListener("message", handler);
+      clearTimeout(timeout);
+      resolve(e.data.text || null);
+    }
+
+    window.addEventListener("message", handler);
+    iframe.contentWindow.postMessage({ type: "capture-text-output" }, "*");
+  });
+}
+
+/**
  * Encapsulates all download/export logic for artifacts.
  * Supports IMAGE (PNG), CODE (.py/.tsx + screenshot PNG), and document formats (DOCX, PDF, TXT, XLSX, HTML, MD).
  */
@@ -71,9 +100,9 @@ export function useArtifactExport({ artifact, previewRef, activeTab, setTab, dow
         return;
       }
 
-      // CODE type: download code or screenshot based on format
+      // CODE type: download source code, screenshot, or data based on format
       if (artifact.type === "CODE") {
-        if (downloadFormat === "pdf") {
+        if (downloadFormat === "png") {
           // Screenshot as PNG from iframe
           if (activeTab !== "preview") {
             setTab("preview");
@@ -92,7 +121,22 @@ export function useArtifactExport({ artifact, previewRef, activeTab, setTab, dow
           }
           return;
         }
-        // Default: download source code
+        if (downloadFormat === "xlsx") {
+          // Extract text output from iframe and export as xlsx
+          if (activeTab !== "preview") {
+            setTab("preview");
+            await new Promise<void>((r) => setTimeout(r, 500));
+          }
+          const textData = await captureIframeTextOutput(previewRef);
+          if (textData) {
+            exportAsXlsx(textData, artifact.title);
+          } else {
+            // Fallback: export source code as text
+            exportAsText(artifact.content, artifact.title, ".txt");
+          }
+          return;
+        }
+        // Default (txt): download source code
         const ext = isPythonCode(artifact.content) ? ".py" : ".tsx";
         exportAsText(artifact.content, artifact.title, ext);
         return;

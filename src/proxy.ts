@@ -98,14 +98,20 @@ function isCsrfExempt(pathname: string): boolean {
 // so we must allow 'unsafe-inline' for scripts. 'strict-dynamic' + nonce
 // would block all Next.js-generated scripts.
 
+// CDN domains used by code preview iframe (Pyodide, Plotly, Babel, Tailwind, ESM imports)
+const PREVIEW_CDNS = "https://cdn.jsdelivr.net https://pyodide.pages.dev https://cdn.plot.ly https://unpkg.com https://cdn.tailwindcss.com https://esm.sh";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
+  // 'unsafe-eval' needed for Pyodide WebAssembly compilation + Babel JSX transform inside preview iframe
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://static.cloudflareinsights.com ${PREVIEW_CDNS}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.sentry.io https://*.cloudflare.com https://static.cloudflareinsights.com https://api.moonshot.cn https://api.deepinfra.com https://api.stripe.com wss:",
+  // https: needed for Pyodide/micropip to fetch packages from pypi.org, files.pythonhosted.org, etc.
+  "connect-src 'self' https: wss:",
   "media-src 'self' blob: https:",
+  `worker-src 'self' blob: ${PREVIEW_CDNS}`,
   "frame-src 'self' blob: data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
