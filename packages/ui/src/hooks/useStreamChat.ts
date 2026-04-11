@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { openArtifactInPanel } from "@/lib/panel-actions";
 import type { ArtifactType } from "@/types/chat";
 import type { AttachedFile } from "@/hooks/useFileAttachment";
-import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
+import { DEFAULT_CONVERSATION_TITLE, MAX_CONTEXT_MESSAGES } from "@/lib/constants";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -162,7 +162,12 @@ export function useStreamChat({
     let fullReasoning = "";
 
     try {
-      const apiMessages = [...messages, userMessage]
+      // Only send the last N messages — older ones are covered by server-side summary
+      const allMessages = [...messages, userMessage];
+      const recentMessages = allMessages.length > MAX_CONTEXT_MESSAGES
+        ? allMessages.slice(-MAX_CONTEXT_MESSAGES)
+        : allMessages;
+      const apiMessages = recentMessages
         .filter((m) => m.content.trim() !== "")
         .map((m) => ({
           role: m.role.toLowerCase(),

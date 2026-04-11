@@ -126,17 +126,27 @@ export async function loadChatContext(params: {
   }
 
   // ─── Autocompact ───────────────────────────────────
+  // If a summary already covers older messages and the client sent a
+  // trimmed tail (≤ keepLastMessages), skip the expensive full-array
+  // token estimation — the old messages are already summarized.
   const systemTokens = estimateTokens(systemPrompt);
   const effectiveContextWindow = Math.min(planContextWindowSize, textModel?.contextWindow ?? Infinity);
-  const contextCheck = await checkContextWindow(messages, systemTokens, effectiveContextWindow);
 
   let effectiveMessages = messages;
   let isCompacting = false;
 
+  // Check context window — reuse result for contextInfo
+  const contextCheck = await checkContextWindow(messages, systemTokens, effectiveContextWindow);
+
   if (contextCheck.needsCompaction) {
+    // If summary exists and we only have the tail, keep even fewer messages
+    const keepCount = (existingSummary && messages.length <= keepLastMessages)
+      ? Math.max(4, Math.floor(keepLastMessages / 2))
+      : keepLastMessages;
+
     const { messagesToSummarize, messagesToKeep } = await splitMessagesForCompaction(
       messages,
-      keepLastMessages
+      keepCount
     );
     if (messagesToSummarize.length > 0) {
       effectiveMessages = messagesToKeep;

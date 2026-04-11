@@ -125,6 +125,8 @@ export const CACHE_TTL = 60_000;
 // ─── Context compaction ───
 export const CONTEXT_COMPACTION_THRESHOLD = 0.7;
 export const CONTEXT_KEEP_LAST_MESSAGES = 12;
+/** Max messages the client sends to /api/chat (older ones are covered by summary) */
+export const MAX_CONTEXT_MESSAGES = 50;
 
 // ─── Webhook ───
 export const WEBHOOK_MAX_ATTEMPTS = 3;

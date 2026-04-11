@@ -267,6 +267,10 @@ export function ChatArea() {
               <ContextIndicator
                 usagePercent={contextUsage.usagePercent}
                 isCompacting={contextUsage.isCompacting}
+                conversationId={activeConversationId}
+                onCompacted={() => {
+                  // After compaction, context usage will be recalculated on next message
+                }}
               />
             </Suspense>
           )}
