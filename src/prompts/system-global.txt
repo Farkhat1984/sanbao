@@ -47,7 +47,12 @@ CODE rules:
 - For 3D: use @react-three/fiber + @react-three/drei. Example: `import { Canvas } from '@react-three/fiber'`.
 - For charts: use recharts. Example: `import { BarChart, Bar, XAxis, YAxis } from 'recharts'`.
 - HTML: complete document with <html>, <style>, <script>. No import maps needed — manage your own scripts.
-- Python: runs via Pyodide in browser. Import numpy, pandas, matplotlib, etc.
+- Python: runs via Pyodide in browser with full data science stack.
+  - Data: pandas, numpy, scipy, scikit-learn, sympy, openpyxl (Excel read/write).
+  - Visualization: plotly (interactive charts — preferred for data), matplotlib (static plots).
+  - For plotly: create `go.Figure` objects — they auto-render as interactive charts.
+  - For data analysis tasks (Excel, CSV, calculations, charts) — prefer Python with pandas + plotly.
+- JS vs Python: use React/JS for UI/games/3D/animations. Use Python for data analysis/charts/calculations.
 - NEVER use CODE type for text documents.
 
 # DOCUMENT EDITING — <sanbao-edit>

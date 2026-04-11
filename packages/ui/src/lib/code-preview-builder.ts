@@ -15,17 +15,40 @@ import {
 export function isPythonCode(raw: string): boolean {
   // Fence explicitly marked as python/py
   if (/^```(?:python|py)\n/i.test(raw.trim())) return true;
-  // Strip any fences before checking syntax markers
+  // Fence explicitly marked as JS/TS/JSX/TSX/HTML — NOT Python
+  if (/^```(?:jsx?|tsx?|javascript|typescript|html)\n/i.test(raw.trim())) return false;
+
   const stripped = raw.replace(/^```\w*\n|```$/gm, "").trim();
-  const markers = [
-    /^def\s+\w+\s*\(/m,
-    /^import\s+\w+/m,
-    /^from\s+\w+\s+import\s/m,
-    /\bprint\s*\(/,
-    /^class\s+\w+.*:/m,
-    /if\s+__name__\s*==\s*['"]__main__['"]/,
+
+  // JS/React disqualifiers — if any match, it's definitely not Python
+  const jsMarkers = [
+    /\bconst\s+\w+\s*=/m,           // const x =
+    /\blet\s+\w+\s*=/m,             // let x =
+    /=>/,                            // arrow function
+    /\bfunction\s+\w+\s*\(/m,       // function name(
+    /<[A-Z]\w+[\s/>]/,               // JSX component <Component
+    /<div[\s>]/,                     // JSX <div
+    /import\s+.*\s+from\s+['"]/m,   // import X from 'pkg' (ES module)
+    /import\s*\{[^}]+\}\s*from/m,   // import { X } from 'pkg'
+    /React\./,                       // React.createElement etc.
+    /useState|useEffect|useRef/,     // React hooks
+    /document\.\w+/,                 // document.getElementById etc.
   ];
-  const hits = markers.filter((r) => r.test(stripped)).length;
+  if (jsMarkers.some((r) => r.test(stripped))) return false;
+
+  // Python markers
+  const pyMarkers = [
+    /^def\s+\w+\s*\(/m,
+    /^from\s+\w+\s+import\s/m,      // from X import Y (Python-specific)
+    /\bprint\s*\(/,
+    /^class\s+\w+.*:/m,             // class Foo: (with colon)
+    /if\s+__name__\s*==\s*['"]__main__['"]/,
+    /^\s*#\s*\w/m,                   // Python comments
+    /\bself\.\w+/,                   // self.attribute
+    /\bdef\s+__\w+__/m,             // dunder methods
+    /\bimport\s+(?:pandas|numpy|matplotlib|plotly|scipy|pygame|sympy|csv|json|os|sys|re|math)\b/,
+  ];
+  const hits = pyMarkers.filter((r) => r.test(stripped)).length;
   return hits >= 2;
 }
 
@@ -37,6 +60,7 @@ const PYODIDE_PACKAGE_MAP: Record<string, string> = {
   numpy: "numpy",
   pandas: "pandas",
   matplotlib: "matplotlib",
+  plotly: "plotly",
   scipy: "scipy",
   sklearn: "scikit-learn",
   PIL: "Pillow",
@@ -45,6 +69,14 @@ const PYODIDE_PACKAGE_MAP: Record<string, string> = {
   requests: "requests",
   yaml: "pyyaml",
   bs4: "beautifulsoup4",
+  openpyxl: "openpyxl",
+  xlrd: "xlrd",
+  json: "",    // built-in, no install needed
+  csv: "",     // built-in
+  re: "",      // built-in
+  math: "",    // built-in
+  os: "",      // built-in
+  sys: "",     // built-in
 };
 
 function detectPythonImports(code: string): string[] {
@@ -53,8 +85,9 @@ function detectPythonImports(code: string): string[] {
   let m;
   while ((m = importRegex.exec(code)) !== null) {
     const mod = m[1];
-    if (PYODIDE_PACKAGE_MAP[mod]) {
-      packages.add(PYODIDE_PACKAGE_MAP[mod]);
+    const pkg = PYODIDE_PACKAGE_MAP[mod];
+    if (pkg) {  // skip empty strings (built-in modules)
+      packages.add(pkg);
     }
   }
   return [...packages];
@@ -68,6 +101,7 @@ export function buildPythonHtml(code: string): string {
   if (fenceMatch) cleanCode = fenceMatch[1].trim();
 
   const usesMpl = /\bmatplotlib\b/.test(cleanCode) || /\bplt\b/.test(cleanCode);
+  const usesPlotly = /\bplotly\b/.test(cleanCode);
   const usesPygame = /\bpygame\b/.test(cleanCode);
   const packages = detectPythonImports(cleanCode);
 
@@ -101,6 +135,7 @@ export function buildPythonHtml(code: string): string {
   <pre id="output"></pre>
   <div id="plot"></div>
   ${usesPygame ? `<canvas id="canvas" width="${canvasW}" height="${canvasH}" tabindex="1"></canvas>` : ""}
+  ${usesPlotly ? `<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"><\/script>` : ""}
   <script>
   (function(){
     window.onerror = function(msg, url, line, col, error) {
@@ -254,6 +289,32 @@ for _fig_num in _plt.get_fignums():
     _img.src = "data:image/png;base64," + _b64
     document.getElementById("plot").appendChild(_img)
 _plt.close("all")
+\`;
+      ` : ""}
+
+      ${usesPlotly ? `
+      userCode += \`
+try:
+    import plotly.io as _pio
+    import plotly.graph_objects as _go
+    from js import document, Plotly as _PlotlyJS
+    # Find all plotly Figure objects in user scope and render them
+    _all_vars = dict(globals())
+    for _vname, _vobj in _all_vars.items():
+        if _vname.startswith('_'):
+            continue
+        if isinstance(_vobj, _go.Figure):
+            _div = document.createElement('div')
+            _div.style.width = '100%'
+            _div.style.marginTop = '12px'
+            document.getElementById('plot').appendChild(_div)
+            # Use plotly.js from CDN (already loaded) to render
+            _fig_json = _pio.to_json(_vobj)
+            import json as _json
+            _fig_data = _json.loads(_fig_json)
+            _PlotlyJS.newPlot(_div, _fig_data.get('data', []), _fig_data.get('layout', {}), {'responsive': True})
+except Exception as _pe:
+    pass
 \`;
       ` : ""}
 
