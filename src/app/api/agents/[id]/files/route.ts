@@ -89,9 +89,9 @@ export async function POST(
   let extractedText: string | null = null;
   if (!file.type.startsWith("image/")) {
     try {
-      const raw = await parseFileToText(buffer, file.name, file.type);
+      const result = await parseFileToText(buffer, file.name, file.type);
       // Strip null bytes — PostgreSQL rejects 0x00 in text columns
-      extractedText = raw ? raw.replace(/\0/g, "") : null;
+      extractedText = result.text ? result.text.replace(/\0/g, "") : null;
     } catch {
       // Non-critical: file will be saved but without extracted text
     }

@@ -19,6 +19,8 @@ export interface AttachedFile {
   base64?: string;
   preview?: string;
   textContent?: string;
+  /** Full CSV data for large tabular files — passed to artifact sandbox, NOT to LLM context */
+  fullData?: string;
   isParsing?: boolean;
 }
 
@@ -154,7 +156,7 @@ export function useFileAttachment(): UseFileAttachmentReturn {
               throw new Error(err.error || "Не удалось обработать файл");
             }
 
-            const { text } = await response.json();
+            const { text, fullData } = await response.json();
 
             if (text.length > CHAT_FILE_MAX_CHARS) {
               setAlertMessage({
@@ -164,7 +166,8 @@ export function useFileAttachment(): UseFileAttachmentReturn {
               setFiles((prev) => prev.filter((f) => f.id !== attached.id));
               continue;
             }
-            if (text.length > CHAT_FILE_WARN_CHARS) {
+            if (text.length > CHAT_FILE_WARN_CHARS && !fullData) {
+              // Only warn if there's no fullData (i.e., it wasn't auto-truncated)
               setAlertMessage({
                 title: "Большой файл",
                 description: `«${file.name}» содержит ~${Math.round(text.length / 4000)}K токенов. Качество ответов может снизиться. Для больших документов рекомендуем загрузить файл в Агента.`,
@@ -174,7 +177,7 @@ export function useFileAttachment(): UseFileAttachmentReturn {
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === attached.id
-                  ? { ...f, textContent: text, isParsing: false }
+                  ? { ...f, textContent: text, fullData: fullData || undefined, isParsing: false }
                   : f
               )
             );

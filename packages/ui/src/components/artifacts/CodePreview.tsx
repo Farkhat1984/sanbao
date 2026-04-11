@@ -7,12 +7,14 @@ import { buildPreviewHtml } from "@/lib/code-preview-builder";
 
 interface CodePreviewProps {
   code: string;
+  /** File data map (filename → CSV) for large tabular files — injected into Python sandbox */
+  fileData?: Record<string, string>;
   onRequestChatFix?: (error: string) => void;
 }
 
 export { isPythonCode } from "@/lib/code-preview-builder";
 
-export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
+export function CodePreview({ code, fileData, onRequestChatFix }: CodePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [key, setKey] = useState(0);
   const [hasError, setHasError] = useState(false);
@@ -20,7 +22,7 @@ export function CodePreview({ code, onRequestChatFix }: CodePreviewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sentToChat, setSentToChat] = useState(false);
 
-  const html = useMemo(() => buildPreviewHtml(code), [code, key]);
+  const html = useMemo(() => buildPreviewHtml(code, fileData), [code, fileData, key]);
 
   // Reset errors when code changes
   useEffect(() => {

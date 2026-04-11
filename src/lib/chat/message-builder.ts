@@ -9,6 +9,8 @@ export interface ChatAttachment {
   type: string;
   base64?: string;
   textContent?: string;
+  /** Full CSV data for large tabular files — stored for artifact sandbox, NOT injected into LLM */
+  fullData?: string;
 }
 
 // ─── Process messages with attachments ───────────────────

@@ -25,6 +25,7 @@ const chatAttachmentSchema = z.object({
   type: z.string().max(127).regex(MIME_TYPE_RE, "Invalid MIME type"),
   base64: z.string().max(5_000_000).optional(),
   textContent: z.string().max(100_000).optional(),
+  fullData: z.string().max(10_000_000).optional(),
 });
 
 /** Runtime validation schema for the chat request body. */

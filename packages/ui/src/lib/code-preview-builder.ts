@@ -95,7 +95,7 @@ function detectPythonImports(code: string): string[] {
 
 // ─── Python HTML builder ─────────────────────────────────
 
-export function buildPythonHtml(code: string): string {
+export function buildPythonHtml(code: string, fileData?: Record<string, string>): string {
   let cleanCode = code.trim();
   const fenceMatch = cleanCode.match(/^```(?:python|py)?\n([\s\S]*?)```$/);
   if (fenceMatch) cleanCode = fenceMatch[1].trim();
@@ -136,6 +136,10 @@ export function buildPythonHtml(code: string): string {
   <div id="plot"></div>
   ${usesPygame ? `<canvas id="canvas" width="${canvasW}" height="${canvasH}" tabindex="1"></canvas>` : ""}
   ${usesPlotly ? `<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"><\/script>` : ""}
+  ${fileData && Object.keys(fileData).length > 0 ? `<script>
+  // File data bridge — large tabular files injected directly, bypassing LLM context
+  window._FILE_DATA = ${JSON.stringify(fileData)};
+  <\/script>` : ""}
   <script>
   (function(){
     window.onerror = function(msg, url, line, col, error) {
@@ -217,6 +221,25 @@ export function buildPythonHtml(code: string): string {
       ` : ""}
 
       loading.textContent = '';
+
+      // Inject _FILE_DATA from JS bridge into Python scope
+      pyodide.runPython(\`
+try:
+    from js import _FILE_DATA as _js_file_data
+    _FILE_DATA = {}
+    for key in dir(_js_file_data):
+        if not key.startswith('_'):
+            try:
+                _FILE_DATA[key] = str(getattr(_js_file_data, key))
+            except:
+                pass
+    # Also try dict-like access via Object.keys
+    from js import Object
+    for key in Object.keys(_js_file_data):
+        _FILE_DATA[str(key)] = str(_js_file_data[str(key)])
+except:
+    _FILE_DATA = {}
+\`);
 
       // Redirect stdout/stderr
       pyodide.runPython(\`
@@ -572,7 +595,12 @@ ${tryBlocks}
 
 // ─── Main preview HTML builder ───────────────────────────
 
-export function buildPreviewHtml(code: string): string {
+/**
+ * @param code - User's code (React/JSX, HTML, or Python)
+ * @param fileData - Optional map of filename → CSV data for large tabular files.
+ *                   Injected into Python sandbox as `_FILE_DATA` dict.
+ */
+export function buildPreviewHtml(code: string, fileData?: Record<string, string>): string {
   let cleanCode = code.trim();
   const fenceMatch = cleanCode.match(/^```(?:tsx?|jsx?|javascript|typescript|html)?\n([\s\S]*?)```$/);
   if (fenceMatch) {
@@ -581,7 +609,7 @@ export function buildPreviewHtml(code: string): string {
 
   // Python code — run via Pyodide
   if (isPythonCode(code)) {
-    return buildPythonHtml(code);
+    return buildPythonHtml(code, fileData);
   }
 
   // Error reporter + screenshot handler — injected into any HTML

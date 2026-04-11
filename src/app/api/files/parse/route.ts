@@ -25,13 +25,17 @@ export async function POST(req: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const text = await parseFileToText(buffer, file.name, file.type);
+    const result = await parseFileToText(buffer, file.name, file.type);
 
-    if (!text) {
+    if (!result.text) {
       return jsonError("Не удалось извлечь текст из файла", 422);
     }
 
-    return jsonOk({ text, fileName: file.name });
+    return jsonOk({
+      text: result.text,
+      fullData: result.fullData || undefined,
+      fileName: file.name,
+    });
   } catch (err) {
     return jsonError(
       err instanceof Error ? err.message : "Ошибка обработки файла",

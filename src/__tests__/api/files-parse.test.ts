@@ -7,7 +7,7 @@ import { POST } from "@/app/api/files/parse/route";
 
 // Mock parse-file separately so we can control per-test
 vi.mock("@/lib/parse-file", () => ({
-  parseFileToText: vi.fn().mockResolvedValue("Parsed text content"),
+  parseFileToText: vi.fn().mockResolvedValue({ text: "Parsed text content" }),
 }));
 
 import { parseFileToText } from "@/lib/parse-file";
@@ -182,7 +182,7 @@ describe("POST /api/files/parse", () => {
   // ─── Error handling ───────────────────────────────────
 
   it("should return 422 when parsed text is empty", async () => {
-    vi.mocked(parseFileToText).mockResolvedValueOnce("");
+    vi.mocked(parseFileToText).mockResolvedValueOnce({ text: "" });
     const file = new File(["fake"], "empty.pdf", { type: "application/pdf" });
     const res = await POST(makeRequest(file));
     expect(res.status).toBe(422);

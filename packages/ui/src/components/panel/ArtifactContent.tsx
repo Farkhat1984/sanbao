@@ -292,6 +292,8 @@ export function ArtifactContent() {
               {activeTab === "preview" && (
                 <CodePreview
                   code={activeArtifact.content}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  fileData={typeof window !== "undefined" ? (window as any).__SANBAO_FILE_DATA__ : undefined}
                   onRequestChatFix={(error) => {
                     const isPygame = isPythonCode(activeArtifact.content) && /pygame/i.test(activeArtifact.content);
                     const code = activeArtifact.content;

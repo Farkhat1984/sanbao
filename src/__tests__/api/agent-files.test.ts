@@ -9,7 +9,7 @@ import { POST, DELETE } from "@/app/api/agents/[id]/files/route";
 
 // Mock parse-file
 vi.mock("@/lib/parse-file", () => ({
-  parseFileToText: vi.fn().mockResolvedValue("Extracted text"),
+  parseFileToText: vi.fn().mockResolvedValue({ text: "Extracted text" }),
 }));
 
 function makeParams(id: string) {

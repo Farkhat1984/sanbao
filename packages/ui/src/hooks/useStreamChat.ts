@@ -100,6 +100,15 @@ export function useStreamChat({
     addMessage(userMessage);
     setInput("");
     const filesToSend = [...attachedFiles];
+    // Store fullData on window for CodePreview to pick up (bypasses LLM context)
+    const fileDataMap: Record<string, string> = {};
+    for (const f of filesToSend) {
+      if (f.fullData) fileDataMap[f.name] = f.fullData;
+    }
+    if (Object.keys(fileDataMap).length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__SANBAO_FILE_DATA__ = fileDataMap;
+    }
     clearFiles();
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -165,6 +174,7 @@ export function useStreamChat({
         type: f.type,
         ...(f.base64 ? { base64: f.base64 } : {}),
         ...(f.textContent ? { textContent: f.textContent } : {}),
+        ...(f.fullData ? { fullData: f.fullData } : {}),
       }));
 
       abortRef.current = new AbortController();
