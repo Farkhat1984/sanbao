@@ -118,11 +118,11 @@ export default function OrganizationDetailPage({
           />
           <NavCard
             icon={Network}
-            title="Мультиагент"
-            description="Создать или выбрать команду"
+            title="Мультиагенты"
+            description={`${(org.multiAgentCount as number) || 0} мультиагентов`}
             onClick={async () => {
               const { id } = await params;
-              router.push(`/organizations/${id}/multiagent/new`);
+              router.push(`/organizations/${id}/multiagents`);
             }}
             iconBg="bg-amber-500/10"
             iconColor="text-amber-500"

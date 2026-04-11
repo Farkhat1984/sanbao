@@ -50,11 +50,12 @@ export async function POST(
     return jsonError("Некорректный JSON", 400);
   }
 
-  const { name, description, icon, iconColor, starterPrompts, agents } = body as {
+  const { name, description, icon, iconColor, instructions, starterPrompts, agents } = body as {
     name?: string;
     description?: string;
     icon?: string;
     iconColor?: string;
+    instructions?: string;
     starterPrompts?: string[];
     agents?: Array<{ type: string; id: string }>;
   };
@@ -71,6 +72,7 @@ export async function POST(
       description: description?.trim() || null,
       icon: icon || null,
       iconColor: iconColor || null,
+      instructions: instructions?.trim() || null,
       starterPrompts: starterPrompts?.filter((s) => s.trim()) || [],
       createdById: userId,
       members: {

@@ -33,6 +33,7 @@ export async function GET(
 
   return jsonOk(serializeDates({
     ...agent,
+    role: memberResult.member.role,
     fileCount: agent._count.files,
     memberCount: agent._count.members,
     conversationCount: agent._count.conversations,

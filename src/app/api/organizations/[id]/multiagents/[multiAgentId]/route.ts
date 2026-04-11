@@ -63,11 +63,12 @@ export async function PUT(
     return jsonError("Некорректный JSON", 400);
   }
 
-  const { name, description, icon, iconColor, starterPrompts, agents } = body as {
+  const { name, description, icon, iconColor, instructions, starterPrompts, agents } = body as {
     name?: string;
     description?: string;
     icon?: string;
     iconColor?: string;
+    instructions?: string;
     starterPrompts?: string[];
     agents?: Array<{ type: string; id: string }>;
   };
@@ -95,6 +96,7 @@ export async function PUT(
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(icon !== undefined && { icon }),
         ...(iconColor !== undefined && { iconColor }),
+        ...(instructions !== undefined && { instructions: instructions?.trim() || null }),
         ...(starterPrompts && { starterPrompts: starterPrompts.filter((s) => s.trim()) }),
       },
       include: { members: true },

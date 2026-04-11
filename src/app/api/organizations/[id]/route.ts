@@ -19,7 +19,7 @@ export async function GET(
   const org = await prisma.organization.findUnique({
     where: { id },
     include: {
-      _count: { select: { members: true, agents: true } },
+      _count: { select: { members: true, agents: true, multiAgents: true } },
       owner: { select: { id: true, name: true, email: true, image: true } },
     },
   });
@@ -31,6 +31,7 @@ export async function GET(
     role: memberResult.member.role,
     memberCount: org._count.members,
     agentCount: org._count.agents,
+    multiAgentCount: org._count.multiAgents,
   }));
 }
 

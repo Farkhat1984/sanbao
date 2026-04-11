@@ -51,6 +51,7 @@ export default function EditMultiAgentPage() {
         id: multiAgent.id as string,
         name: multiAgent.name as string,
         description: (multiAgent.description as string | null) ?? null,
+        instructions: (multiAgent.instructions as string | null) ?? null,
         icon: (multiAgent.icon as string | null) ?? null,
         iconColor: (multiAgent.iconColor as string | null) ?? null,
         starterPrompts: (multiAgent.starterPrompts as string[]) || [],

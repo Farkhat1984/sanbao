@@ -12,7 +12,7 @@ export async function GET() {
     select: { orgId: true, role: true },
   });
 
-  if (memberships.length === 0) return jsonOk([]);
+  if (memberships.length === 0) return jsonOk({ agents: [], multiAgents: [] });
 
   const orgIds = memberships.map((m) => m.orgId);
   const roleMap = new Map(memberships.map((m) => [m.orgId, m.role]));
@@ -49,15 +49,37 @@ export async function GET() {
     }
   }
 
-  return jsonOk(filtered.map((a) => serializeDates({
-    id: a.id,
-    orgId: a.orgId,
-    orgName: a.org.name,
-    orgSlug: a.org.slug,
-    name: a.name,
-    description: a.description,
-    status: a.status,
-    mcpServer: a.mcpServer,
-    swarmEnabled: a.org.swarmEnabled,
-  })));
+  const multiAgents = await prisma.multiAgent.findMany({
+    where: { orgId: { in: orgIds } },
+    include: {
+      org: { select: { id: true, name: true, slug: true } },
+      members: { select: { agentType: true, agentId: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return jsonOk({
+    agents: filtered.map((a) => serializeDates({
+      id: a.id,
+      orgId: a.orgId,
+      orgName: a.org.name,
+      orgSlug: a.org.slug,
+      name: a.name,
+      description: a.description,
+      status: a.status,
+      mcpServer: a.mcpServer,
+      swarmEnabled: a.org.swarmEnabled,
+    })),
+    multiAgents: multiAgents.map((ma) => serializeDates({
+      id: ma.id,
+      orgId: ma.orgId,
+      orgName: ma.org.name,
+      orgSlug: ma.org.slug,
+      name: ma.name,
+      description: ma.description,
+      icon: ma.icon,
+      iconColor: ma.iconColor,
+      memberCount: ma.members.length,
+    })),
+  });
 }

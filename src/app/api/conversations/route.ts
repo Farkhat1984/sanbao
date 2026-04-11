@@ -154,6 +154,14 @@ export async function POST(req: Request) {
     });
   }
 
+  let orgAgentInfo = null;
+  if (orgAgentId) {
+    orgAgentInfo = await prisma.orgAgent.findUnique({
+      where: { id: orgAgentId },
+      select: { id: true, name: true, icon: true, iconColor: true },
+    });
+  }
+
   return jsonOk({
     id: conversation.id,
     title: conversation.title,
@@ -168,5 +176,9 @@ export async function POST(req: Request) {
     isSystemAgent: agentInfo?.isSystem ?? false,
     isSwarmMode: conversation.isSwarmMode,
     swarmOrgId: conversation.swarmOrgId,
+    orgAgentId: orgAgentInfo?.id ?? null,
+    orgAgentName: orgAgentInfo?.name ?? null,
+    orgAgentIcon: orgAgentInfo?.icon ?? null,
+    orgAgentIconColor: orgAgentInfo?.iconColor ?? null,
   }, 201);
 }

@@ -34,6 +34,7 @@ export default function OrgAgentsPage({
   const [agents, setAgents] = useState<OrgAgentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [orgId, setOrgId] = useState("");
+  const [role, setRole] = useState<string>("");
 
   // Infinite scroll state
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -57,6 +58,13 @@ export default function OrgAgentsPage({
         })
         .catch(console.error)
         .finally(() => setIsLoading(false));
+      // Fetch role
+      fetch(`/api/organizations/${id}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.role) setRole(data.role);
+        })
+        .catch(() => {});
     });
   }, [params]);
 
@@ -83,6 +91,8 @@ export default function OrgAgentsPage({
     loading: loadingMore,
   });
 
+  const isAdmin = role === "OWNER" || role === "ADMIN";
+
   return (
     <div className="h-full">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
@@ -101,13 +111,15 @@ export default function OrgAgentsPage({
               Агенты, созданные из ваших документов
             </p>
           </div>
-          <button
-            onClick={() => router.push(`/organizations/${orgId}/agents/new`)}
-            className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            Создать агента
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => router.push(`/organizations/${orgId}/agents/new`)}
+              className="h-10 px-5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 hover:shadow-md transition-all cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              Создать агента
+            </button>
+          )}
         </div>
 
         {isLoading && (
@@ -183,14 +195,18 @@ export default function OrgAgentsPage({
             </div>
             <h2 className="text-lg font-semibold text-text-primary mb-2">Нет агентов</h2>
             <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
-              Создайте AI-агента, загрузив документы вашей организации.
+              {isAdmin
+                ? "Создайте AI-агента, загрузив документы вашей организации."
+                : "В этой организации пока нет агентов."}
             </p>
-            <button
-              onClick={() => router.push(`/organizations/${orgId}/agents/new`)}
-              className="h-10 px-6 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer"
-            >
-              Создать агента
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => router.push(`/organizations/${orgId}/agents/new`)}
+                className="h-10 px-6 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer"
+              >
+                Создать агента
+              </button>
+            )}
           </div>
         )}
       </div>

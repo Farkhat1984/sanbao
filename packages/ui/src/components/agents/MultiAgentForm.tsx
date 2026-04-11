@@ -16,6 +16,7 @@ interface MultiAgentFormProps {
     id: string;
     name: string;
     description: string | null;
+    instructions: string | null;
     icon: string | null;
     iconColor: string | null;
     starterPrompts: string[];
@@ -32,6 +33,7 @@ export function MultiAgentForm({ orgId, multiAgent, canUseRag = false }: MultiAg
 
   const [name, setName] = useState(multiAgent?.name || "");
   const [description, setDescription] = useState(multiAgent?.description || "");
+  const [instructions, setInstructions] = useState(multiAgent?.instructions || "");
   const [icon, setIcon] = useState(multiAgent?.icon || "Network");
   const [iconColor, setIconColor] = useState(multiAgent?.iconColor || "#f59e0b");
   const [starterPrompts, setStarterPrompts] = useState<string[]>(
@@ -71,6 +73,7 @@ export function MultiAgentForm({ orgId, multiAgent, canUseRag = false }: MultiAg
       const body = {
         name,
         description,
+        instructions,
         icon,
         iconColor,
         starterPrompts: starterPrompts.filter((s) => s.trim()),
@@ -179,10 +182,31 @@ export function MultiAgentForm({ orgId, multiAgent, canUseRag = false }: MultiAg
           </div>
         </div>
 
-        {/* Section 2: Starter Prompts */}
+        {/* Section 2: Behavior */}
         <div className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="text-sm font-semibold text-text-primary mb-4">Поведение</h2>
-          <StarterPromptsEditor prompts={starterPrompts} onChange={setStarterPrompts} />
+
+          <div className="space-y-6">
+            {/* Instructions */}
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">
+                Инструкции
+              </label>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Опишите поведение и правила работы мультиагента. Это будет его системный промпт..."
+                rows={6}
+                className="w-full px-4 py-3 rounded-xl bg-surface-alt border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors resize-y"
+              />
+              <p className="text-xs text-text-secondary mt-1">
+                Системные инструкции определяют поведение мультиагента в каждом чате
+              </p>
+            </div>
+
+            {/* Starter Prompts */}
+            <StarterPromptsEditor prompts={starterPrompts} onChange={setStarterPrompts} />
+          </div>
         </div>
 
         {/* Section 3: Capabilities (Knowledge Files) */}

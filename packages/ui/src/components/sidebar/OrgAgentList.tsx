@@ -16,6 +16,15 @@ interface OrgAgentItem {
   swarmEnabled?: boolean;
 }
 
+interface MultiAgentItem {
+  id: string;
+  orgId: string;
+  orgName: string;
+  name: string;
+  icon: string | null;
+  iconColor: string | null;
+}
+
 interface OrgInfo {
   orgName: string;
   agents: OrgAgentItem[];
@@ -31,6 +40,7 @@ export function OrgAgentList() {
   const setOrgAgentId = useChatStore((s) => s.setOrgAgentId);
   const setSwarmMode = useChatStore((s) => s.setSwarmMode);
   const [agents, setAgents] = useState<OrgAgentItem[]>([]);
+  const [multiAgents, setMultiAgents] = useState<MultiAgentItem[]>([]);
   const [orgSwarmMap, setOrgSwarmMap] = useState<Map<string, boolean>>(new Map());
   const [isOpen, setIsOpen] = useState(false);
 
@@ -39,22 +49,26 @@ export function OrgAgentList() {
     fetch("/api/organizations/my-agents")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAgents(data);
-          // Build swarm enabled map from response
+        if (data && data.agents) {
+          setAgents(data.agents);
+          setMultiAgents(data.multiAgents || []);
+          // Build swarm enabled map from agents
           const swarmMap = new Map<string, boolean>();
-          for (const a of data) {
+          for (const a of data.agents) {
             if (a.swarmEnabled !== undefined && !swarmMap.has(a.orgId)) {
               swarmMap.set(a.orgId, a.swarmEnabled);
             }
           }
           setOrgSwarmMap(swarmMap);
+        } else if (Array.isArray(data)) {
+          // Backward compat
+          setAgents(data);
         }
       })
       .catch(console.error);
   }, [session?.user]);
 
-  if (agents.length === 0) return null;
+  if (agents.length === 0 && multiAgents.length === 0) return null;
 
   // Group by org
   const byOrg = new Map<string, OrgInfo>();
@@ -62,6 +76,12 @@ export function OrgAgentList() {
     const group = byOrg.get(agent.orgId) || { orgName: agent.orgName, agents: [], swarmEnabled: orgSwarmMap.get(agent.orgId) ?? true };
     group.agents.push(agent);
     byOrg.set(agent.orgId, group);
+  }
+  // Ensure orgs with only multiAgents also appear
+  for (const ma of multiAgents) {
+    if (!byOrg.has(ma.orgId)) {
+      byOrg.set(ma.orgId, { orgName: ma.orgName, agents: [], swarmEnabled: false });
+    }
   }
 
   const handleSelectAgent = (agent: OrgAgentItem) => {
@@ -73,12 +93,12 @@ export function OrgAgentList() {
     router.push("/chat");
   };
 
-  const handleSelectSwarm = (orgId: string) => {
+  const handleSelectSwarm = (orgId: string, multiAgentId: string) => {
     setActiveConversation(null);
     setActiveAgentId(null);
     setOrgAgentId(null);
     setMessages([]);
-    setSwarmMode(orgId);
+    setSwarmMode(orgId, multiAgentId);
     router.push("/chat");
   };
 
@@ -100,16 +120,19 @@ export function OrgAgentList() {
               <p className="text-[10px] uppercase tracking-wider text-text-secondary px-1 mb-1">
                 {group.orgName}
               </p>
-              {/* Swarm Mother entry — show when org has 2+ agents and swarm is enabled */}
-              {group.swarmEnabled && group.agents.length >= 2 && (
-                <button
-                  onClick={() => handleSelectSwarm(orgId)}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
-                >
-                  <Network className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  <span className="truncate">Мультиагент</span>
-                </button>
-              )}
+              {/* Show each multiagent from this org */}
+              {multiAgents
+                .filter((ma) => ma.orgId === orgId)
+                .map((ma) => (
+                  <button
+                    key={ma.id}
+                    onClick={() => handleSelectSwarm(orgId, ma.id)}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                  >
+                    <Network className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">{ma.name}</span>
+                  </button>
+                ))}
               {group.agents.map((agent) => (
                 <button
                   key={agent.id}

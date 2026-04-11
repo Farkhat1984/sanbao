@@ -77,26 +77,20 @@ export default function AgentsPage() {
 
     const orgFetch = fetch("/api/organizations/my-agents")
       .then((r) => r.json())
-      .then(async (data) => {
-        if (Array.isArray(data)) {
-          setOrgAgents(data);
-          // Fetch multi-agents for each unique org
-          const orgIds = [...new Set(data.map((a: OrgAgentItem) => a.orgId))];
-          const allMultiAgents: MultiAgentItem[] = [];
-          await Promise.allSettled(
-            orgIds.map((orgId) =>
-              fetch(`/api/organizations/${orgId}/multiagents`)
-                .then((r) => r.json())
-                .then((maData) => {
-                  if (Array.isArray(maData)) {
-                    for (const ma of maData) {
-                      allMultiAgents.push({ ...ma, orgId });
-                    }
-                  }
-                }),
-            ),
-          );
-          setMultiAgents(allMultiAgents);
+      .then((data) => {
+        const agentsList = data?.agents || (Array.isArray(data) ? data : []);
+        const maList = data?.multiAgents || [];
+        if (agentsList.length > 0) setOrgAgents(agentsList);
+        if (maList.length > 0) {
+          setMultiAgents(maList.map((ma: Record<string, unknown>) => ({
+            id: ma.id as string,
+            orgId: ma.orgId as string,
+            name: ma.name as string,
+            description: (ma.description as string | null) ?? null,
+            icon: (ma.icon as string | null) ?? null,
+            iconColor: (ma.iconColor as string | null) ?? null,
+            members: Array.from({ length: (ma.memberCount as number) || 0 }),
+          })));
         }
       })
       .catch(() => {
