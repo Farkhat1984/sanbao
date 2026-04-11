@@ -83,6 +83,7 @@ export async function POST(req: Request) {
     userId: session.user.id,
     planId: plan.id,
     thinkingEnabled: body.thinkingEnabled,
+    webSearchEnabled: body.webSearchEnabled,
     planningEnabled: body.planningEnabled,
     maxMcpTools: settings.maxMcpTools,
   });
@@ -175,7 +176,7 @@ export async function POST(req: Request) {
     const stream = streamMoonshot(context.apiMessages, {
       maxTokens: effectiveMaxTokens,
       thinkingEnabled: body.thinkingEnabled,
-      webSearchEnabled: true,
+      webSearchEnabled: body.webSearchEnabled,
       mcpTools: mcpTools,
       nativeToolCtx,
       contextInfo: context.contextInfo,

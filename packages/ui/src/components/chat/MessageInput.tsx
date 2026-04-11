@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Send,
   StopCircle,
@@ -32,8 +32,20 @@ export function MessageInput() {
   const isStreaming = useChatStore((s) => s.isStreaming);
   const thinkingEnabled = useChatStore((s) => s.thinkingEnabled);
   const toggleThinking = useChatStore((s) => s.toggleThinking);
+  const webSearchEnabled = useChatStore((s) => s.webSearchEnabled);
+  const toggleWebSearch = useChatStore((s) => s.toggleWebSearch);
+  const setWebSearchEnabled = useChatStore((s) => s.setWebSearchEnabled);
+  const activeAgentId = useChatStore((s) => s.activeAgentId);
+  const orgAgentId = useChatStore((s) => s.orgAgentId);
+  const multiAgentId = useChatStore((s) => s.multiAgentId);
 
   const agentTools = useAgentStore((s) => s.agentTools);
+
+  // Auto-toggle web search: ON for general chat, OFF for agents
+  useEffect(() => {
+    const hasAgent = !!activeAgentId || !!orgAgentId || !!multiAgentId;
+    setWebSearchEnabled(!hasAgent);
+  }, [activeAgentId, orgAgentId, multiAgentId, setWebSearchEnabled]);
   const isMobile = useIsMobile();
 
   // ─── Extracted hooks ────────────────────────────────────
@@ -186,6 +198,8 @@ export function MessageInput() {
             hasAgentTools={agentTools.length > 0}
             thinkingEnabled={thinkingEnabled}
             toggleThinking={toggleThinking}
+            webSearchEnabled={webSearchEnabled}
+            toggleWebSearch={toggleWebSearch}
           />
 
           <textarea

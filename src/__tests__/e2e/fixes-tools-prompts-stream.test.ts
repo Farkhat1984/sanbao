@@ -272,6 +272,7 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
     userId: "test-user-1",
     planId: "plan-free",
     thinkingEnabled: false,
+    webSearchEnabled: true,
     planningEnabled: false,
     maxMcpTools: 100,
   };
@@ -338,8 +339,8 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
 
     const prompt = result.data.systemPrompt;
 
-    // Websearch prompt is ALWAYS appended — it enforces KB-first priority
-    expect(prompt).toContain("$web_search");
+    // Websearch prompt is appended when webSearchEnabled=true
+    expect(prompt).toContain("$web_search tool");
   });
 
   it("default chat (no agent) DOES get websearch prompt appended", async () => {
@@ -353,8 +354,23 @@ describe("Fix 2: Prompt assembly — global + agent prompt coexistence", () => {
 
     const prompt = result.data.systemPrompt;
 
-    // Websearch prompt should be appended for default chat
-    expect(prompt).toContain("$web_search");
+    // Websearch prompt should be appended when webSearchEnabled=true
+    expect(prompt).toContain("$web_search tool");
+  });
+
+  it("websearch prompt is NOT added when webSearchEnabled=false", async () => {
+    const result = await resolveAgentAndTools({
+      ...baseParams,
+      webSearchEnabled: false,
+    });
+
+    expect("data" in result).toBe(true);
+    if (!("data" in result)) return;
+
+    const prompt = result.data.systemPrompt;
+
+    // Websearch prompt should NOT be present when disabled
+    expect(prompt).not.toContain("$web_search tool");
   });
 
   it("custom (non-system) agent gets agent-base prompt instead of global", async () => {

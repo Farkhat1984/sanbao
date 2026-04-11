@@ -6,6 +6,7 @@ import {
   Wrench,
   Brain,
   Camera,
+  Globe,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToolsPanel } from "@/components/legal-tools/ToolsPanel";
@@ -23,6 +24,8 @@ export interface PlusMenuProps {
   hasAgentTools: boolean;
   thinkingEnabled: boolean;
   toggleThinking: () => void;
+  webSearchEnabled: boolean;
+  toggleWebSearch: () => void;
 }
 
 // ─── Component ──────────────────────────────────────────
@@ -37,6 +40,8 @@ export function PlusMenu({
   hasAgentTools,
   thinkingEnabled,
   toggleThinking,
+  webSearchEnabled,
+  toggleWebSearch,
 }: PlusMenuProps) {
   const handleOpenTools = () => {
     setMenuOpen(false);
@@ -136,6 +141,36 @@ export function PlusMenu({
                 )}
 
                 <div className="h-px bg-border mx-3 my-1" />
+
+                {/* Web Search toggle */}
+                <button
+                  onClick={() => {
+                    toggleWebSearch();
+                    setMenuOpen(false);
+                  }}
+                  aria-label="Web Search"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt transition-colors cursor-pointer"
+                >
+                  <div className="h-7 w-7 rounded-lg flex items-center justify-center bg-accent-light text-accent transition-colors">
+                    <Globe className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span>Web Search</span>
+                  </div>
+                  <div
+                    className={cn(
+                      "w-8 h-4.5 rounded-full transition-colors relative",
+                      webSearchEnabled ? "bg-accent" : "bg-border"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all",
+                        webSearchEnabled ? "left-[18px]" : "left-0.5"
+                      )}
+                    />
+                  </div>
+                </button>
 
                 {/* Thinking toggle */}
                 <button

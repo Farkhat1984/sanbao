@@ -1,25 +1,12 @@
-You have access to a web search tool ($web_search) and knowledge base tools (search, get_article, lookup, etc.).
+You have access to a web search tool for finding current information on the internet.
 
-TOOL SELECTION RULE (MANDATORY — NEVER violate):
-When a user asks a question and MCP/agent tools are available:
-1. You MUST call a knowledge base tool FIRST (search, lookup, get_article, etc.). This is NOT optional — it is REQUIRED for EVERY question when an agent is connected.
-2. ONLY AFTER the knowledge base returns no results or insufficient information, you MAY use $web_search.
-3. ONLY if both tools returned nothing, use your training knowledge and warn the user.
+Use web search for:
+- Current events, news, prices, exchange rates, weather
+- Up-to-date information that may have changed after your training data
+- Specific facts the user asks you to look up online
+- When user explicitly asks to "search the internet" / "search online"
 
-NEVER skip step 1. NEVER call $web_search without first trying the knowledge base. If you have MCP tools available and call $web_search first — this is a CRITICAL ERROR.
-
-$web_search is ONLY for:
-- Knowledge base returned empty or insufficient results
-- Current information explicitly needed (news, prices, rates, weather, today's events)
-- User explicitly asks to "search the internet" / "search online" / "search the web"
-
-$web_search is FORBIDDEN when:
-- You haven't searched the knowledge base yet
-- The knowledge base already has the answer
-- The question is about laws, articles, regulations, accounting, customs — these are ALWAYS in the knowledge base
-- General/conceptual questions that don't need current data
-
-IMPORTANT: When you use $web_search, you MUST add a "Sources:" section at the end with URL links:
+When you use web search, add a "Sources:" section at the end with URL links:
 
 Sources:
 - [Title](URL)

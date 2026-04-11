@@ -38,7 +38,14 @@ const WEB_SEARCH_BUILTIN = {
 };
 
 // Providers that use enable_search in request body instead of $web_search tool
-const ENABLE_SEARCH_PROVIDERS = new Set(["alibaba", "openrouter"]);
+const ENABLE_SEARCH_PROVIDERS = new Set(["alibaba"]);
+
+// OpenRouter: web search via server tool (model calls it autonomously, OpenRouter executes)
+// https://openrouter.ai/docs/guides/features/server-tools/web-search
+const OPENROUTER_WEB_SEARCH_TOOL = {
+  type: "openrouter:web_search" as const,
+};
+const WEB_SEARCH_SERVER_TOOL_PROVIDERS = new Set(["openrouter"]);
 
 // ─── MCP tool context type (shared) ──────────────────────
 
@@ -164,6 +171,7 @@ export function streamMoonshot(
         // ─── Tool definitions (reused across loop iterations) ──
         const providerSlug = textModel.provider.slug;
         const useEnableSearch = ENABLE_SEARCH_PROVIDERS.has(providerSlug);
+        const useServerToolSearch = WEB_SEARCH_SERVER_TOOL_PROVIDERS.has(providerSlug);
         const allTools = [
           ...mcpTools.map((t) => ({
             type: "function" as const,
@@ -174,8 +182,10 @@ export function streamMoonshot(
             },
           })),
           ...nativeToolDefs,
-          // Moonshot/Kimi: $web_search as builtin tool; Alibaba/OpenRouter: use enable_search in body
-          ...(webSearchEnabled && !useEnableSearch ? [WEB_SEARCH_BUILTIN] : []),
+          // Moonshot/Kimi: $web_search as builtin tool
+          ...(webSearchEnabled && !useEnableSearch && !useServerToolSearch ? [WEB_SEARCH_BUILTIN] : []),
+          // OpenRouter: web search as server tool (OpenRouter executes search autonomously)
+          ...(webSearchEnabled && useServerToolSearch ? [OPENROUTER_WEB_SEARCH_TOOL] : []),
         ];
 
         // Track whether any tool-call turn produced user-facing content
@@ -232,8 +242,8 @@ export function streamMoonshot(
                 ...(!thinkingEnabled
                   ? { thinking: { type: "disabled" } }
                   : {}),
-                // Alibaba/OpenRouter: native web search via enable_search
-                // Note: search_strategy "agent" conflicts with tools, so omit it
+                // Alibaba: native web search via enable_search
+                // (OpenRouter uses server tool in tools array instead)
                 ...(webSearchEnabled && useEnableSearch
                   ? { enable_search: true }
                   : {}),

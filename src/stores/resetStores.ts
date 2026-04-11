@@ -49,7 +49,7 @@ export function resetAllStores() {
   useAiSettingsStore.setState({
     provider: "default",
     thinkingEnabled: false,
-    webSearchEnabled: false,
+    webSearchEnabled: true,
     planningEnabled: false,
   });
 

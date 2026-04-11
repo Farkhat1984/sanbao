@@ -227,10 +227,11 @@ export async function resolveAgentAndTools(params: {
   userId: string;
   planId: string;
   thinkingEnabled: boolean;
+  webSearchEnabled: boolean;
   planningEnabled: boolean;
   maxMcpTools: number;
 }): Promise<{ data: AgentResolutionResult } | { error: NextResponse }> {
-  const { userId, planId, thinkingEnabled, planningEnabled, maxMcpTools } = params;
+  const { userId, planId, thinkingEnabled, webSearchEnabled, planningEnabled, maxMcpTools } = params;
   let { agentId, orgAgentId, skillId, conversationId } = params;
 
   // Load admin-editable prompts from DB (cached 60s)
@@ -345,7 +346,7 @@ export async function resolveAgentAndTools(params: {
   // N+1 fix: batch all getPrompt calls into a single Promise.all instead of 3 sequential DB lookups
   const [planningPrompt, websearchPrompt, thinkingPrompt] = await Promise.all([
     planningEnabled ? getPrompt("prompt_mode_planning") : Promise.resolve(null),
-    getPrompt("prompt_mode_websearch"),
+    webSearchEnabled ? getPrompt("prompt_mode_websearch") : Promise.resolve(null),
     thinkingEnabled ? getPrompt("prompt_mode_thinking") : Promise.resolve(null),
   ]);
 
@@ -353,9 +354,7 @@ export async function resolveAgentAndTools(params: {
     systemPrompt += "\n\n" + planningPrompt;
   }
 
-  // Web search prompt: ALWAYS add when available.
-  // For agents with MCP tools it's even more critical — the prompt enforces
-  // "search knowledge base FIRST, web search ONLY as fallback" priority.
+  // Web search prompt: only when user enabled web search via UI toggle
   if (websearchPrompt) {
     systemPrompt += "\n\n" + websearchPrompt;
   }
