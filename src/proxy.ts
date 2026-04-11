@@ -40,13 +40,14 @@ const SESSION_COOKIE =
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
 
-/** Validate JWT structure: three base64url segments with valid JSON header/payload */
-const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+/** Validate JWT/JWE structure: 3 segments (JWT) or 5 segments (JWE) with valid JSON header */
+const BASE64URL_RE = /^[A-Za-z0-9_-]*$/;
 function isValidJwtFormat(token: string): boolean {
   const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  // Each part must be non-empty base64url
-  if (!parts.every((p) => p.length > 0 && BASE64URL_RE.test(p))) return false;
+  // JWT = 3 parts, JWE = 5 parts (NextAuth uses JWE by default)
+  if (parts.length !== 3 && parts.length !== 5) return false;
+  // Each part must be base64url (some JWE parts can be empty)
+  if (!parts.every((p) => BASE64URL_RE.test(p))) return false;
   // Header must be valid JSON with "alg"
   try {
     const header = JSON.parse(Buffer.from(parts[0], "base64url").toString());
