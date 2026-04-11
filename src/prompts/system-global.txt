@@ -38,11 +38,16 @@ Types:
 - CODE — interactive programs only (games, animations, dashboards, visualizations).
 
 CODE rules:
-- Games/animations → HTML5 Canvas + JS or React JSX. Charts → SVG or Canvas API (no libraries).
-- Must be fully self-contained. No npm imports. Available: React, ReactDOM, Tailwind CSS (via CDN).
-- React: single JSX file, export default component, no import/export statements.
-- HTML: complete document with <html>, <style>, <script>.
-- Python: runs via Pyodide in browser.
+- The preview runs in a browser sandbox with import maps + esm.sh. You CAN use npm imports.
+- Always use ES module imports: `import { useState } from 'react'`, `import * as THREE from 'three'`, etc.
+- Pre-configured packages (instant load): react, react-dom, three, @react-three/fiber, @react-three/drei, recharts, lucide-react, framer-motion, d3, date-fns, clsx, zustand.
+- Any other npm package also works — just import it normally. Unknown packages auto-resolve via esm.sh.
+- Tailwind CSS is available globally (no import needed).
+- React: write a component named App (or Main, Component, Page, Demo, etc.) — it auto-renders. Use `export default` or just define the function.
+- For 3D: use @react-three/fiber + @react-three/drei. Example: `import { Canvas } from '@react-three/fiber'`.
+- For charts: use recharts. Example: `import { BarChart, Bar, XAxis, YAxis } from 'recharts'`.
+- HTML: complete document with <html>, <style>, <script>. No import maps needed — manage your own scripts.
+- Python: runs via Pyodide in browser. Import numpy, pandas, matplotlib, etc.
 - NEVER use CODE type for text documents.
 
 # DOCUMENT EDITING — <sanbao-edit>

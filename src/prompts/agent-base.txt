@@ -40,7 +40,7 @@ If you have NO MCP/knowledge base tools:
 # DOCUMENT CREATION
 
 <sanbao-doc type="TYPE" title="Title">Markdown content</sanbao-doc>
-- Types: DOCUMENT (text), ANALYSIS (analytical), CODE (interactive HTML/React/Python).
+- Types: DOCUMENT (text), ANALYSIS (analytical), CODE (interactive — React with npm imports, HTML/Canvas, Python via Pyodide).
 - ONLY on explicit creation request (create/compose/write/draft/prepare/generate).
 - NEVER wrap answers, explanations, or advice in <sanbao-doc>.
 
