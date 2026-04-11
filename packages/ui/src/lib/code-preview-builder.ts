@@ -1,7 +1,14 @@
 // ─── Code preview HTML builders ──────────────────────────
 // Generates sandboxed HTML for live code preview (React/JSX, plain HTML, Python).
+// React/JSX uses import maps + esm.sh for native ESM imports (Three.js, recharts, etc.)
 
-import { REACT_CDN_URL, REACT_DOM_CDN_URL, BABEL_CDN_URL, TAILWIND_CDN_URL, PYODIDE_CDN_URL } from "@/lib/constants";
+import {
+  BABEL_CDN_URL,
+  TAILWIND_CDN_URL,
+  PYODIDE_CDN_URL,
+  ESM_CDN_BASE,
+  IMPORTMAP_PACKAGES,
+} from "@/lib/constants";
 
 // ─── Python detection ────────────────────────────────────
 
@@ -265,20 +272,210 @@ _plt.close("all")
 </html>`;
 }
 
-// ─── Import/export stripping ─────────────────────────────
+// ─── ESM import detection ───────────────────────────────
 
-/** Strip ES module import/export statements that don't work in browser script tags */
-function stripImportsExports(code: string): string {
+/** Well-known component names for auto-detection in module scope */
+const COMPONENT_NAMES = [
+  "App", "Main", "Component", "Page", "Home", "Demo", "Example",
+  "Game", "Chart", "Dashboard", "Calculator", "Timer", "Editor",
+  "Viewer", "Player", "Widget",
+] as const;
+
+/** React hooks that should be auto-imported if code uses them without importing react */
+const REACT_HOOKS = [
+  "useState", "useEffect", "useRef", "useMemo", "useCallback",
+  "useReducer", "useContext", "useLayoutEffect", "useId",
+  "useTransition", "useDeferredValue", "useSyncExternalStore",
+] as const;
+
+const REACT_APIS = [
+  "createContext", "Fragment", "Suspense", "lazy", "memo",
+  "forwardRef", "Children", "cloneElement", "createElement",
+  "isValidElement", "StrictMode",
+] as const;
+
+/**
+ * Detect bare-specifier imports from user code.
+ * Matches: `import X from 'pkg'`, `import { X } from 'pkg'`, `import * as X from 'pkg'`, `import 'pkg'`
+ * Ignores relative imports (`./`, `../`, `/`).
+ */
+function detectImports(code: string): Set<string> {
+  const imports = new Set<string>();
+  const regex = /import\s+(?:[\w{},*\s]+from\s+)?['"]([^'"./][^'"]*)['"]/g;
+  let m;
+  while ((m = regex.exec(code)) !== null) {
+    imports.add(m[1]);
+  }
+  return imports;
+}
+
+/**
+ * Resolve a package specifier to its esm.sh URL.
+ * First checks the pre-mapped IMPORTMAP_PACKAGES, then falls back to auto-generated URL.
+ */
+function resolveEsmUrl(specifier: string): string {
+  if (IMPORTMAP_PACKAGES[specifier]) return IMPORTMAP_PACKAGES[specifier];
+  // Auto-generate esm.sh URL for unknown packages, pin react deps to avoid duplication
+  return `${ESM_CDN_BASE}/${specifier}?deps=react@18,react-dom@18`;
+}
+
+/**
+ * Given a set of raw import specifiers from user code, build the full import map entries.
+ * Always includes react + react-dom. Expands scoped package prefixes where needed.
+ */
+function buildImportMap(userImports: Set<string>): Record<string, string> {
+  const entries: Record<string, string> = {};
+
+  // Always include react core
+  const corePackages = ["react", "react/", "react-dom", "react-dom/", "react-dom/client", "react/jsx-runtime"];
+  for (const pkg of corePackages) {
+    entries[pkg] = resolveEsmUrl(pkg);
+  }
+
+  for (const specifier of userImports) {
+    // Skip react/react-dom (already added above)
+    if (specifier === "react" || specifier === "react-dom" || specifier.startsWith("react/") || specifier.startsWith("react-dom/")) {
+      // Still add the exact specifier if it's a subpath like react-dom/client
+      entries[specifier] = resolveEsmUrl(specifier);
+      continue;
+    }
+
+    // Add exact specifier
+    entries[specifier] = resolveEsmUrl(specifier);
+
+    // For packages that might have subpath imports (e.g., `three/examples/...`),
+    // add the trailing-slash entry if the base package has one in IMPORTMAP_PACKAGES
+    const basePkg = specifier.includes("/") ? specifier.split("/").slice(0, specifier.startsWith("@") ? 2 : 1).join("/") : specifier;
+    if (basePkg !== specifier) {
+      // User imported a subpath — make sure base package + trailing slash are mapped
+      entries[basePkg] = resolveEsmUrl(basePkg);
+      const slashKey = basePkg + "/";
+      entries[slashKey] = resolveEsmUrl(slashKey);
+    } else {
+      // Check if this package has a trailing-slash entry in IMPORTMAP_PACKAGES
+      const slashKey = specifier + "/";
+      if (IMPORTMAP_PACKAGES[slashKey]) {
+        entries[slashKey] = IMPORTMAP_PACKAGES[slashKey];
+      }
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Check if user code already imports React (any form).
+ * Returns true if code has `import ... from 'react'` or `import 'react'`.
+ */
+function hasReactImport(code: string): boolean {
+  return /import\s+(?:[\w{},*\s]+from\s+)?['"]react['"]/.test(code);
+}
+
+/**
+ * Detect which React hooks/APIs are used in code so we can auto-import only what's needed.
+ */
+function detectUsedReactApis(code: string): { hooks: string[]; apis: string[] } {
+  const hooks = REACT_HOOKS.filter((h) => new RegExp(`\\b${h}\\b`).test(code));
+  const apis = REACT_APIS.filter((a) => new RegExp(`\\b${a}\\b`).test(code));
+  return { hooks, apis };
+}
+
+/**
+ * Build auto-prepended React import if the user's code doesn't already import react.
+ */
+function buildReactImportLine(code: string): string {
+  if (hasReactImport(code)) return "";
+
+  const { hooks, apis } = detectUsedReactApis(code);
+  const named = [...hooks, ...apis];
+
+  if (named.length > 0) {
+    return `import React, { ${named.join(", ")} } from 'react';\n`;
+  }
+  // Even if no named imports detected, import React for JSX
+  return `import React from 'react';\n`;
+}
+
+/**
+ * Check if user code has an `export default` — indicates intended root component.
+ */
+function getDefaultExportName(code: string): string | null {
+  // `export default function Foo`
+  const funcMatch = code.match(/export\s+default\s+function\s+(\w+)/);
+  if (funcMatch) return funcMatch[1];
+
+  // `export default class Foo`
+  const classMatch = code.match(/export\s+default\s+class\s+(\w+)/);
+  if (classMatch) return classMatch[1];
+
+  // `export default Foo` (identifier reference)
+  const idMatch = code.match(/export\s+default\s+([A-Z]\w*)\s*;?$/m);
+  if (idMatch) return idMatch[1];
+
+  return null;
+}
+
+/**
+ * Strip `export default` keywords but keep the declaration.
+ * ESM `export` in a Babel `data-type="module"` script works, but `export default`
+ * creates issues with the auto-render footer. We convert to plain declarations.
+ */
+function normalizeExports(code: string): string {
   return code
-    // Remove: import { X } from 'pkg'; import X from 'pkg'; import 'pkg';
-    .replace(/^import\s+.*?from\s+['"][^'"]+['"];?\s*$/gm, "")
-    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, "")
-    // Remove: export default X; export { X }; but keep the declaration
-    .replace(/^export\s+default\s+(?=function|class|const|let|var)/gm, "")
+    // `export default function Foo(` → `function Foo(`
+    .replace(/^export\s+default\s+(?=function\s|class\s)/gm, "")
+    // `export default Foo;` → `` (just a reference, component detected by name)
     .replace(/^export\s+default\s+(\w+);?\s*$/gm, "")
+    // `export { Foo, Bar };` → remove
     .replace(/^export\s+\{[^}]*\};?\s*$/gm, "")
-    .replace(/^export\s+(?=function|class|const|let|var)/gm, "")
-    .trim();
+    // `export function Foo` → `function Foo` (named export)
+    .replace(/^export\s+(?=function\s|class\s|const\s|let\s|var\s)/gm, "");
+}
+
+/**
+ * Build the component detection + render footer injected after user code.
+ * Uses try/catch per known component name since ESM module scope doesn't pollute window.
+ */
+function buildRenderFooter(defaultExportName: string | null): string {
+  // If we know the default export name, render it directly
+  if (defaultExportName) {
+    return `
+;(async () => {
+  const { createRoot } = await import('react-dom/client');
+  const _React = await import('react');
+  try {
+    const _root = createRoot(document.getElementById('root'));
+    _root.render(_React.createElement(${defaultExportName}));
+    window.parent.postMessage({type:'preview-ready'}, '*');
+  } catch(_e) {
+    window.parent.postMessage({type:'preview-error', message: _e.stack || _e.toString()}, '*');
+  }
+})();`;
+  }
+
+  // Otherwise, scan known component names in module scope via try/catch
+  const tryBlocks = COMPONENT_NAMES.map(
+    (name) => `  try { if (typeof ${name} === 'function' || (typeof ${name} === 'object' && ${name} !== null)) _C = ${name}; } catch(_) {}`
+  ).join("\n");
+
+  return `
+;(async () => {
+  const { createRoot } = await import('react-dom/client');
+  const _React = await import('react');
+  let _C;
+${tryBlocks}
+  if (_C) {
+    try {
+      const _root = createRoot(document.getElementById('root'));
+      _root.render(_React.createElement(_C));
+      window.parent.postMessage({type:'preview-ready'}, '*');
+    } catch(_e) {
+      window.parent.postMessage({type:'preview-error', message: _e.stack || _e.toString()}, '*');
+    }
+  } else {
+    window.parent.postMessage({type:'preview-error', message:'No component found. Export default or define one of: ${COMPONENT_NAMES.join(", ")}'}, '*');
+  }
+})();`;
 }
 
 // ─── Main preview HTML builder ───────────────────────────
@@ -293,11 +490,6 @@ export function buildPreviewHtml(code: string): string {
   // Python code — run via Pyodide
   if (isPythonCode(code)) {
     return buildPythonHtml(code);
-  }
-
-  // Strip import/export for non-HTML code (React/JSX) — they can't work in browser
-  if (!/^\s*<!DOCTYPE|^\s*<html/i.test(cleanCode)) {
-    cleanCode = stripImportsExports(cleanCode);
   }
 
   // Error reporter script — injected into any HTML
@@ -317,7 +509,7 @@ export function buildPreviewHtml(code: string): string {
 
   const readySignal = `<script>window.parent.postMessage({type:'preview-ready'}, '*');<\/script>`;
 
-  // Full HTML document — inject error reporter
+  // Full HTML document — inject error reporter (unchanged)
   if (/^\s*<!DOCTYPE|^\s*<html/i.test(cleanCode)) {
     if (cleanCode.includes('</head>')) {
       cleanCode = cleanCode.replace('</head>', errorReporter + '</head>');
@@ -335,16 +527,43 @@ export function buildPreviewHtml(code: string): string {
     return cleanCode;
   }
 
-  // React/JSX code — wrap in full HTML shell
+  // ─── React/JSX code — import maps + esm.sh ─────────────
+
+  // 1. Detect the default export name before normalizing
+  const defaultExportName = getDefaultExportName(cleanCode);
+
+  // 2. Detect all bare-specifier imports from user code
+  const userImports = detectImports(cleanCode);
+
+  // 3. Build the import map with all required packages
+  const importMapEntries = buildImportMap(userImports);
+  const importMapJson = JSON.stringify({ imports: importMapEntries }, null, 2);
+
+  // 4. Auto-prepend React import if missing
+  const reactImportLine = buildReactImportLine(cleanCode);
+
+  // 5. Normalize exports (strip export keywords, keep declarations)
+  const normalizedCode = normalizeExports(cleanCode);
+
+  // 6. Build the render footer
+  const renderFooter = buildRenderFooter(defaultExportName);
+
+  // Combine user code with auto-imports and render footer
+  const fullCode = `${reactImportLine}${normalizedCode}\n\n${renderFooter}`;
+  // Escape for embedding in a JS string literal (backtick template)
+  const escapedCode = fullCode
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\`")
+    .replace(/\$\{/g, "\\${");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="${REACT_CDN_URL}" crossorigin><\/script>
-  <script src="${REACT_DOM_CDN_URL}" crossorigin><\/script>
-  <script src="${BABEL_CDN_URL}"><\/script>
+  <script type="importmap">${importMapJson}<\/script>
   <script src="${TAILWIND_CDN_URL}"><\/script>
+  <script src="${BABEL_CDN_URL}"><\/script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -354,38 +573,23 @@ export function buildPreviewHtml(code: string): string {
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" data-type="module">
-    const { useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext, createContext, Fragment } = React;
-
-    ${cleanCode}
-
-    ;(function() {
-      try {
-        // Scan all global functions/classes to find React components
-        const knownNames = ['App','Main','Component','Page','Home','Demo','Example','Game','Chart','Dashboard','Calculator','Timer','Editor','Viewer','Player','Widget'];
-        const candidates = knownNames
-          .map(n => { try { return eval(n); } catch { return null; } })
-          .filter(Boolean);
-        // Fallback: find any PascalCase function that returns JSX
-        if (candidates.length === 0) {
-          const allVars = Object.keys(window).filter(k => /^[A-Z]/.test(k) && typeof window[k] === 'function');
-          for (const k of allVars) {
-            try { candidates.push(window[k]); break; } catch {}
-          }
-        }
-
-        const RootComponent = candidates[0];
-        if (RootComponent) {
-          const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(React.createElement(RootComponent));
-          window.parent.postMessage({type:'preview-ready'}, '*');
-        } else {
-          window.parent.postMessage({type:'preview-error', message:'No component found. Define: App, Main, Component, Page, Home, Demo, or Example.'}, '*');
-        }
-      } catch(e) {
-        window.parent.postMessage({type:'preview-error', message: e.stack || e.toString()}, '*');
-      }
-    })();
+  <script>
+  // Babel transforms JSX, then we inject as native <script type="module">
+  // so the browser's import map resolves bare specifiers (three, recharts, etc.)
+  try {
+    var _code = \`${escapedCode}\`;
+    var _transformed = Babel.transform(_code, {
+      presets: ['react'],
+      sourceType: 'module',
+      filename: 'artifact.tsx',
+    }).code;
+    var _script = document.createElement('script');
+    _script.type = 'module';
+    _script.textContent = _transformed;
+    document.head.appendChild(_script);
+  } catch(_e) {
+    window.parent.postMessage({type:'preview-error', message: 'Babel: ' + (_e.message || _e.toString())}, '*');
+  }
   <\/script>
 </body>
 </html>`;

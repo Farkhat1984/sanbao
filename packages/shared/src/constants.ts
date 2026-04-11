@@ -154,11 +154,41 @@ export const DEFAULT_SMTP_PORT = 587;
 export const DEFAULT_EMAIL_FROM = "noreply@sanbao.ai";
 
 // ─── Code preview CDN ───
+/** @deprecated Use IMPORTMAP_PACKAGES + BABEL_CDN_URL for import-map-based previews */
 export const REACT_CDN_URL = "https://unpkg.com/react@18/umd/react.development.js";
+/** @deprecated Use IMPORTMAP_PACKAGES + BABEL_CDN_URL for import-map-based previews */
 export const REACT_DOM_CDN_URL = "https://unpkg.com/react-dom@18/umd/react-dom.development.js";
 export const BABEL_CDN_URL = "https://unpkg.com/@babel/standalone/babel.min.js";
 export const TAILWIND_CDN_URL = "https://cdn.tailwindcss.com";
 export const PYODIDE_CDN_URL = "https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js";
+
+// ─── ESM import map (code preview) ───
+export const ESM_CDN_BASE = "https://esm.sh";
+
+/** Pre-mapped packages for browser import maps (package → esm.sh URL) */
+export const IMPORTMAP_PACKAGES: Record<string, string> = {
+  "react": "https://esm.sh/react@18?dev",
+  "react/": "https://esm.sh/react@18&dev/",
+  "react-dom": "https://esm.sh/react-dom@18?dev&deps=react@18",
+  "react-dom/": "https://esm.sh/react-dom@18&dev&deps=react@18/",
+  "react-dom/client": "https://esm.sh/react-dom@18/client?dev&deps=react@18",
+  "react/jsx-runtime": "https://esm.sh/react@18/jsx-runtime?dev",
+  "three": "https://esm.sh/three@0.170.0",
+  "three/": "https://esm.sh/three@0.170.0/",
+  "@react-three/fiber": "https://esm.sh/@react-three/fiber@9?deps=react@18,react-dom@18,three@0.170.0",
+  "@react-three/drei": "https://esm.sh/@react-three/drei@10?deps=react@18,react-dom@18,three@0.170.0,@react-three/fiber@9",
+  "recharts": "https://esm.sh/recharts@2?deps=react@18,react-dom@18",
+  "lucide-react": "https://esm.sh/lucide-react@0.460?deps=react@18",
+  "framer-motion": "https://esm.sh/framer-motion@11?deps=react@18,react-dom@18",
+  "zustand": "https://esm.sh/zustand@5?deps=react@18",
+  "zustand/": "https://esm.sh/zustand@5&deps=react@18/",
+  "@radix-ui/react-icons": "https://esm.sh/@radix-ui/react-icons@1?deps=react@18",
+  "clsx": "https://esm.sh/clsx@2",
+  "date-fns": "https://esm.sh/date-fns@4",
+  "date-fns/": "https://esm.sh/date-fns@4/",
+  "d3": "https://esm.sh/d3@7",
+  "d3/": "https://esm.sh/d3@7/",
+};
 
 // ─── Integrations ───
 export const INTEGRATION_TYPES = [
