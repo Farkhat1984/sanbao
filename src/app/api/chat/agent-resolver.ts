@@ -265,7 +265,12 @@ export async function resolveAgentAndTools(params: {
         // Generic agent-base rules are too weak — LLM skips MCP tools for $web_search
         if (ctx.mcpTools.length > 0) {
           const kbToolNames = ctx.mcpTools.map(t => t.name).join(", ");
-          systemPrompt += `\n\n# KNOWLEDGE BASE PRIORITY (MANDATORY)\nYou have a dedicated knowledge base with these tools: ${kbToolNames}\nFor ANY user question, you MUST call one of these tools FIRST before considering $web_search or your training knowledge.\nIf the knowledge base returns results, use them as your primary source.\nOnly use $web_search if your knowledge base tools return empty or insufficient results.\nNever skip your knowledge base tools — this is a CRITICAL requirement.`;
+          const kbDomain = ctx.mcpTools.find(t => t.defaultDomain)?.defaultDomain || "";
+          let kbPrompt = `\n\n# KNOWLEDGE BASE PRIORITY (MANDATORY)\nYou have a dedicated knowledge base with these tools: ${kbToolNames}\nFor ANY user question, you MUST call one of these tools FIRST before considering $web_search or your training knowledge.\nIf the knowledge base returns results, use them as your primary source.\nOnly use $web_search if your knowledge base tools return empty or insufficient results.\nNever skip your knowledge base tools — this is a CRITICAL requirement.`;
+          if (kbDomain) {
+            kbPrompt += `\n\nWhen citing sources from knowledge base results, format links as: [description](source://${kbDomain}/source_file/chunk_index)\nUse the source_file and chunk_index values from each search result's metadata.`;
+          }
+          systemPrompt += kbPrompt;
         }
       }
       agentMcpTools.push(...ctx.mcpTools);

@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
     let mcpUrl = UNIFIED_MCP_URL;
     let mcpToken = CORTEX_TOKEN;
 
-    // For custom agent knowledge bases (domain starts with agent_),
+    // For custom agent knowledge bases (domain starts with ns_),
     // look up the specific MCP server since unified endpoint doesn't serve custom domains
-    if (domain.startsWith("agent_")) {
+    if (domain.startsWith("ns_")) {
       const mcpServer = await prisma.mcpServer.findFirst({
         where: {
           userId,

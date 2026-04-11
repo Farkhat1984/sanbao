@@ -65,18 +65,33 @@ export async function POST(
       data: { url: endpoint, status: "DISCONNECTED" },
     });
   } else {
-    // Create new MCP server owned by the user
-    mcpServer = await prisma.mcpServer.create({
-      data: {
+    // Check for orphaned MCP server (created by old code without AgentMcpServer link)
+    const orphanedServer = await prisma.mcpServer.findFirst({
+      where: {
         userId,
-        name: `${agent.name} - LeemaDB`,
-        url: endpoint,
-        transport: "STREAMABLE_HTTP",
-        apiKey: user.cortexNsApiKey, // stored encrypted
-        isGlobal: false,
-        isEnabled: true,
+        name: { endsWith: "- LeemaDB" },
+        url: { contains: agent.projectId! },
       },
     });
+    if (orphanedServer) {
+      mcpServer = await prisma.mcpServer.update({
+        where: { id: orphanedServer.id },
+        data: { url: endpoint, status: "DISCONNECTED" },
+      });
+    } else {
+      // Create new MCP server owned by the user
+      mcpServer = await prisma.mcpServer.create({
+        data: {
+          userId,
+          name: `${agent.name} - LeemaDB`,
+          url: endpoint,
+          transport: "STREAMABLE_HTTP",
+          apiKey: user.cortexNsApiKey, // stored encrypted
+          isGlobal: false,
+          isEnabled: true,
+        },
+      });
+    }
   }
 
   // Discover tools via internal Docker endpoint (public URL not reachable from container)
