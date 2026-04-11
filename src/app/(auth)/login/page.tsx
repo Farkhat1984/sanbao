@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { springTransition } from "@sanbao/shared/animations";
 import { SanbaoCompass } from "@sanbao/ui/components/ui/SanbaoCompass";
@@ -44,7 +45,6 @@ const SESSION_COOKIE =
 
 export default function LoginPage() {
   const router = useRouter();
-  const [csrfToken, setCsrfToken] = useState("");
   const [isNative, setIsNative] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -62,11 +62,6 @@ export default function LoginPage() {
         }
       }
     });
-
-    fetch("/api/auth/csrf")
-      .then((r) => r.json())
-      .then((d) => setCsrfToken(d.csrfToken))
-      .catch(() => {});
   }, []);
 
   /** Native Google Sign-In via Capacitor plugin → set NextAuth cookie */
@@ -176,18 +171,15 @@ export default function LoginPage() {
               {loading ? "Входим..." : "Войти через Google"}
             </button>
           ) : (
-            /* Standard web OAuth form */
-            <form action="/api/auth/signin/google" method="post">
-              <input type="hidden" name="csrfToken" value={csrfToken} />
-              <input type="hidden" name="callbackUrl" value="/chat" />
-              <button
-                type="submit"
-                className="w-full h-11 rounded-xl border border-border bg-surface text-sm font-medium text-text-primary hover:bg-surface-alt flex items-center justify-center gap-2.5 transition-colors cursor-pointer"
-              >
-                <GoogleIcon />
-                Войти через Google
-              </button>
-            </form>
+            /* Standard web OAuth via next-auth/react signIn() */
+            <button
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: "/chat" })}
+              className="w-full h-11 rounded-xl border border-border bg-surface text-sm font-medium text-text-primary hover:bg-surface-alt flex items-center justify-center gap-2.5 transition-colors cursor-pointer"
+            >
+              <GoogleIcon />
+              Войти через Google
+            </button>
           )}
 
           <p className="text-center text-[11px] text-text-secondary mt-4 leading-relaxed">

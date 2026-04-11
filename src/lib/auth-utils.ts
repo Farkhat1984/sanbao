@@ -98,9 +98,18 @@ export async function handleOAuthLogin(params: OAuthLoginParams): Promise<OAuthL
   // 2. No existing account link — find or create user
   let user;
 
-  // Try to link by email if user already exists
+  // Only auto-link by email if user exists but has NO OAuth accounts
+  // (i.e., was created via credentials). Never merge two OAuth identities.
   if (email) {
-    user = await prisma.user.findUnique({ where: { email } });
+    const candidate = await prisma.user.findUnique({
+      where: { email },
+      include: { accounts: { where: { type: "oauth" }, select: { id: true }, take: 1 } },
+    });
+    if (candidate && candidate.accounts.length === 0) {
+      // Credentials-only user — safe to link this OAuth account
+      user = candidate;
+    }
+    // If candidate has existing OAuth accounts, do NOT auto-link — create new user below
   }
 
   // Email is required in our schema — use fallback if provider doesn't supply one

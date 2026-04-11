@@ -323,6 +323,7 @@ function SettingsContent() {
               for (const name of cookieNames) {
                 document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
                 document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax`;
+                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.sanbao.ai; Secure; SameSite=Lax`;
               }
               window.location.href = "/login";
             }}
